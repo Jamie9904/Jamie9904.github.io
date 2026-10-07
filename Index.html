@@ -50,8 +50,10 @@ td.l{font-family:ui-monospace,Menlo,Consolas,monospace}
 <h1>LPN Pallet Log</h1>
 
 <div class="card">
-  <label for="date">Date</label>
-  <input type="date" id="date">
+  <div class="row">
+    <div><label for="date">Date</label><input type="date" id="date"></div>
+    <div class="grow"><label for="recv">Received by</label><input id="recv" placeholder="Name of person who received the delivery"></div>
+  </div>
 </div>
 
 <div class="card">
@@ -64,6 +66,7 @@ td.l{font-family:ui-monospace,Menlo,Consolas,monospace}
     <button id="photo">Scan by photo</button>
     <input type="file" id="file" accept="image/*" capture="environment" hidden>
   </div>
+  <div class="msg" style="color:var(--mu);margin-top:10px">Note: if Live scan doesn't work, try Scan by photo instead.</div>
   <div id="scanbox" hidden>
     <video id="video" playsinline muted></video>
     <div class="row" style="align-items:center;margin-top:8px">
@@ -98,12 +101,12 @@ const $=id=>document.getElementById(id);
 function load(){
   try{
     const d=localStorage.getItem("lpnlog");
-    if(d){const o=JSON.parse(d);rows=o.rows||[];$("date").value=o.date||"";}
+    if(d){const o=JSON.parse(d);rows=o.rows||[];$("date").value=o.date||"";$("recv").value=o.recv||"";}
   }catch(e){}
   if(!$("date").value)$("date").value=new Date().toISOString().slice(0,10);
 }
 function save(){
-  try{localStorage.setItem("lpnlog",JSON.stringify({rows,date:$("date").value}))}catch(e){}
+  try{localStorage.setItem("lpnlog",JSON.stringify({rows,date:$("date").value,recv:$("recv").value}))}catch(e){}
 }
 function render(){
   const b=$("body");b.innerHTML="";
@@ -227,6 +230,7 @@ $("stopscan").onclick=()=>stopScan();
 $("add").onclick=add;
 $("lpn").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();add()}});
 $("date").onchange=save;
+$("recv").oninput=save;
 $("clear").onclick=()=>{
   if(rows.length&&confirm("Clear all "+rows.length+" entries?")){rows=[];save();render();$("msg").textContent=""}
 };
@@ -251,18 +255,24 @@ function saveBlob(data,type,name){
 }
 function fallbackXls(d){
   const esc=v=>String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const who=($("recv").value||"").trim();
   const c={BB:0,FMCG:0,Mixed:0};rows.forEach(r=>c[r.type]++);
-  const side=[["Pallet Type","Count"],["BB",c.BB],["FMCG",c.FMCG],["Mixed",c.Mixed],["Total",rows.length]];
+  const side=[["Pallet Type","Count","h"],["Brown Box",c.BB],["FMCG",c.FMCG],["Mixed",c.Mixed],["Total",rows.length,"b"],null,["Delivery Details","","h2"],["Date",d,"l"],["Received by",who,"l"]];
   const n=Math.max(rows.length,side.length-1);
   let h='<html><head><meta charset="utf-8"><style>td,th{font-family:Arial;font-size:14pt;border:1px solid #000;padding:4px;text-align:left}th{font-size:16pt;background:#e6e9ed}</style></head><body><table>';
   for(let i=-1;i<n;i++){
     const head=i<0,t=head?"th":"td";
-    const l=head?["Date","LPN","Pallet Type"]:rows[i]?[d,rows[i].lpn,rows[i].type]:null;
+    const l=head?["LPN","Pallet Type"]:rows[i]?[rows[i].lpn,rows[i].type]:null;
     const r=side[i+1]||null;
     h+="<tr>";
-    h+=l?l.map((v,k)=>"<"+t+(k===1&&!head?' style="mso-number-format:\'\\@\'"':"")+">"+esc(v)+"</"+t+">").join(""):"<td></td><td></td><td></td>";
+    h+=l?l.map((v,k)=>"<"+t+(k===0&&!head?' style="mso-number-format:\'\\@\'"':"")+">"+esc(v)+"</"+t+">").join(""):"<td></td><td></td>";
     h+='<td style="border:none"></td>';
-    h+=r?r.map(v=>"<"+t+">"+esc(v)+"</"+t+">").join(""):"<td></td><td></td>";
+    if(r){
+      const tt=(r[2]==="h"||r[2]==="b")?"th":"td";
+      if(r[2]==="h2")h+="<th colspan=2>"+esc(r[0])+"</th>";
+      else if(r[2]==="l")h+="<th>"+esc(r[0])+"</th><td>"+esc(r[1])+"</td>";
+      else h+="<"+tt+">"+esc(r[0])+"</"+tt+"><"+tt+">"+esc(r[1])+"</"+tt+">";
+    }else h+="<td></td><td></td>";
     h+="</tr>";
   }
   h+="</table></body></html>";
@@ -285,42 +295,51 @@ $("dl").onclick=async()=>{
     }
     const wb=new ExcelJS.Workbook();
     const ws=wb.addWorksheet("LPN Log");
-    ws.columns=[{width:16},{width:34},{width:20},{width:4},{width:20},{width:12}];
+    ws.columns=[{width:34},{width:20},{width:4},{width:22},{width:24}];
+    const who=($("recv").value||"").trim();
     const c={BB:0,FMCG:0,Mixed:0};rows.forEach(r=>c[r.type]++);
-    const side=[["Pallet Type","Count"],["BB",c.BB],["FMCG",c.FMCG],["Mixed",c.Mixed],["Total",rows.length]];
+    const side=[
+      {v:["Pallet Type","Count"],h:1},
+      {v:["Brown Box",c.BB]},{v:["FMCG",c.FMCG]},{v:["Mixed",c.Mixed]},
+      {v:["Total",rows.length],b:1},
+      null,
+      {v:["Delivery Details",""],h:1,merge:1},
+      {v:["Date",d],l:1},
+      {v:["Received by",who],l:1}
+    ];
     const n=Math.max(rows.length,side.length-1);
     let off=0;
     if(logo){
-      off=4;
+      off=5;
       try{
         const dim=await new Promise((res,rej)=>{const im=new Image();im.onload=()=>res([im.width,im.height]);im.onerror=rej;im.src=logo});
-        const w=Math.min(380,Math.round(80*dim[0]/dim[1]));
+        const hPx=Math.max(50,Math.min(140,Math.round(388*dim[1]/dim[0])));
         const id=wb.addImage({base64:logo,extension:"png"});
-        ws.addImage(id,{tl:{col:0.1,row:0.2},ext:{width:w,height:Math.round(w*dim[1]/dim[0])}});
-        for(let k=1;k<=4;k++)ws.getRow(k).height=22;
+        for(let k=1;k<=4;k++)ws.getRow(k).height=hPx*0.75/4;
+        ws.addImage(id,{tl:{col:0,row:0},br:{col:2,row:4},editAs:"oneCell"});
       }catch(e){off=0}
     }
     const border={top:{style:"thin"},left:{style:"thin"},bottom:{style:"thin"},right:{style:"thin"}};
     for(let i=-1;i<n;i++){
       const r=ws.getRow(i+2+off);
       const head=i<0;
-      const left=head?["Date","LPN","Pallet Type"]:rows[i]?[d,rows[i].lpn,rows[i].type]:null;
+      const left=head?["LPN","Pallet Type"]:rows[i]?[rows[i].lpn,rows[i].type]:null;
       const right=side[i+1]||null;
-      const put=(col,val,bold,isNum)=>{
+      const put=(col,val,bold,isNum,big)=>{
         const cell=r.getCell(col);
         cell.value=val;
-        cell.font={name:"Arial",size:head?16:14,bold:bold};
+        cell.font={name:"Arial",size:big?16:14,bold:!!bold};
         cell.border=border;
-        cell.alignment={vertical:"middle",horizontal:isNum?"center":"left"};
+        cell.alignment={vertical:"middle",horizontal:isNum?"center":"left",wrapText:true};
         if(bold)cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFE6E9ED"}};
       };
-      if(left)left.forEach((v,k)=>put(k+1,v,head,false));
+      if(left)left.forEach((v,k)=>put(k+1,v,head,false,head));
       if(right){
-        const tot=right[0]==="Total";
-        put(5,right[0],head||tot,false);
-        put(6,right[1],head||tot,typeof right[1]==="number");
+        put(4,right.v[0],right.h||right.b||right.l,false,right.h);
+        put(5,right.v[1],right.h||right.b,typeof right.v[1]==="number",right.h);
+        if(right.merge)ws.mergeCells(r.number,4,r.number,5);
       }
-      r.height=head?26:22;
+      r.height=(head||(right&&right.h))?26:22;
     }
     ws.pageSetup={orientation:"portrait",paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:(1+off)+":"+(1+off),margins:{left:0.5,right:0.5,top:0.6,bottom:0.6,header:0.3,footer:0.3}};
     ws.views=[{state:"frozen",ySplit:1+off}];
