@@ -32,6 +32,8 @@ th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--bd);white-sp
 th{font-size:.75rem;color:var(--mu);text-transform:uppercase}
 td select{padding:6px}
 td.l{font-family:ui-monospace,Menlo,Consolas,monospace}
+#fsdu{display:block;width:26px;height:26px;margin:9px 4px;accent-color:var(--ac)}
+td input[type=checkbox]{width:20px;height:20px;accent-color:var(--ac)}
 #logoImg{display:block;max-height:80px;max-width:100%;margin-bottom:10px}
 #scanbox{margin-top:12px}
 #video{width:100%;max-height:300px;background:#000;border-radius:8px;object-fit:cover}
@@ -61,6 +63,7 @@ td.l{font-family:ui-monospace,Menlo,Consolas,monospace}
     <div class="grow"><label for="lpn">LPN number</label><input id="lpn" autocomplete="off" autocapitalize="characters" placeholder="Scan or type LPN, press Enter"></div>
     <div class="grow"><label for="type">Pallet type</label>
       <select id="type"><option>BB</option><option>FMCG</option><option>FPP</option><option>Mixed</option></select></div>
+    <div><label for="fsdu">FSDU</label><input type="checkbox" id="fsdu" aria-label="Pallet contains an FSDU"></div>
     <button class="p" id="add">Add</button>
     <button id="scan">📷 Live scan</button>
     <button id="photo">Scan by photo</button>
@@ -81,7 +84,7 @@ td.l{font-family:ui-monospace,Menlo,Consolas,monospace}
   <div class="sum" id="sum"></div>
   <div class="wrap">
     <table>
-      <thead><tr><th>#</th><th>LPN</th><th>Pallet type</th><th></th></tr></thead>
+      <thead><tr><th>#</th><th>LPN</th><th>Pallet type</th><th>FSDU</th><th></th></tr></thead>
       <tbody id="body"></tbody>
     </table>
   </div>
@@ -110,7 +113,7 @@ function save(){
 }
 function render(){
   const b=$("body");b.innerHTML="";
-  if(!rows.length){b.innerHTML='<tr><td colspan="4" class="empty">No pallets logged yet</td></tr>'}
+  if(!rows.length){b.innerHTML='<tr><td colspan="5" class="empty">No pallets logged yet</td></tr>'}
   rows.forEach((r,i)=>{
     const tr=document.createElement("tr");
     const n=document.createElement("td");n.textContent=i+1;
@@ -120,17 +123,21 @@ function render(){
     TYPES.forEach(x=>{const o=document.createElement("option");o.textContent=x;if(x===r.type)o.selected=true;s.appendChild(o)});
     s.onchange=()=>{r.type=s.value;save();summary()};
     t.appendChild(s);
+    const f=document.createElement("td");
+    const cb=document.createElement("input");cb.type="checkbox";cb.checked=!!r.fsdu;cb.setAttribute("aria-label","FSDU for "+r.lpn);
+    cb.onchange=()=>{r.fsdu=cb.checked;save()};
+    f.appendChild(cb);
     const x=document.createElement("td");
     const btn=document.createElement("button");btn.className="d";btn.textContent="✕";btn.setAttribute("aria-label","Delete "+r.lpn);
     btn.onclick=()=>{rows.splice(i,1);save();render()};
     x.appendChild(btn);
-    tr.append(n,l,t,x);b.appendChild(tr);
+    tr.append(n,l,t,f,x);b.appendChild(tr);
   });
   summary();
 }
 function summary(){
   const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
-  $("sum").innerHTML="<span>Total: <b>"+rows.length+"</b></span><span>BB: <b>"+c.BB+"</b></span><span>FMCG: <b>"+c.FMCG+"</b></span><span>FPP: <b>"+c.FPP+"</b></span><span>Mixed: <b>"+c.Mixed+"</b></span>";
+  $("sum").innerHTML="<span>Total: <b>"+rows.length+"</b></span><span>BB: <b>"+c.BB+"</b></span><span>FMCG: <b>"+c.FMCG+"</b></span><span>FPP: <b>"+c.FPP+"</b></span><span>Mixed: <b>"+c.Mixed+"</b></span><span>FSDU: <b>"+rows.filter(r=>r.fsdu).length+"</b></span>";
 }
 function add(){
   const v=$("lpn").value.trim();
@@ -140,7 +147,8 @@ function add(){
 }
 function addValue(v){
   $("msg").textContent=rows.some(r=>r.lpn.toLowerCase()===v.toLowerCase())?"Note: "+v+" was already logged (added again).":"";
-  rows.push({lpn:v,type:$("type").value});
+  rows.push({lpn:v,type:$("type").value,fsdu:$("fsdu").checked});
+  $("fsdu").checked=false;
   save();render();
 }
 /* ---- barcode scanning ---- */
@@ -257,15 +265,15 @@ function fallbackXls(d){
   const esc=v=>String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   const who=($("recv").value||"").trim();
   const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
-  const side=[["Pallet Type","Count","h"],["Brown Box",c.BB],["FMCG",c.FMCG],["FPP",c.FPP],["Mixed",c.Mixed],["Total",rows.length,"b"],null,["Delivery Details","","h2"],["Date",d,"l"],["Received by",who,"l"]];
+  const side=[["Pallet Type","Count","h"],["Brown Box",c.BB],["FMCG",c.FMCG],["FPP",c.FPP],["Mixed",c.Mixed],["Total",rows.length,"b"],["FSDU (not in total)",rows.filter(r=>r.fsdu).length],null,["Delivery Details","","h2"],["Date",d,"l"],["Received by",who,"l"]];
   const n=Math.max(rows.length,side.length-1);
   let h='<html><head><meta charset="utf-8"><style>td,th{font-family:Arial;font-size:14pt;border:1px solid #000;padding:4px;text-align:left}th{font-size:16pt;background:#e6e9ed}</style></head><body><table>';
   for(let i=-1;i<n;i++){
     const head=i<0,t=head?"th":"td";
-    const l=head?["LPN","Pallet Type"]:rows[i]?[rows[i].lpn,rows[i].type]:null;
+    const l=head?["LPN","Pallet Type","FSDU"]:rows[i]?[rows[i].lpn,rows[i].type,rows[i].fsdu?"Yes":"No"]:null;
     const r=side[i+1]||null;
     h+="<tr>";
-    h+=l?l.map((v,k)=>"<"+t+(k===0&&!head?' style="mso-number-format:\'\\@\'"':"")+">"+esc(v)+"</"+t+">").join(""):"<td></td><td></td>";
+    h+=l?l.map((v,k)=>"<"+t+(k===0&&!head?' style="mso-number-format:\'\\@\'"':"")+">"+esc(v)+"</"+t+">").join(""):"<td></td><td></td><td></td>";
     h+='<td style="border:none"></td>';
     if(r){
       const tt=(r[2]==="h"||r[2]==="b")?"th":"td";
@@ -295,13 +303,14 @@ $("dl").onclick=async()=>{
     }
     const wb=new ExcelJS.Workbook();
     const ws=wb.addWorksheet("LPN Log");
-    ws.columns=[{width:34},{width:20},{width:4},{width:22},{width:24}];
+    ws.columns=[{width:34},{width:20},{width:10},{width:4},{width:28},{width:24}];
     const who=($("recv").value||"").trim();
     const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
     const side=[
       {v:["Pallet Type","Count"],h:1},
       {v:["Brown Box",c.BB]},{v:["FMCG",c.FMCG]},{v:["FPP",c.FPP]},{v:["Mixed",c.Mixed]},
       {v:["Total",rows.length],b:1},
+      {v:["FSDU (not in total)",rows.filter(r=>r.fsdu).length]},
       null,
       {v:["Delivery Details",""],h:1,merge:1},
       {v:["Date",d],l:1},
@@ -313,10 +322,10 @@ $("dl").onclick=async()=>{
       off=5;
       try{
         const dim=await new Promise((res,rej)=>{const im=new Image();im.onload=()=>res([im.width,im.height]);im.onerror=rej;im.src=logo});
-        const hPx=Math.max(50,Math.min(140,Math.round(388*dim[1]/dim[0])));
+        const hPx=Math.max(50,Math.min(140,Math.round(463*dim[1]/dim[0])));
         const id=wb.addImage({base64:logo,extension:"png"});
         for(let k=1;k<=4;k++)ws.getRow(k).height=hPx*0.75/4;
-        ws.addImage(id,{tl:{col:0,row:0},br:{col:2,row:4},editAs:"oneCell"});
+        ws.addImage(id,{tl:{col:0,row:0},br:{col:3,row:4},editAs:"oneCell"});
       }catch(e){off=0}
     }
     const bc={argb:"FF000000"};
@@ -324,7 +333,7 @@ $("dl").onclick=async()=>{
     for(let i=-1;i<n;i++){
       const r=ws.getRow(i+2+off);
       const head=i<0;
-      const left=head?["LPN","Pallet Type"]:rows[i]?[rows[i].lpn,rows[i].type]:null;
+      const left=head?["LPN","Pallet Type","FSDU"]:rows[i]?[rows[i].lpn,rows[i].type,rows[i].fsdu?"Yes":"No"]:null;
       const right=side[i+1]||null;
       const put=(col,val,bold,isNum,big)=>{
         const cell=r.getCell(col);
@@ -336,13 +345,13 @@ $("dl").onclick=async()=>{
       };
       if(left)left.forEach((v,k)=>put(k+1,v,head,false,head));
       if(right){
-        put(4,right.v[0],right.h||right.b||right.l,false,right.h);
-        put(5,right.v[1],right.h||right.b,typeof right.v[1]==="number",right.h);
-        if(right.merge)ws.mergeCells(r.number,4,r.number,5);
+        put(5,right.v[0],right.h||right.b||right.l,false,right.h);
+        put(6,right.v[1],right.h||right.b,typeof right.v[1]==="number",right.h);
+        if(right.merge)ws.mergeCells(r.number,5,r.number,6);
       }
       if(r.number>1&&(head||(right&&right.h))){
         const up=ws.getRow(r.number-1);
-        (head?[1,2,4,5]:[4,5]).forEach(col=>{up.getCell(col).border={bottom:{style:"medium",color:bc}}});
+        (head?[1,2,3,5,6]:[5,6]).forEach(col=>{up.getCell(col).border={bottom:{style:"medium",color:bc}}});
       }
       r.height=(head||(right&&right.h))?26:22;
     }
