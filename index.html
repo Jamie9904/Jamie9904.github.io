@@ -60,7 +60,7 @@ td.l{font-family:ui-monospace,Menlo,Consolas,monospace}
   <div class="row">
     <div class="grow"><label for="lpn">LPN number</label><input id="lpn" autocomplete="off" autocapitalize="characters" placeholder="Scan or type LPN, press Enter"></div>
     <div class="grow"><label for="type">Pallet type</label>
-      <select id="type"><option>BB</option><option>FMCG</option><option>Mixed</option></select></div>
+      <select id="type"><option>BB</option><option>FMCG</option><option>FPP</option><option>Mixed</option></select></div>
     <button class="p" id="add">Add</button>
     <button id="scan">📷 Live scan</button>
     <button id="photo">Scan by photo</button>
@@ -94,7 +94,7 @@ td.l{font-family:ui-monospace,Menlo,Consolas,monospace}
 </main>
 
 <script>
-const TYPES=["BB","FMCG","Mixed"];
+const TYPES=["BB","FMCG","FPP","Mixed"];
 let rows=[];
 const $=id=>document.getElementById(id);
 
@@ -129,8 +129,8 @@ function render(){
   summary();
 }
 function summary(){
-  const c={BB:0,FMCG:0,Mixed:0};rows.forEach(r=>c[r.type]++);
-  $("sum").innerHTML="<span>Total: <b>"+rows.length+"</b></span><span>BB: <b>"+c.BB+"</b></span><span>FMCG: <b>"+c.FMCG+"</b></span><span>Mixed: <b>"+c.Mixed+"</b></span>";
+  const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
+  $("sum").innerHTML="<span>Total: <b>"+rows.length+"</b></span><span>BB: <b>"+c.BB+"</b></span><span>FMCG: <b>"+c.FMCG+"</b></span><span>FPP: <b>"+c.FPP+"</b></span><span>Mixed: <b>"+c.Mixed+"</b></span>";
 }
 function add(){
   const v=$("lpn").value.trim();
@@ -256,8 +256,8 @@ function saveBlob(data,type,name){
 function fallbackXls(d){
   const esc=v=>String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   const who=($("recv").value||"").trim();
-  const c={BB:0,FMCG:0,Mixed:0};rows.forEach(r=>c[r.type]++);
-  const side=[["Pallet Type","Count","h"],["Brown Box",c.BB],["FMCG",c.FMCG],["Mixed",c.Mixed],["Total",rows.length,"b"],null,["Delivery Details","","h2"],["Date",d,"l"],["Received by",who,"l"]];
+  const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
+  const side=[["Pallet Type","Count","h"],["Brown Box",c.BB],["FMCG",c.FMCG],["FPP",c.FPP],["Mixed",c.Mixed],["Total",rows.length,"b"],null,["Delivery Details","","h2"],["Date",d,"l"],["Received by",who,"l"]];
   const n=Math.max(rows.length,side.length-1);
   let h='<html><head><meta charset="utf-8"><style>td,th{font-family:Arial;font-size:14pt;border:1px solid #000;padding:4px;text-align:left}th{font-size:16pt;background:#e6e9ed}</style></head><body><table>';
   for(let i=-1;i<n;i++){
@@ -297,10 +297,10 @@ $("dl").onclick=async()=>{
     const ws=wb.addWorksheet("LPN Log");
     ws.columns=[{width:34},{width:20},{width:4},{width:22},{width:24}];
     const who=($("recv").value||"").trim();
-    const c={BB:0,FMCG:0,Mixed:0};rows.forEach(r=>c[r.type]++);
+    const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
     const side=[
       {v:["Pallet Type","Count"],h:1},
-      {v:["Brown Box",c.BB]},{v:["FMCG",c.FMCG]},{v:["Mixed",c.Mixed]},
+      {v:["Brown Box",c.BB]},{v:["FMCG",c.FMCG]},{v:["FPP",c.FPP]},{v:["Mixed",c.Mixed]},
       {v:["Total",rows.length],b:1},
       null,
       {v:["Delivery Details",""],h:1,merge:1},
@@ -319,7 +319,8 @@ $("dl").onclick=async()=>{
         ws.addImage(id,{tl:{col:0,row:0},br:{col:2,row:4},editAs:"oneCell"});
       }catch(e){off=0}
     }
-    const border={top:{style:"thin"},left:{style:"thin"},bottom:{style:"thin"},right:{style:"thin"}};
+    const bc={argb:"FF000000"};
+    const border={top:{style:"thin",color:bc},left:{style:"thin",color:bc},bottom:{style:"thin",color:bc},right:{style:"thin",color:bc}};
     for(let i=-1;i<n;i++){
       const r=ws.getRow(i+2+off);
       const head=i<0;
@@ -329,7 +330,7 @@ $("dl").onclick=async()=>{
         const cell=r.getCell(col);
         cell.value=val;
         cell.font={name:"Arial",size:big?16:14,bold:!!bold};
-        cell.border=border;
+        cell.border=big?{...border,top:{style:"medium",color:bc}}:border;
         cell.alignment={vertical:"middle",horizontal:isNum?"center":"left",wrapText:true};
         if(bold)cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFE6E9ED"}};
       };
@@ -338,6 +339,10 @@ $("dl").onclick=async()=>{
         put(4,right.v[0],right.h||right.b||right.l,false,right.h);
         put(5,right.v[1],right.h||right.b,typeof right.v[1]==="number",right.h);
         if(right.merge)ws.mergeCells(r.number,4,r.number,5);
+      }
+      if(r.number>1&&(head||(right&&right.h))){
+        const up=ws.getRow(r.number-1);
+        (head?[1,2,4,5]:[4,5]).forEach(col=>{up.getCell(col).border={bottom:{style:"medium",color:bc}}});
       }
       r.height=(head||(right&&right.h))?26:22;
     }
@@ -351,27 +356,42 @@ $("dl").onclick=async()=>{
   }
 };
 /* ---- logo ---- */
-let logo="";
-function showLogo(){
-  $("logoImg").hidden=!logo;if(logo)$("logoImg").src=logo;
-  $("logoRm").hidden=!logo;$("logoBtn").textContent=logo?"Change logo":"Add logo";
+/* Default logo: put an image file named logo.png in the same folder as this page. */
+const DEFAULT_LOGO_URL="logo.png";
+let logo="",custom="",defaultLogo="";
+function scaleToData(bmp){
+  const sc=Math.min(1,600/bmp.width);
+  const cv=document.createElement("canvas");
+  cv.width=Math.round(bmp.width*sc);cv.height=Math.round(bmp.height*sc);
+  cv.getContext("2d").drawImage(bmp,0,0,cv.width,cv.height);
+  return cv.toDataURL("image/png");
 }
-function loadLogo(){try{logo=localStorage.getItem("lpnlogo")||""}catch(e){}showLogo()}
+function showLogo(){
+  logo=custom||defaultLogo;
+  $("logoImg").hidden=!logo;if(logo)$("logoImg").src=logo;
+  $("logoBtn").textContent=logo?"Change logo":"Add logo";
+  $("logoRm").hidden=!custom;
+  $("logoRm").textContent=defaultLogo?"Reset to default logo":"Remove logo";
+}
+async function loadLogo(){
+  try{custom=localStorage.getItem("lpnlogo")||""}catch(e){}
+  showLogo();
+  try{
+    const r=await fetch(DEFAULT_LOGO_URL);
+    if(r.ok)defaultLogo=scaleToData(await createImageBitmap(await r.blob()));
+  }catch(e){}
+  showLogo();
+}
 $("logoBtn").onclick=()=>{$("logoFile").value="";$("logoFile").click()};
 $("logoFile").onchange=async e=>{
   const f=e.target.files&&e.target.files[0];if(!f)return;
   try{
-    const bmp=await createImageBitmap(f);
-    const sc=Math.min(1,600/bmp.width);
-    const cv=document.createElement("canvas");
-    cv.width=Math.round(bmp.width*sc);cv.height=Math.round(bmp.height*sc);
-    cv.getContext("2d").drawImage(bmp,0,0,cv.width,cv.height);
-    logo=cv.toDataURL("image/png");
-    try{localStorage.setItem("lpnlogo",logo)}catch(err){}
+    custom=scaleToData(await createImageBitmap(f));
+    try{localStorage.setItem("lpnlogo",custom)}catch(err){}
     showLogo();
   }catch(err){$("msg").textContent="Couldn't read that image file."}
 };
-$("logoRm").onclick=()=>{logo="";try{localStorage.removeItem("lpnlogo")}catch(e){}showLogo()};
+$("logoRm").onclick=()=>{custom="";try{localStorage.removeItem("lpnlogo")}catch(e){}showLogo()};
 loadLogo();
 load();render();
 </script>
