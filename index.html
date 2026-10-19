@@ -33,6 +33,16 @@ th{font-size:.75rem;color:var(--mu);text-transform:uppercase}
 td select{padding:6px}
 td.l{font-family:ui-monospace,Menlo,Consolas,monospace}
 textarea{font:14px/1.4 ui-monospace,Menlo,Consolas,monospace;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:10px;width:100%}
+#side{position:fixed;right:env(safe-area-inset-right,0px);top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;z-index:20}
+#side button{writing-mode:vertical-rl;padding:12px 8px;border-radius:8px 0 0 8px;font-weight:600;background:var(--ac);border-color:var(--ac);color:#fff}
+#shade{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:30}
+#panel{position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);background:var(--card);color:var(--tx);border-left:1px solid var(--bd);z-index:40;overflow-y:auto;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(24px + env(safe-area-inset-bottom,0px))}
+#panel h2{font-size:1.15rem;margin:0}
+#panel h3{font-size:1rem;margin:16px 0 6px}
+#panel p,#panel li{font-size:.92rem;margin:4px 0}
+#panel ul,#panel ol{padding-left:20px;margin:6px 0}
+#panel .ver{color:var(--mu);font-size:.8rem;font-weight:400}
+@media (max-width:820px){main{padding-right:52px}}
 #fsdu{display:block;width:26px;height:26px;margin:9px 4px;accent-color:var(--ac)}
 td input[type=checkbox]{width:20px;height:20px;accent-color:var(--ac)}
 #logoImg{display:block;max-height:80px;max-width:100%;margin-bottom:10px}
@@ -115,6 +125,18 @@ td input[type=checkbox]{width:20px;height:20px;accent-color:var(--ac)}
 </div>
 </main>
 
+<aside id="side" aria-label="Help">
+  <button id="btnGuide">📖 Guide</button>
+  <button id="btnLog">📝 Changelog</button>
+</aside>
+<div id="shade" hidden></div>
+<section id="panel" role="dialog" aria-labelledby="panelTitle" hidden>
+  <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
+    <h2 id="panelTitle"></h2>
+    <button id="panelClose" aria-label="Close">✕ Close</button>
+  </div>
+  <div id="panelBody"></div>
+</section>
 <script>
 const TYPES=["BB","FMCG","FPP","Mixed"];
 let rows=[];
@@ -558,6 +580,73 @@ $("cmpGo").onclick=async()=>{
     cmpMsg("Couldn't create the document: "+((err&&err.message)||"error"));
   }
 };
+/* ---- help panel ---- */
+const HELP={guide:`<h3>1. Set up the delivery</h3>
+<p>Enter the <b>Date</b> and the name of the person who <b>Received</b> the delivery at the top. Use <b>Add logo</b> if you want a logo on the page and on the spreadsheet. If a file called logo.png sits next to the app, it is used as the default logo. <b>Change logo</b> overrides it on this device and <b>Reset to default logo</b> brings it back.</p>
+<h3>2. Log pallets</h3>
+<ol>
+<li>Type or scan the LPN into the LPN box.</li>
+<li>Choose the pallet type: BB, FMCG, FPP or Mixed.</li>
+<li>Tick <b>FSDU</b> if the pallet contains one.</li>
+<li>Press <b>Add</b> (or Enter).</li>
+</ol>
+<p>The FSDU tick box clears after every pallet. The pallet type stays as you left it. If an LPN has already been logged you get a note, but it is still added.</p>
+<p>In the table you can change a pallet’s type or FSDU tick afterwards, or remove it with ✕. The totals above the table count each pallet once. The FSDU count is shown separately and is not part of the total.</p>
+<h3>3. Scanning barcodes</h3>
+<ul>
+<li><b>Scan by photo:</b> take a clear photo of the barcode. Its contents are added as an LPN with the selected type.</li>
+<li><b>Handheld or Bluetooth scanner:</b> click the LPN box and scan. It types the code and presses Enter for you. This hasn’t been tested, so it may not work.</li>
+<li><b>Live scan:</b> opens the camera and adds each barcode it sees. It needs the app to be opened over HTTPS and camera permission. If Live scan doesn’t work, try Scan by photo.</li>
+</ul>
+<h3>4. Download the spreadsheet</h3>
+<p>Press <b>Download (Excel)</b>. The file has your logo, the Pallet table (LPN, pallet type, FSDU), a breakdown of pallets by type with a Total, an FSDU line that is not included in the Total, and Delivery Details with the date and who received it. It is set up to print on A4 portrait. In the spreadsheet BB is shown as “Brown Box”. If the spreadsheet builder can’t load (for example no internet), a basic .xls file is saved instead.</p>
+<h3>5. Check a delivery against the manifest</h3>
+<ol>
+<li><b>LPN log:</b> upload an exported spreadsheet, or take a photo of the printed log.</li>
+<li><b>Manifest:</b> add one or more photos of the manifest.</li>
+<li>Check the two lists of numbers and fix any mistakes. You can also type numbers in.</li>
+<li>Press <b>Compare and download</b> to get a spreadsheet with ✓ Found or ✗ Missing for every manifest number.</li>
+</ol>
+<p>Photos are read with text recognition. It looks for entries that match the LPN format and fixes common lookalike characters in the number part, but it can still misread the letters, so check the lists before comparing.</p>
+<h3>6. Good to know</h3>
+<ul>
+<li>Your entries, date, name and logo are saved in this browser on this device only. <b>Clear all</b> removes the entries.</li>
+<li>LPNs are expected as 1 to 3 letters followed by digits, for example RUN000000000.</li>
+<li>Always check numbers read from photos before comparing, as photos can be misread.</li>
+</ul>`,log:`<h3>v1.8 <span class="ver">Current</span></h3>
+<ul><li>Added this Guide and Changelog panel.</li></ul>
+<h3>v1.7</h3>
+<ul><li>Manifest check can now read a photo of the printed log as well as an uploaded file.</li>
+<li>Photo reading follows the LPN format (1 to 3 letters then digits).</li>
+<li>Both lists of numbers can be edited before comparing.</li></ul>
+<h3>v1.6</h3>
+<ul><li>New Check delivery against manifest section: compares manifest photos with the log and produces a spreadsheet of ✓ and ✗.</li></ul>
+<h3>v1.5</h3>
+<ul><li>Heavier borders and tighter columns so tables print cleanly on A4 portrait.</li>
+<li>Added an FSDU line to the breakdown that is not counted in the total.</li></ul>
+<h3>v1.4</h3>
+<ul><li>Added the FPP pallet type.</li>
+<li>Added an FSDU tick box that resets after each pallet and shows in the Pallet table.</li></ul>
+<h3>v1.3</h3>
+<ul><li>Added a Received by name.</li>
+<li>Date moved into a new Delivery Details section under the breakdown.</li></ul>
+<h3>v1.2</h3>
+<ul><li>Spreadsheet download is now Excel with larger print-friendly text.</li>
+<li>Added a breakdown by pallet type, with BB shown as Brown Box.</li>
+<li>Added a logo banner above the Pallet table.</li></ul>
+<h3>v1.1</h3>
+<ul><li>Added barcode scanning by photo. Live scanning with the camera added to the standalone version.</li><li>The standalone version supports a default logo.</li></ul>
+<h3>v1.0</h3>
+<ul><li>First version: log LPNs with a pallet type, set a date, and download the table.</li></ul>`};
+function openHelp(k,t){
+  $("panelTitle").textContent=t;$("panelBody").innerHTML=HELP[k];
+  $("panel").hidden=false;$("shade").hidden=false;$("panel").scrollTop=0;
+}
+function closeHelp(){$("panel").hidden=true;$("shade").hidden=true}
+$("btnGuide").onclick=()=>openHelp("guide","How to use this app");
+$("btnLog").onclick=()=>openHelp("log","Changelog");
+$("panelClose").onclick=closeHelp;$("shade").onclick=closeHelp;
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeHelp()});
 load();render();
 </script>
 </body>
