@@ -32,7 +32,8 @@ th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--bd);white-sp
 th{font-size:.75rem;color:var(--mu);text-transform:uppercase}
 td select{padding:6px}
 td.l{font-family:ui-monospace,Menlo,Consolas,monospace}
-textarea{font:14px/1.4 ui-monospace,Menlo,Consolas,monospace;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:10px;width:100%}
+textarea{font:14px/1.4 ui-monospace,Menlo,Consolas,monospace;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:10px;display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;resize:vertical}
+.card{min-width:0;max-width:100%}
 #side{position:fixed;right:env(safe-area-inset-right,0px);top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;z-index:20}
 #side button{writing-mode:vertical-rl;padding:12px 8px;border-radius:8px 0 0 8px;font-weight:600;background:var(--ac);border-color:var(--ac);color:#fff}
 #shade{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:30}
