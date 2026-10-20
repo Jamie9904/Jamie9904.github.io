@@ -506,6 +506,8 @@ async function ocr(f){
   }finally{await w.terminate()}
 }
 async function readPhoto(f){return extractLpns(await ocr(f))}
+async function readLogPhoto(f){return extractLpns(await ocr(f))}
+async function sendFile(buf,name,mime){saveBlob(buf,mime,name)}
 function addNums(a,id){
   id=id||"cmpNums";
   const cur=$(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
