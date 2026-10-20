@@ -108,6 +108,7 @@ td input[type=checkbox]{width:20px;height:20px;accent-color:var(--ac)}
 </div>
 <div class="card" id="cmpCard">
   <h2 style="font-size:1.1rem;margin:0 0 10px">Check delivery against manifest</h2>
+  <div style="margin-bottom:12px"><label for="cmpDate">Manifest date</label><input type="date" id="cmpDate"></div>
   <div class="row">
     <div class="grow"><label>1. LPN log</label><div class="row"><button id="cmpLogBtn">Upload log file</button><button id="cmpLogPhotoBtn">📷 Photo of printed log</button></div></div>
     <div class="grow"><label>2. Manifest photos</label><button id="cmpPhotoBtn">📷 Add manifest photo</button></div>
@@ -542,45 +543,86 @@ $("cmpPhotoFile").onchange=async e=>{
 };
 $("cmpClear").onclick=()=>{$("cmpNums").value="";$("cmpLogNums").value="";$("cmpLogName").textContent="";$("cmpSum").innerHTML="";cmpMsg("")};
 $("cmpGo").onclick=async()=>{
-  const logList=$("cmpLogNums").value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  const lines=id=>$(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  const uniq=a=>{const seen=new Set();return a.filter(x=>{const k=norm(x);if(!k||seen.has(k))return false;seen.add(k);return true})};
+  const logList=uniq(lines("cmpLogNums")),man=uniq(lines("cmpNums"));
   if(!logList.length){cmpMsg("Add the LPN log first: upload the exported file or take a photo of the printed copy.");return}
-  const man=[...new Set($("cmpNums").value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean))];
   if(!man.length){cmpMsg("Add manifest photos or type the manifest numbers first.");return}
-  const have=new Set(logList.map(norm));
-  const res=man.map(n=>({n,ok:have.has(norm(n))}));
-  const miss=res.filter(r=>!r.ok).length;
-  $("cmpSum").innerHTML="<span>On manifest: <b>"+res.length+"</b></span><span>✓ Found in log: <b>"+(res.length-miss)+"</b></span><span>✗ Missing from log: <b>"+miss+"</b></span>";
+  const ms=new Set(man.map(norm)),ls=new Set(logList.map(norm));
+  const res=[];
+  man.forEach(n=>res.push({n,man:true,log:ls.has(norm(n))}));
+  logList.forEach(n=>{if(!ms.has(norm(n)))res.push({n,man:false,log:true})});
+  const kind=x=>x.man&&x.log?"ok":x.man?"missing":"book";
+  const cnt={ok:0,missing:0,book:0};res.forEach(x=>cnt[kind(x)]++);
+  $("cmpSum").innerHTML="<span>On manifest: <b>"+man.length+"</b></span><span>✓ Matched: <b>"+cnt.ok+"</b></span><span>✗ Missing (report): <b>"+cnt.missing+"</b></span><span>⚠ On log only (book in): <b>"+cnt.book+"</b></span>";
   cmpMsg("Preparing document…");
   try{
     await loadExcel();
-    const d=$("date").value||"no-date";
+    const d=$("cmpDate").value||"no-date";
     const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet("Manifest Check");
-    ws.columns=[{width:40},{width:20}];
-    const bc={argb:"FF000000"},bd={top:{style:"medium",color:bc},left:{style:"medium",color:bc},bottom:{style:"medium",color:bc},right:{style:"medium",color:bc}};
-    const t=ws.getRow(1).getCell(1);t.value="Manifest check";t.font={name:"Arial",size:20,bold:true};
-    ws.getRow(2).getCell(1).value="Date: "+d;
-    ws.getRow(3).getCell(1).value="Found in log: "+(res.length-miss)+" of "+res.length+"   |   Missing from log: "+miss;
-    [2,3].forEach(r=>ws.getRow(r).getCell(1).font={name:"Arial",size:14});
-    const hr=ws.getRow(5);
-    ["LPN on manifest","In log?"].forEach((h,k)=>{const c=hr.getCell(k+1);c.value=h;c.font={name:"Arial",size:16,bold:true};c.border=bd;c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFE6E9ED"}}});
-    hr.height=26;
-    res.forEach((x,i)=>{
-      const r=ws.getRow(6+i);r.height=24;
-      const a=r.getCell(1),b=r.getCell(2);
-      a.value=x.n;a.font={name:"Arial",size:14};a.border=bd;a.alignment={vertical:"middle"};
-      b.value=x.ok?"✓ Found":"✗ Missing";
-      b.font={name:"Arial",size:14,bold:true,color:{argb:x.ok?"FF1B7A2F":"FFC62828"}};
-      b.border=bd;b.alignment={vertical:"middle"};
-      b.fill={type:"pattern",pattern:"solid",fgColor:{argb:x.ok?"FFDDF3E1":"FFFADBDB"}};
-    });
-    ws.pageSetup={orientation:"portrait",paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:"5:5",margins:{left:0.5,right:0.5,top:0.6,bottom:0.6,header:0.3,footer:0.3}};
+    ws.columns=[{width:21},{width:17},{width:10},{width:19},{width:3},{width:25},{width:18}];
+    const bc={argb:"FF000000"},med={style:"medium",color:bc};
+    const border={top:med,left:med,bottom:med,right:med};
+    let off=0;
+    if(logo){
+      off=5;
+      try{
+        const dim=await new Promise((res2,rej)=>{const im=new Image();im.onload=()=>res2([im.width,im.height]);im.onerror=rej;im.src=logo});
+        const hPx=Math.max(50,Math.min(140,Math.round(489*dim[1]/dim[0])));
+        const id=wb.addImage({base64:logo,extension:"png"});
+        for(let k=1;k<=4;k++)ws.getRow(k).height=hPx*0.75/4;
+        ws.addImage(id,{tl:{col:0,row:0},br:{col:4,row:4},editAs:"oneCell"});
+      }catch(e){off=0}
+    }
+    const side=[
+      {v:["Summary","Count"],h:1},
+      {v:["On manifest",man.length]},
+      {v:["✓ Matched",cnt.ok]},
+      {v:["✗ Missing",cnt.missing]},
+      {v:["⚠ Log only",cnt.book]},
+      null,
+      {v:["Delivery Details",""],h:1,merge:1},
+      {v:["Date",d],l:1}
+    ];
+    const ST={ok:{t:"✓ Matched",f:null},missing:{t:"✗ MISSING",f:"FFA6A6A6"},book:{t:"⚠ LOG ONLY",f:"FFD0D0D0"}};
+    const HD="FFE6E9ED";
+    const n=Math.max(res.length,side.length-1);
+    for(let i=-1;i<n;i++){
+      const r=ws.getRow(i+2+off);
+      const head=i<0,x=head?null:res[i],k0=x?kind(x):null,st=k0?ST[k0]:null;
+      const left=head?["LPN","On manifest","On log","Result"]:x?[x.n,x.man?"Yes":"No",x.log?"Yes":"No",st.t]:null;
+      const right=side[i+1]||null;
+      const put=(col,val,o)=>{
+        const c=r.getCell(col);c.value=val;
+        c.font={name:"Arial",size:14,bold:!!o.bold,color:bc};
+        c.border=border;
+        c.alignment={vertical:"middle",horizontal:o.center?"center":"left",wrapText:true};
+        if(o.fill)c.fill={type:"pattern",pattern:"solid",fgColor:{argb:o.fill}};
+      };
+      if(left)left.forEach((v,k)=>put(k+1,v,{bold:head||k0!=="ok",fill:head?HD:st.f,center:k>=1}));
+      if(right){
+        const hd=!!right.h;
+        put(6,right.v[0],{bold:hd||!!right.l,fill:(hd||right.l)?HD:null});
+        put(7,right.v[1],{bold:hd,fill:hd?HD:null,center:typeof right.v[1]==="number"});
+        if(right.merge)ws.mergeCells(r.number,6,r.number,7);
+      }
+      if(r.number>1&&(head||(right&&right.h))){
+        const up=ws.getRow(r.number-1);
+        (head?[1,2,3,4,6,7]:[6,7]).forEach(col=>{up.getCell(col).border={bottom:med}});
+      }
+      r.height=(head||(right&&right.h))?26:22;
+    }
+    ws.pageSetup={orientation:"portrait",paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:(1+off)+":"+(1+off),margins:{left:0.4,right:0.4,top:0.6,bottom:0.6,header:0.3,footer:0.3}};
     await sendFile(await wb.xlsx.writeBuffer(),"Manifest-check-"+d+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     cmpMsg("");
   }catch(err){
     if(err&&err.code==="declined"){cmpMsg("");return}
-    cmpMsg("Couldn't create the document: "+((err&&err.message)||"error"));
+    cmpMsg("Couldn’t create the document: "+((err&&err.message)||"error"));
   }
 };
+try{$("cmpDate").value=localStorage.getItem("lpncmpdate")||""}catch(e){}
+if(!$("cmpDate").value)$("cmpDate").value=new Date().toISOString().slice(0,10);
+$("cmpDate").onchange=()=>{try{localStorage.setItem("lpncmpdate",$("cmpDate").value)}catch(e){}};
 /* ---- help panel ---- */
 const HELP={guide:`<h3>1. Set up the delivery</h3>
 <p>Enter the <b>Date</b> and the name of the person who <b>Received</b> the delivery at the top. Use <b>Add logo</b> if you want a logo on the page and on the spreadsheet. If a file called logo.png sits next to the app, it is used as the default logo. <b>Change logo</b> overrides it on this device and <b>Reset to default logo</b> brings it back.</p>
@@ -603,10 +645,11 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <p>Press <b>Download (Excel)</b>. The file has your logo, the Pallet table (LPN, pallet type, FSDU), a breakdown of pallets by type with a Total, an FSDU line that is not included in the Total, and Delivery Details with the date and who received it. It is set up to print on A4 portrait. In the spreadsheet BB is shown as “Brown Box”. If the spreadsheet builder can’t load (for example no internet), a basic .xls file is saved instead.</p>
 <h3>5. Check a delivery against the manifest</h3>
 <ol>
+<li><b>Manifest date:</b> set the date of the manifest. It can be different from today and is used on the comparison spreadsheet.</li>
 <li><b>LPN log:</b> upload an exported spreadsheet, or take a photo of the printed log.</li>
 <li><b>Manifest:</b> add one or more photos of the manifest.</li>
 <li>Check the two lists of numbers and fix any mistakes. You can also type numbers in.</li>
-<li>Press <b>Compare and download</b> to get a spreadsheet with ✓ Found or ✗ Missing for every manifest number.</li>
+<li>Press <b>Compare and download</b> to get a spreadsheet that lists every LPN from both sources. <b>✓ Matched</b> means it is on both. <b>✗ MISSING</b> means it is on the manifest but not the log, so report it as missing. <b>⚠ LOG ONLY</b> means it is on the log but not the manifest, so it still needs booking in.</li>
 </ol>
 <p>Photos are read with text recognition. It looks for entries that match the LPN format and fixes common lookalike characters in the number part, but it can still misread the letters, so check the lists before comparing.</p>
 <h3>6. Good to know</h3>
@@ -614,7 +657,14 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <li>Your entries, date, name and logo are saved in this browser on this device only. <b>Clear all</b> removes the entries.</li>
 <li>LPNs are expected as 1 to 3 letters followed by digits, for example RUN000000000.</li>
 <li>Always check numbers read from photos before comparing, as photos can be misread.</li>
-</ul>`,log:`<h3>v1.8 <span class="ver">Current</span></h3>
+</ul>`,log:`<h3>v2.1 <span class="ver">Current</span></h3>
+<ul><li>Added a Manifest date for the comparison, separate from the log date.</li></ul>
+<h3>v2.0</h3>
+<ul><li>Manifest check spreadsheet redesigned: logo at the top, main table on the left with a Summary and Delivery Details table on the right, like the log spreadsheet.</li>
+<li>Optimised for black and white printing: results use symbols and words, with greyscale shading instead of colours.</li></ul>
+<h3>v1.9</h3>
+<ul><li>The comparison spreadsheet now shows where each unmatched LPN came from: manifest only is marked Missing (report it) and log only is marked to book in.</li></ul>
+<h3>v1.8</h3>
 <ul><li>Added this Guide and Changelog panel.</li></ul>
 <h3>v1.7</h3>
 <ul><li>Manifest check can now read a photo of the printed log as well as an uploaded file.</li>
