@@ -108,6 +108,7 @@ td input[type=checkbox]{width:20px;height:20px;accent-color:var(--ac)}
 </div>
 <div class="card" id="cmpCard">
   <h2 style="font-size:1.1rem;margin:0 0 10px">Check delivery against manifest</h2>
+  <div class="msg" style="color:var(--wn);margin:0 0 12px">⚠ This section is still being tested, so results may not always be right. Please check them carefully.</div>
   <div style="margin-bottom:12px"><label for="cmpDate">Manifest date</label><input type="date" id="cmpDate"></div>
   <div class="row">
     <div class="grow"><label>1. LPN log</label><div class="row"><button id="cmpLogBtn">Upload log file</button><button id="cmpLogPhotoBtn">📷 Photo of printed log</button></div></div>
@@ -659,7 +660,9 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <li>Your entries, date, name and logo are saved in this browser on this device only. <b>Clear all</b> removes the entries.</li>
 <li>LPNs are expected as 1 to 3 letters followed by digits, for example RUN000000000.</li>
 <li>Always check numbers read from photos before comparing, as photos can be misread.</li>
-</ul>`,log:`<h3>v2.1 <span class="ver">Current</span></h3>
+</ul>`,log:`<h3>v2.2 <span class="ver">Current</span></h3>
+<ul><li>Added a note that the manifest comparison section is still being tested.</li></ul>
+<h3>v2.1</h3>
 <ul><li>Added a Manifest date for the comparison, separate from the log date.</li></ul>
 <h3>v2.0</h3>
 <ul><li>Manifest check spreadsheet redesigned: logo at the top, main table on the left with a Summary and Delivery Details table on the right, like the log spreadsheet.</li>
