@@ -652,7 +652,7 @@ if(!$("cmpDate").value)$("cmpDate").value=new Date().toISOString().slice(0,10);
 $("cmpDate").onchange=()=>{try{localStorage.setItem("lpncmpdate",$("cmpDate").value)}catch(e){}};
 /* ---- prefix presets ---- */
 const PRESET_URL="presets.json";
-const BUILTIN={"Default":"RUN, QUB, VLT, RBY, IM, MDW, V, R, Q, M"};
+const BUILTIN={"Standard":"RUN, QUB, VLT, RBY, IM, MDW, V, R, Q, M"};
 let filePresets={},localPresets={};
 const pfxMsg=t=>{$("pfxMsg").textContent=t};
 const normList=v=>(Array.isArray(v)?v.join(","):String(v)).toUpperCase().split(/[^A-Z]+/).filter(Boolean).join(", ");
@@ -661,23 +661,22 @@ const savePfx=()=>{try{localStorage.setItem("lpncmppfx",$("cmpPfx").value)}catch
 const saveLocal=()=>{try{localStorage.setItem("lpnpresets",JSON.stringify(localPresets))}catch(e){}};
 function fillPresets(){
   const s=$("cmpPreset");s.innerHTML="";
+  const a=document.createElement("option");a.value="__all";a.textContent="All prefixes (leave blank)";s.appendChild(a);
   Object.keys(presets()).forEach(n=>{const o=document.createElement("option");o.textContent=n;s.appendChild(o)});
   const c=document.createElement("option");c.value="__custom";c.textContent="Custom (not saved as a preset)";s.appendChild(c);
   syncSelect();
 }
 function syncSelect(){
   const cur=normList($("cmpPfx").value),p=presets();
+  if(!cur){$("cmpPreset").value="__all";return}
   const hit=Object.keys(p).find(n=>normList(p[n])===cur);
   $("cmpPreset").value=hit||"__custom";
 }
 function applyPreset(){
   const n=$("cmpPreset").value,p=presets();
+  if(n==="__all"){$("cmpPfx").value="";savePfx();return}
   if(n==="__custom"||!p[n])return;
   $("cmpPfx").value=normList(p[n]);savePfx();
-}
-function useFirstIfEmpty(){
-  if($("cmpPfx").value.trim())return;
-  $("cmpPreset").selectedIndex=0;applyPreset();syncSelect();
 }
 async function loadPresetFile(){
   if(!PRESET_URL)return;
@@ -688,11 +687,18 @@ async function loadPresetFile(){
     Object.keys(j).forEach(k=>{if(k[0]!=="_"){const v=normList(j[k]);if(v)o[k]=v}});
     filePresets=o;pfxMsg("");
   }catch(e){pfxMsg("Couldn’t load "+PRESET_URL+", so the built-in preset is being used.")}
-  fillPresets();useFirstIfEmpty();
+  fillPresets();
 }
 try{localPresets=JSON.parse(localStorage.getItem("lpnpresets")||"{}")||{}}catch(e){localPresets={}}
+try{
+  if(localStorage.getItem("lpncmppfxv")!=="3"){
+    const old=normList(localStorage.getItem("lpncmppfx")||"");
+    if(old==="RUN, QUB, VLT, RBY, IM, V, R, Q"||old==="RUN, QUB, VLT, RBY, IM, MDW, V, R, Q, M")localStorage.setItem("lpncmppfx","");
+    localStorage.setItem("lpncmppfxv","3");
+  }
+}catch(e){}
 try{$("cmpPfx").value=localStorage.getItem("lpncmppfx")||""}catch(e){}
-fillPresets();useFirstIfEmpty();loadPresetFile();
+fillPresets();loadPresetFile();
 $("cmpPreset").onchange=()=>{applyPreset();pfxMsg("")};
 $("cmpPfx").oninput=()=>{savePfx();syncSelect()};
 $("pfxSave").onclick=()=>{
@@ -705,7 +711,7 @@ $("pfxSave").onclick=()=>{
 };
 $("pfxDel").onclick=()=>{
   const n=$("cmpPreset").value;
-  if(n==="__custom"){pfxMsg("Choose a saved preset to delete.");return}
+  if(n==="__custom"||n==="__all"){pfxMsg("Choose a saved preset to delete.");return}
   if(Object.prototype.hasOwnProperty.call(localPresets,n)){
     delete localPresets[n];saveLocal();fillPresets();
     pfxMsg("Deleted “"+n+"”."+(presets()[n]?" The version from the presets file is now used.":""));
@@ -740,7 +746,7 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <h3>5. Check a delivery against the manifest</h3>
 <ol>
 <li><b>Manifest date:</b> set the date of the manifest. It can be different from today and is used on the comparison spreadsheet.</li>
-<li><b>Prefix preset:</b> choose a preset to fill the list of LPN prefixes, then edit the list if a delivery is different. Only numbers starting with these prefixes are picked up from photos. Use <b>Save as preset</b> to keep a list under a name. Presets are also read from a <b>presets.json</b> file next to the app, which you can edit in any text editor. <b>Download presets file</b> creates an updated copy from your current presets.</li>
+<li><b>Prefix preset:</b> choose a preset to fill the list of LPN prefixes, then edit the list if a delivery is different. Only numbers starting with these prefixes are picked up from photos. Leave the list blank, or choose <b>All prefixes</b>, to pick up any LPN made of 1 to 3 letters followed by digits. Use <b>Save as preset</b> to keep a list under a name. Presets are also read from a <b>presets.json</b> file next to the app, which you can edit in any text editor. <b>Download presets file</b> creates an updated copy from your current presets.</li>
 <li><b>LPN log:</b> upload an exported spreadsheet, or take a photo of the printed log.</li>
 <li><b>Manifest:</b> add one or more photos of the manifest.</li>
 <li>Check the two lists of numbers and fix any mistakes. You can also type numbers in.</li>
@@ -752,7 +758,9 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <li>Your entries, date, name and logo are saved in this browser on this device only. <b>Clear all</b> removes the entries.</li>
 <li>LPNs are expected as a letter prefix followed by digits, for example RUN000000000. The prefix list only affects numbers read from photos, not numbers you type in.</li>
 <li>Always check numbers read from photos before comparing, as photos can be misread.</li>
-</ul>`,log:`<h3>v2.5 <span class="ver">Current</span></h3>
+</ul>`,log:`<h3>v2.6 <span class="ver">Current</span></h3>
+<ul><li>Prefix detection now starts blank (any LPN), and the previous list is saved as the Standard preset.</li></ul>
+<h3>v2.5</h3>
 <ul><li>Prefixes are now chosen from editable presets that you can save and delete.</li><li>The standalone version reads shared presets from an editable presets.json file next to the app.</li></ul>
 <h3>v2.4</h3>
 <ul><li>Added MDW and M to the default LPN prefixes.</li></ul>

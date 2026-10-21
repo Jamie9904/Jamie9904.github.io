@@ -1,4 +1,4 @@
 {
   "_note": "Each preset is a name and a comma-separated list of LPN prefixes. Edit this file and upload it next to index.html.",
-  "Default": "RUN, QUB, VLT, RBY, IM, MDW, V, R, Q, M"
+  "Standard": "RUN, QUB, VLT, RBY, IM, MDW, V, R, Q, M"
 }
