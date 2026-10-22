@@ -460,7 +460,7 @@ $("logoFile").onchange=async e=>{
 $("logoRm").onclick=()=>{custom="";try{localStorage.removeItem("lpnlogo")}catch(e){}showLogo()};
 loadLogo();
 /* ---- manifest check ---- */
-let logLpns=null;
+let logLpns=null,logSrc=null;
 const norm=v=>String(v).toUpperCase().replace(/[^A-Z0-9]/g,"");
 const cmpMsg=t=>{$("cmpMsg").textContent=t};
 function getPfx(){return [...new Set(($("cmpPfx").value||"").toUpperCase().split(/[^A-Z]+/).filter(Boolean))]}
@@ -487,15 +487,16 @@ function lpnsFromGrid(g){
   return out;
 }
 async function readLog(f){
+  logSrc=null;
   const name=f.name.toLowerCase();
   if(name.endsWith(".xlsx")){
     await loadExcel();
-    const wb=new ExcelJS.Workbook();await wb.xlsx.load(await f.arrayBuffer());
+    const ab=await f.arrayBuffer();const wb=new ExcelJS.Workbook();await wb.xlsx.load(ab);
     const g=[];
     wb.worksheets[0].eachRow({includeEmpty:true},row=>{
       g.push((row.values||[]).slice(1).map(v=>v==null?"":typeof v==="object"?(v.richText?v.richText.map(x=>x.text).join(""):(v.text||v.result||"")):v));
     });
-    return lpnsFromGrid(g);
+    const lp=lpnsFromGrid(g);logSrc={buf:ab.slice(0),name:f.name};return lp;
   }
   const text=await f.text();
   if(/<table/i.test(text)){
@@ -544,7 +545,7 @@ $("cmpLogBtn").onclick=()=>{$("cmpLogFile").value="";$("cmpLogFile").click()};
 $("cmpLogFile").onchange=async e=>{
   const f=e.target.files&&e.target.files[0];if(!f)return;
   cmpMsg("Reading log…");
-  try{const l=await readLog(f);$("cmpLogNums").value=l.join("\n");$("cmpLogName").textContent=f.name+": "+l.length+" LPNs found";cmpMsg("")}
+  try{const l=await readLog(f);$("cmpLogNums").value=l.join("\n");$("cmpLogName").textContent=f.name+": "+l.length+" LPNs found"+(logSrc?". The comparison will be added to this file as a new tab.":"");cmpMsg("")}
   catch(err){$("cmpLogName").textContent="";cmpMsg(err.message||"Couldn't read that file.")}
 };
 $("cmpLogPhotoBtn").onclick=()=>{$("cmpLogPhotoFile").value="";$("cmpLogPhotoFile").click()};
@@ -555,7 +556,7 @@ $("cmpLogPhotoFile").onchange=async e=>{
     try{addNums(await readLogPhoto(files[i]),"cmpLogNums")}
     catch(err){cmpMsg("Couldn't read log photo "+(i+1)+": "+((err&&err.message)||"error")+" You can type the numbers in the box instead.");return}
   }
-  $("cmpLogName").textContent="Read from photo of printed log";
+  logSrc=null;$("cmpLogName").textContent="Read from photo of printed log";
   cmpMsg("Done. Check the log numbers are correct, then compare.");
 };
 $("cmpPhotoBtn").onclick=()=>{$("cmpPhotoFile").value="";$("cmpPhotoFile").click()};
@@ -568,7 +569,7 @@ $("cmpPhotoFile").onchange=async e=>{
   }
   cmpMsg("Done. Check the numbers below are correct, then compare.");
 };
-$("cmpClear").onclick=()=>{$("cmpNums").value="";$("cmpLogNums").value="";$("cmpLogName").textContent="";$("cmpSum").innerHTML="";cmpMsg("")};
+$("cmpClear").onclick=()=>{logSrc=null;$("cmpNums").value="";$("cmpLogNums").value="";$("cmpLogName").textContent="";$("cmpSum").innerHTML="";cmpMsg("")};
 $("cmpGo").onclick=async()=>{
   const lines=id=>$(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
   const uniq=a=>{const seen=new Set();return a.filter(x=>{const k=norm(x);if(!k||seen.has(k))return false;seen.add(k);return true})};
@@ -586,7 +587,11 @@ $("cmpGo").onclick=async()=>{
   try{
     await loadExcel();
     const d=$("cmpDate").value||"no-date";
-    const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet("Manifest Check");
+    const wb=new ExcelJS.Workbook();
+    if(logSrc)await wb.xlsx.load(logSrc.buf);
+    let tab="Manifest Check",tn=2;
+    while(wb.getWorksheet(tab))tab="Manifest Check "+(tn++);
+    const ws=wb.addWorksheet(tab);
     ws.columns=[{width:21},{width:17},{width:10},{width:19},{width:3},{width:25},{width:18}];
     const bc={argb:"FF000000"},med={style:"medium",color:bc};
     const border={top:med,left:med,bottom:med,right:med};
@@ -640,7 +645,8 @@ $("cmpGo").onclick=async()=>{
       r.height=(head||(right&&right.h))?26:22;
     }
     ws.pageSetup={orientation:"portrait",paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:(1+off)+":"+(1+off),margins:{left:0.4,right:0.4,top:0.6,bottom:0.6,header:0.3,footer:0.3}};
-    await sendFile(await wb.xlsx.writeBuffer(),"Manifest-check-"+d+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    const outName=logSrc?logSrc.name.replace(/\.xlsx$/i,"")+" (with manifest check).xlsx":"Manifest-check-"+d+".xlsx";
+    await sendFile(await wb.xlsx.writeBuffer(),outName,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     cmpMsg("");
   }catch(err){
     if(err&&err.code==="declined"){cmpMsg("");return}
@@ -750,7 +756,7 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <li><b>LPN log:</b> upload an exported spreadsheet, or take a photo of the printed log.</li>
 <li><b>Manifest:</b> add one or more photos of the manifest.</li>
 <li>Check the two lists of numbers and fix any mistakes. You can also type numbers in.</li>
-<li>Press <b>Compare and download</b> to get a spreadsheet that lists every LPN from both sources. <b>✓ Matched</b> means it is on both. <b>✗ MISSING</b> means it is on the manifest but not the log, so report it as missing. <b>⚠ LOG ONLY</b> means it is on the log but not the manifest, so it still needs booking in.</li>
+<li>Press <b>Compare and download</b> to get a spreadsheet that lists every LPN from both sources. <b>✓ Matched</b> means it is on both. <b>✗ MISSING</b> means it is on the manifest but not the log, so report it as missing. <b>⚠ LOG ONLY</b> means it is on the log but not the manifest, so it still needs booking in. If you uploaded the log as an .xlsx file, the comparison is added as a new tab called <b>Manifest Check</b> in a copy of that file, so you get both in one workbook. With a photo of the printed log you get a separate spreadsheet.</li>
 </ol>
 <p>Photos are read with text recognition. It looks for entries that match the LPN format and fixes common lookalike characters in the number part, but it can still misread the letters, so check the lists before comparing.</p>
 <h3>6. Good to know</h3>
@@ -758,7 +764,9 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <li>Your entries, date, name and logo are saved in this browser on this device only. <b>Clear all</b> removes the entries.</li>
 <li>LPNs are expected as a letter prefix followed by digits, for example RUN000000000. The prefix list only affects numbers read from photos, not numbers you type in.</li>
 <li>Always check numbers read from photos before comparing, as photos can be misread.</li>
-</ul>`,log:`<h3>v2.6 <span class="ver">Current</span></h3>
+</ul>`,log:`<h3>v2.7 <span class="ver">Current</span></h3>
+<ul><li>When the log was uploaded as an .xlsx file, the comparison is now added as a new tab on a copy of that file.</li></ul>
+<h3>v2.6</h3>
 <ul><li>Prefix detection now starts blank (any LPN), and the previous list is saved as the Standard preset.</li></ul>
 <h3>v2.5</h3>
 <ul><li>Prefixes are now chosen from editable presets that you can save and delete.</li><li>The standalone version reads shared presets from an editable presets.json file next to the app.</li></ul>
