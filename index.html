@@ -125,7 +125,7 @@ td input[type=checkbox]{width:20px;height:20px;accent-color:var(--ac)}
   </div>
   <div class="row">
     <div class="grow"><label>1. LPN log</label><div class="row"><button id="cmpLogBtn">Upload log file</button><button id="cmpLogPhotoBtn">📷 Photo of printed log</button></div></div>
-    <div class="grow"><label>2. Manifest photos</label><button id="cmpPhotoBtn">📷 Add manifest photo</button></div>
+    <div class="grow"><label>2. Manifest photos or PDFs</label><div class="row"><button id="cmpPhotoBtn">📷 Add manifest photo</button><button id="cmpPdfBtn">📄 Add manifest PDFs</button></div></div>
   </div>
   <div class="msg" id="cmpLogName" style="color:var(--mu)"></div>
   <label for="cmpLogNums" style="margin-top:10px">Numbers in the log (one per line: fix any mistakes)</label>
@@ -133,6 +133,7 @@ td input[type=checkbox]{width:20px;height:20px;accent-color:var(--ac)}
   <input type="file" id="cmpLogFile" accept=".xlsx,.xls,.csv" hidden>
   <input type="file" id="cmpLogPhotoFile" accept="image/*" multiple hidden>
   <input type="file" id="cmpPhotoFile" accept="image/*" multiple hidden>
+  <input type="file" id="cmpPdfFile" accept="application/pdf,.pdf" multiple hidden>
   <div class="msg" id="cmpMsg"></div>
   <label for="cmpNums" style="margin-top:10px">Numbers read from the manifest (one per line: fix any mistakes or type them in)</label>
   <textarea id="cmpNums" rows="6"></textarea>
@@ -523,17 +524,61 @@ function extractLpns(text){
   }
   return out;
 }
-async function ocr(f){
+async function prep(f){
+  const b=await createImageBitmap(f);
+  const long=Math.max(b.width,b.height);
+  const sc=long<2400?Math.min(3,2400/long):Math.min(1,3200/long);
+  const cv=document.createElement("canvas");cv.width=Math.round(b.width*sc);cv.height=Math.round(b.height*sc);
+  const ctx=cv.getContext("2d");ctx.imageSmoothingQuality="high";ctx.drawImage(b,0,0,cv.width,cv.height);
+  const im=ctx.getImageData(0,0,cv.width,cv.height),d=im.data,n=d.length/4,hist=new Uint32Array(256);
+  for(let i=0;i<d.length;i+=4){const g=(d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114)|0;d[i]=d[i+1]=d[i+2]=g;hist[g]++}
+  let acc=0,lo=0,hi=255;
+  for(let i=0;i<256;i++){acc+=hist[i];if(acc>=n*0.01){lo=i;break}}
+  acc=0;for(let i=255;i>=0;i--){acc+=hist[i];if(acc>=n*0.01){hi=i;break}}
+  const span=Math.max(1,hi-lo);
+  for(let i=0;i<d.length;i+=4){const v=Math.max(0,Math.min(255,((d[i]-lo)*255/span)|0));d[i]=d[i+1]=d[i+2]=v}
+  ctx.putImageData(im,0,0);return cv;
+}
+function cropScaled(cv,bb){
+  const pad=6,x=Math.max(0,bb.x0-pad),y=Math.max(0,bb.y0-pad);
+  const w=Math.max(1,Math.min(cv.width-x,bb.x1-bb.x0+2*pad)),h=Math.max(1,Math.min(cv.height-y,bb.y1-bb.y0+2*pad));
+  const sc=Math.min(4,Math.max(1,110/h)),m=16;
+  const c=document.createElement("canvas");c.width=Math.round(w*sc)+2*m;c.height=Math.round(h*sc)+2*m;
+  const ctx=c.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,c.width,c.height);
+  ctx.imageSmoothingQuality="high";ctx.drawImage(cv,x,y,w,h,m,m,Math.round(w*sc),Math.round(h*sc));
+  return c;
+}
+async function ocrLpns(f){
   await loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",()=>window.Tesseract);
+  const cv=await prep(f);
   const w=await Tesseract.createWorker("eng");
   try{
-    await w.setParameters({tessedit_char_whitelist:"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "});
-    return (await w.recognize(await shrink(f))).data.text;
+    await w.setParameters({tessedit_char_whitelist:"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ",preserve_interword_spaces:"1"});
+    const r=(await w.recognize(cv)).data;
+    const out=[],orig=new Set();
+    await w.setParameters({tessedit_pageseg_mode:"7"});
+    for(const wd of (r.words||[])){
+      const found=extractLpns(wd.text);
+      if(found.length!==1)continue;
+      orig.add(found[0]);
+      let val=found[0];
+      try{
+        const again=extractLpns((await w.recognize(cropScaled(cv,wd.bbox))).data.text.replace(/\s+/g,""));
+        if(again.length===1)val=again[0];
+      }catch(e){}
+      out.push(val);
+    }
+    extractLpns(r.text).forEach(x=>{if(!orig.has(x))out.push(x)});
+    return out;
   }finally{await w.terminate()}
 }
-async function readPhoto(f){return extractLpns(await ocr(f))}
-async function readLogPhoto(f){return extractLpns(await ocr(f))}
+async function readPhoto(f){return ocrLpns(f)}
+async function readLogPhoto(f){return ocrLpns(f)}
 async function sendFile(buf,name,mime){saveBlob(buf,mime,name)}
+function oddNote(id){
+  const odd=$(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).filter(x=>{const m=x.match(/\d+$/);const n=m?m[0].length:0;return n!==9&&n!==10});
+  return odd.length?" These have an unusual number of digits, so check them against the paper copy: "+odd.slice(0,8).join(", ")+(odd.length>8?" and "+(odd.length-8)+" more":"")+".":"";
+}
 function addNums(a,id){
   id=id||"cmpNums";
   const cur=$(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
@@ -557,7 +602,53 @@ $("cmpLogPhotoFile").onchange=async e=>{
     catch(err){cmpMsg("Couldn't read log photo "+(i+1)+": "+((err&&err.message)||"error")+" You can type the numbers in the box instead.");return}
   }
   logSrc=null;$("cmpLogName").textContent="Read from photo of printed log";
-  cmpMsg("Done. Check the log numbers are correct, then compare.");
+  cmpMsg("Done. Check the log numbers are correct, then compare."+oddNote("cmpLogNums"));
+};
+async function loadPdfJs(){
+  const t=()=>window.pdfjsLib;
+  const set=b=>{pdfjsLib.GlobalWorkerOptions.workerSrc=b+"pdf.worker.min.js"};
+  try{await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",t);set("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/")}
+  catch(e){await loadScript("https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js",t);set("https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/")}
+}
+function lpnsFromText(text){
+  const pf=getPfx().sort((a,b)=>b.length-a.length);
+  const re=new RegExp("\\b("+(pf.length?pf.join("|"):"[A-Z]{1,3}")+")[ \\t]?([0-9]{8,12})\\b","gi");
+  const out=[];let m;
+  while((m=re.exec(text)))out.push(m[1].toUpperCase()+m[2]);
+  return out;
+}
+async function readPdf(f,say){
+  await loadPdfJs();
+  const pdf=await pdfjsLib.getDocument({data:new Uint8Array(await f.arrayBuffer())}).promise;
+  let text="";
+  for(let p=1;p<=pdf.numPages;p++){
+    const tc=await (await pdf.getPage(p)).getTextContent();
+    text+=tc.items.map(i=>i.str+(i.hasEOL?"\n":" ")).join("")+"\n";
+  }
+  const found=lpnsFromText(text);
+  if(found.length)return found;
+  const out=[],n=Math.min(pdf.numPages,20);
+  for(let p=1;p<=n;p++){
+    say("reading page "+p+" of "+n+"…");
+    const page=await pdf.getPage(p),vp=page.getViewport({scale:2});
+    const cv=document.createElement("canvas");cv.width=Math.round(vp.width);cv.height=Math.round(vp.height);
+    await page.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;
+    const blob=await new Promise(r=>cv.toBlob(r,"image/jpeg",0.85));
+    out.push(...await readPhoto(blob));
+  }
+  return out;
+}
+$("cmpPdfBtn").onclick=()=>{$("cmpPdfFile").value="";$("cmpPdfFile").click()};
+$("cmpPdfFile").onchange=async e=>{
+  const files=[...(e.target.files||[])];if(!files.length)return;
+  let total=0;const fails=[];
+  for(let i=0;i<files.length;i++){
+    const tag="PDF "+(i+1)+" of "+files.length;
+    cmpMsg("Reading "+tag+"…");
+    try{const found=await readPdf(files[i],m=>cmpMsg(tag+": "+m));total+=found.length;addNums(found)}
+    catch(err){fails.push(files[i].name+" ("+((err&&err.message)||"error")+")")}
+  }
+  cmpMsg("Read "+(files.length-fails.length)+" of "+files.length+" PDFs and found "+total+" LPNs."+(fails.length?" Couldn’t read: "+fails.join(", ")+". You can type those numbers in the box instead.":"")+" Check the numbers below are correct, then compare."+oddNote("cmpNums"));
 };
 $("cmpPhotoBtn").onclick=()=>{$("cmpPhotoFile").value="";$("cmpPhotoFile").click()};
 $("cmpPhotoFile").onchange=async e=>{
@@ -567,7 +658,7 @@ $("cmpPhotoFile").onchange=async e=>{
     try{addNums(await readPhoto(files[i]))}
     catch(err){cmpMsg("Couldn't read photo "+(i+1)+": "+((err&&err.message)||"error")+" You can type the numbers in the box instead.");return}
   }
-  cmpMsg("Done. Check the numbers below are correct, then compare.");
+  cmpMsg("Done. Check the numbers below are correct, then compare."+oddNote("cmpNums"));
 };
 $("cmpClear").onclick=()=>{logSrc=null;$("cmpNums").value="";$("cmpLogNums").value="";$("cmpLogName").textContent="";$("cmpSum").innerHTML="";cmpMsg("")};
 $("cmpGo").onclick=async()=>{
@@ -754,17 +845,21 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <li><b>Manifest date:</b> set the date of the manifest. It can be different from today and is used on the comparison spreadsheet.</li>
 <li><b>Prefix preset:</b> choose a preset to fill the list of LPN prefixes, then edit the list if a delivery is different. Only numbers starting with these prefixes are picked up from photos. Leave the list blank, or choose <b>All prefixes</b>, to pick up any LPN made of 1 to 3 letters followed by digits. Use <b>Save as preset</b> to keep a list under a name. <b>Download presets file</b> creates an updated copy from your current presets.</li>
 <li><b>LPN log:</b> upload an exported spreadsheet, or take a photo of the printed log.</li>
-<li><b>Manifest:</b> add one or more photos of the manifest.</li>
+<li><b>Manifest:</b> add one or more photos or PDF files of the manifest. You can choose several PDFs at once. PDFs with selectable text are read directly, and scanned PDFs are read like photos.</li>
 <li>Check the two lists of numbers and fix any mistakes. You can also type numbers in.</li>
 <li>Press <b>Compare and download</b> to get a spreadsheet that lists every LPN from both sources. <b>✓ Matched</b> means it is on both. <b>✗ MISSING</b> means it is on the manifest but not the log, so report it as missing. <b>⚠ LOG ONLY</b> means it is on the log but not the manifest, so it still needs booking in. If you uploaded the log as an .xlsx file, the comparison is added as a new tab called <b>Manifest Check</b> in a copy of that file, so you get both in one workbook. With a photo of the printed log you get a separate spreadsheet.</li>
 </ol>
-<p>Photos are read with text recognition. It looks for entries that match the LPN format and fixes common lookalike characters in the number part, but it can still misread the letters, so check the lists before comparing.</p>
+<p>Photos are read with text recognition. It looks for entries that match the LPN format and fixes common lookalike characters in the number part, but it can still misread the letters, so check the lists before comparing. It cleans up the image and re-reads each number close up to improve accuracy, and flags numbers with an unusual number of digits.</p>
 <h3>6. Good to know</h3>
 <ul>
 <li>Your entries, date, name and logo are saved in this browser on this device only. <b>Clear all</b> removes the entries.</li>
 <li>LPNs are expected as a letter prefix followed by digits, for example RUN000000000. The prefix list only affects numbers read from photos, not numbers you type in.</li>
 <li>Always check numbers read from photos before comparing, as photos can be misread.</li>
-</ul>`,log:`<h3>v2.7 <span class="ver">Current</span></h3>
+</ul>`,log:`<h3>v2.9 <span class="ver">Current</span></h3>
+<ul><li>Improved text recognition: the image is cleaned up and each number is re-read close up. Numbers with an unusual number of digits are now flagged.</li></ul>
+<h3>v2.8</h3>
+<ul><li>The manifest check can now read several PDF manifests at once.</li></ul>
+<h3>v2.7</h3>
 <ul><li>When the log was uploaded as an .xlsx file, the comparison is now added as a new tab on a copy of that file.</li></ul>
 <h3>v2.6</h3>
 <ul><li>Prefix detection now starts blank (any LPN), and the previous list is saved as the Standard preset.</li></ul>
