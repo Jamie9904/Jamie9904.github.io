@@ -115,7 +115,7 @@ td input[type=checkbox]{width:20px;height:20px;accent-color:var(--ac)}
   </div>
   <div class="act">
     <button class="d" id="clear">Clear all</button>
-    <button class="p" id="dl">Download (Excel)</button>
+    <div class="row" style="gap:8px"><button id="dlMail">✉ Email file</button><button class="p" id="dl">Download (Excel)</button></div>
   </div>
   <div class="msg" id="dlmsg"></div>
 </div>
@@ -151,7 +151,7 @@ td input[type=checkbox]{width:20px;height:20px;accent-color:var(--ac)}
   <label for="cmpNums" style="margin-top:10px">Numbers read from the manifest (one per line: fix any mistakes or type them in)</label>
   <textarea id="cmpNums" rows="6"></textarea>
   <div class="sum" id="cmpSum" style="margin-top:10px"></div>
-  <div class="act"><button class="d" id="cmpClear">Clear</button><button class="p" id="cmpGo">Compare and download</button></div>
+  <div class="act"><button class="d" id="cmpClear">Clear</button><div class="row" style="gap:8px"><button id="cmpMail">✉ Compare and email</button><button class="p" id="cmpGo">Compare and download</button></div></div>
 </div>
 </main>
 
@@ -360,7 +360,7 @@ function saveBlob(data,type,name){
   document.body.appendChild(a);a.click();
   setTimeout(()=>{a.remove();URL.revokeObjectURL(url)},10000);
 }
-function fallbackXls(d){
+async function fallbackXls(d){
   const esc=v=>String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   const who=($("recv").value||"").trim();
   const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
@@ -383,8 +383,27 @@ function fallbackXls(d){
     h+="</tr>";
   }
   h+="</table></body></html>";
-  saveBlob(h,"application/vnd.ms-excel","LPN-log-"+d+".xls");
+  await deliver(h,"LPN-log-"+d+".xls","application/vnd.ms-excel");
 }
+let emailMode=false,emailNote="";
+async function deliver(buf,name,mime){
+  if(!emailMode)return saveOnly(buf,name,mime);
+  const file=new File([buf],name,{type:mime});
+  const subject=name.replace(/\.[^.]+$/,"");
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    try{await navigator.share({files:[file],title:subject,text:"Please find the attached file: "+name});return}
+    catch(e){if(e&&e.name==="AbortError")return}
+  }
+  await saveOnly(buf,name,mime);
+  emailNote="This browser can’t attach files automatically, so the file was saved. Please attach it to your email.";
+  try{window.location.href="mailto:?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent("Please find the attached file: "+name)}catch(e){}
+}
+async function emailVia(handler,msgId){
+  emailMode=true;emailNote="";
+  try{await handler()}finally{emailMode=false}
+  if(emailNote)$(msgId).textContent=emailNote;
+}
+async function saveOnly(buf,name,mime){saveBlob(buf,mime,name)}
 $("dl").onclick=async()=>{
   const m=$("dlmsg");m.textContent="";
   if(!rows.length){m.textContent="Add at least one LPN before downloading.";return}
@@ -396,7 +415,7 @@ $("dl").onclick=async()=>{
     try{await loadScript("https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js",hasX)}
     catch(e1){try{await loadScript("https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js",hasX)}catch(e2){ok=false}}
     if(!ok){
-      fallbackXls(d);
+      await fallbackXls(d);
       m.textContent="The full spreadsheet builder couldn't load (no internet or it's blocked), so a basic Excel file (.xls) was saved instead. Excel may warn about the format when opening: click Yes.";
       return;
     }
@@ -457,7 +476,7 @@ $("dl").onclick=async()=>{
     ws.pageSetup={orientation:"portrait",paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:(1+off)+":"+(1+off),margins:{left:0.4,right:0.4,top:0.6,bottom:0.6,header:0.3,footer:0.3}};
     ws.views=[{state:"frozen",ySplit:1+off}];
     const buf=await wb.xlsx.writeBuffer();
-    saveBlob(buf,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","LPN-log-"+d+".xlsx");
+    await deliver(buf,"LPN-log-"+d+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     m.textContent="";
   }catch(e){
     m.textContent="Couldn't create the spreadsheet: "+((e&&e.message)||"unknown error")+". Please try again or tell me this message.";
@@ -615,7 +634,7 @@ async function ocrLpns(f){
 }
 async function readPhoto(f){return ocrLpns(f)}
 async function readLogPhoto(f){return ocrLpns(f)}
-async function sendFile(buf,name,mime){saveBlob(buf,mime,name)}
+async function sendFile(buf,name,mime){return deliver(buf,name,mime)}
 function oddNote(id){
   const odd=$(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).filter(x=>{const m=x.match(/\d+$/);const n=m?m[0].length:0;return n!==9&&n!==10});
   return odd.length?" These have an unusual number of digits, so check them against the paper copy: "+odd.slice(0,8).join(", ")+(odd.length>8?" and "+(odd.length-8)+" more":"")+".":"";
@@ -861,6 +880,8 @@ $("pfxDl").onclick=()=>{
   saveBlob(JSON.stringify(o,null,2)+"\n","application/json","presets.json");
   pfxMsg("Downloaded presets.json. Replace the file next to the app with it to share these presets.");
 };
+$("dlMail").onclick=()=>emailVia($("dl").onclick,"dlmsg");
+$("cmpMail").onclick=()=>emailVia($("cmpGo").onclick,"cmpMsg");
 /* ---- help panel ---- */
 const HELP={guide:`<h3>1. Set up the delivery</h3>
 <p>Enter the <b>Date</b> and the name of the person who <b>Received</b> the delivery at the top. Use <b>Add logo</b> if you want a logo on the page and on the spreadsheet. If a file called logo.png sits next to the app, it is used as the default logo. <b>Change logo</b> overrides it on this device and <b>Reset to default logo</b> brings it back.</p>
@@ -881,6 +902,7 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 </ul>
 <h3>4. Download the spreadsheet</h3>
 <p>Press <b>Download (Excel)</b>. The file has your logo, the Pallet table (LPN, pallet type, FSDU), a breakdown of pallets by type with a Total, an FSDU line that is not included in the Total, and Delivery Details with the date and who received it. It is set up to print on A4 portrait. In the spreadsheet BB is shown as “Brown Box”. If the spreadsheet builder can’t load (for example no internet), a basic .xls file is saved instead.</p>
+<p><b>Emailing it:</b> press <b>✉ Email file</b> instead and your phone’s share sheet opens with the spreadsheet attached. Choose your email app from the list. <b>✉ Compare and email</b> does the same for the comparison. If the browser can’t attach files, the file is saved and you are asked to attach it to your email yourself.</p>
 <h3>5. Check a delivery against the manifest</h3>
 <ol>
 <li><b>Manifest date:</b> set the date of the manifest. It can be different from today and is used on the comparison spreadsheet.</li>
@@ -903,7 +925,9 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <li>Your entries, date, name and logo are saved in this browser on this device only. <b>Clear all</b> removes the entries.</li>
 <li>LPNs are expected as a letter prefix followed by digits, for example RUN000000000. The prefix list only affects numbers read from photos, not numbers you type in.</li>
 <li>Always check numbers read from photos before comparing, as photos can be misread.</li>
-</ul>`,log:`<h3>v3.1 <span class="ver">Current</span></h3>
+</ul>`,log:`<h3>v3.2 <span class="ver">Current</span></h3>
+<ul><li>Added buttons to email the spreadsheets as attachments using your phone’s share sheet.</li></ul>
+<h3>v3.1</h3>
 <ul><li>Added a one-time pop-up that explains how to install the app.</li></ul>
 <h3>v3.0</h3>
 <ul><li>The standalone version can now be installed as an app on Android and iPhone.</li></ul>
