@@ -385,23 +385,47 @@ async function fallbackXls(d){
   h+="</table></body></html>";
   await deliver(h,"LPN-log-"+d+".xls","application/vnd.ms-excel");
 }
-let emailMode=false,emailNote="";
+let emailMode=false,emailNote="",pendingShare=null;
 async function deliver(buf,name,mime){
   if(!emailMode)return saveOnly(buf,name,mime);
   const file=new File([buf],name,{type:mime});
   const subject=name.replace(/\.[^.]+$/,"");
-  if(navigator.canShare&&navigator.canShare({files:[file]})){
-    try{await navigator.share({files:[file],title:subject,text:"Please find the attached file: "+name});return}
-    catch(e){if(e&&e.name==="AbortError")return}
+  const data={files:[file],title:subject,text:"Please find the attached file: "+name};
+  let reason="sharing isn’t supported in this browser";
+  if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+    try{await navigator.share(data);return}
+    catch(e){
+      if(e&&e.name==="AbortError")return;
+      if(e&&e.name==="NotAllowedError"){pendingShare={data,buf,name,mime};return}
+      reason="sharing failed ("+((e&&e.name)||"error")+")";
+    }
   }
+  await fallbackMail(buf,name,mime,subject,reason);
+}
+async function fallbackMail(buf,name,mime,subject,reason){
   await saveOnly(buf,name,mime);
-  emailNote="This browser can’t attach files automatically, so the file was saved. Please attach it to your email.";
+  emailNote="The file was saved because "+reason+". Please attach it to your email.";
   try{window.location.href="mailto:?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent("Please find the attached file: "+name)}catch(e){}
 }
 async function emailVia(handler,msgId){
-  emailMode=true;emailNote="";
+  emailMode=true;emailNote="";pendingShare=null;
   try{await handler()}finally{emailMode=false}
-  if(emailNote)$(msgId).textContent=emailNote;
+  const el=$(msgId);
+  if(pendingShare){
+    const ps=pendingShare;pendingShare=null;
+    el.textContent="File ready. ";
+    const b=document.createElement("button");b.className="p";b.textContent="✉ Tap to share";
+    b.onclick=async()=>{
+      b.disabled=true;
+      try{await navigator.share(ps.data);el.textContent=""}
+      catch(e){
+        if(e&&e.name==="AbortError"){b.disabled=false;return}
+        try{await fallbackMail(ps.buf,ps.name,ps.mime,ps.data.title,"sharing was blocked ("+((e&&e.name)||"error")+")");el.textContent=emailNote}
+        catch(err){el.textContent="Couldn’t save the file."}
+      }
+    };
+    el.appendChild(b);
+  }else if(emailNote)el.textContent=emailNote;
 }
 async function saveOnly(buf,name,mime){saveBlob(buf,mime,name)}
 $("dl").onclick=async()=>{
@@ -902,7 +926,7 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 </ul>
 <h3>4. Download the spreadsheet</h3>
 <p>Press <b>Download (Excel)</b>. The file has your logo, the Pallet table (LPN, pallet type, FSDU), a breakdown of pallets by type with a Total, an FSDU line that is not included in the Total, and Delivery Details with the date and who received it. It is set up to print on A4 portrait. In the spreadsheet BB is shown as “Brown Box”. If the spreadsheet builder can’t load (for example no internet), a basic .xls file is saved instead.</p>
-<p><b>Emailing it:</b> press <b>✉ Email file</b> instead and your phone’s share sheet opens with the spreadsheet attached. Choose your email app from the list. <b>✉ Compare and email</b> does the same for the comparison. If the browser can’t attach files, the file is saved and you are asked to attach it to your email yourself.</p>
+<p><b>Emailing it:</b> press <b>✉ Email file</b> instead and your phone’s share sheet opens with the spreadsheet attached. Choose your email app from the list. <b>✉ Compare and email</b> does the same for the comparison. If it says the file is ready, tap <b>Tap to share</b>. If the browser can’t attach files, the file is saved and you are asked to attach it to your email yourself.</p>
 <h3>5. Check a delivery against the manifest</h3>
 <ol>
 <li><b>Manifest date:</b> set the date of the manifest. It can be different from today and is used on the comparison spreadsheet.</li>
@@ -925,7 +949,9 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <li>Your entries, date, name and logo are saved in this browser on this device only. <b>Clear all</b> removes the entries.</li>
 <li>LPNs are expected as a letter prefix followed by digits, for example RUN000000000. The prefix list only affects numbers read from photos, not numbers you type in.</li>
 <li>Always check numbers read from photos before comparing, as photos can be misread.</li>
-</ul>`,log:`<h3>v3.2 <span class="ver">Current</span></h3>
+</ul>`,log:`<h3>v3.3 <span class="ver">Current</span></h3>
+<ul><li>Email buttons now show a Tap to share button when the phone needs a fresh tap, instead of just saving the file.</li></ul>
+<h3>v3.2</h3>
 <ul><li>Added buttons to email the spreadsheets as attachments using your phone’s share sheet.</li></ul>
 <h3>v3.1</h3>
 <ul><li>Added a one-time pop-up that explains how to install the app.</li></ul>
@@ -1015,6 +1041,7 @@ $("panelBody").addEventListener("click",e=>{if(e.target&&e.target.id==="showInst
   setTimeout(openInstall,700);
 })();
 if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
+setTimeout(()=>{loadExcel().catch(()=>{})},2500);
 load();render();
 </script>
 </body>
