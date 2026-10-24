@@ -4,6 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>LPN Pallet Log</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1f6feb">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="LPN Log">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
 :root{--bg:#f5f6f8;--card:#fff;--tx:#1b1f24;--mu:#6a727c;--bd:#d9dde3;--ac:#1f6feb;--dg:#c62828;--wn:#b26a00;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171a;--card:#1d2126;--tx:#e8ebee;--mu:#98a1ab;--bd:#343a41;--ac:#4c8dff;--dg:#ef5350;--wn:#ffb74d}}
@@ -44,6 +51,12 @@ textarea{font:14px/1.4 ui-monospace,Menlo,Consolas,monospace;color:var(--tx);bac
 #panel ul,#panel ol{padding-left:20px;margin:6px 0}
 #panel .ver{color:var(--mu);font-size:.8rem;font-weight:400}
 @media (max-width:820px){main{padding-right:52px}}
+#instShade{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50}
+#instBox{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(440px,calc(100% - 32px));max-height:calc(100% - 32px);overflow-y:auto;background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:12px;padding:18px;z-index:60}
+#instBox h2{font-size:1.15rem;margin:0 0 6px}
+#instBox h3{font-size:1rem;margin:14px 0 4px}
+#instBox ol{padding-left:20px;margin:4px 0}
+#instBox li,#instBox p{font-size:.92rem;margin:4px 0}
 #fsdu{display:block;width:26px;height:26px;margin:9px 4px;accent-color:var(--ac)}
 td input[type=checkbox]{width:20px;height:20px;accent-color:var(--ac)}
 #logoImg{display:block;max-height:80px;max-width:100%;margin-bottom:10px}
@@ -153,6 +166,34 @@ td input[type=checkbox]{width:20px;height:20px;accent-color:var(--ac)}
     <button id="panelClose" aria-label="Close">✕ Close</button>
   </div>
   <div id="panelBody"></div>
+</section>
+<div id="instShade" hidden></div>
+<section id="instBox" role="dialog" aria-labelledby="instTitle" hidden>
+  <h2 id="instTitle">Install this app on your phone</h2>
+  <p>Add it to your home screen so it opens full screen like an app.</p>
+  <div id="instAnd">
+    <h3>Android (Chrome)</h3>
+    <ol>
+      <li>Open this app’s web address in Chrome.</li>
+      <li>Tap the ⋮ menu at the top right.</li>
+      <li>Tap <b>Install app</b> (or <b>Add to Home screen</b>).</li>
+      <li>Confirm. The icon appears on your home screen.</li>
+    </ol>
+  </div>
+  <div id="instIos">
+    <h3>iPhone (Safari)</h3>
+    <ol>
+      <li>Open this app’s web address in Safari (not Chrome or another app’s browser).</li>
+      <li>Tap the <b>Share</b> button (the square with an arrow).</li>
+      <li>Scroll down and tap <b>Add to Home Screen</b>.</li>
+      <li>Tap <b>Add</b>.</li>
+    </ol>
+  </div>
+  <p style="color:var(--mu)">You will only see this once. You can open it again from the Guide tab.</p>
+  <div class="row" style="margin-top:10px">
+    <button class="p" id="instNow" hidden>Install now</button>
+    <button class="p" id="instClose">Got it</button>
+  </div>
 </section>
 <script>
 const TYPES=["BB","FMCG","FPP","Mixed"];
@@ -850,12 +891,23 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <li>Press <b>Compare and download</b> to get a spreadsheet that lists every LPN from both sources. <b>✓ Matched</b> means it is on both. <b>✗ MISSING</b> means it is on the manifest but not the log, so report it as missing. <b>⚠ LOG ONLY</b> means it is on the log but not the manifest, so it still needs booking in. If you uploaded the log as an .xlsx file, the comparison is added as a new tab called <b>Manifest Check</b> in a copy of that file, so you get both in one workbook. With a photo of the printed log you get a separate spreadsheet.</li>
 </ol>
 <p>Photos are read with text recognition. It looks for entries that match the LPN format and fixes common lookalike characters in the number part, but it can still misread the letters, so check the lists before comparing. It cleans up the image and re-reads each number close up to improve accuracy, and flags numbers with an unusual number of digits.</p>
-<h3>6. Good to know</h3>
+<h3>6. Install it on your phone</h3>
+<ul>
+<li><b>Android (Chrome):</b> open the app’s web address, tap the ⋮ menu, then <b>Install app</b> or <b>Add to Home screen</b>.</li>
+<li><b>iPhone (Safari):</b> open the web address in Safari, tap the <b>Share</b> button, then <b>Add to Home Screen</b>. It must be Safari, not another browser.</li>
+<li><button id="showInstall">Show the install pop-up again</button></li>
+<li>It then opens full screen from its own icon. You still need an internet connection for text recognition, the Excel builder and the PDF reader. This hasn’t been tested on every phone, so downloads may behave differently, for example going to the Files app on iPhone.</li>
+</ul>
+<h3>7. Good to know</h3>
 <ul>
 <li>Your entries, date, name and logo are saved in this browser on this device only. <b>Clear all</b> removes the entries.</li>
 <li>LPNs are expected as a letter prefix followed by digits, for example RUN000000000. The prefix list only affects numbers read from photos, not numbers you type in.</li>
 <li>Always check numbers read from photos before comparing, as photos can be misread.</li>
-</ul>`,log:`<h3>v2.9 <span class="ver">Current</span></h3>
+</ul>`,log:`<h3>v3.1 <span class="ver">Current</span></h3>
+<ul><li>Added a one-time pop-up that explains how to install the app.</li></ul>
+<h3>v3.0</h3>
+<ul><li>The standalone version can now be installed as an app on Android and iPhone.</li></ul>
+<h3>v2.9</h3>
 <ul><li>Improved text recognition: the image is cleaned up and each number is re-read close up. Numbers with an unusual number of digits are now flagged.</li></ul>
 <h3>v2.8</h3>
 <ul><li>The manifest check can now read several PDF manifests at once.</li></ul>
@@ -912,6 +964,33 @@ $("btnGuide").onclick=()=>openHelp("guide","How to use this app");
 $("btnLog").onclick=()=>openHelp("log","Changelog");
 $("panelClose").onclick=closeHelp;$("shade").onclick=closeHelp;
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeHelp()});
+/* ---- install pop-up ---- */
+let deferredInstall=null;
+function openInstall(){
+  const ios=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+  const a=$("instAnd"),b=$("instIos"),par=a.parentNode;
+  if(ios)par.insertBefore(b,a);else par.insertBefore(a,b);
+  $("instShade").hidden=false;$("instBox").hidden=false;$("instBox").scrollTop=0;
+}
+function closeInstall(){$("instShade").hidden=true;$("instBox").hidden=true}
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;$("instNow").hidden=false});
+$("instNow").onclick=async()=>{
+  if(!deferredInstall)return;
+  deferredInstall.prompt();
+  try{await deferredInstall.userChoice}catch(e){}
+  deferredInstall=null;$("instNow").hidden=true;closeInstall();
+};
+$("instClose").onclick=closeInstall;$("instShade").onclick=closeInstall;
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeInstall()});
+$("panelBody").addEventListener("click",e=>{if(e.target&&e.target.id==="showInstall"){closeHelp();openInstall()}});
+(function(){
+  const installed=(window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches)||navigator.standalone;
+  let seen=false;try{seen=!!localStorage.getItem("lpninstallshown")}catch(e){}
+  if(installed||seen)return;
+  try{localStorage.setItem("lpninstallshown","1")}catch(e){}
+  setTimeout(openInstall,700);
+})();
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
 load();render();
 </script>
 </body>
