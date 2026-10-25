@@ -41,6 +41,15 @@ Phones that already have the app open will show a "A new version is available" b
 
 After the app has been opened once with a connection, it keeps a copy of itself and of the libraries it loads (Excel, PDF and text recognition, plus fonts), so it can be used without signal. The libraries are saved the first time each one is used, so open Export and the manifest check once while online.
 
+## Self-hosting the fonts (optional)
+
+The app loads two fonts from Google Fonts (Atkinson Hyperlegible and IBM Plex Mono). They are saved for offline use after the first load, and the app falls back to the system font if they can't be loaded. To remove the dependency on Google completely:
+
+1. Download the `.woff2` files for Atkinson Hyperlegible (regular and bold) and IBM Plex Mono (regular, medium and semibold), for example from fontsource.org, into a `fonts/` folder in the repository.
+2. Add a matching `@font-face` rule for each to the top of `styles.css`, with `font-display:swap`.
+3. Delete the three Google Fonts lines (two `preconnect` links and the `stylesheet` link) from `index.html`.
+4. Add the `fonts/...` files to the list at the top of `sw.js` and change the cache name.
+
 ## Presets
 
 `presets.json` is a simple list of named prefix sets, for example:

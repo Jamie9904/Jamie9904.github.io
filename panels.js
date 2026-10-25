@@ -55,8 +55,8 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <li>Your entries, date, name and logo are saved in this browser on this device only. <b>Clear all</b> removes the entries.</li>
 <li>LPNs are expected as a letter prefix followed by digits, for example RUN000000000. The prefix list only affects numbers read from photos, not numbers you type in.</li>
 <li>Always check numbers read from photos before comparing, as photos can be misread.</li>
-</ul>`,log:`<h3>v3.19 <span class="ver">Current</span></h3>
-<ul><li>Warnings before adding duplicate or unusual LPNs, with a skip or add anyway choice.</li><li>Undo for removed pallets.</li><li>Start new delivery, a Saved deliveries list, and importing an exported log. Saved deliveries older than the start of last week (weeks start on Sunday) are removed automatically.</li><li>The install pop-up can now be opened again from Settings as well as the Guide, and the pop-up itself says so.</li><li>Settings now warns when your accent colour is hard to see against your background, and status messages are announced by screen readers.</li><li>An “update available” banner appears in installed apps when a new version has been uploaded.</li><li>Accessibility and layout fixes: the log fits on phones with larger tap targets, rows and sections are labelled for screen readers, placeholder text is easier to read, the entry bar is shorter on phones, and the Add button sits next to the LPN box on larger screens.</li><li>Icons are now simple line icons instead of emoji, and deleting a saved delivery has an Undo instead of a confirmation box.</li><li>Exports and the manifest check can now work offline after the first online use.</li><li>Manifest check: Use current log or a saved delivery as the log, a Check results panel on screen, and Fix or remove buttons for misread numbers.</li><li>Pallet type buttons, an expected pallets count, an Export menu with Print, confirm-each-scan option, separate sound and vibration settings, and backup and restore in Settings.</li><li>Tap an LPN to edit it, search and filter the log, delivery notes in the exports, Clear all now has Undo, saved deliveries show their totals, and the screen stays awake while live scanning.</li><li>New Settings: default pallet type, keep last type, warnings on or off, sound and vibration, and text size.</li></ul>
+</ul>`,log:`<h3>v3.20 <span class="ver">Current</span></h3>
+<ul><li>Warnings before adding duplicate or unusual LPNs, with a skip or add anyway choice.</li><li>Undo for removed pallets.</li><li>Start new delivery, a Saved deliveries list, and importing an exported log. Saved deliveries older than the start of last week (weeks start on Sunday) are removed automatically.</li><li>The install pop-up can now be opened again from Settings as well as the Guide, and the pop-up itself says so.</li><li>Settings now warns when your accent colour is hard to see against your background, and status messages are announced by screen readers.</li><li>An “update available” banner appears in installed apps when a new version has been uploaded.</li><li>Look and feel: a header mark, quieter buttons and delete icons, tidier fields, a two-column layout on wide screens, a version line at the bottom, one chevron style, and a contents bar at the top of the Guide.</li><li>Accessibility and layout fixes: the log fits on phones with larger tap targets, rows and sections are labelled for screen readers, placeholder text is easier to read, the entry bar is shorter on phones, and the Add button sits next to the LPN box on larger screens.</li><li>Icons are now simple line icons instead of emoji, and deleting a saved delivery has an Undo instead of a confirmation box.</li><li>Exports and the manifest check can now work offline after the first online use.</li><li>Manifest check: Use current log or a saved delivery as the log, a Check results panel on screen, and Fix or remove buttons for misread numbers.</li><li>Pallet type buttons, an expected pallets count, an Export menu with Print, confirm-each-scan option, separate sound and vibration settings, and backup and restore in Settings.</li><li>Tap an LPN to edit it, search and filter the log, delivery notes in the exports, Clear all now has Undo, saved deliveries show their totals, and the screen stays awake while live scanning.</li><li>New Settings: default pallet type, keep last type, warnings on or off, sound and vibration, and text size.</li></ul>
 <h3>v3.0</h3>
 <ul><li>New navy and orange design with a single-sheet layout, colour-coded pallet types and a docked entry bar on phones.</li><li>Settings tab: your own background and accent colours (picker or hex), quick themes, reset, and the option to include a copy of the log with the comparison.</li><li>Stacked header on phones. The manifest comparison section can be shown or hidden and starts hidden.</li></ul>
 <h3>v2.0</h3>
@@ -65,8 +65,14 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <ul><li>Manifest comparison improvements: editable prefix presets, a separate manifest date, several PDF manifests at once, more accurate text recognition, and unmatched LPNs marked as Missing or Log only.</li><li>Comparison added as a new tab on an uploaded .xlsx log.</li><li>Black and white print-friendly comparison sheet with a summary table and the logo.</li></ul>
 <h3>v1.0</h3>
 <ul><li>Log LPNs with pallet type (BB, FMCG, FPP, Mixed), an FSDU tick box, date and received-by name.</li><li>Barcode scanning, by photo or live camera in the standalone version.</li><li>Excel download with logo, breakdown table and delivery details, set up for A4 portrait printing.</li><li>Check delivery against manifest from photos or files.</li></ul>`};
+function guideToc(html){
+  const items=[];
+  html=html.replace(/<h3>(\d+)\. ([^<]+)<\/h3>/g,(m,n,t)=>{items.push([n,t]);return '<h3 id="g'+n+'">'+n+'. '+t+'</h3>'});
+  const short=t=>t.replace(/^(Set up the delivery)$/,"Delivery").replace(/^Log pallets$/,"Logging").replace(/^Scanning barcodes$/,"Scanning").replace(/^Download the spreadsheet$/,"Export").replace(/^Check a delivery against the manifest$/,"Manifest check").replace(/^Install it on your phone$/,"Install").replace(/^Good to know$/,"Good to know");
+  return '<nav class="guidetoc" aria-label="Guide sections">'+items.map(x=>'<a href="#g'+x[0]+'" data-g="g'+x[0]+'">'+short(x[1])+'</a>').join("")+'</nav>'+html;
+}
 function openHelp(k,t){
-  $("panelTitle").textContent=t;$("panelBody").innerHTML=HELP[k];
+  $("panelTitle").textContent=t;$("panelBody").innerHTML=k==="guide"?guideToc(HELP.guide):HELP[k];
   $("panel").hidden=false;$("shade").hidden=false;$("panel").scrollTop=0;if(k==="settings")initSettings();if(k==="history")initHistory();
 }
 function closeHelp(){$("panel").hidden=true;$("shade").hidden=true}
@@ -301,6 +307,8 @@ function initSettings(){
 }
 $("btnGuide").onclick=()=>openHelp("guide","How to use this app");
 $("btnLog").onclick=()=>openHelp("log","Changelog");
+$("footLog").onclick=()=>openHelp("log","Changelog");
+{const vm=HELP.log.match(/<h3>(v\d+\.\d+)/);$("verText").textContent="LPN Pallet Log "+(vm?vm[1]:"")+" · Made by Jamie ·"}
 $("btnSet").onclick=()=>openHelp("settings","Settings");
 $("panelClose").onclick=closeHelp;$("shade").onclick=closeHelp;
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeHelp()});
@@ -322,7 +330,7 @@ $("instNow").onclick=async()=>{
 };
 $("instClose").onclick=closeInstall;$("instShade").onclick=closeInstall;
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeInstall()});
-$("panelBody").addEventListener("click",e=>{if(e.target&&e.target.id==="showInstall"){closeHelp();openInstall()}});
+$("panelBody").addEventListener("click",e=>{if(e.target&&e.target.id==="showInstall"){closeHelp();openInstall()}const a=e.target&&e.target.closest&&e.target.closest("a[data-g]");if(a){e.preventDefault();const t=document.getElementById(a.dataset.g);if(t)t.scrollIntoView({behavior:"smooth",block:"start"})}});
 (function(){
   const installed=(window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches)||navigator.standalone;
   let seen=false;try{seen=!!localStorage.getItem("lpninstallshown")}catch(e){}

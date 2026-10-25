@@ -498,8 +498,8 @@ $("pfxDl").onclick=()=>{
   pfxMsg("Downloaded presets.json. Replace the file next to the app with it to share these presets.");
 };
 $("dlMail").onclick=()=>emailVia($("dl").onclick,"dlmsg");
-$("expBtn").onclick=()=>{const m=$("expMenu");m.hidden=!m.hidden;$("expBtn").setAttribute("aria-expanded",!m.hidden);$("expBtn").textContent=m.hidden?"Export ▾":"Export ▴"};
-$("expMenu").addEventListener("click",e=>{if(e.target.closest("button")){$("expMenu").hidden=true;$("expBtn").setAttribute("aria-expanded","false");$("expBtn").textContent="Export ▾"}});
+$("expBtn").onclick=()=>{const m=$("expMenu");m.hidden=!m.hidden;$("expBtn").setAttribute("aria-expanded",!m.hidden);};
+$("expMenu").addEventListener("click",e=>{if(e.target.closest("button")){$("expMenu").hidden=true;$("expBtn").setAttribute("aria-expanded","false")}});
 $("prn").onclick=async()=>{
   const m=$("dlmsg");m.textContent="";
   if(!rows.length){m.textContent="Add at least one LPN before printing.";return}

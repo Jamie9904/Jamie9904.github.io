@@ -22,7 +22,7 @@
 <header class="top">
   <div class="brand">
     <img id="logoImg" alt="Company logo" hidden>
-    <div class="mark" aria-hidden="true">LPN</div>
+    <div class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M3 5h18v9H3z"/><path d="M8 5v9M16 5v9"/><path d="M3 14v4h4v-4M10 14v4h4v-4M17 14v4h4v-4"/></svg></div>
     <div style="min-width:0"><h1>LPN Pallet Log</h1><div class="sub">Goods-in pallet documentation</div></div>
   </div>
   <aside id="side" aria-label="Help">
@@ -33,7 +33,7 @@
 </header>
 <main>
 
-<div class="card">
+<div class="card" id="delCard">
   <h2 class="ct">Delivery</h2>
   <div class="row">
     <div><label for="date">Date</label><input type="date" id="date"></div>
@@ -55,7 +55,7 @@
     <div class="lp"><label for="lpn">LPN number</label><input id="lpn" style="width:100%;font-size:1.05rem" autocomplete="off" autocapitalize="characters" placeholder="Scan or type LPN, press Enter"></div>
     <div><label for="fsdu">FSDU</label><input type="checkbox" id="fsdu" aria-label="Pallet contains an FSDU"></div>
     <button class="p" id="add" style="min-width:90px">Add</button>
-    <button type="button" id="scanBtn" aria-expanded="false" aria-controls="btnrow">Scan ▾</button>
+    <button type="button" id="scanBtn" aria-expanded="false" aria-controls="btnrow">Scan<svg class="chv" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
   </div>
   <div class="btnrow" id="btnrow">
     <button id="scan">Live scan</button>
@@ -90,13 +90,13 @@
   <div class="row" style="margin-top:14px"><button id="newDel">Start new delivery</button><button id="histBtn">Saved deliveries</button></div>
   <div class="act">
     <button class="d" id="clear">Clear all</button>
-    <div class="row" style="gap:8px"><button class="p" id="expBtn" aria-expanded="false" aria-controls="expMenu">Export ▾</button></div>
+    <div class="row" style="gap:8px"><button class="p" id="expBtn" aria-expanded="false" aria-controls="expMenu">Export<svg class="chv" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button></div>
   </div>
-  <div class="menu" id="expMenu" hidden><button class="p" id="dl">Download (Excel)</button><button id="dlMail">Email PDF</button><button id="prn">Print</button></div>
+  <div class="menu" id="expMenu" hidden><button id="dl">Download (Excel)</button><button id="dlMail">Email PDF</button><button id="prn">Print</button></div>
   <div class="msg" id="dlmsg" role="status" aria-live="polite"></div>
 </div>
 <div class="card" id="cmpCard">
-  <h2 class="tglh"><button type="button" class="tgl" id="cmpToggle" aria-expanded="false" aria-controls="cmpBody"><span class="tt">Manifest check</span><span class="chev" aria-hidden="true">▾</span></button></h2>
+  <h2 class="tglh"><button type="button" class="tgl" id="cmpToggle" aria-expanded="false" aria-controls="cmpBody"><span class="tt">Manifest check</span><span class="chev" aria-hidden="true"><svg class="chv" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></button></h2>
   <div id="cmpBody" hidden style="margin-top:14px">
   <div class="warn">⚠ This section is still being tested, so results may not always be right. Please check them carefully.</div>
   <div style="margin-bottom:12px"><label for="cmpDate">Manifest date</label><input type="date" id="cmpDate"></div>
@@ -132,6 +132,7 @@
   <div class="act"><button class="d" id="cmpClear">Clear</button><div class="row" style="gap:8px"><button class="p" id="cmpCheck">Check results</button><button id="cmpMail">Compare and email PDF</button><button id="cmpGo">Compare and download</button></div></div>
   </div>
 </div>
+<footer class="foot"><span id="verText"></span> <button type="button" class="linkbtn" id="footLog">Changelog</button></footer>
 </main>
 
 <div id="shade" hidden></div>
