@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>LPN Pallet Log</title>
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#1f6feb">
+<meta name="theme-color" content="#0c1830">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,9 +15,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
-:root{--bg:#e3e8e4;--paper:#fbfcfa;--ink:#27312d;--mu:#66726c;--rule:#d3dad5;--ac:#2f6f68;--ac2:#265b55;--acs:#dcebe8;--bb:#b07d4f;--fm:#5382b8;--fp:#8a9a3b;--mx:#9a6aa6;--dg:#b3392f;--wn:#7a5a1c;--wns:#f6ecd2;--sel:#e9efeb;--line:#bcc5bf;--r:6px;box-sizing:border-box;padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#131816;--paper:#1c2321;--ink:#e3e9e5;--mu:#98a59e;--rule:#2e3834;--ac:#5fb0a6;--ac2:#7cc4ba;--acs:#223532;--bb:#cf9b6c;--fm:#7fa8dc;--fp:#b2c05e;--mx:#c192cc;--dg:#f08a80;--wn:#e6c785;--wns:#2e2815;--sel:#27302d;--line:#46524d}}
-:root[data-theme="dark"]{--bg:#131816;--paper:#1c2321;--ink:#e3e9e5;--mu:#98a59e;--rule:#2e3834;--ac:#5fb0a6;--ac2:#7cc4ba;--acs:#223532;--bb:#cf9b6c;--fm:#7fa8dc;--fp:#b2c05e;--mx:#c192cc;--dg:#f08a80;--wn:#e6c785;--wns:#2e2815;--sel:#27302d;--line:#46524d}
+:root{color-scheme:dark;--bg:#0c1830;--paper:#13264a;--ink:#eaf0fa;--mu:#9db0d0;--rule:#223a63;--ac:#ff8a2a;--ac2:#ffa24f;--acs:#3a3550;--bb:#dba56c;--fm:#6fa8ff;--fp:#a9c95a;--mx:#c79bf0;--dg:#ff7b6e;--wn:#ffcf8a;--wns:#3a3020;--sel:#1a3562;--line:#35507f;--r:6px;box-sizing:border-box;padding-bottom:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:16.5px/1.55 "Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
@@ -29,7 +27,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16.5px/1.55 "Atkinson H
 #logoImg{display:block;height:38px;max-width:110px;object-fit:contain;flex:none}
 #side{display:flex;gap:16px;flex:none}
 #side button{min-height:40px;padding:0;font-size:.95rem;font-weight:700;background:transparent;border:0;border-bottom:2px solid var(--ac);border-radius:0;color:var(--ac)}
-#side button:hover{background:transparent;color:var(--ac2)}
+#side button:hover{background:transparent;color:var(--ac2);border-color:var(--ac2)}
 #side .lbl{display:inline}
 main{max-width:720px;margin:0 auto;background:var(--paper);padding:6px 18px 280px;border:1px solid var(--rule);border-bottom:0;min-height:70vh}
 @media (min-width:760px){main{padding-bottom:60px;border-radius:var(--r) var(--r) 0 0}}
@@ -41,7 +39,7 @@ label{display:block;font-size:.85rem;font-weight:700;color:var(--mu);margin-bott
 input,select,button,textarea{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;max-width:100%}
 input:not([type=checkbox]),select{min-height:46px}
 input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--ac);outline-offset:1px;border-color:var(--ac)}
-#lpn{font:600 1.2rem/1 "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;letter-spacing:.03em;min-height:52px;border-width:2px;border-color:var(--ink)}
+#lpn{font:600 1.2rem/1 "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;letter-spacing:.03em;min-height:52px;border-width:2px;border-color:var(--ac)}
 #lpn::placeholder{font:400 .95rem "Atkinson Hyperlegible",system-ui,sans-serif;letter-spacing:0;color:var(--mu)}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
 .grow{flex:1;min-width:150px}
@@ -50,7 +48,7 @@ button{cursor:pointer;min-height:46px;font-weight:700;font-size:.95rem}
 button:hover{background:var(--sel)}
 button:active{transform:translateY(1px)}
 button:disabled{opacity:.55;cursor:default}
-button.p{background:var(--ac);border-color:var(--ac);color:#fff}
+button.p{background:var(--ac);border-color:var(--ac);color:#0c1830}
 button.p:hover{background:var(--ac2);border-color:var(--ac2)}
 button.d{color:var(--dg);background:transparent}
 button.d:hover{background:color-mix(in srgb,var(--dg) 12%,var(--paper));border-color:var(--dg)}
@@ -72,7 +70,7 @@ button.d:hover{background:color-mix(in srgb,var(--dg) 12%,var(--paper));border-c
 #sum span:nth-child(6)::before{background:var(--ink);border-radius:50%}
 #cmpSum span{background:var(--sel);border-radius:var(--r);padding:3px 10px;font-size:.88rem;color:var(--mu)}
 #cmpSum b{color:var(--ink)}
-.wrap{overflow-x:auto;border-top:2px solid var(--ink);border-bottom:1px solid var(--line);max-height:60vh;overflow-y:auto;margin:0 -18px}
+.wrap{overflow-x:auto;border-top:2px solid var(--ac);border-bottom:1px solid var(--line);max-height:60vh;overflow-y:auto;margin:0 -18px}
 table{width:100%;border-collapse:separate;border-spacing:0}
 th,td{text-align:left;padding:9px 12px;border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent);white-space:nowrap}
 th:first-child,td:first-child{padding-left:18px}
@@ -111,10 +109,10 @@ button.tgl:hover{background:transparent}
 button.tgl .tt{flex:1}
 button.tgl .chev{font:400 1rem sans-serif;color:var(--ac);width:28px;height:28px;display:grid;place-items:center;transition:transform .15s}
 button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
-.entry{border:2px solid var(--ink);border-radius:var(--r);padding:14px;background:var(--paper)}
-.card+.card.entry{padding:14px;border:2px solid var(--ink);border-top:2px solid var(--ink)}
+.entry{border:2px solid var(--ac);border-radius:var(--r);padding:14px;background:var(--paper)}
+.card+.card.entry{padding:14px;border:2px solid var(--ac);border-top:2px solid var(--ac)}
 @media (max-width:759px){
-  .card.entry,.card+.card.entry{position:fixed;left:0;right:0;bottom:0;z-index:15;margin:0;border:0;border-top:2px solid var(--ink);border-radius:0;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 18px rgba(20,30,26,.14);max-height:80vh;overflow-y:auto}
+  .card.entry,.card+.card.entry{position:fixed;left:0;right:0;bottom:0;z-index:15;margin:0;border:0;border-top:2px solid var(--ac);border-radius:0;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 18px rgba(0,0,0,.35);max-height:80vh;overflow-y:auto}
   .entry .ct,.entry .note{display:none}
   .addgrid{grid-template-columns:1fr auto auto;gap:8px 10px}
   .addgrid .lp{grid-column:1/3;grid-row:1}
@@ -124,15 +122,15 @@ button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
   .entry .btnrow{margin-top:8px;flex-wrap:nowrap}
   .entry .btnrow button{min-width:0;min-height:42px;padding:6px 8px;font-size:.88rem}
 }
-#shade{position:fixed;inset:0;background:rgba(20,28,25,.45);z-index:30}
-#panel{position:fixed;top:0;right:0;bottom:0;width:min(470px,100%);background:var(--paper);color:var(--ink);border-left:1px solid var(--line);box-shadow:-8px 0 28px rgba(20,28,25,.15);z-index:40;overflow-y:auto;padding:calc(16px + env(safe-area-inset-top,0px)) 20px calc(24px + env(safe-area-inset-bottom,0px))}
+#shade{position:fixed;inset:0;background:rgba(3,8,20,.6);z-index:30}
+#panel{position:fixed;top:0;right:0;bottom:0;width:min(470px,100%);background:var(--paper);color:var(--ink);border-left:1px solid var(--line);box-shadow:-8px 0 28px rgba(0,0,0,.4);z-index:40;overflow-y:auto;padding:calc(16px + env(safe-area-inset-top,0px)) 20px calc(24px + env(safe-area-inset-bottom,0px))}
 #panel h2{font:700 1.3rem/1.2 "Atkinson Hyperlegible",sans-serif;margin:0}
 #panel h3{font:700 1.05rem/1.3 "Atkinson Hyperlegible",sans-serif;margin:20px 0 6px;color:var(--ac)}
 #panel p,#panel li{font-size:.95rem;margin:5px 0}
 #panel ul,#panel ol{padding-left:20px;margin:6px 0}
 #panel .ver{font:700 .75rem "Atkinson Hyperlegible",sans-serif;background:var(--acs);color:var(--ac);border-radius:var(--r);padding:2px 8px;margin-left:8px;vertical-align:middle}
-#instShade{position:fixed;inset:0;background:rgba(20,28,25,.5);z-index:50}
-#instBox{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(450px,calc(100% - 32px));max-height:calc(100% - 32px);overflow-y:auto;background:var(--paper);color:var(--ink);border:2px solid var(--ink);border-radius:var(--r);padding:20px;z-index:60}
+#instShade{position:fixed;inset:0;background:rgba(3,8,20,.65);z-index:50}
+#instBox{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(450px,calc(100% - 32px));max-height:calc(100% - 32px);overflow-y:auto;background:var(--paper);color:var(--ink);border:2px solid var(--ac);border-radius:var(--r);padding:20px;z-index:60}
 #instBox h2{font:700 1.3rem/1.2 "Atkinson Hyperlegible",sans-serif;margin:0 0 6px}
 #instBox h3{font:700 1.05rem/1.3 "Atkinson Hyperlegible",sans-serif;margin:14px 0 4px;color:var(--ac)}
 #instBox ol{padding-left:20px;margin:4px 0}
@@ -1239,7 +1237,9 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <li>Your entries, date, name and logo are saved in this browser on this device only. <b>Clear all</b> removes the entries.</li>
 <li>LPNs are expected as a letter prefix followed by digits, for example RUN000000000. The prefix list only affects numbers read from photos, not numbers you type in.</li>
 <li>Always check numbers read from photos before comparing, as photos can be misread.</li>
-</ul>`,log:`<h3>v3.12 <span class="ver">Current</span></h3>
+</ul>`,log:`<h3>v3.13 <span class="ver">Current</span></h3>
+<ul><li>New colours: navy blue background with orange accents. The layout is unchanged.</li></ul>
+<h3>v3.12</h3>
 <ul><li>New layout: one continuous sheet instead of separate boxes, the entry controls dock to the bottom of the screen on phones, counts shown as one line, and plain text Guide and Changelog links.</li></ul>
 <h3>v3.11</h3>
 <ul><li>New softer design: muted colours, easier-to-read font, and each pallet row tinted in its pallet type’s colour.</li></ul>
