@@ -57,6 +57,8 @@ textarea{font:14px/1.4 ui-monospace,Menlo,Consolas,monospace;color:var(--tx);bac
 #instBox h3{font-size:1rem;margin:14px 0 4px}
 #instBox ol{padding-left:20px;margin:4px 0}
 #instBox li,#instBox p{font-size:.92rem;margin:4px 0}
+.chk{display:flex;align-items:flex-start;gap:8px;font-size:.9rem;color:var(--tx);margin-top:10px}
+#cmpMerge{width:20px;height:20px;margin:1px 0 0;flex:none;accent-color:var(--ac)}
 #fsdu{display:block;width:26px;height:26px;margin:9px 4px;accent-color:var(--ac)}
 td input[type=checkbox]{width:20px;height:20px;accent-color:var(--ac)}
 #logoImg{display:block;max-height:80px;max-width:100%;margin-bottom:10px}
@@ -115,7 +117,7 @@ td input[type=checkbox]{width:20px;height:20px;accent-color:var(--ac)}
   </div>
   <div class="act">
     <button class="d" id="clear">Clear all</button>
-    <div class="row" style="gap:8px"><button id="dlMail">✉ Email file</button><button class="p" id="dl">Download (Excel)</button></div>
+    <div class="row" style="gap:8px"><button id="dlMail">✉ Email PDF</button><button class="p" id="dl">Download (Excel)</button></div>
   </div>
   <div class="msg" id="dlmsg"></div>
 </div>
@@ -143,15 +145,16 @@ td input[type=checkbox]{width:20px;height:20px;accent-color:var(--ac)}
   <div class="msg" id="cmpLogName" style="color:var(--mu)"></div>
   <label for="cmpLogNums" style="margin-top:10px">Numbers in the log (one per line: fix any mistakes)</label>
   <textarea id="cmpLogNums" rows="5"></textarea>
-  <input type="file" id="cmpLogFile" accept=".xlsx,.xls,.csv" hidden>
+  <input type="file" id="cmpLogFile" accept=".xlsx,.xls,.csv,.pdf,application/pdf" hidden>
   <input type="file" id="cmpLogPhotoFile" accept="image/*" multiple hidden>
   <input type="file" id="cmpPhotoFile" accept="image/*" multiple hidden>
   <input type="file" id="cmpPdfFile" accept="application/pdf,.pdf" multiple hidden>
   <div class="msg" id="cmpMsg"></div>
   <label for="cmpNums" style="margin-top:10px">Numbers read from the manifest (one per line: fix any mistakes or type them in)</label>
   <textarea id="cmpNums" rows="6"></textarea>
+  <label class="chk"><input type="checkbox" id="cmpMerge" checked><span>Include a copy of the log with the comparison (a tab in the spreadsheet, extra pages at the end of the PDF)</span></label>
   <div class="sum" id="cmpSum" style="margin-top:10px"></div>
-  <div class="act"><button class="d" id="cmpClear">Clear</button><div class="row" style="gap:8px"><button id="cmpMail">✉ Compare and email</button><button class="p" id="cmpGo">Compare and download</button></div></div>
+  <div class="act"><button class="d" id="cmpClear">Clear</button><div class="row" style="gap:8px"><button id="cmpMail">✉ Compare and email PDF</button><button class="p" id="cmpGo">Compare and download</button></div></div>
 </div>
 </main>
 
@@ -385,9 +388,133 @@ async function fallbackXls(d){
   h+="</table></body></html>";
   await deliver(h,"LPN-log-"+d+".xls","application/vnd.ms-excel");
 }
+function pdfLogSheet(doc,sh,multi){
+  const g=trimGrid(sh.grid);
+  if(!g.length)return;
+  const wide=g[0].length>4;
+  doc.addPage("a4",wide?"landscape":"portrait");
+  doc.setFont("helvetica","bold");doc.setFontSize(14);doc.setTextColor(0);
+  doc.text("Log copy"+(multi?": "+sh.name:""),10,14);
+  doc.autoTable(Object.assign({},PDF_BASE,{
+    startY:20,margin:{left:10,right:10,top:20,bottom:12},
+    styles:Object.assign({},PDF_BASE.styles,{fontSize:wide?9:11,cellPadding:1.8}),
+    head:[g[0].map(String)],body:g.slice(1).map(r=>r.map(String)),
+    didParseCell:d=>{if(String(d.cell.text.join("")).trim()===""){d.cell.styles.lineWidth=0;d.cell.styles.fillColor=[255,255,255]}}
+  }));
+}
+async function loadPdfLib(){
+  const ok=()=>window.PDFLib;
+  try{await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js",ok)}
+  catch(e){await loadScript("https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js",ok)}
+}
+async function loadJsPdf(){
+  const ok=()=>window.jspdf&&window.jspdf.jsPDF&&window.jspdf.jsPDF.API&&window.jspdf.jsPDF.API.autoTable;
+  try{
+    await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js",()=>window.jspdf);
+    await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js",ok);
+  }catch(e){
+    await loadScript("https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js",()=>window.jspdf);
+    await loadScript("https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js",ok);
+  }
+}
+const PDF_HEAD=[230,233,237],PDF_BASE={theme:"grid",styles:{font:"helvetica",fontSize:11,cellPadding:2.2,textColor:0,lineColor:0,lineWidth:0.4,valign:"middle"},headStyles:{fillColor:PDF_HEAD,textColor:0,fontStyle:"bold",lineColor:0,lineWidth:0.4}};
+async function pdfBanner(doc,x,width){
+  let y=12;
+  if(logo){
+    try{
+      const dim=await new Promise((res,rej)=>{const im=new Image();im.onload=()=>res([im.width,im.height]);im.onerror=rej;im.src=logo});
+      const h=Math.max(12,Math.min(32,width*dim[1]/dim[0]));
+      doc.addImage(logo,"PNG",x,y,width,h);y+=h+6;
+    }catch(e){}
+  }
+  return y;
+}
+const pdfCell=(t,o)=>({content:String(t),styles:Object.assign({},o||{})});
+async function buildLogPdf(d){
+  await loadJsPdf();
+  const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:"portrait"});
+  doc.setProperties({title:"LPN log "+d,subject:"LPN log",keywords:"LPNLOG2:"+encodeURIComponent(JSON.stringify({d:d,r:($("recv").value||"").trim(),rows:rows.map(r=>[r.lpn,r.type,r.fsdu?1:0])}))});
+  const who=($("recv").value||"").trim();
+  const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
+  const L=10,LW=100,RX=L+LW+8,RW=190-LW-8;
+  const y0=await pdfBanner(doc,L,LW);
+  const bold={fontStyle:"bold",fillColor:PDF_HEAD};
+  doc.autoTable(Object.assign({},PDF_BASE,{
+    startY:y0,margin:{left:RX,right:10,top:12,bottom:12},tableWidth:RW,
+    head:[["Pallet Type","Count"]],
+    body:[["Brown Box",c.BB],["FMCG",c.FMCG],["FPP",c.FPP],["Mixed",c.Mixed],
+      [pdfCell("Total",bold),pdfCell(rows.length,bold)],
+      ["FSDU (not in total)",rows.filter(r=>r.fsdu).length]],
+    columnStyles:{1:{halign:"center",cellWidth:22}}
+  }));
+  doc.autoTable(Object.assign({},PDF_BASE,{
+    startY:doc.lastAutoTable.finalY+8,margin:{left:RX,right:10,top:12,bottom:12},tableWidth:RW,
+    head:[[{content:"Delivery Details",colSpan:2}]],
+    body:[[pdfCell("Date",bold),d],[pdfCell("Received by",bold),who]],
+    columnStyles:{0:{cellWidth:32}}
+  }));
+  doc.setPage(1);
+  doc.autoTable(Object.assign({},PDF_BASE,{
+    startY:y0,margin:{left:L,right:210-L-LW,top:12,bottom:12},tableWidth:LW,
+    head:[["LPN","Pallet Type","FSDU"]],
+    body:rows.map(r=>[r.lpn,r.type,r.fsdu?"Yes":"No"]),
+    columnStyles:{0:{cellWidth:46},1:{cellWidth:32},2:{cellWidth:22,halign:"center"}}
+  }));
+  return doc.output("arraybuffer");
+}
+async function buildCmpPdf(res,cnt,manCount,d,logCopy){
+  await loadJsPdf();
+  const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:"portrait"});
+  const L=10,LW=112,RX=L+LW+6,RW=190-LW-6;
+  const y0=await pdfBanner(doc,L,LW);
+  const bold={fontStyle:"bold",fillColor:PDF_HEAD};
+  doc.autoTable(Object.assign({},PDF_BASE,{
+    startY:y0,margin:{left:RX,right:10,top:12,bottom:12},tableWidth:RW,
+    head:[["Summary","Count"]],
+    body:[["On manifest",manCount],["Matched",cnt.ok],["Missing",cnt.missing],["Log only",cnt.book]],
+    columnStyles:{1:{halign:"center",cellWidth:22}}
+  }));
+  doc.autoTable(Object.assign({},PDF_BASE,{
+    startY:doc.lastAutoTable.finalY+8,margin:{left:RX,right:10,top:12,bottom:12},tableWidth:RW,
+    head:[[{content:"Delivery Details",colSpan:2}]],
+    body:[[pdfCell("Date",bold),d]],
+    columnStyles:{0:{cellWidth:26}}
+  }));
+  doc.setPage(1);
+  const ST={ok:{t:"Matched",s:{}},missing:{t:"MISSING",s:{fontStyle:"bold",fillColor:[166,166,166]}},book:{t:"LOG ONLY",s:{fontStyle:"bold",fillColor:[208,208,208]}}};
+  const kd=x=>x.man&&x.log?"ok":x.man?"missing":"book";
+  doc.autoTable(Object.assign({},PDF_BASE,{
+    startY:y0,margin:{left:L,right:210-L-LW,top:12,bottom:12},tableWidth:LW,
+    head:[["LPN","On manifest","On log","Result"]],
+    body:res.map(x=>{const st=ST[kd(x)];return [pdfCell(x.n,st.s),pdfCell(x.man?"Yes":"No",st.s),pdfCell(x.log?"Yes":"No",st.s),pdfCell(st.t,st.s)]}),
+    columnStyles:{0:{cellWidth:38},1:{cellWidth:28,halign:"center"},2:{cellWidth:20,halign:"center"},3:{cellWidth:26}}
+  }));
+  if(logCopy){
+    if(logCopy.pdf){
+      await loadPdfLib();
+      const base=await PDFLib.PDFDocument.load(doc.output("arraybuffer"));
+      const src=await PDFLib.PDFDocument.load(logCopy.pdf.buf.slice(0),{ignoreEncryption:true});
+      (await base.copyPages(src,src.getPageIndices())).forEach(pg=>base.addPage(pg));
+      return await base.save();
+    }
+    if(logCopy.sheets&&logCopy.sheets.length){
+      logCopy.sheets.forEach(sh=>pdfLogSheet(doc,sh,logCopy.sheets.length>1));
+    }else{
+      doc.addPage();
+      doc.setFontSize(14);doc.setFont("helvetica","bold");doc.text("Log copy",L,16);
+      doc.autoTable(Object.assign({},PDF_BASE,{
+        startY:22,margin:{left:L,right:210-L-100,top:12,bottom:12},tableWidth:100,
+        head:[["LPN"]],body:logCopy.list.map(n=>[n])
+      }));
+    }
+  }
+  return doc.output("arraybuffer");
+}
+let pdfJob=null;
 let emailMode=false,emailNote="",pendingShare=null;
 async function deliver(buf,name,mime){
-  if(!emailMode)return saveOnly(buf,name,mime);
+  if(!emailMode){pdfJob=null;return saveOnly(buf,name,mime)}
+  if(pdfJob){const job=pdfJob;pdfJob=null;buf=await job();name=name.replace(/\.[^.]+$/,"")+".pdf";mime="application/pdf"}
   const file=new File([buf],name,{type:mime});
   const subject=name.replace(/\.[^.]+$/,"");
   const data={files:[file],title:subject,text:"Please find the attached file: "+name};
@@ -396,8 +523,8 @@ async function deliver(buf,name,mime){
     try{await navigator.share(data);return}
     catch(e){
       if(e&&e.name==="AbortError")return;
-      if(e&&e.name==="NotAllowedError"){pendingShare={data,buf,name,mime};return}
-      reason="sharing failed ("+((e&&e.name)||"error")+")";
+      if(e&&e.name==="NotAllowedError"&&!(navigator.userActivation&&navigator.userActivation.isActive)){pendingShare={data,buf,name,mime};return}
+      reason=(e&&e.name==="NotAllowedError")?"the browser blocked sharing it from a web app (NotAllowedError). Chrome only allows some file types to be shared this way, and Excel files may not be one of them":"sharing failed ("+((e&&e.name)||"error")+")";
     }
   }
   await fallbackMail(buf,name,mime,subject,reason);
@@ -420,7 +547,7 @@ async function emailVia(handler,msgId){
       try{await navigator.share(ps.data);el.textContent=""}
       catch(e){
         if(e&&e.name==="AbortError"){b.disabled=false;return}
-        try{await fallbackMail(ps.buf,ps.name,ps.mime,ps.data.title,"sharing was blocked ("+((e&&e.name)||"error")+")");el.textContent=emailNote}
+        try{await fallbackMail(ps.buf,ps.name,ps.mime,ps.data.title,(e&&e.name==="NotAllowedError")?"the browser blocked sharing it from a web app (NotAllowedError). Chrome only allows some file types to be shared this way, and Excel files may not be one of them":"sharing failed ("+((e&&e.name)||"error")+")");el.textContent=emailNote}
         catch(err){el.textContent="Couldn’t save the file."}
       }
     };
@@ -500,6 +627,7 @@ $("dl").onclick=async()=>{
     ws.pageSetup={orientation:"portrait",paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:(1+off)+":"+(1+off),margins:{left:0.4,right:0.4,top:0.6,bottom:0.6,header:0.3,footer:0.3}};
     ws.views=[{state:"frozen",ySplit:1+off}];
     const buf=await wb.xlsx.writeBuffer();
+    pdfJob=()=>buildLogPdf(d);
     await deliver(buf,"LPN-log-"+d+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     m.textContent="";
   }catch(e){
@@ -545,7 +673,7 @@ $("logoFile").onchange=async e=>{
 $("logoRm").onclick=()=>{custom="";try{localStorage.removeItem("lpnlogo")}catch(e){}showLogo()};
 loadLogo();
 /* ---- manifest check ---- */
-let logLpns=null,logSrc=null;
+let logLpns=null,logSrc=null,logPdfSrc=null,logSheets=null;
 const norm=v=>String(v).toUpperCase().replace(/[^A-Z0-9]/g,"");
 const cmpMsg=t=>{$("cmpMsg").textContent=t};
 function getPfx(){return [...new Set(($("cmpPfx").value||"").toUpperCase().split(/[^A-Z]+/).filter(Boolean))]}
@@ -571,24 +699,42 @@ function lpnsFromGrid(g){
   for(let i=start+1;i<g.length;i++){const t=String(g[i][col]==null?"":g[i][col]).trim();if(!t)break;out.push(t)}
   return out;
 }
+function cellText(v){return v==null?"":v instanceof Date?v.toISOString().slice(0,10):typeof v==="object"?(v.richText?v.richText.map(x=>x.text).join(""):(v.text||v.result||"")):v}
+function trimGrid(g){
+  const rows=g.map(r=>r.map(c=>c==null?"":c));
+  const empty=r=>r.every(c=>String(c).trim()==="");
+  while(rows.length&&empty(rows[0]))rows.shift();
+  while(rows.length&&empty(rows[rows.length-1]))rows.pop();
+  let nc=0;rows.forEach(r=>{for(let i=r.length-1;i>=0;i--){if(String(r[i]).trim()!==""){nc=Math.max(nc,i+1);break}}});
+  return rows.map(r=>{const o=r.slice(0,nc);while(o.length<nc)o.push("");return o});
+}
+function logGridFrom(rows,d,who){
+  const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>{if(c[r.type]!==undefined)c[r.type]++});
+  const side=[["Pallet Type","Count"],["Brown Box",c.BB],["FMCG",c.FMCG],["FPP",c.FPP],["Mixed",c.Mixed],["Total",rows.length],["FSDU (not in total)",rows.filter(r=>r.fsdu).length],["",""],["Delivery Details",""],["Date",d||""],["Received by",who||""]];
+  const n=Math.max(rows.length+1,side.length),g=[];
+  for(let i=0;i<n;i++){
+    const left=i===0?["LPN","Pallet Type","FSDU"]:rows[i-1]?[rows[i-1].lpn,rows[i-1].type,rows[i-1].fsdu?"Yes":"No"]:["","",""];
+    g.push([...left,"",...(side[i]||["",""])]);
+  }
+  return g;
+}
 async function readLog(f){
-  logSrc=null;
+  logSrc=null;logPdfSrc=null;logSheets=null;
   const name=f.name.toLowerCase();
+  if(name.endsWith(".pdf"))return readLogPdf(f,m=>cmpMsg("Reading log PDF: "+m));
   if(name.endsWith(".xlsx")){
     await loadExcel();
     const ab=await f.arrayBuffer();const wb=new ExcelJS.Workbook();await wb.xlsx.load(ab);
-    const g=[];
-    wb.worksheets[0].eachRow({includeEmpty:true},row=>{
-      g.push((row.values||[]).slice(1).map(v=>v==null?"":typeof v==="object"?(v.richText?v.richText.map(x=>x.text).join(""):(v.text||v.result||"")):v));
-    });
-    const lp=lpnsFromGrid(g);logSrc={buf:ab.slice(0),name:f.name};return lp;
+    if(!wb.worksheets.length)throw new Error("That file has no sheets.");
+    const sheets=wb.worksheets.map(ws=>{const grid=[];ws.eachRow({includeEmpty:true},row=>{grid.push((row.values||[]).slice(1).map(cellText))});return {name:ws.name,grid}});
+    const lp=lpnsFromGrid(sheets[0].grid);
+    logSrc={buf:ab.slice(0),name:f.name};logSheets=sheets;return lp;
   }
   const text=await f.text();
-  if(/<table/i.test(text)){
-    const doc=new DOMParser().parseFromString(text,"text/html");
-    return lpnsFromGrid([...doc.querySelectorAll("tr")].map(tr=>[...tr.children].map(c=>c.textContent.trim())));
-  }
-  return lpnsFromGrid(text.split(/\r?\n/).map(l=>l.split(",").map(x=>x.replace(/^"|"$/g,"").trim())));
+  let g;
+  if(/<table/i.test(text)){const doc=new DOMParser().parseFromString(text,"text/html");g=[...doc.querySelectorAll("tr")].map(tr=>[...tr.children].map(c=>c.textContent.trim()))}
+  else g=text.split(/\r?\n/).map(l=>l.split(",").map(x=>x.replace(/^"|"$/g,"").trim()));
+  const lp=lpnsFromGrid(g);logSheets=[{name:"Log copy",grid:g}];return lp;
 }
 async function shrink(f){
   const b=await createImageBitmap(f);
@@ -674,7 +820,7 @@ $("cmpLogBtn").onclick=()=>{$("cmpLogFile").value="";$("cmpLogFile").click()};
 $("cmpLogFile").onchange=async e=>{
   const f=e.target.files&&e.target.files[0];if(!f)return;
   cmpMsg("Reading log…");
-  try{const l=await readLog(f);$("cmpLogNums").value=l.join("\n");$("cmpLogName").textContent=f.name+": "+l.length+" LPNs found"+(logSrc?". The comparison will be added to this file as a new tab.":"");cmpMsg("")}
+  try{const l=await readLog(f);$("cmpLogNums").value=l.join("\n");$("cmpLogName").textContent=f.name+": "+l.length+" LPNs found"+(logSrc&&$("cmpMerge").checked?". The comparison will be added to this file as a new tab.":"");cmpMsg(/\.pdf$/i.test(f.name)?"Read from PDF. Check the log numbers are correct, then compare."+oddNote("cmpLogNums"):"")}
   catch(err){$("cmpLogName").textContent="";cmpMsg(err.message||"Couldn't read that file.")}
 };
 $("cmpLogPhotoBtn").onclick=()=>{$("cmpLogPhotoFile").value="";$("cmpLogPhotoFile").click()};
@@ -685,7 +831,7 @@ $("cmpLogPhotoFile").onchange=async e=>{
     try{addNums(await readLogPhoto(files[i]),"cmpLogNums")}
     catch(err){cmpMsg("Couldn't read log photo "+(i+1)+": "+((err&&err.message)||"error")+" You can type the numbers in the box instead.");return}
   }
-  logSrc=null;$("cmpLogName").textContent="Read from photo of printed log";
+  logSrc=null;logPdfSrc=null;logSheets=null;$("cmpLogName").textContent="Read from photo of printed log";
   cmpMsg("Done. Check the log numbers are correct, then compare."+oddNote("cmpLogNums"));
 };
 async function loadPdfJs(){
@@ -722,6 +868,34 @@ async function readPdf(f,say){
   }
   return out;
 }
+async function readLogPdf(f,say){
+  await loadPdfJs();
+  const ab=await f.arrayBuffer();
+  logPdfSrc={buf:ab.slice(0),name:f.name};
+  const pdf=await pdfjsLib.getDocument({data:new Uint8Array(ab.slice(0))}).promise;
+  try{
+    const meta=await pdf.getMetadata();
+    const kw=(meta&&meta.info&&meta.info.Keywords)||"";
+    if(kw.indexOf("LPNLOG2:")===0){
+      try{
+        const o=JSON.parse(decodeURIComponent(kw.slice(8)));
+        const rw=(o.rows||[]).map(r=>({lpn:String(r[0]),type:String(r[1]),fsdu:!!r[2]}));
+        if(rw.length){logSheets=[{name:"Log copy",grid:logGridFrom(rw,o.d,o.r)}];return rw.map(r=>r.lpn)}
+      }catch(e){}
+    }
+    if(kw.indexOf("LPNLOG|")===0){const l=kw.slice(7).split("|").map(s=>s.trim()).filter(Boolean);if(l.length)return l}
+  }catch(e){}
+  const col=[];
+  for(let p=1;p<=pdf.numPages;p++){
+    const items=(await (await pdf.getPage(p)).getTextContent()).items.filter(i=>i.str&&i.str.trim());
+    const head=items.find(i=>i.str.trim()==="LPN");
+    if(!head)continue;
+    const x=head.transform[4],y=head.transform[5];
+    items.forEach(i=>{if(i!==head&&i.transform[5]<y-1&&Math.abs(i.transform[4]-x)<6)col.push(i.str.trim())});
+  }
+  if(col.length)return col;
+  return readPdf(f,say);
+}
 $("cmpPdfBtn").onclick=()=>{$("cmpPdfFile").value="";$("cmpPdfFile").click()};
 $("cmpPdfFile").onchange=async e=>{
   const files=[...(e.target.files||[])];if(!files.length)return;
@@ -744,7 +918,7 @@ $("cmpPhotoFile").onchange=async e=>{
   }
   cmpMsg("Done. Check the numbers below are correct, then compare."+oddNote("cmpNums"));
 };
-$("cmpClear").onclick=()=>{logSrc=null;$("cmpNums").value="";$("cmpLogNums").value="";$("cmpLogName").textContent="";$("cmpSum").innerHTML="";cmpMsg("")};
+$("cmpClear").onclick=()=>{logSrc=null;logPdfSrc=null;logSheets=null;$("cmpNums").value="";$("cmpLogNums").value="";$("cmpLogName").textContent="";$("cmpSum").innerHTML="";cmpMsg("")};
 $("cmpGo").onclick=async()=>{
   const lines=id=>$(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
   const uniq=a=>{const seen=new Set();return a.filter(x=>{const k=norm(x);if(!k||seen.has(k))return false;seen.add(k);return true})};
@@ -762,8 +936,9 @@ $("cmpGo").onclick=async()=>{
   try{
     await loadExcel();
     const d=$("cmpDate").value||"no-date";
+    const merge=$("cmpMerge").checked,mergeSrc=merge?logSrc:null;
     const wb=new ExcelJS.Workbook();
-    if(logSrc)await wb.xlsx.load(logSrc.buf);
+    if(mergeSrc)await wb.xlsx.load(mergeSrc.buf);
     let tab="Manifest Check",tn=2;
     while(wb.getWorksheet(tab))tab="Manifest Check "+(tn++);
     const ws=wb.addWorksheet(tab);
@@ -820,7 +995,25 @@ $("cmpGo").onclick=async()=>{
       r.height=(head||(right&&right.h))?26:22;
     }
     ws.pageSetup={orientation:"portrait",paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:(1+off)+":"+(1+off),margins:{left:0.4,right:0.4,top:0.6,bottom:0.6,header:0.3,footer:0.3}};
-    const outName=logSrc?logSrc.name.replace(/\.xlsx$/i,"")+" (with manifest check).xlsx":"Manifest-check-"+d+".xlsx";
+    if(merge&&!logSrc){
+      const sheets=logSheets&&logSheets.length?logSheets:[{name:"Log copy",grid:[["LPN"],...logList.map(n=>[n])]}];
+      sheets.forEach(sh=>{
+        const g=trimGrid(sh.grid);if(!g.length)return;
+        let nm="Log copy",tk=2;while(wb.getWorksheet(nm))nm="Log copy "+(tk++);
+        const lw=wb.addWorksheet(nm),nc=g[0].length,wd=[];
+        for(let c=0;c<nc;c++){let m=0;g.forEach(r=>{const t=String(r[c]);if(t)m=Math.max(m,t.length)});wd.push(m?Math.min(40,Math.max(10,Math.round(m*1.25))):3)}
+        lw.columns=wd.map(w=>({width:w}));
+        g.forEach((r,i)=>r.forEach((v,c)=>{
+          if(v===""||v==null)return;
+          const cell=lw.getRow(i+1).getCell(c+1);cell.value=v;
+          cell.font={name:"Arial",size:14,bold:i===0,color:bc};cell.border=border;
+          if(i===0)cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:HD}};
+        }));
+        lw.pageSetup={orientation:nc>4?"landscape":"portrait",paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:"1:1",margins:{left:0.4,right:0.4,top:0.6,bottom:0.6,header:0.3,footer:0.3}};
+      });
+    }
+    const outName=mergeSrc?mergeSrc.name.replace(/\.xlsx$/i,"")+" (with manifest check).xlsx":"Manifest-check-"+d+".xlsx";
+    pdfJob=()=>buildCmpPdf(res,cnt,man.length,d,merge?{list:logList,pdf:logPdfSrc,sheets:logSheets}:null);
     await sendFile(await wb.xlsx.writeBuffer(),outName,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     cmpMsg("");
   }catch(err){
@@ -830,6 +1023,8 @@ $("cmpGo").onclick=async()=>{
 };
 try{$("cmpDate").value=localStorage.getItem("lpncmpdate")||""}catch(e){}
 if(!$("cmpDate").value)$("cmpDate").value=new Date().toISOString().slice(0,10);
+try{const mv=localStorage.getItem("lpncmpmerge");if(mv!==null)$("cmpMerge").checked=mv==="1"}catch(e){}
+$("cmpMerge").onchange=()=>{try{localStorage.setItem("lpncmpmerge",$("cmpMerge").checked?"1":"0")}catch(e){}};
 $("cmpDate").onchange=()=>{try{localStorage.setItem("lpncmpdate",$("cmpDate").value)}catch(e){}};
 /* ---- prefix presets ---- */
 const PRESET_URL="presets.json";
@@ -926,17 +1121,18 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 </ul>
 <h3>4. Download the spreadsheet</h3>
 <p>Press <b>Download (Excel)</b>. The file has your logo, the Pallet table (LPN, pallet type, FSDU), a breakdown of pallets by type with a Total, an FSDU line that is not included in the Total, and Delivery Details with the date and who received it. It is set up to print on A4 portrait. In the spreadsheet BB is shown as “Brown Box”. If the spreadsheet builder can’t load (for example no internet), a basic .xls file is saved instead.</p>
-<p><b>Emailing it:</b> press <b>✉ Email file</b> instead and your phone’s share sheet opens with the spreadsheet attached. Choose your email app from the list. <b>✉ Compare and email</b> does the same for the comparison. If it says the file is ready, tap <b>Tap to share</b>. If the browser can’t attach files, the file is saved and you are asked to attach it to your email yourself.</p>
+<p><b>Emailing it:</b> press <b>✉ Email PDF</b> and your phone’s share sheet opens with a PDF copy of the spreadsheet attached, because phones don’t allow Excel files to be shared this way. The Excel download is unchanged. Choose your email app from the list. <b>✉ Compare and email PDF</b> does the same for the comparison (just the comparison, not the merged workbook). If it says the file is ready, tap <b>Tap to share</b>. If the browser can’t attach files, the file is saved and you are asked to attach it to your email yourself.</p>
 <h3>5. Check a delivery against the manifest</h3>
 <ol>
 <li><b>Manifest date:</b> set the date of the manifest. It can be different from today and is used on the comparison spreadsheet.</li>
 <li><b>Prefix preset:</b> choose a preset to fill the list of LPN prefixes, then edit the list if a delivery is different. Only numbers starting with these prefixes are picked up from photos. Leave the list blank, or choose <b>All prefixes</b>, to pick up any LPN made of 1 to 3 letters followed by digits. Use <b>Save as preset</b> to keep a list under a name. <b>Download presets file</b> creates an updated copy from your current presets.</li>
-<li><b>LPN log:</b> upload an exported spreadsheet, or take a photo of the printed log.</li>
+<li><b>LPN log:</b> upload an exported spreadsheet or a PDF of the log, or take a photo of the printed log. PDFs made by this app’s email button are read exactly. Other PDFs are read like manifests.</li>
 <li><b>Manifest:</b> add one or more photos or PDF files of the manifest. You can choose several PDFs at once. PDFs with selectable text are read directly, and scanned PDFs are read like photos.</li>
 <li>Check the two lists of numbers and fix any mistakes. You can also type numbers in.</li>
 <li>Press <b>Compare and download</b> to get a spreadsheet that lists every LPN from both sources. <b>✓ Matched</b> means it is on both. <b>✗ MISSING</b> means it is on the manifest but not the log, so report it as missing. <b>⚠ LOG ONLY</b> means it is on the log but not the manifest, so it still needs booking in. If you uploaded the log as an .xlsx file, the comparison is added as a new tab called <b>Manifest Check</b> in a copy of that file, so you get both in one workbook. With a photo of the printed log you get a separate spreadsheet.</li>
 </ol>
 <p>Photos are read with text recognition. It looks for entries that match the LPN format and fixes common lookalike characters in the number part, but it can still misread the letters, so check the lists before comparing. It cleans up the image and re-reads each number close up to improve accuracy, and flags numbers with an unusual number of digits.</p>
+<p><b>Include a copy of the log:</b> when this box is ticked (the default), the Excel comparison is added as a new tab on your uploaded log workbook. If the log came from a PDF or another type of file, the comparison workbook gets a <b>Log copy</b> tab with all of the log’s information. The emailed PDF has the log added as extra pages after the comparison: your uploaded PDF as it is, or a table copy of the spreadsheet’s information. If the log was read from a photo or a PDF not made by this app, only the LPN numbers are available to copy. Untick the box to get the comparison on its own.</p>
 <h3>6. Install it on your phone</h3>
 <ul>
 <li><b>Android (Chrome):</b> open the app’s web address, tap the ⋮ menu, then <b>Install app</b> or <b>Add to Home screen</b>.</li>
@@ -949,7 +1145,15 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <li>Your entries, date, name and logo are saved in this browser on this device only. <b>Clear all</b> removes the entries.</li>
 <li>LPNs are expected as a letter prefix followed by digits, for example RUN000000000. The prefix list only affects numbers read from photos, not numbers you type in.</li>
 <li>Always check numbers read from photos before comparing, as photos can be misread.</li>
-</ul>`,log:`<h3>v3.3 <span class="ver">Current</span></h3>
+</ul>`,log:`<h3>v3.7 <span class="ver">Current</span></h3>
+<ul><li>The log copy now includes all of the log’s information (pallet numbers, types, FSDU, breakdown and delivery details), not just the numbers.</li></ul>
+<h3>v3.6</h3>
+<ul><li>Added a tick box to include a copy of the log with the comparison: extra pages at the end of the PDF, and a tab in the spreadsheet.</li></ul>
+<h3>v3.5</h3>
+<ul><li>The log for a comparison can now be uploaded as a PDF as well as a spreadsheet, and PDFs made by the app can be read back accurately.</li></ul>
+<h3>v3.4</h3>
+<ul><li>The email buttons now share a PDF copy, since phones block sharing Excel files. Excel downloads are unchanged.</li></ul>
+<h3>v3.3</h3>
 <ul><li>Email buttons now show a Tap to share button when the phone needs a fresh tap, instead of just saving the file.</li></ul>
 <h3>v3.2</h3>
 <ul><li>Added buttons to email the spreadsheets as attachments using your phone’s share sheet.</li></ul>
@@ -1041,7 +1245,7 @@ $("panelBody").addEventListener("click",e=>{if(e.target&&e.target.id==="showInst
   setTimeout(openInstall,700);
 })();
 if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
-setTimeout(()=>{loadExcel().catch(()=>{})},2500);
+setTimeout(()=>{loadExcel().catch(()=>{});loadJsPdf().catch(()=>{})},2500);
 load();render();
 </script>
 </body>
