@@ -11,92 +11,179 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="LPN Log">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
-:root{--bg:#f5f6f8;--card:#fff;--tx:#1b1f24;--mu:#6a727c;--bd:#d9dde3;--ac:#1f6feb;--dg:#c62828;--wn:#b26a00;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171a;--card:#1d2126;--tx:#e8ebee;--mu:#98a1ab;--bd:#343a41;--ac:#4c8dff;--dg:#ef5350;--wn:#ffb74d}}
-:root[data-theme="dark"]{--bg:#14171a;--card:#1d2126;--tx:#e8ebee;--mu:#98a1ab;--bd:#343a41;--ac:#4c8dff;--dg:#ef5350;--wn:#ffb74d}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
+:root{--bg:#e3e8e4;--paper:#fbfcfa;--ink:#27312d;--mu:#66726c;--rule:#d3dad5;--ac:#2f6f68;--ac2:#265b55;--acs:#dcebe8;--bb:#b07d4f;--fm:#5382b8;--fp:#8a9a3b;--mx:#9a6aa6;--dg:#b3392f;--wn:#7a5a1c;--wns:#f6ecd2;--sel:#e9efeb;--line:#bcc5bf;--r:6px;box-sizing:border-box;padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#131816;--paper:#1c2321;--ink:#e3e9e5;--mu:#98a59e;--rule:#2e3834;--ac:#5fb0a6;--ac2:#7cc4ba;--acs:#223532;--bb:#cf9b6c;--fm:#7fa8dc;--fp:#b2c05e;--mx:#c192cc;--dg:#f08a80;--wn:#e6c785;--wns:#2e2815;--sel:#27302d;--line:#46524d}}
+:root[data-theme="dark"]{--bg:#131816;--paper:#1c2321;--ink:#e3e9e5;--mu:#98a59e;--rule:#2e3834;--ac:#5fb0a6;--ac2:#7cc4ba;--acs:#223532;--bb:#cf9b6c;--fm:#7fa8dc;--fp:#b2c05e;--mx:#c192cc;--dg:#f08a80;--wn:#e6c785;--wns:#2e2815;--sel:#27302d;--line:#46524d}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-main{max-width:720px;margin:0 auto;padding:16px}
-h1{font-size:1.3rem;margin:0 0 12px}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:12px}
-label{display:block;font-size:.8rem;color:var(--mu);margin-bottom:4px}
-input,select,button{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:10px;max-width:100%}
-input:focus,select:focus,button:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16.5px/1.55 "Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+.top{display:flex;align-items:center;gap:14px;max-width:720px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top,0px)) 18px 12px}
+.top .brand{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
+.top .mark{display:none}
+.top h1{font:700 1.3rem/1.15 "Atkinson Hyperlegible",sans-serif;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .sub{font-size:.82rem;color:var(--mu)}
+#logoImg{display:block;height:38px;max-width:110px;object-fit:contain;flex:none}
+#side{display:flex;gap:16px;flex:none}
+#side button{min-height:40px;padding:0;font-size:.95rem;font-weight:700;background:transparent;border:0;border-bottom:2px solid var(--ac);border-radius:0;color:var(--ac)}
+#side button:hover{background:transparent;color:var(--ac2)}
+#side .lbl{display:inline}
+main{max-width:720px;margin:0 auto;background:var(--paper);padding:6px 18px 280px;border:1px solid var(--rule);border-bottom:0;min-height:70vh}
+@media (min-width:760px){main{padding-bottom:60px;border-radius:var(--r) var(--r) 0 0}}
+.card{background:none;border:0;border-radius:0;box-shadow:none;padding:0;margin:0;min-width:0;max-width:100%}
+.card+.card{margin-top:26px;padding-top:18px;border-top:1px solid var(--line)}
+.card:first-of-type{margin-top:0}
+.ct{font:700 1.25rem/1.2 "Atkinson Hyperlegible",sans-serif;margin:8px 0 14px}
+label{display:block;font-size:.85rem;font-weight:700;color:var(--mu);margin-bottom:4px}
+input,select,button,textarea{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;max-width:100%}
+input:not([type=checkbox]),select{min-height:46px}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--ac);outline-offset:1px;border-color:var(--ac)}
+#lpn{font:600 1.2rem/1 "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;letter-spacing:.03em;min-height:52px;border-width:2px;border-color:var(--ink)}
+#lpn::placeholder{font:400 .95rem "Atkinson Hyperlegible",system-ui,sans-serif;letter-spacing:0;color:var(--mu)}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
 .grow{flex:1;min-width:150px}
 .grow input,.grow select{width:100%}
-button{cursor:pointer}
-button.p{background:var(--ac);border-color:var(--ac);color:#fff;font-weight:600}
-button.d{color:var(--dg)}
-.msg{min-height:1.2em;font-size:.85rem;color:var(--wn);margin-top:8px}
-.sum{display:flex;gap:8px;flex-wrap:wrap;font-size:.85rem;color:var(--mu);margin-bottom:10px}
-.sum b{color:var(--tx)}
-.wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse}
-th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--bd);white-space:nowrap}
-th{font-size:.75rem;color:var(--mu);text-transform:uppercase}
-td select{padding:6px}
-td.l{font-family:ui-monospace,Menlo,Consolas,monospace}
-textarea{font:14px/1.4 ui-monospace,Menlo,Consolas,monospace;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:10px;display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;resize:vertical}
-.card{min-width:0;max-width:100%}
-#side{position:fixed;right:env(safe-area-inset-right,0px);top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;z-index:20}
-#side button{writing-mode:vertical-rl;padding:12px 8px;border-radius:8px 0 0 8px;font-weight:600;background:var(--ac);border-color:var(--ac);color:#fff}
-#shade{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:30}
-#panel{position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);background:var(--card);color:var(--tx);border-left:1px solid var(--bd);z-index:40;overflow-y:auto;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(24px + env(safe-area-inset-bottom,0px))}
-#panel h2{font-size:1.15rem;margin:0}
-#panel h3{font-size:1rem;margin:16px 0 6px}
-#panel p,#panel li{font-size:.92rem;margin:4px 0}
+button{cursor:pointer;min-height:46px;font-weight:700;font-size:.95rem}
+button:hover{background:var(--sel)}
+button:active{transform:translateY(1px)}
+button:disabled{opacity:.55;cursor:default}
+button.p{background:var(--ac);border-color:var(--ac);color:#fff}
+button.p:hover{background:var(--ac2);border-color:var(--ac2)}
+button.d{color:var(--dg);background:transparent}
+button.d:hover{background:color-mix(in srgb,var(--dg) 12%,var(--paper));border-color:var(--dg)}
+.msg{min-height:1.2em;font-size:.9rem;color:var(--wn);margin-top:8px}
+.msg:empty{min-height:0;margin:0}
+.note{font-size:.88rem;color:var(--mu);margin-top:10px}
+.warn{background:var(--wns);color:var(--wn);border-left:4px solid var(--wn);padding:9px 12px;font-size:.9rem;margin:0 0 14px}
+.sum{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+#sum{display:flex;gap:6px 18px;flex-wrap:wrap;align-items:baseline;margin:0 0 12px;font-size:.95rem}
+#sum span{display:inline-flex;align-items:baseline;gap:6px;font-weight:700;color:var(--mu)}
+#sum b{order:2;font-size:1.15rem;color:var(--ink)}
+#sum span:first-child{flex-basis:100%;font-size:.9rem}
+#sum span:first-child b{font-size:1.6rem}
+#sum span:nth-child(n+2)::before{content:"";width:12px;height:12px;border-radius:3px;background:var(--line);align-self:center;margin-right:2px}
+#sum span:nth-child(2)::before{background:var(--bb)}
+#sum span:nth-child(3)::before{background:var(--fm)}
+#sum span:nth-child(4)::before{background:var(--fp)}
+#sum span:nth-child(5)::before{background:var(--mx)}
+#sum span:nth-child(6)::before{background:var(--ink);border-radius:50%}
+#cmpSum span{background:var(--sel);border-radius:var(--r);padding:3px 10px;font-size:.88rem;color:var(--mu)}
+#cmpSum b{color:var(--ink)}
+.wrap{overflow-x:auto;border-top:2px solid var(--ink);border-bottom:1px solid var(--line);max-height:60vh;overflow-y:auto;margin:0 -18px}
+table{width:100%;border-collapse:separate;border-spacing:0}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent);white-space:nowrap}
+th:first-child,td:first-child{padding-left:18px}
+th:last-child,td:last-child{padding-right:18px}
+tbody tr:last-child td{border-bottom:0}
+th{position:sticky;top:0;background:var(--paper);color:var(--mu);font-size:.82rem;font-weight:700;z-index:1;border-bottom:1px solid var(--line)}
+tbody tr[data-t="BB"]{background:color-mix(in srgb,var(--bb) 14%,var(--paper));box-shadow:inset 5px 0 0 var(--bb)}
+tbody tr[data-t="FMCG"]{background:color-mix(in srgb,var(--fm) 14%,var(--paper));box-shadow:inset 5px 0 0 var(--fm)}
+tbody tr[data-t="FPP"]{background:color-mix(in srgb,var(--fp) 16%,var(--paper));box-shadow:inset 5px 0 0 var(--fp)}
+tbody tr[data-t="Mixed"]{background:color-mix(in srgb,var(--mx) 14%,var(--paper));box-shadow:inset 5px 0 0 var(--mx)}
+td:first-child{color:var(--mu);font-variant-numeric:tabular-nums;width:1%}
+td.l{font:600 .98rem "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace}
+td select{min-height:36px;padding:3px 8px;font-weight:700;background:transparent}
+td button{min-height:34px;padding:2px 10px}
+#type{font-weight:700}
+textarea{font:400 14px/1.5 "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;display:block;width:100%;max-width:100%;min-width:0;resize:vertical}
+.chk{display:flex;align-items:flex-start;gap:10px;font-size:.95rem;font-weight:400;color:var(--ink);margin-top:14px}
+.chk input,#cmpMerge{width:21px;height:21px;margin:1px 0 0;flex:none;accent-color:var(--ac)}
+#fsdu{display:block;width:30px;height:30px;margin:0;accent-color:var(--ac);padding:0}
+td input[type=checkbox]{width:21px;height:21px;accent-color:var(--ac)}
+#scanbox{margin-top:10px}
+#video{width:100%;max-height:200px;background:#000;border-radius:var(--r);object-fit:cover}
+.empty{color:var(--mu);text-align:center;padding:30px 12px}
+.act{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-top:14px}
+.act>.row{flex:1;justify-content:flex-end}
+@media (max-width:560px){.act{flex-direction:column;align-items:stretch}.act>.row{flex-direction:column;align-items:stretch}.act button{width:100%}.act button.d{order:3}}
+.addgrid{display:grid;grid-template-columns:1fr auto auto;gap:10px 12px;align-items:end}
+.addgrid .lp{grid-column:1/-1}
+.addgrid>div:nth-child(3){display:flex;align-items:center;gap:8px}
+.addgrid>div:nth-child(3) label{margin:0}
+.addgrid #add{min-width:96px;min-height:52px}
+.btnrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.btnrow button{flex:1;min-width:130px}
+button.tgl{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:transparent;border:0;padding:0;min-height:40px;font:700 1.25rem/1.2 "Atkinson Hyperlegible",sans-serif;color:var(--ink)}
+button.tgl:hover{background:transparent}
+button.tgl .tt{flex:1}
+button.tgl .chev{font:400 1rem sans-serif;color:var(--ac);width:28px;height:28px;display:grid;place-items:center;transition:transform .15s}
+button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.entry{border:2px solid var(--ink);border-radius:var(--r);padding:14px;background:var(--paper)}
+.card+.card.entry{padding:14px;border:2px solid var(--ink);border-top:2px solid var(--ink)}
+@media (max-width:759px){
+  .card.entry,.card+.card.entry{position:fixed;left:0;right:0;bottom:0;z-index:15;margin:0;border:0;border-top:2px solid var(--ink);border-radius:0;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 18px rgba(20,30,26,.14);max-height:80vh;overflow-y:auto}
+  .entry .ct,.entry .note{display:none}
+  .addgrid{grid-template-columns:1fr auto auto;gap:8px 10px}
+  .addgrid .lp{grid-column:1/3;grid-row:1}
+  .addgrid #add{grid-column:3;grid-row:1}
+  .addgrid>div:nth-child(2){grid-column:1;grid-row:2}
+  .addgrid>div:nth-child(3){grid-column:2/4;grid-row:2;justify-content:flex-end}
+  .entry .btnrow{margin-top:8px;flex-wrap:nowrap}
+  .entry .btnrow button{min-width:0;min-height:42px;padding:6px 8px;font-size:.88rem}
+}
+#shade{position:fixed;inset:0;background:rgba(20,28,25,.45);z-index:30}
+#panel{position:fixed;top:0;right:0;bottom:0;width:min(470px,100%);background:var(--paper);color:var(--ink);border-left:1px solid var(--line);box-shadow:-8px 0 28px rgba(20,28,25,.15);z-index:40;overflow-y:auto;padding:calc(16px + env(safe-area-inset-top,0px)) 20px calc(24px + env(safe-area-inset-bottom,0px))}
+#panel h2{font:700 1.3rem/1.2 "Atkinson Hyperlegible",sans-serif;margin:0}
+#panel h3{font:700 1.05rem/1.3 "Atkinson Hyperlegible",sans-serif;margin:20px 0 6px;color:var(--ac)}
+#panel p,#panel li{font-size:.95rem;margin:5px 0}
 #panel ul,#panel ol{padding-left:20px;margin:6px 0}
-#panel .ver{color:var(--mu);font-size:.8rem;font-weight:400}
-@media (max-width:820px){main{padding-right:52px}}
-#instShade{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50}
-#instBox{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(440px,calc(100% - 32px));max-height:calc(100% - 32px);overflow-y:auto;background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:12px;padding:18px;z-index:60}
-#instBox h2{font-size:1.15rem;margin:0 0 6px}
-#instBox h3{font-size:1rem;margin:14px 0 4px}
+#panel .ver{font:700 .75rem "Atkinson Hyperlegible",sans-serif;background:var(--acs);color:var(--ac);border-radius:var(--r);padding:2px 8px;margin-left:8px;vertical-align:middle}
+#instShade{position:fixed;inset:0;background:rgba(20,28,25,.5);z-index:50}
+#instBox{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(450px,calc(100% - 32px));max-height:calc(100% - 32px);overflow-y:auto;background:var(--paper);color:var(--ink);border:2px solid var(--ink);border-radius:var(--r);padding:20px;z-index:60}
+#instBox h2{font:700 1.3rem/1.2 "Atkinson Hyperlegible",sans-serif;margin:0 0 6px}
+#instBox h3{font:700 1.05rem/1.3 "Atkinson Hyperlegible",sans-serif;margin:14px 0 4px;color:var(--ac)}
 #instBox ol{padding-left:20px;margin:4px 0}
-#instBox li,#instBox p{font-size:.92rem;margin:4px 0}
-.chk{display:flex;align-items:flex-start;gap:8px;font-size:.9rem;color:var(--tx);margin-top:10px}
-#cmpMerge{width:20px;height:20px;margin:1px 0 0;flex:none;accent-color:var(--ac)}
-#fsdu{display:block;width:26px;height:26px;margin:9px 4px;accent-color:var(--ac)}
-td input[type=checkbox]{width:20px;height:20px;accent-color:var(--ac)}
-#logoImg{display:block;max-height:80px;max-width:100%;margin-bottom:10px}
-#scanbox{margin-top:12px}
-#video{width:100%;max-height:300px;background:#000;border-radius:8px;object-fit:cover}
+#instBox li,#instBox p{font-size:.95rem;margin:4px 0}
 [hidden]{display:none!important}
-.empty{color:var(--mu);text-align:center;padding:18px}
-.act{display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap;margin-top:12px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media print{.top,#side,#shade,#panel,.entry{display:none}}
 </style>
 </head>
 <body>
+<header class="top">
+  <div class="brand">
+    <img id="logoImg" alt="Company logo" hidden>
+    <div class="mark" aria-hidden="true">LPN</div>
+    <div style="min-width:0"><h1>LPN Pallet Log</h1><div class="sub">Goods-in pallet documentation</div></div>
+  </div>
+  <aside id="side" aria-label="Help">
+    <button id="btnGuide" aria-label="Guide">📖<span class="lbl"> Guide</span></button>
+    <button id="btnLog" aria-label="Changelog">📝<span class="lbl"> Changelog</span></button>
+  </aside>
+</header>
 <main>
-<div class="card">
-  <img id="logoImg" alt="Company logo" hidden>
-  <div class="row"><button id="logoBtn">Add logo</button><button class="d" id="logoRm" hidden>Remove logo</button></div>
-  <input type="file" id="logoFile" accept="image/*" hidden>
-</div>
-<h1>LPN Pallet Log</h1>
 
 <div class="card">
+  <div class="ct">Delivery</div>
   <div class="row">
     <div><label for="date">Date</label><input type="date" id="date"></div>
     <div class="grow"><label for="recv">Received by</label><input id="recv" placeholder="Name of person who received the delivery"></div>
   </div>
+  <div class="row" style="margin-top:12px;align-items:center">
+    <button id="logoBtn">Add logo</button><button class="d" id="logoRm" hidden>Remove logo</button>
+    <input type="file" id="logoFile" accept="image/*" hidden>
+    <span class="note" style="margin:0">Optional. Shown in the header and on exported files.</span>
+  </div>
 </div>
 
-<div class="card">
-  <div class="row">
-    <div class="grow"><label for="lpn">LPN number</label><input id="lpn" autocomplete="off" autocapitalize="characters" placeholder="Scan or type LPN, press Enter"></div>
-    <div class="grow"><label for="type">Pallet type</label>
-      <select id="type"><option>BB</option><option>FMCG</option><option>FPP</option><option>Mixed</option></select></div>
+<div class="card entry">
+  <div class="ct">Add a pallet</div>
+  <div class="addgrid">
+    <div class="lp"><label for="lpn">LPN number</label><input id="lpn" style="width:100%;font-size:1.05rem" autocomplete="off" autocapitalize="characters" placeholder="Scan or type LPN, press Enter"></div>
+    <div><label for="type">Pallet type</label>
+      <select id="type" style="width:100%"><option>BB</option><option>FMCG</option><option>FPP</option><option>Mixed</option></select></div>
     <div><label for="fsdu">FSDU</label><input type="checkbox" id="fsdu" aria-label="Pallet contains an FSDU"></div>
-    <button class="p" id="add">Add</button>
+    <button class="p" id="add" style="min-width:90px">Add</button>
+  </div>
+  <div class="btnrow">
     <button id="scan">📷 Live scan</button>
     <button id="photo">Scan by photo</button>
     <input type="file" id="file" accept="image/*" capture="environment" hidden>
   </div>
-  <div class="msg" style="color:var(--mu);margin-top:10px">Note: if Live scan doesn't work, try Scan by photo instead.</div>
+  <div class="note">💡 If Live scan doesn’t work, try Scan by photo instead.</div>
   <div id="scanbox" hidden>
     <video id="video" playsinline muted></video>
     <div class="row" style="align-items:center;margin-top:8px">
@@ -108,6 +195,7 @@ td input[type=checkbox]{width:20px;height:20px;accent-color:var(--ac)}
 </div>
 
 <div class="card">
+  <div class="ct">Pallet log</div>
   <div class="sum" id="sum"></div>
   <div class="wrap">
     <table>
@@ -122,8 +210,9 @@ td input[type=checkbox]{width:20px;height:20px;accent-color:var(--ac)}
   <div class="msg" id="dlmsg"></div>
 </div>
 <div class="card" id="cmpCard">
-  <h2 style="font-size:1.1rem;margin:0 0 10px">Check delivery against manifest</h2>
-  <div class="msg" style="color:var(--wn);margin:0 0 12px">⚠ This section is still being tested, so results may not always be right. Please check them carefully.</div>
+  <button type="button" class="tgl" id="cmpToggle" aria-expanded="false" aria-controls="cmpBody"><span class="tt">Manifest check</span><span class="chev" aria-hidden="true">▾</span></button>
+  <div id="cmpBody" hidden style="margin-top:14px">
+  <div class="warn">⚠ This section is still being tested, so results may not always be right. Please check them carefully.</div>
   <div style="margin-bottom:12px"><label for="cmpDate">Manifest date</label><input type="date" id="cmpDate"></div>
   <div style="margin-bottom:12px">
     <label for="cmpPreset">Prefix preset</label>
@@ -155,13 +244,10 @@ td input[type=checkbox]{width:20px;height:20px;accent-color:var(--ac)}
   <label class="chk"><input type="checkbox" id="cmpMerge" checked><span>Include a copy of the log with the comparison (a tab in the spreadsheet, extra pages at the end of the PDF)</span></label>
   <div class="sum" id="cmpSum" style="margin-top:10px"></div>
   <div class="act"><button class="d" id="cmpClear">Clear</button><div class="row" style="gap:8px"><button id="cmpMail">✉ Compare and email PDF</button><button class="p" id="cmpGo">Compare and download</button></div></div>
+  </div>
 </div>
 </main>
 
-<aside id="side" aria-label="Help">
-  <button id="btnGuide">📖 Guide</button>
-  <button id="btnLog">📝 Changelog</button>
-</aside>
 <div id="shade" hidden></div>
 <section id="panel" role="dialog" aria-labelledby="panelTitle" hidden>
   <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -217,13 +303,14 @@ function render(){
   const b=$("body");b.innerHTML="";
   if(!rows.length){b.innerHTML='<tr><td colspan="5" class="empty">No pallets logged yet</td></tr>'}
   rows.forEach((r,i)=>{
-    const tr=document.createElement("tr");
+    const tr=document.createElement("tr");tr.dataset.t=r.type;
     const n=document.createElement("td");n.textContent=i+1;
     const l=document.createElement("td");l.className="l";l.textContent=r.lpn;
     const t=document.createElement("td");
     const s=document.createElement("select");
     TYPES.forEach(x=>{const o=document.createElement("option");o.textContent=x;if(x===r.type)o.selected=true;s.appendChild(o)});
-    s.onchange=()=>{r.type=s.value;save();summary()};
+    s.dataset.t=r.type;
+    s.onchange=()=>{r.type=s.value;s.dataset.t=s.value;tr.dataset.t=s.value;save();summary()};
     t.appendChild(s);
     const f=document.createElement("td");
     const cb=document.createElement("input");cb.type="checkbox";cb.checked=!!r.fsdu;cb.setAttribute("aria-label","FSDU for "+r.lpn);
@@ -239,7 +326,7 @@ function render(){
 }
 function summary(){
   const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
-  $("sum").innerHTML="<span>Total: <b>"+rows.length+"</b></span><span>BB: <b>"+c.BB+"</b></span><span>FMCG: <b>"+c.FMCG+"</b></span><span>FPP: <b>"+c.FPP+"</b></span><span>Mixed: <b>"+c.Mixed+"</b></span><span>FSDU: <b>"+rows.filter(r=>r.fsdu).length+"</b></span>";
+  $("sum").innerHTML="<span><b>"+rows.length+"</b>Total</span><span><b>"+c.BB+"</b>BB</span><span><b>"+c.FMCG+"</b>FMCG</span><span><b>"+c.FPP+"</b>FPP</span><span><b>"+c.Mixed+"</b>Mixed</span><span><b>"+rows.filter(r=>r.fsdu).length+"</b>FSDU</span>";
 }
 function add(){
   const v=$("lpn").value.trim();
@@ -337,6 +424,8 @@ $("photo").onclick=()=>{$("file").value="";$("file").click()};
 $("file").onchange=e=>{const f=e.target.files&&e.target.files[0];if(f)decodePhoto(f)};
 
 $("stopscan").onclick=()=>stopScan();
+$("type").dataset.t=$("type").value;
+$("type").addEventListener("change",()=>{$("type").dataset.t=$("type").value});
 $("add").onclick=add;
 $("lpn").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();add()}});
 $("date").onchange=save;
@@ -1101,6 +1190,10 @@ $("pfxDl").onclick=()=>{
 };
 $("dlMail").onclick=()=>emailVia($("dl").onclick,"dlmsg");
 $("cmpMail").onclick=()=>emailVia($("cmpGo").onclick,"cmpMsg");
+$("cmpToggle").onclick=()=>{
+  const open=$("cmpBody").hidden;
+  $("cmpBody").hidden=!open;$("cmpToggle").setAttribute("aria-expanded",open?"true":"false");
+};
 /* ---- help panel ---- */
 const HELP={guide:`<h3>1. Set up the delivery</h3>
 <p>Enter the <b>Date</b> and the name of the person who <b>Received</b> the delivery at the top. Use <b>Add logo</b> if you want a logo on the page and on the spreadsheet. If a file called logo.png sits next to the app, it is used as the default logo. <b>Change logo</b> overrides it on this device and <b>Reset to default logo</b> brings it back.</p>
@@ -1124,6 +1217,7 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <p><b>Emailing it:</b> press <b>✉ Email PDF</b> and your phone’s share sheet opens with a PDF copy of the spreadsheet attached, because phones don’t allow Excel files to be shared this way. The Excel download is unchanged. Choose your email app from the list. <b>✉ Compare and email PDF</b> does the same for the comparison (just the comparison, not the merged workbook). If it says the file is ready, tap <b>Tap to share</b>. If the browser can’t attach files, the file is saved and you are asked to attach it to your email yourself.</p>
 <h3>5. Check a delivery against the manifest</h3>
 <ol>
+<li><b>Showing the section:</b> the manifest check is hidden by default. Tap its heading to show or hide it.</li>
 <li><b>Manifest date:</b> set the date of the manifest. It can be different from today and is used on the comparison spreadsheet.</li>
 <li><b>Prefix preset:</b> choose a preset to fill the list of LPN prefixes, then edit the list if a delivery is different. Only numbers starting with these prefixes are picked up from photos. Leave the list blank, or choose <b>All prefixes</b>, to pick up any LPN made of 1 to 3 letters followed by digits. Use <b>Save as preset</b> to keep a list under a name. <b>Download presets file</b> creates an updated copy from your current presets.</li>
 <li><b>LPN log:</b> upload an exported spreadsheet or a PDF of the log, or take a photo of the printed log. PDFs made by this app’s email button are read exactly. Other PDFs are read like manifests.</li>
@@ -1145,7 +1239,17 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <li>Your entries, date, name and logo are saved in this browser on this device only. <b>Clear all</b> removes the entries.</li>
 <li>LPNs are expected as a letter prefix followed by digits, for example RUN000000000. The prefix list only affects numbers read from photos, not numbers you type in.</li>
 <li>Always check numbers read from photos before comparing, as photos can be misread.</li>
-</ul>`,log:`<h3>v3.7 <span class="ver">Current</span></h3>
+</ul>`,log:`<h3>v3.12 <span class="ver">Current</span></h3>
+<ul><li>New layout: one continuous sheet instead of separate boxes, the entry controls dock to the bottom of the screen on phones, counts shown as one line, and plain text Guide and Changelog links.</li></ul>
+<h3>v3.11</h3>
+<ul><li>New softer design: muted colours, easier-to-read font, and each pallet row tinted in its pallet type’s colour.</li></ul>
+<h3>v3.10</h3>
+<ul><li>New design: goods-in look with a pallet-label entry area, colour-coded pallet types, a tally of counts at the top of the log, and a hazard-stripe header.</li></ul>
+<h3>v3.9</h3>
+<ul><li>The manifest comparison section can now be shown or hidden, and is hidden by default.</li></ul>
+<h3>v3.8</h3>
+<ul><li>Refreshed design: sticky header with the logo and help buttons, numbered section cards, clearer buttons, tidier tables and improved dark mode.</li></ul>
+<h3>v3.7</h3>
 <ul><li>The log copy now includes all of the log’s information (pallet numbers, types, FSDU, breakdown and delivery details), not just the numbers.</li></ul>
 <h3>v3.6</h3>
 <ul><li>Added a tick box to include a copy of the log with the comparison: extra pages at the end of the PDF, and a tab in the spreadsheet.</li></ul>
