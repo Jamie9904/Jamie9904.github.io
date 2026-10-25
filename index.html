@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>LPN Pallet Log</title>
+<meta name="description" content="Log goods-in pallet LPNs, export the log as Excel or PDF, and check a delivery against its manifest.">
+<link rel="icon" href="icon-192.png" type="image/png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0c1830">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -24,15 +26,15 @@
     <div style="min-width:0"><h1>LPN Pallet Log</h1><div class="sub">Goods-in pallet documentation</div></div>
   </div>
   <aside id="side" aria-label="Help">
-    <button id="btnGuide" aria-label="Guide">📖<span class="lbl"> Guide</span></button>
-    <button id="btnLog" aria-label="Changelog">📝<span class="lbl"> Changelog</span></button>
-    <button id="btnSet" aria-label="Settings">⚙<span class="lbl"> Settings</span></button>
+    <button id="btnGuide" aria-label="Guide"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5"/></svg><span class="lbl">Guide</span></button>
+    <button id="btnLog" aria-label="Changelog"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 12h7M9 16h7"/></svg><span class="lbl">Changelog</span></button>
+    <button id="btnSet" aria-label="Settings"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><span class="lbl">Settings</span></button>
   </aside>
 </header>
 <main>
 
 <div class="card">
-  <div class="ct">Delivery</div>
+  <h2 class="ct">Delivery</h2>
   <div class="row">
     <div><label for="date">Date</label><input type="date" id="date"></div>
     <div class="grow"><label for="recv">Received by</label><input id="recv" placeholder="Name of person who received the delivery"></div>
@@ -47,19 +49,20 @@
 </div>
 
 <div class="card entry">
-  <div class="ct">Add a pallet</div>
+  <h2 class="ct">Add a pallet</h2>
   <div class="tyb" id="tyb" role="group" aria-label="Pallet type"><button type="button" data-t="BB">BB</button><button type="button" data-t="FMCG">FMCG</button><button type="button" data-t="FPP">FPP</button><button type="button" data-t="Mixed">Mixed</button><select id="type" hidden aria-hidden="true"><option>BB</option><option>FMCG</option><option>FPP</option><option>Mixed</option></select></div>
   <div class="addgrid">
     <div class="lp"><label for="lpn">LPN number</label><input id="lpn" style="width:100%;font-size:1.05rem" autocomplete="off" autocapitalize="characters" placeholder="Scan or type LPN, press Enter"></div>
     <div><label for="fsdu">FSDU</label><input type="checkbox" id="fsdu" aria-label="Pallet contains an FSDU"></div>
     <button class="p" id="add" style="min-width:90px">Add</button>
+    <button type="button" id="scanBtn" aria-expanded="false" aria-controls="btnrow">Scan ▾</button>
   </div>
-  <div class="btnrow">
-    <button id="scan">📷 Live scan</button>
+  <div class="btnrow" id="btnrow">
+    <button id="scan">Live scan</button>
     <button id="photo">Scan by photo</button>
     <input type="file" id="file" accept="image/*" capture="environment" hidden>
   </div>
-  <div class="note">💡 If Live scan doesn’t work, try Scan by photo instead.</div>
+  <div class="note">Tip: if Live scan doesn’t work, try Scan by photo instead.</div>
   <div id="scanbox" hidden>
     <video id="video" playsinline muted></video>
     <div class="row" style="align-items:center;margin-top:8px">
@@ -72,7 +75,7 @@
 </div>
 
 <div class="card">
-  <div class="ct">Pallet log</div>
+  <h2 class="ct">Pallet log</h2>
   <div class="sum" id="sum"></div>
   <div class="expinfo" id="expInfo" hidden></div>
   <div class="undo" id="undoBar" hidden role="status"><span id="undoTxt"></span><button id="undoBtn">Undo</button></div>
@@ -89,11 +92,11 @@
     <button class="d" id="clear">Clear all</button>
     <div class="row" style="gap:8px"><button class="p" id="expBtn" aria-expanded="false" aria-controls="expMenu">Export ▾</button></div>
   </div>
-  <div class="menu" id="expMenu" hidden><button class="p" id="dl">Download (Excel)</button><button id="dlMail">✉ Email PDF</button><button id="prn">🖨 Print</button></div>
+  <div class="menu" id="expMenu" hidden><button class="p" id="dl">Download (Excel)</button><button id="dlMail">Email PDF</button><button id="prn">Print</button></div>
   <div class="msg" id="dlmsg" role="status" aria-live="polite"></div>
 </div>
 <div class="card" id="cmpCard">
-  <button type="button" class="tgl" id="cmpToggle" aria-expanded="false" aria-controls="cmpBody"><span class="tt">Manifest check</span><span class="chev" aria-hidden="true">▾</span></button>
+  <h2 class="tglh"><button type="button" class="tgl" id="cmpToggle" aria-expanded="false" aria-controls="cmpBody"><span class="tt">Manifest check</span><span class="chev" aria-hidden="true">▾</span></button></h2>
   <div id="cmpBody" hidden style="margin-top:14px">
   <div class="warn">⚠ This section is still being tested, so results may not always be right. Please check them carefully.</div>
   <div style="margin-bottom:12px"><label for="cmpDate">Manifest date</label><input type="date" id="cmpDate"></div>
@@ -111,8 +114,8 @@
     <div class="msg" id="pfxMsg" role="status" aria-live="polite" style="color:var(--mu)"></div>
   </div>
   <div class="row">
-    <div class="grow"><label>1. LPN log</label><div class="row"><button class="p" id="cmpUseLog">Use current log</button><button id="cmpLogBtn">Upload log file</button><button id="cmpLogPhotoBtn">📷 Photo of printed log</button></div><select id="cmpHist" style="width:100%;margin-top:8px" aria-label="Use a saved delivery"></select></div>
-    <div class="grow"><label>2. Manifest photos or PDFs</label><div class="row"><button id="cmpPhotoBtn">📷 Add manifest photo</button><button id="cmpPdfBtn">📄 Add manifest PDFs</button></div></div>
+    <div class="grow"><label>1. LPN log</label><div class="row"><button class="p" id="cmpUseLog">Use current log</button><button id="cmpLogBtn">Upload log file</button><button id="cmpLogPhotoBtn">Photo of printed log</button></div><select id="cmpHist" style="width:100%;margin-top:8px" aria-label="Use a saved delivery"></select></div>
+    <div class="grow"><label>2. Manifest photos or PDFs</label><div class="row"><button id="cmpPhotoBtn">Add manifest photo</button><button id="cmpPdfBtn">Add manifest PDFs</button></div></div>
   </div>
   <div class="msg" id="cmpLogName" role="status" aria-live="polite" style="color:var(--mu)"></div>
   <label for="cmpLogNums" style="margin-top:10px">Numbers in the log (one per line: fix any mistakes)</label>
@@ -126,7 +129,7 @@
   <textarea id="cmpNums" rows="6"></textarea>
   <div class="sum" id="cmpSum" style="margin-top:10px"></div>
   <div class="cmpres" id="cmpRes" hidden></div>
-  <div class="act"><button class="d" id="cmpClear">Clear</button><div class="row" style="gap:8px"><button class="p" id="cmpCheck">Check results</button><button id="cmpMail">✉ Compare and email PDF</button><button id="cmpGo">Compare and download</button></div></div>
+  <div class="act"><button class="d" id="cmpClear">Clear</button><div class="row" style="gap:8px"><button class="p" id="cmpCheck">Check results</button><button id="cmpMail">Compare and email PDF</button><button id="cmpGo">Compare and download</button></div></div>
   </div>
 </div>
 </main>

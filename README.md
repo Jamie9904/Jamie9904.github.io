@@ -32,10 +32,14 @@ The page must be served over https for the camera, installing and sharing to wor
 ## Updating the app
 
 1. Replace the changed files in the repository (usually just the ones that changed; each file has a single job, listed above) and commit them.
-2. If you add a file, add it to the list at the top of `sw.js`. If you change `sw.js` or any icon, also change the cache name at the top of `sw.js` (for example `lpn-log-v3` to `lpn-log-v4`) so phones pick up the new files.
+2. If you add a file, add it to the list at the top of `sw.js`. If you change `sw.js` or any icon, also change the cache name at the top of `sw.js` (for example `lpn-log-v4` to `lpn-log-v5`) so phones pick up the new files.
 3. Wait a minute for Pages to publish.
 
 Phones that already have the app open will show a "A new version is available" banner. Tap Refresh to load it. Nothing in the log is lost, because it is saved on the device as you work.
+
+## Working offline
+
+After the app has been opened once with a connection, it keeps a copy of itself and of the libraries it loads (Excel, PDF and text recognition, plus fonts), so it can be used without signal. The libraries are saved the first time each one is used, so open Export and the manifest check once while online.
 
 ## Presets
 

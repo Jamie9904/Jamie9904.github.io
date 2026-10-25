@@ -184,7 +184,7 @@ async function emailVia(handler,msgId){
   if(pendingShare){
     const ps=pendingShare;pendingShare=null;
     el.textContent="File ready. ";
-    const b=document.createElement("button");b.className="p";b.textContent="✉ Tap to share";
+    const b=document.createElement("button");b.className="p";b.textContent="Tap to share";
     b.onclick=async()=>{
       b.disabled=true;
       try{await navigator.share(ps.data);el.textContent=""}

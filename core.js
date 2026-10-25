@@ -67,12 +67,13 @@ function render(){
     const t=document.createElement("td");
     const s=document.createElement("select");
     TYPES.forEach(x=>{const o=document.createElement("option");o.textContent=x;if(x===r.type)o.selected=true;s.appendChild(o)});
-    s.dataset.t=r.type;
+    s.dataset.t=r.type;s.setAttribute("aria-label","Pallet type for "+r.lpn);
     s.onchange=()=>{r.type=s.value;s.dataset.t=s.value;tr.dataset.t=s.value;save();summary()};
     t.appendChild(s);
     const f=document.createElement("td");
     const cb=document.createElement("input");cb.type="checkbox";cb.checked=!!r.fsdu;cb.setAttribute("aria-label","FSDU for "+r.lpn);
     cb.onchange=()=>{r.fsdu=cb.checked;save()};
+    f.className="f";f.onclick=e=>{if(e.target!==cb){cb.checked=!cb.checked;r.fsdu=cb.checked;save()}};
     f.appendChild(cb);
     const x=document.createElement("td");
     const btn=document.createElement("button");btn.className="d";btn.textContent="✕";btn.setAttribute("aria-label","Delete "+r.lpn);

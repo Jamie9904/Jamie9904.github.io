@@ -8,7 +8,7 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <li>Tick <b>FSDU</b> if the pallet contains one.</li>
 <li>Press <b>Add</b> (or Enter).</li>
 </ol>
-<p>The FSDU tick box clears after every pallet. The pallet type stays as you left it. If an LPN has already been logged you get a note, but it is still added.</p>
+<p>The FSDU tick box clears after every pallet. The pallet type stays as you left it, unless you turn that off in Settings. If an LPN is already in the log, or doesn’t look right, you get a warning and can choose Skip or Add anyway.</p>
 <p>In the table you can change a pallet’s type or FSDU tick afterwards, or remove it with ✕. The totals above the table count each pallet once. The FSDU count is shown separately and is not part of the total.</p>
 <p><b>Warnings:</b> before a pallet is added, the app checks the LPN. If it is already in the log, doesn’t look like an LPN, uses a prefix that isn’t in your prefix list, or has an unusual number of digits, a red warning appears with a vibration and a sound. Tap <b>Skip</b> to leave it out or <b>Add anyway</b> to log it. You can switch the warnings off in Settings.</p>
 <p><b>Undo:</b> when you remove a pallet with ✕, edit an LPN or use Clear all, an <b>Undo</b> bar appears for a few seconds.</p>
@@ -20,6 +20,7 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <p><b>Editing and finding pallets:</b> tap an LPN in the log to correct it. Use the search box and type filter above the log to find pallets; the counts at the top always cover the whole log. Delivery notes are optional and appear in the exports.</p>
 <p><b>Saved deliveries:</b> <b>Start new delivery</b> saves the current log to history and clears the page. <b>Saved deliveries</b> lists them (this week and last week, with weeks starting on Sunday) so you can open one again, delete it, or import an exported spreadsheet or app-made PDF. The history is stored on this device only.</p>
 <h3>3. Scanning barcodes</h3>
+<p>On phones the scan options are tucked away: tap <b>Scan</b> next to the Add button to show <b>Live scan</b> and <b>Scan by photo</b>.</p>
 <ul>
 <li><b>Scan by photo:</b> take a clear photo of the barcode. Its contents are added as an LPN with the selected type.</li>
 <li><b>Handheld or Bluetooth scanner:</b> click the LPN box and scan. It types the code and presses Enter for you. This hasn’t been tested, so it may not work.</li>
@@ -27,7 +28,7 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 </ul>
 <h3>4. Download the spreadsheet</h3>
 <p>Press <b>Download (Excel)</b>. The file has your logo, the Pallet table (LPN, pallet type, FSDU), a breakdown of pallets by type with a Total, an FSDU line that is not included in the Total, and Delivery Details with the date and who received it. It is set up to print on A4 portrait. In the spreadsheet BB is shown as “Brown Box”. If the spreadsheet builder can’t load (for example no internet), a basic .xls file is saved instead.</p>
-<p><b>Emailing it:</b> press <b>✉ Email PDF</b> and your phone’s share sheet opens with a PDF copy of the spreadsheet attached, because phones don’t allow Excel files to be shared this way. The Excel download is unchanged. Choose your email app from the list. <b>✉ Compare and email PDF</b> does the same for the comparison (just the comparison, not the merged workbook). If it says the file is ready, tap <b>Tap to share</b>. If the browser can’t attach files, the file is saved and you are asked to attach it to your email yourself.</p>
+<p><b>Emailing it:</b> press <b>Email PDF</b> and your phone’s share sheet opens with a PDF copy of the spreadsheet attached, because phones don’t allow Excel files to be shared this way. The Excel download is unchanged. Choose your email app from the list. <b>Compare and email PDF</b> does the same for the comparison (just the comparison, not the merged workbook). If it says the file is ready, tap <b>Tap to share</b>. If the browser can’t attach files, the file is saved and you are asked to attach it to your email yourself.</p>
 <h3>5. Check a delivery against the manifest</h3>
 <ol>
 <li><b>Showing the section:</b> the manifest check is hidden by default. Tap its heading to show or hide it.</li>
@@ -55,7 +56,7 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <li>LPNs are expected as a letter prefix followed by digits, for example RUN000000000. The prefix list only affects numbers read from photos, not numbers you type in.</li>
 <li>Always check numbers read from photos before comparing, as photos can be misread.</li>
 </ul>`,log:`<h3>v3.19 <span class="ver">Current</span></h3>
-<ul><li>Warnings before adding duplicate or unusual LPNs, with a skip or add anyway choice.</li><li>Undo for removed pallets.</li><li>Start new delivery, a Saved deliveries list, and importing an exported log. Saved deliveries older than the start of last week (weeks start on Sunday) are removed automatically.</li><li>The install pop-up can now be opened again from Settings as well as the Guide.</li><li>Settings now warns when your accent colour is hard to see against your background, and status messages are announced by screen readers.</li><li>An “update available” banner appears in installed apps when a new version has been uploaded.</li><li>Manifest check: Use current log or a saved delivery as the log, a Check results panel on screen, and Fix or remove buttons for misread numbers.</li><li>Pallet type buttons, an expected pallets count, an Export menu with Print, confirm-each-scan option, separate sound and vibration settings, and backup and restore in Settings.</li><li>Tap an LPN to edit it, search and filter the log, delivery notes in the exports, Clear all now has Undo, saved deliveries show their totals, and the screen stays awake while live scanning.</li><li>New Settings: default pallet type, keep last type, warnings on or off, sound and vibration, and text size.</li></ul>
+<ul><li>Warnings before adding duplicate or unusual LPNs, with a skip or add anyway choice.</li><li>Undo for removed pallets.</li><li>Start new delivery, a Saved deliveries list, and importing an exported log. Saved deliveries older than the start of last week (weeks start on Sunday) are removed automatically.</li><li>The install pop-up can now be opened again from Settings as well as the Guide.</li><li>Settings now warns when your accent colour is hard to see against your background, and status messages are announced by screen readers.</li><li>An “update available” banner appears in installed apps when a new version has been uploaded.</li><li>Accessibility and layout fixes: the log fits on phones with larger tap targets, rows and sections are labelled for screen readers, placeholder text is easier to read, the entry bar is shorter on phones, and the Add button sits next to the LPN box on larger screens.</li><li>Icons are now simple line icons instead of emoji, and deleting a saved delivery has an Undo instead of a confirmation box.</li><li>Exports and the manifest check can now work offline after the first online use.</li><li>Manifest check: Use current log or a saved delivery as the log, a Check results panel on screen, and Fix or remove buttons for misread numbers.</li><li>Pallet type buttons, an expected pallets count, an Export menu with Print, confirm-each-scan option, separate sound and vibration settings, and backup and restore in Settings.</li><li>Tap an LPN to edit it, search and filter the log, delivery notes in the exports, Clear all now has Undo, saved deliveries show their totals, and the screen stays awake while live scanning.</li><li>New Settings: default pallet type, keep last type, warnings on or off, sound and vibration, and text size.</li></ul>
 <h3>v3.0</h3>
 <ul><li>New navy and orange design with a single-sheet layout, colour-coded pallet types and a docked entry bar on phones.</li><li>Settings tab: your own background and accent colours (picker or hex), quick themes, reset, and the option to include a copy of the log with the comparison.</li><li>Stacked header on phones. The manifest comparison section can be shown or hidden and starts hidden.</li></ul>
 <h3>v2.0</h3>
@@ -219,7 +220,16 @@ function initHistory(){
     const r=document.createElement("div");r.className="row";
     const o=document.createElement("button");o.className="p";o.textContent="Open";o.onclick=()=>openHist(h.id);
     const x=document.createElement("button");x.className="d";x.textContent="Delete";
-    x.onclick=()=>{if(confirm("Delete this saved delivery?")){hist=hist.filter(z=>z.id!==h.id);saveHist();initHistory()}};
+    x.onclick=()=>{
+      const at=Math.max(0,hist.findIndex(z=>z.id===h.id));
+      hist=hist.filter(z=>z.id!==h.id);saveHist();
+      d.innerHTML="";d.className="hist";
+      const t=document.createElement("span");t.textContent="Deleted. ";
+      const u=document.createElement("button");u.textContent="Undo";u.className="p";
+      u.onclick=()=>{hist.splice(Math.min(at,hist.length),0,h);saveHist();initHistory()};
+      const row=document.createElement("div");row.className="row";row.style.alignItems="center";row.append(t,u);d.appendChild(row);
+      d.setAttribute("role","status");
+    };
     r.append(o,x);d.append(hd,tt,sb,r);root.appendChild(d);
   });
   $("histImport").onclick=()=>{$("histFile").value="";$("histFile").click()};

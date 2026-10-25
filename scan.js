@@ -101,3 +101,5 @@ $("clear").onclick=()=>{
   const prev=rows;rows=[];save();render();$("msg").textContent="";hideCheck();
   showUndo("Cleared "+prev.length+" pallets",()=>{rows=prev;save();render()});
 };
+
+$("scanBtn").onclick=()=>{const b=$("btnrow"),o=!b.classList.contains("open");b.classList.toggle("open",o);$("scanBtn").setAttribute("aria-expanded",o);$("scanBtn").textContent=o?"Scan ▴":"Scan ▾"};
