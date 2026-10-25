@@ -8,7 +8,13 @@ Keep these together in the same folder (the root of the GitHub Pages site):
 
 | File | Purpose | Required |
 | --- | --- | --- |
-| `index.html` | The whole app | Yes |
+| `index.html` | The page layout and structure | Yes |
+| `styles.css` | All styling and themes | Yes |
+| `core.js` | Logging, the pallet table, duplicate checks, undo, settings values | Yes |
+| `scan.js` | Barcode scanning (live and by photo) | Yes |
+| `export.js` | Excel, PDF and print output, and the logo | Yes |
+| `compare.js` | Manifest check, text recognition and prefix presets | Yes |
+| `panels.js` | Guide, changelog, Settings, saved deliveries, install pop-up and update banner | Yes |
 | `manifest.webmanifest` | Lets the app be installed on a phone | For install |
 | `sw.js` | Service worker: offline copy and the "new version available" banner | For install |
 | `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` | App icons | For install |
@@ -17,7 +23,7 @@ Keep these together in the same folder (the root of the GitHub Pages site):
 
 ## Publishing on GitHub Pages
 
-1. Create a repository and upload all the files above to the main branch (the app must be named `index.html`).
+1. Create a repository and upload all the files above to the main branch.
 2. In the repository go to Settings, then Pages, choose "Deploy from a branch", pick the main branch and the root folder, and save.
 3. After a minute or two the site is live at `https://<username>.github.io/<repository>/`.
 
@@ -25,8 +31,8 @@ The page must be served over https for the camera, installing and sharing to wor
 
 ## Updating the app
 
-1. Replace `index.html` in the repository with the new file and commit it.
-2. If you change `sw.js` or any icon, also change the cache name at the top of `sw.js` (for example `lpn-log-v2` to `lpn-log-v3`) so phones pick up the new files.
+1. Replace the changed files in the repository (usually just the ones that changed; each file has a single job, listed above) and commit them.
+2. If you add a file, add it to the list at the top of `sw.js`. If you change `sw.js` or any icon, also change the cache name at the top of `sw.js` (for example `lpn-log-v3` to `lpn-log-v4`) so phones pick up the new files.
 3. Wait a minute for Pages to publish.
 
 Phones that already have the app open will show a "A new version is available" banner. Tap Refresh to load it. Nothing in the log is lost, because it is saved on the device as you work.
