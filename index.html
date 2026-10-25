@@ -79,6 +79,15 @@ button.d:hover{background:color-mix(in srgb,var(--dg) 12%,var(--paper));border-c
 #sum span:nth-child(6)::before{background:var(--ink);border-radius:50%}
 #cmpSum span{background:var(--sel);border-radius:var(--r);padding:3px 10px;font-size:.88rem;color:var(--mu)}
 #cmpSum b{color:var(--ink)}
+@media (max-width:620px){#cmpBody>.row>.grow{flex:1 1 100%}}
+.cmpres{margin-top:12px;border-top:1px solid var(--line);padding-top:6px}
+.cmpres h4{margin:14px 0 6px;font-size:1rem}
+.cmpres h4.m{color:var(--dg)}.cmpres h4.b{color:var(--wn)}
+.cmpres .ri{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.cmpres .ri .l{flex:1;min-width:0;overflow-wrap:anywhere;font:600 .98rem "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace}
+.cmpres .ri input{flex:1;min-width:0;min-height:38px;font:600 .98rem "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;padding:4px 8px}
+.cmpres .ri button{min-height:38px;padding:4px 12px}
+.cmpres summary{cursor:pointer;font-weight:700;margin:14px 0 6px}
 .wrap{overflow-x:auto;border-top:2px solid var(--ac);border-bottom:1px solid var(--line);max-height:60vh;overflow-y:auto;margin:0 -18px}
 table{width:100%;border-collapse:separate;border-spacing:0}
 th,td{text-align:left;padding:9px 12px;border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent);white-space:nowrap}
@@ -97,19 +106,34 @@ td button{min-height:34px;padding:2px 10px}
 #type{font-weight:700}
 textarea{font:400 14px/1.5 "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;display:block;width:100%;max-width:100%;min-width:0;resize:vertical}
 .chk{display:flex;align-items:flex-start;gap:10px;font-size:.95rem;font-weight:400;color:var(--ink);margin-top:14px}
-.chk input,#setMerge,#setCheck,#setSound{width:21px;height:21px;margin:1px 0 0;flex:none;accent-color:var(--ac)}
+.chk input,#setMerge,#setCheck,#setSound,#setKeep,#setVib,#setConf{width:21px;height:21px;margin:1px 0 0;flex:none;accent-color:var(--ac)}
 #fsdu{display:block;width:30px;height:30px;margin:0;accent-color:var(--ac);padding:0}
 td input[type=checkbox]{width:21px;height:21px;accent-color:var(--ac)}
 #scanbox{margin-top:10px}
 #video{width:100%;max-height:200px;background:#000;border-radius:var(--r);object-fit:cover}
 .empty{color:var(--mu);text-align:center;padding:30px 12px}
+td.l{cursor:text}
+td.l input{width:100%;min-width:9ch;min-height:38px;font:600 .98rem "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;padding:4px 8px}
+.flt{display:flex;gap:8px;margin:0 0 10px}
+.flt input{flex:1;min-width:0}
+.flt select{flex:0 0 auto}
+#fltInfo{color:var(--mu);font-size:.88rem;margin:-4px 0 8px}
 .act{display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-top:14px}
 .act>.row{flex:1;justify-content:flex-end}
 @media (max-width:560px){.act{flex-direction:column;align-items:stretch}.act>.row{flex-direction:column;align-items:stretch}.act button{width:100%}.act button.d{order:3}}
-.addgrid{display:grid;grid-template-columns:1fr auto auto;gap:10px 12px;align-items:end}
+.addgrid{display:grid;grid-template-columns:1fr auto;gap:10px 12px;align-items:end}
 .addgrid .lp{grid-column:1/-1}
-.addgrid>div:nth-child(3){display:flex;align-items:center;gap:8px}
-.addgrid>div:nth-child(3) label{margin:0}
+.tyb{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.tyb button{min-height:50px;font-weight:700;border-width:2px;padding:6px 4px}
+.tyb button[data-t=BB]{border-color:var(--bb)}.tyb button[data-t=FMCG]{border-color:var(--fm)}.tyb button[data-t=FPP]{border-color:var(--fp)}.tyb button[data-t=Mixed]{border-color:var(--mx)}
+.tyb button.on{color:#111}
+.tyb button.on[data-t=BB]{background:var(--bb)}.tyb button.on[data-t=FMCG]{background:var(--fm)}.tyb button.on[data-t=FPP]{background:var(--fp)}.tyb button.on[data-t=Mixed]{background:var(--mx)}
+.expinfo{font-weight:700;margin:-2px 0 10px}
+.expinfo.ok{color:var(--fp)}.expinfo.bad{color:var(--dg)}
+.menu{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.menu button{width:100%;text-align:left;min-height:48px}
+.addgrid>div:nth-child(2){display:flex;align-items:center;gap:8px}
+.addgrid>div:nth-child(2) label{margin:0}
 .addgrid #add{min-width:96px;min-height:52px}
 .btnrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
 .btnrow button{flex:1;min-width:130px}
@@ -123,11 +147,10 @@ button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
 @media (max-width:759px){
   .card.entry,.card+.card.entry{position:fixed;left:0;right:0;bottom:0;z-index:15;margin:0;border:0;border-top:2px solid var(--ac);border-radius:0;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 18px rgba(0,0,0,.35);max-height:80vh;overflow-y:auto}
   .entry .ct,.entry .note{display:none}
-  .addgrid{grid-template-columns:1fr auto auto;gap:8px 10px}
-  .addgrid .lp{grid-column:1/3;grid-row:1}
-  .addgrid #add{grid-column:3;grid-row:1}
-  .addgrid>div:nth-child(2){grid-column:1;grid-row:2}
-  .addgrid>div:nth-child(3){grid-column:2/4;grid-row:2;justify-content:flex-end}
+  .addgrid{grid-template-columns:1fr auto;gap:8px 10px}
+  .addgrid .lp{grid-column:1;grid-row:1}
+  .addgrid #add{grid-column:2;grid-row:1}
+  .addgrid>div:nth-child(2){grid-column:1/3;grid-row:2;justify-content:flex-start}
   .entry .btnrow{margin-top:8px;flex-wrap:nowrap}
   .entry .btnrow button{min-width:0;min-height:42px;padding:6px 8px;font-size:.88rem}
 }
@@ -190,6 +213,8 @@ button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
     <div><label for="date">Date</label><input type="date" id="date"></div>
     <div class="grow"><label for="recv">Received by</label><input id="recv" placeholder="Name of person who received the delivery"></div>
   </div>
+  <div style="margin-top:12px;max-width:220px"><label for="expect">Expected pallets</label><input type="number" id="expect" min="0" inputmode="numeric" placeholder="Optional" style="width:100%"></div>
+  <div style="margin-top:12px"><label for="notes">Delivery notes</label><textarea id="notes" rows="2" placeholder="Optional. For example: 2 pallets damaged, driver name"></textarea></div>
   <div class="row" style="margin-top:12px;align-items:center">
     <button id="logoBtn">Add logo</button><button class="d" id="logoRm" hidden>Remove logo</button>
     <input type="file" id="logoFile" accept="image/*" hidden>
@@ -199,10 +224,9 @@ button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
 
 <div class="card entry">
   <div class="ct">Add a pallet</div>
+  <div class="tyb" id="tyb" role="group" aria-label="Pallet type"><button type="button" data-t="BB">BB</button><button type="button" data-t="FMCG">FMCG</button><button type="button" data-t="FPP">FPP</button><button type="button" data-t="Mixed">Mixed</button><select id="type" hidden aria-hidden="true"><option>BB</option><option>FMCG</option><option>FPP</option><option>Mixed</option></select></div>
   <div class="addgrid">
     <div class="lp"><label for="lpn">LPN number</label><input id="lpn" style="width:100%;font-size:1.05rem" autocomplete="off" autocapitalize="characters" placeholder="Scan or type LPN, press Enter"></div>
-    <div><label for="type">Pallet type</label>
-      <select id="type" style="width:100%"><option>BB</option><option>FMCG</option><option>FPP</option><option>Mixed</option></select></div>
     <div><label for="fsdu">FSDU</label><input type="checkbox" id="fsdu" aria-label="Pallet contains an FSDU"></div>
     <button class="p" id="add" style="min-width:90px">Add</button>
   </div>
@@ -226,7 +250,10 @@ button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
 <div class="card">
   <div class="ct">Pallet log</div>
   <div class="sum" id="sum"></div>
+  <div class="expinfo" id="expInfo" hidden></div>
   <div class="undo" id="undoBar" hidden role="status"><span id="undoTxt"></span><button id="undoBtn">Undo</button></div>
+  <div class="flt"><input id="flt" type="search" placeholder="Search LPNs" autocomplete="off" aria-label="Search LPNs"><select id="fltType" aria-label="Filter by type"><option value="">All types</option><option>BB</option><option>FMCG</option><option>FPP</option><option>Mixed</option></select></div>
+  <div id="fltInfo" hidden></div>
   <div class="wrap">
     <table>
       <thead><tr><th>#</th><th>LPN</th><th>Pallet type</th><th>FSDU</th><th></th></tr></thead>
@@ -236,8 +263,9 @@ button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
   <div class="row" style="margin-top:14px"><button id="newDel">Start new delivery</button><button id="histBtn">Saved deliveries</button></div>
   <div class="act">
     <button class="d" id="clear">Clear all</button>
-    <div class="row" style="gap:8px"><button id="dlMail">✉ Email PDF</button><button class="p" id="dl">Download (Excel)</button></div>
+    <div class="row" style="gap:8px"><button class="p" id="expBtn" aria-expanded="false" aria-controls="expMenu">Export ▾</button></div>
   </div>
+  <div class="menu" id="expMenu" hidden><button class="p" id="dl">Download (Excel)</button><button id="dlMail">✉ Email PDF</button><button id="prn">🖨 Print</button></div>
   <div class="msg" id="dlmsg"></div>
 </div>
 <div class="card" id="cmpCard">
@@ -259,7 +287,7 @@ button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
     <div class="msg" id="pfxMsg" style="color:var(--mu)"></div>
   </div>
   <div class="row">
-    <div class="grow"><label>1. LPN log</label><div class="row"><button id="cmpLogBtn">Upload log file</button><button id="cmpLogPhotoBtn">📷 Photo of printed log</button></div></div>
+    <div class="grow"><label>1. LPN log</label><div class="row"><button class="p" id="cmpUseLog">Use current log</button><button id="cmpLogBtn">Upload log file</button><button id="cmpLogPhotoBtn">📷 Photo of printed log</button></div><select id="cmpHist" style="width:100%;margin-top:8px" aria-label="Use a saved delivery"></select></div>
     <div class="grow"><label>2. Manifest photos or PDFs</label><div class="row"><button id="cmpPhotoBtn">📷 Add manifest photo</button><button id="cmpPdfBtn">📄 Add manifest PDFs</button></div></div>
   </div>
   <div class="msg" id="cmpLogName" style="color:var(--mu)"></div>
@@ -273,7 +301,8 @@ button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
   <label for="cmpNums" style="margin-top:10px">Numbers read from the manifest (one per line: fix any mistakes or type them in)</label>
   <textarea id="cmpNums" rows="6"></textarea>
   <div class="sum" id="cmpSum" style="margin-top:10px"></div>
-  <div class="act"><button class="d" id="cmpClear">Clear</button><div class="row" style="gap:8px"><button id="cmpMail">✉ Compare and email PDF</button><button class="p" id="cmpGo">Compare and download</button></div></div>
+  <div class="cmpres" id="cmpRes" hidden></div>
+  <div class="act"><button class="d" id="cmpClear">Clear</button><div class="row" style="gap:8px"><button class="p" id="cmpCheck">Check results</button><button id="cmpMail">✉ Compare and email PDF</button><button id="cmpGo">Compare and download</button></div></div>
   </div>
 </div>
 </main>
@@ -318,7 +347,8 @@ button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
 const TYPES=["BB","FMCG","FPP","Mixed"];
 let rows=[];
 const $=id=>document.getElementById(id);
-let cfg={defType:"BB",check:true,sound:true,size:"1"};
+function syncType(){const v=$("type").value;$("type").dataset.t=v;document.querySelectorAll("#tyb button").forEach(b=>{const on=b.dataset.t===v;b.classList.toggle("on",on);b.setAttribute("aria-pressed",on)})}
+let cfg={defType:"BB",check:true,sound:true,size:"1",keepType:true,vibrate:true,confirmScan:false};
 try{const c=JSON.parse(localStorage.getItem("lpncfg")||"null");if(c)cfg=Object.assign(cfg,c)}catch(e){}
 if(!TYPES.includes(cfg.defType))cfg.defType="BB";
 const saveCfg=()=>{try{localStorage.setItem("lpncfg",JSON.stringify(cfg))}catch(e){}};
@@ -326,8 +356,8 @@ const applyCfg=()=>{document.documentElement.style.setProperty("--ts",cfg.size||
 applyCfg();
 let actx=null;
 function sfx(kind){
+  if(cfg.vibrate){try{navigator.vibrate&&navigator.vibrate(kind==="warn"?[140,80,140]:[70])}catch(e){}}
   if(!cfg.sound)return;
-  try{navigator.vibrate&&navigator.vibrate(kind==="warn"?[140,80,140]:[70])}catch(e){}
   try{
     const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
     actx=actx||new AC();if(actx.state==="suspended")actx.resume();
@@ -339,20 +369,47 @@ function sfx(kind){
 function load(){
   try{
     const d=localStorage.getItem("lpnlog");
-    if(d){const o=JSON.parse(d);rows=o.rows||[];$("date").value=o.date||"";$("recv").value=o.recv||"";}
+    if(d){const o=JSON.parse(d);rows=o.rows||[];$("date").value=o.date||"";$("recv").value=o.recv||"";$("notes").value=o.notes||"";$("expect").value=o.expect||"";}
   }catch(e){}
   if(!$("date").value)$("date").value=new Date().toISOString().slice(0,10);
 }
 function save(){
-  try{localStorage.setItem("lpnlog",JSON.stringify({rows,date:$("date").value,recv:$("recv").value}))}catch(e){}
+  try{localStorage.setItem("lpnlog",JSON.stringify({rows,date:$("date").value,recv:$("recv").value,notes:$("notes").value,expect:$("expect").value}))}catch(e){}
 }
 function render(){
+  syncType();
   const b=$("body");b.innerHTML="";
   if(!rows.length){b.innerHTML='<tr><td colspan="5" class="empty">No pallets logged yet</td></tr>'}
+  const q=($("flt").value||"").trim().toUpperCase().replace(/\s+/g,""),ft=$("fltType").value;
+  let shown=0;
   rows.forEach((r,i)=>{
+    if(q&&r.lpn.toUpperCase().replace(/\s+/g,"").indexOf(q)<0)return;
+    if(ft&&r.type!==ft)return;
+    shown++;
     const tr=document.createElement("tr");tr.dataset.t=r.type;
     const n=document.createElement("td");n.textContent=i+1;
-    const l=document.createElement("td");l.className="l";l.textContent=r.lpn;
+    const l=document.createElement("td");l.className="l";l.textContent=r.lpn;l.title="Tap to edit";
+    l.onclick=()=>{
+      if(l.querySelector("input"))return;
+      const inp=document.createElement("input");inp.value=r.lpn;inp.setAttribute("autocapitalize","characters");inp.setAttribute("aria-label","Edit LPN");
+      l.textContent="";l.appendChild(inp);inp.focus();inp.select();
+      let done=false;
+      const finish=ok=>{
+        if(done)return;done=true;
+        const v=inp.value.trim();
+        if(ok&&v&&v!==r.lpn){
+          const u=v.toUpperCase().replace(/\s+/g,"");
+          const dup=rows.some((z,k)=>k!==i&&z.lpn.toUpperCase().replace(/\s+/g,"")===u);
+          const old=r.lpn;r.lpn=v;save();
+          $("msg").textContent=dup?"Note: "+v+" is already in the log.":"";
+          if(dup)sfx("warn");
+          showUndo("Changed "+old+" to "+v,()=>{r.lpn=old;save();render()});
+        }
+        render();
+      };
+      inp.onblur=()=>finish(true);
+      inp.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();finish(true)}else if(e.key==="Escape"){finish(false)}};
+    };
     const t=document.createElement("td");
     const s=document.createElement("select");
     TYPES.forEach(x=>{const o=document.createElement("option");o.textContent=x;if(x===r.type)o.selected=true;s.appendChild(o)});
@@ -369,9 +426,14 @@ function render(){
     x.appendChild(btn);
     tr.append(n,l,t,f,x);b.appendChild(tr);
   });
+  if(rows.length&&!shown){b.innerHTML='<tr><td colspan="5" class="empty">No pallets match the search</td></tr>'}
+  const fi=$("fltInfo");const fa=!!(q||ft);fi.hidden=!fa;if(fa)fi.textContent="Showing "+shown+" of "+rows.length+" pallets (counts above are for the whole log).";
   summary();
 }
+function extras(){const o=[];const e=parseInt($("expect").value,10);if(e>=0)o.push(["Expected pallets",String(e)]);const n=($("notes").value||"").trim();if(n)o.push(["Notes",n]);return o}
 function summary(){
+  const ei=$("expInfo"),ex=parseInt($("expect").value,10);
+  if(ex>=0){const d=rows.length-ex;ei.hidden=false;ei.className="expinfo "+(d===0?"ok":"bad");ei.textContent=rows.length+" of "+ex+" expected"+(d===0?" ✓ all accounted for":d<0?" ("+(-d)+" to go)":" ("+d+" more than expected)")}else ei.hidden=true;
   const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
   $("sum").innerHTML="<span><b>"+rows.length+"</b>Total</span><span><b>"+c.BB+"</b>BB</span><span><b>"+c.FMCG+"</b>FMCG</span><span><b>"+c.FPP+"</b>FPP</span><span><b>"+c.Mixed+"</b>Mixed</span><span><b>"+rows.filter(r=>r.fsdu).length+"</b>FSDU</span>";
 }
@@ -390,16 +452,17 @@ function lpnIssues(v){
 }
 let pendingAdd=null;
 function hideCheck(){pendingAdd=null;$("chkBar").hidden=true}
-function tryAdd(v){
+function tryAdd(v,scan){
   if(pendingAdd)return false;
   const issues=cfg.check?lpnIssues(v):[];
-  if(!issues.length){addValue(v);return true}
+  if(!issues.length&&!(scan&&cfg.confirmScan)){addValue(v);return true}
   pendingAdd={v:v,type:$("type").value,fsdu:$("fsdu").checked};
   $("fsdu").checked=false;
-  $("chkTxt").textContent="Check "+v+": "+issues.join("; ")+".";
+  $("chkTxt").textContent=issues.length?"Check "+v+": "+issues.join("; ")+".":"Scanned "+v+" as "+pendingAdd.type+". Add it?";
+  $("chkAdd").textContent=issues.length?"Add anyway":"Add";
   $("chkBar").hidden=false;
   $("msg").textContent="";
-  sfx("warn");
+  if(issues.length)sfx("warn");
   return false;
 }
 function add(){
@@ -413,6 +476,7 @@ function addValue(v,o){
   $("msg").textContent="";
   rows.push({lpn:v,type:o.type,fsdu:!!o.fsdu});
   if(o===undefined||!arguments[1])$("fsdu").checked=false;
+  if(!cfg.keepType){$("type").value=cfg.defType;$("type").dataset.t=cfg.defType}
   save();render();sfx("ok");
 }
 $("chkSkip").onclick=()=>{hideCheck();$("lpn").focus()};
@@ -425,6 +489,9 @@ function showUndo(text,fn){
   undoTimer=setTimeout(()=>{$("undoBar").hidden=true},9000);
 }
 /* ---- barcode scanning ---- */
+let wake=null;
+async function keepAwake(on){try{if(on){if(navigator.wakeLock&&!wake){wake=await navigator.wakeLock.request("screen");wake.addEventListener("release",()=>{wake=null})}}else if(wake){await wake.release();wake=null}}catch(e){wake=null}}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&scanning)keepAwake(true)});
 let stream=null,timer=null,zxReader=null,lastCode="",lastAt=0,scanning=false;
 function onCode(raw){
   const v=String(raw||"").trim();
@@ -433,8 +500,8 @@ function onCode(raw){
   if(v===lastCode&&now-lastAt<2500){lastAt=now;return}
   if(pendingAdd)return;
   lastCode=v;lastAt=now;
-  const ok=tryAdd(v);
-  $("smsg").textContent=ok?"Added: "+v+" ("+$("type").value+")":"Check needed: see the warning below.";
+  const ok=tryAdd(v,true);
+  $("smsg").textContent=ok?"Added: "+v+" ("+$("type").value+")":"Check the message below.";
 }
 function loadZX(){
   return new Promise((res,rej)=>{
@@ -466,6 +533,7 @@ async function startScan(){
       zxReader=new ZXing.BrowserMultiFormatReader();
       await zxReader.decodeFromConstraints({video:{facingMode:{ideal:"environment"}},audio:false},v,(res)=>{if(res)onCode(res.getText())});
     }
+    keepAwake(true);
     $("smsg").textContent="Point the camera at a pallet barcode.";
   }catch(e){
     stopScan(true);
@@ -475,7 +543,7 @@ async function startScan(){
   }
 }
 function stopScan(keepMsg){
-  scanning=false;
+  scanning=false;keepAwake(false);
   if(timer){clearInterval(timer);timer=null}
   if(zxReader){try{zxReader.reset()}catch(e){}zxReader=null}
   if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
@@ -508,14 +576,20 @@ $("photo").onclick=()=>{$("file").value="";$("file").click()};
 $("file").onchange=e=>{const f=e.target.files&&e.target.files[0];if(f)decodePhoto(f)};
 
 $("stopscan").onclick=()=>stopScan();
-$("type").dataset.t=$("type").value;
-$("type").addEventListener("change",()=>{$("type").dataset.t=$("type").value});
+syncType();
+$("type").addEventListener("change",syncType);
+document.querySelectorAll("#tyb button").forEach(b=>{b.onclick=()=>{$("type").value=b.dataset.t;syncType()}});
 $("add").onclick=add;
+$("flt").oninput=render;$("fltType").onchange=render;
 $("lpn").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();add()}});
 $("date").onchange=save;
 $("recv").oninput=save;
+$("notes").oninput=save;
+$("expect").oninput=()=>{save();summary()};
 $("clear").onclick=()=>{
-  if(rows.length&&confirm("Clear all "+rows.length+" entries?")){rows=[];save();render();$("msg").textContent=""}
+  if(!rows.length)return;
+  const prev=rows;rows=[];save();render();$("msg").textContent="";hideCheck();
+  showUndo("Cleared "+prev.length+" pallets",()=>{rows=prev;save();render()});
 };
 function loadScript(src,test){
   return new Promise((res,rej)=>{
@@ -540,7 +614,7 @@ async function fallbackXls(d){
   const esc=v=>String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   const who=($("recv").value||"").trim();
   const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
-  const side=[["Pallet Type","Count","h"],["Brown Box",c.BB],["FMCG",c.FMCG],["FPP",c.FPP],["Mixed",c.Mixed],["Total",rows.length,"b"],["FSDU (not in total)",rows.filter(r=>r.fsdu).length],null,["Delivery Details","","h2"],["Date",d,"l"],["Received by",who,"l"]];
+  const side=[["Pallet Type","Count","h"],["Brown Box",c.BB],["FMCG",c.FMCG],["FPP",c.FPP],["Mixed",c.Mixed],["Total",rows.length,"b"],["FSDU (not in total)",rows.filter(r=>r.fsdu).length],null,["Delivery Details","","h2"],["Date",d,"l"],["Received by",who,"l"]].concat(extras().map(e=>[e[0],e[1],"l"]));
   const n=Math.max(rows.length,side.length-1);
   let h='<html><head><meta charset="utf-8"><style>td,th{font-family:Arial;font-size:14pt;border:2px solid #000;padding:4px;text-align:left}th{font-size:16pt;background:#e6e9ed}</style></head><body><table>';
   for(let i=-1;i<n;i++){
@@ -606,7 +680,7 @@ const pdfCell=(t,o)=>({content:String(t),styles:Object.assign({},o||{})});
 async function buildLogPdf(d){
   await loadJsPdf();
   const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:"portrait"});
-  doc.setProperties({title:"LPN log "+d,subject:"LPN log",keywords:"LPNLOG2:"+encodeURIComponent(JSON.stringify({d:d,r:($("recv").value||"").trim(),rows:rows.map(r=>[r.lpn,r.type,r.fsdu?1:0])}))});
+  doc.setProperties({title:"LPN log "+d,subject:"LPN log",keywords:"LPNLOG2:"+encodeURIComponent(JSON.stringify({d:d,r:($("recv").value||"").trim(),n:($("notes").value||"").trim(),e:$("expect").value||"",rows:rows.map(r=>[r.lpn,r.type,r.fsdu?1:0])}))});
   const who=($("recv").value||"").trim();
   const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
   const L=10,LW=100,RX=L+LW+8,RW=190-LW-8;
@@ -623,7 +697,7 @@ async function buildLogPdf(d){
   doc.autoTable(Object.assign({},PDF_BASE,{
     startY:doc.lastAutoTable.finalY+8,margin:{left:RX,right:10,top:12,bottom:12},tableWidth:RW,
     head:[[{content:"Delivery Details",colSpan:2}]],
-    body:[[pdfCell("Date",bold),d],[pdfCell("Received by",bold),who]],
+    body:[[pdfCell("Date",bold),d],[pdfCell("Received by",bold),who]].concat(extras().map(e=>[pdfCell(e[0],bold),e[1]])),
     columnStyles:{0:{cellWidth:32}}
   }));
   doc.setPage(1);
@@ -757,7 +831,7 @@ $("dl").onclick=async()=>{
       {v:["Delivery Details",""],h:1,merge:1},
       {v:["Date",d],l:1},
       {v:["Received by",who],l:1}
-    ];
+    ].concat(extras().map(e=>({v:[e[0],e[1]],l:1,note:e[0]==="Notes"?1:0})));
     const n=Math.max(rows.length,side.length-1);
     let off=0;
     if(logo){
@@ -795,7 +869,7 @@ $("dl").onclick=async()=>{
         const up=ws.getRow(r.number-1);
         (head?[1,2,3,5,6]:[5,6]).forEach(col=>{up.getCell(col).border={bottom:{style:"medium",color:bc}}});
       }
-      r.height=(head||(right&&right.h))?26:22;
+      r.height=(head||(right&&right.h))?26:(right&&right.note?Math.max(22,Math.ceil(String(right.v[1]).length/16)*20):22);
     }
     ws.pageSetup={orientation:"portrait",paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:(1+off)+":"+(1+off),margins:{left:0.4,right:0.4,top:0.6,bottom:0.6,header:0.3,footer:0.3}};
     ws.views=[{state:"frozen",ySplit:1+off}];
@@ -1092,20 +1166,93 @@ $("cmpPhotoFile").onchange=async e=>{
   }
   cmpMsg("Done. Check the numbers below are correct, then compare."+oddNote("cmpNums"));
 };
-$("cmpClear").onclick=()=>{logSrc=null;logPdfSrc=null;logSheets=null;$("cmpNums").value="";$("cmpLogNums").value="";$("cmpLogName").textContent="";$("cmpSum").innerHTML="";cmpMsg("")};
-$("cmpGo").onclick=async()=>{
+$("cmpClear").onclick=()=>{logSrc=null;logPdfSrc=null;logSheets=null;$("cmpNums").value="";$("cmpLogNums").value="";$("cmpLogName").textContent="";$("cmpSum").innerHTML="";$("cmpRes").hidden=true;$("cmpRes").innerHTML="";cmpMsg("")};
+function cmpData(){
   const lines=id=>$(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
   const uniq=a=>{const seen=new Set();return a.filter(x=>{const k=norm(x);if(!k||seen.has(k))return false;seen.add(k);return true})};
   const logList=uniq(lines("cmpLogNums")),man=uniq(lines("cmpNums"));
-  if(!logList.length){cmpMsg("Add the LPN log first: upload the exported file or take a photo of the printed copy.");return}
-  if(!man.length){cmpMsg("Add manifest photos or type the manifest numbers first.");return}
+  if(!logList.length){cmpMsg("Add the LPN log first: use the current log, a saved delivery, an uploaded file or a photo of the printed copy.");return null}
+  if(!man.length){cmpMsg("Add manifest photos or type the manifest numbers first.");return null}
   const ms=new Set(man.map(norm)),ls=new Set(logList.map(norm));
   const res=[];
   man.forEach(n=>res.push({n,man:true,log:ls.has(norm(n))}));
   logList.forEach(n=>{if(!ms.has(norm(n)))res.push({n,man:false,log:true})});
   const kind=x=>x.man&&x.log?"ok":x.man?"missing":"book";
   const cnt={ok:0,missing:0,book:0};res.forEach(x=>cnt[kind(x)]++);
+  return {logList,man,res,cnt,kind};
+}
+function replaceLine(id,old,nv){
+  const k=norm(old);
+  const out=[];$(id).value.split(/\r?\n/).forEach(l=>{const t=l.trim();if(!t)return;if(norm(t)===k){if(nv)out.push(nv)}else out.push(t)});
+  $(id).value=out.join("\n");
+}
+function refreshCmp(){const C=cmpData();if(C)renderCmp(C);else $("cmpRes").hidden=true}
+function renderCmp(C){
+  const {res,cnt,man,kind}=C;
   $("cmpSum").innerHTML="<span>On manifest: <b>"+man.length+"</b></span><span>✓ Matched: <b>"+cnt.ok+"</b></span><span>✗ Missing (report): <b>"+cnt.missing+"</b></span><span>⚠ On log only (book in): <b>"+cnt.book+"</b></span>";
+  const box=$("cmpRes");box.hidden=false;box.innerHTML="";
+  const mk=(title,cls,items,src,hint)=>{
+    const h=document.createElement("h4");h.className=cls;h.textContent=title+" ("+items.length+")";box.appendChild(h);
+    const note=document.createElement("div");note.className="note";note.style.margin="0 0 4px";note.textContent=items.length?hint:"None";box.appendChild(note);
+    items.forEach(x=>{
+      const row=document.createElement("div");row.className="ri";
+      const l=document.createElement("span");l.className="l";l.textContent=x.n;
+      const fix=document.createElement("button");fix.textContent="Fix";fix.setAttribute("aria-label","Fix "+x.n);
+      const del=document.createElement("button");del.className="d";del.textContent="✕";del.setAttribute("aria-label","Remove "+x.n);
+      fix.onclick=()=>{
+        const inp=document.createElement("input");inp.value=x.n;inp.setAttribute("autocapitalize","characters");inp.setAttribute("aria-label","Corrected LPN");
+        row.replaceChild(inp,l);inp.focus();inp.select();
+        let done=false;
+        const fin=ok=>{if(done)return;done=true;const v=inp.value.trim();if(ok&&v&&v!==x.n)replaceLine(src,x.n,v);refreshCmp()};
+        inp.onblur=()=>fin(true);
+        inp.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();fin(true)}else if(e.key==="Escape")fin(false)};
+      };
+      del.onclick=()=>{replaceLine(src,x.n,"");refreshCmp()};
+      row.append(l,fix,del);box.appendChild(row);
+    });
+  };
+  mk("✗ Missing from the log","m",res.filter(x=>kind(x)==="missing"),"cmpNums","On the manifest but not in your log: report these. If one was misread, tap Fix.");
+  mk("⚠ On the log only","b",res.filter(x=>kind(x)==="book"),"cmpLogNums","In your log but not on the manifest: book these in. If one was mistyped, tap Fix.");
+  const ok=res.filter(x=>kind(x)==="ok");
+  const det=document.createElement("details");
+  const sm=document.createElement("summary");sm.textContent="✓ Matched ("+ok.length+")";det.appendChild(sm);
+  const ml=document.createElement("div");ml.className="note";ml.style.cssText="margin:0;overflow-wrap:anywhere";ml.textContent=ok.map(x=>x.n).join(", ")||"None";det.appendChild(ml);
+  box.appendChild(det);
+}
+function setLogFrom(list,rowsArr,d,recv,label){
+  logSrc=null;logPdfSrc=null;
+  logSheets=[{name:"Log copy",grid:logGridFrom(rowsArr,d,recv)}];
+  $("cmpLogNums").value=list.join("\n");$("cmpLogName").textContent=label;
+  cmpMsg("Log loaded. Add the manifest, then press Check results.");
+  if(!$("cmpRes").hidden)refreshCmp();
+}
+$("cmpUseLog").onclick=()=>{
+  if(!rows.length){cmpMsg("The log is empty. Add some pallets first, or upload a log.");return}
+  setLogFrom(rows.map(r=>r.lpn),rows,$("date").value,$("recv").value,"Current log: "+rows.length+" LPNs");
+};
+function fillCmpHist(){
+  try{pruneHist()}catch(e){}
+  const sel=$("cmpHist");sel.innerHTML="";sel.add(new Option(hist.length?"Or use a saved delivery…":"No saved deliveries yet",""));
+  hist.forEach(h=>sel.add(new Option((h.date||"No date")+", "+h.rows.length+" pallets"+(h.recv?" ("+h.recv+")":""),h.id)));
+}
+$("cmpHist").addEventListener("pointerdown",fillCmpHist);$("cmpHist").addEventListener("focus",fillCmpHist);
+$("cmpHist").onchange=()=>{
+  const h=hist.find(x=>x.id===$("cmpHist").value);if(!h)return;
+  setLogFrom(h.rows.map(r=>r.lpn),h.rows,h.date,h.recv,"Saved delivery: "+(h.date||"No date")+", "+h.rows.length+" LPNs");
+  $("cmpHist").value="";
+};
+$("cmpCheck").onclick=()=>{
+  const C=cmpData();if(!C)return;
+  renderCmp(C);cmpMsg("Check the results below and fix anything that was misread. Then download or email the document.");
+};
+$("cmpLogNums").addEventListener("input",()=>{if(!$("cmpRes").hidden)refreshCmp()});
+$("cmpNums").addEventListener("input",()=>{if(!$("cmpRes").hidden)refreshCmp()});
+$("cmpGo").onclick=async()=>{
+  const lines=id=>$(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  const uniq=a=>{const seen=new Set();return a.filter(x=>{const k=norm(x);if(!k||seen.has(k))return false;seen.add(k);return true})};
+  const C=cmpData();if(!C)return;
+  const {logList,man,res,cnt,kind}=C;
+  renderCmp(C);
   cmpMsg("Preparing document…");
   try{
     await loadExcel();
@@ -1166,7 +1313,7 @@ $("cmpGo").onclick=async()=>{
         const up=ws.getRow(r.number-1);
         (head?[1,2,3,4,6,7]:[6,7]).forEach(col=>{up.getCell(col).border={bottom:med}});
       }
-      r.height=(head||(right&&right.h))?26:22;
+      r.height=(head||(right&&right.h))?26:(right&&right.note?Math.max(22,Math.ceil(String(right.v[1]).length/16)*20):22);
     }
     ws.pageSetup={orientation:"portrait",paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:(1+off)+":"+(1+off),margins:{left:0.4,right:0.4,top:0.6,bottom:0.6,header:0.3,footer:0.3}};
     if(merge&&!logSrc){
@@ -1272,8 +1419,34 @@ $("pfxDl").onclick=()=>{
   pfxMsg("Downloaded presets.json. Replace the file next to the app with it to share these presets.");
 };
 $("dlMail").onclick=()=>emailVia($("dl").onclick,"dlmsg");
+$("expBtn").onclick=()=>{const m=$("expMenu");m.hidden=!m.hidden;$("expBtn").setAttribute("aria-expanded",!m.hidden);$("expBtn").textContent=m.hidden?"Export ▾":"Export ▴"};
+$("expMenu").addEventListener("click",e=>{if(e.target.closest("button")){$("expMenu").hidden=true;$("expBtn").setAttribute("aria-expanded","false");$("expBtn").textContent="Export ▾"}});
+$("prn").onclick=async()=>{
+  const m=$("dlmsg");m.textContent="";
+  if(!rows.length){m.textContent="Add at least one LPN before printing.";return}
+  const d=$("date").value||"no-date";
+  try{
+    m.textContent="Preparing the print copy…";
+    const buf=await buildLogPdf(d);
+    let printed=false;
+    if(typeof saveBlob==="function"){
+      try{
+        const url=URL.createObjectURL(new Blob([buf],{type:"application/pdf"}));
+        const fr=document.createElement("iframe");fr.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+        fr.onload=()=>{try{fr.contentWindow.focus();fr.contentWindow.print();printed=true}catch(e){}};
+        fr.src=url;document.body.appendChild(fr);
+        await new Promise(r=>setTimeout(r,1500));
+        setTimeout(()=>{fr.remove();URL.revokeObjectURL(url)},60000);
+      }catch(e){}
+    }
+    if(printed){m.textContent="";return}
+    await saveOnly(buf,"LPN-log-"+d+".pdf","application/pdf");
+    m.textContent="Print view isn’t available here, so a PDF was saved instead. Open it to print.";
+  }catch(e){m.textContent="Couldn’t prepare the print copy: "+((e&&e.message)||"unknown error")}
+};
 $("cmpMail").onclick=()=>emailVia($("cmpGo").onclick,"cmpMsg");
 $("cmpToggle").onclick=()=>{
+  fillCmpHist();
   const open=$("cmpBody").hidden;
   $("cmpBody").hidden=!open;$("cmpToggle").setAttribute("aria-expanded",open?"true":"false");
 };
@@ -1290,7 +1463,13 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <p>The FSDU tick box clears after every pallet. The pallet type stays as you left it. If an LPN has already been logged you get a note, but it is still added.</p>
 <p>In the table you can change a pallet’s type or FSDU tick afterwards, or remove it with ✕. The totals above the table count each pallet once. The FSDU count is shown separately and is not part of the total.</p>
 <p><b>Warnings:</b> before a pallet is added, the app checks the LPN. If it is already in the log, doesn’t look like an LPN, uses a prefix that isn’t in your prefix list, or has an unusual number of digits, a red warning appears with a vibration and a sound. Tap <b>Skip</b> to leave it out or <b>Add anyway</b> to log it. You can switch the warnings off in Settings.</p>
-<p><b>Undo:</b> when you remove a pallet with ✕, an <b>Undo</b> bar appears for a few seconds.</p>
+<p><b>Undo:</b> when you remove a pallet with ✕, edit an LPN or use Clear all, an <b>Undo</b> bar appears for a few seconds.</p>
+<p><b>Pallet type buttons:</b> tap BB, FMCG, FPP or Mixed above the LPN box before adding. The chosen type stays selected unless you change that in Settings.</p>
+<p><b>Expected pallets:</b> enter how many pallets you expect and the log shows a running count, for example “12 of 14 expected”, turning green when they match. It appears in the exports.</p>
+<p><b>Export menu:</b> Export opens Download (Excel), Email PDF and Print. Print opens the print dialog for the PDF layout, or saves the PDF if printing isn’t available.</p>
+<p><b>Confirming scans:</b> turn on “Ask me to confirm each scanned barcode” in Settings to see each scan and tap Add or Skip before it is logged.</p>
+<p><b>Backup:</b> Settings has Download backup and Restore backup for your log, saved deliveries and settings.</p>
+<p><b>Editing and finding pallets:</b> tap an LPN in the log to correct it. Use the search box and type filter above the log to find pallets; the counts at the top always cover the whole log. Delivery notes are optional and appear in the exports.</p>
 <p><b>Saved deliveries:</b> <b>Start new delivery</b> saves the current log to history and clears the page. <b>Saved deliveries</b> lists them (this week and last week, with weeks starting on Sunday) so you can open one again, delete it, or import an exported spreadsheet or app-made PDF. The history is stored on this device only.</p>
 <h3>3. Scanning barcodes</h3>
 <ul>
@@ -1304,6 +1483,7 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <h3>5. Check a delivery against the manifest</h3>
 <ol>
 <li><b>Showing the section:</b> the manifest check is hidden by default. Tap its heading to show or hide it.</li>
+<li><b>Quick start:</b> tap <b>Use current log</b> (or pick a saved delivery) for step 1, add the manifest, then press <b>Check results</b>. The results appear on screen: Missing (report), On the log only (book in), and Matched. Tap <b>Fix</b> on any number to correct a misread or mistype, or ✕ to remove it, and the results update straight away. Then use Compare and download, or Compare and email PDF, to make the document.</li>
 <li><b>Manifest date:</b> set the date of the manifest. It can be different from today and is used on the comparison spreadsheet.</li>
 <li><b>Prefix preset:</b> choose a preset to fill the list of LPN prefixes, then edit the list if a delivery is different. Only numbers starting with these prefixes are picked up from photos. Leave the list blank, or choose <b>All prefixes</b>, to pick up any LPN made of 1 to 3 letters followed by digits. Use <b>Save as preset</b> to keep a list under a name. <b>Download presets file</b> creates an updated copy from your current presets.</li>
 <li><b>LPN log:</b> upload an exported spreadsheet or a PDF of the log, or take a photo of the printed log. PDFs made by this app’s email button are read exactly. Other PDFs are read like manifests.</li>
@@ -1327,7 +1507,7 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <li>LPNs are expected as a letter prefix followed by digits, for example RUN000000000. The prefix list only affects numbers read from photos, not numbers you type in.</li>
 <li>Always check numbers read from photos before comparing, as photos can be misread.</li>
 </ul>`,log:`<h3>v3.19 <span class="ver">Current</span></h3>
-<ul><li>Warnings before adding duplicate or unusual LPNs, with a skip or add anyway choice.</li><li>Undo for removed pallets.</li><li>Start new delivery, a Saved deliveries list, and importing an exported log. Saved deliveries older than the start of last week (weeks start on Sunday) are removed automatically.</li><li>New Settings: default pallet type, warnings on or off, sound and vibration, and text size.</li></ul>
+<ul><li>Warnings before adding duplicate or unusual LPNs, with a skip or add anyway choice.</li><li>Undo for removed pallets.</li><li>Start new delivery, a Saved deliveries list, and importing an exported log. Saved deliveries older than the start of last week (weeks start on Sunday) are removed automatically.</li><li>Manifest check: Use current log or a saved delivery as the log, a Check results panel on screen, and Fix or remove buttons for misread numbers.</li><li>Pallet type buttons, an expected pallets count, an Export menu with Print, confirm-each-scan option, separate sound and vibration settings, and backup and restore in Settings.</li><li>Tap an LPN to edit it, search and filter the log, delivery notes in the exports, Clear all now has Undo, saved deliveries show their totals, and the screen stays awake while live scanning.</li><li>New Settings: default pallet type, keep last type, warnings on or off, sound and vibration, and text size.</li></ul>
 <h3>v3.0</h3>
 <ul><li>New navy and orange design with a single-sheet layout, colour-coded pallet types and a docked entry bar on phones.</li><li>Settings tab: your own background and accent colours (picker or hex), quick themes, reset, and the option to include a copy of the log with the comparison.</li><li>Stacked header on phones. The manifest comparison section can be shown or hidden and starts hidden.</li></ul>
 <h3>v2.0</h3>
@@ -1388,11 +1568,18 @@ HELP.settings=`<h3>Colours</h3>
 <h3>Logging</h3>
 <label for="setDef">Default pallet type</label>
 <select id="setDef"><option>BB</option><option>FMCG</option><option>FPP</option><option>Mixed</option></select>
+<label class="chk"><input type="checkbox" id="setKeep"><span>Keep the last pallet type selected after adding (otherwise go back to the default type)</span></label>
 <label class="chk"><input type="checkbox" id="setCheck"><span>Warn me about duplicate or unusual LPNs before adding them</span></label>
-<label class="chk"><input type="checkbox" id="setSound"><span>Play a sound and vibrate when a pallet is added or a warning shows</span></label>
+<label class="chk"><input type="checkbox" id="setSound"><span>Play a sound when a pallet is added or a warning shows</span></label>
+<label class="chk"><input type="checkbox" id="setVib"><span>Vibrate when a pallet is added or a warning shows</span></label>
+<label class="chk"><input type="checkbox" id="setConf"><span>Ask me to confirm each scanned barcode before it is added</span></label>
 <h3>Display</h3>
 <label for="setSize">Text size</label>
-<select id="setSize"><option value="1">Normal</option><option value="1.12">Large</option><option value="1.25">Extra large</option></select>`;
+<select id="setSize"><option value="1">Normal</option><option value="1.12">Large</option><option value="1.25">Extra large</option></select>
+<h3>Backup</h3>
+<p>Your log, saved deliveries and settings live in this browser only. Download a backup to keep a copy or move to another device, then restore it there.</p>
+<div class="row"><button id="bkDl">Download backup</button><button id="bkUp">Restore backup</button><input type="file" id="bkFile" accept=".json,application/json" hidden></div>
+<div class="msg" id="bkMsg"></div>`;
 /* ---- saved deliveries ---- */
 let hist=[];try{hist=JSON.parse(localStorage.getItem("lpnhist")||"[]")||[]}catch(e){hist=[]}
 const saveHist=()=>{try{localStorage.setItem("lpnhist",JSON.stringify(hist))}catch(e){}};
@@ -1404,19 +1591,19 @@ function pushHist(entry){hist.unshift(Object.assign({id:String(Date.now())+Math.
 const todayStr=()=>new Date().toISOString().slice(0,10);
 function newDelivery(){
   if(!rows.length){$("dlmsg").textContent="The log is empty, so there is nothing to save.";return}
-  const prev={rows:rows.slice(),date:$("date").value,recv:$("recv").value};
-  pushHist({saved:new Date().toISOString(),date:prev.date,recv:prev.recv,rows:prev.rows});
+  const prev={rows:rows.slice(),date:$("date").value,recv:$("recv").value,notes:$("notes").value,expect:$("expect").value};
+  pushHist({saved:new Date().toISOString(),date:prev.date,recv:prev.recv,notes:prev.notes,expect:prev.expect,rows:prev.rows});
   const id=hist[0].id;
-  rows=[];$("date").value=todayStr();$("type").value=cfg.defType;$("type").dataset.t=cfg.defType;
+  rows=[];$("notes").value="";$("expect").value="";$("date").value=todayStr();$("type").value=cfg.defType;$("type").dataset.t=cfg.defType;
   save();render();
   $("dlmsg").textContent="Saved to history and started a new delivery.";
-  showUndo("Saved to history. Started a new delivery.",()=>{hist=hist.filter(h=>h.id!==id);saveHist();rows=prev.rows;$("date").value=prev.date;$("recv").value=prev.recv;save();render();$("dlmsg").textContent=""});
+  showUndo("Saved to history. Started a new delivery.",()=>{hist=hist.filter(h=>h.id!==id);saveHist();rows=prev.rows;$("date").value=prev.date;$("recv").value=prev.recv;$("notes").value=prev.notes||"";$("expect").value=prev.expect||"";save();render();$("dlmsg").textContent=""});
 }
 function openHist(id){
   const h=hist.find(x=>x.id===id);if(!h)return;
-  if(rows.length)pushHist({saved:new Date().toISOString(),date:$("date").value,recv:$("recv").value,rows:rows.slice()});
+  if(rows.length)pushHist({saved:new Date().toISOString(),date:$("date").value,recv:$("recv").value,notes:$("notes").value,expect:$("expect").value,rows:rows.slice()});
   hist=hist.filter(x=>x.id!==id);saveHist();
-  rows=h.rows.map(r=>Object.assign({},r));$("date").value=h.date||todayStr();$("recv").value=h.recv||"";
+  rows=h.rows.map(r=>Object.assign({},r));$("date").value=h.date||todayStr();$("recv").value=h.recv||"";$("notes").value=h.notes||"";$("expect").value=h.expect||"";
   save();render();closeHelp();
   $("dlmsg").textContent="Opened the saved delivery. Your previous log, if it had pallets, was saved to history.";
 }
@@ -1429,7 +1616,7 @@ async function parseExported(f){
     const meta=await pdf.getMetadata();const kw=(meta&&meta.info&&meta.info.Keywords)||"";
     if(kw.indexOf("LPNLOG2:")!==0)throw new Error("That PDF wasn’t made by this app’s Email PDF button, so the pallet types can’t be read from it.");
     const o=JSON.parse(decodeURIComponent(kw.slice(8)));
-    return {date:o.d||"",recv:o.r||"",rows:(o.rows||[]).map(r=>({lpn:String(r[0]),type:normT(r[1]),fsdu:!!r[2]})),unk:unk};
+    return {date:o.d||"",recv:o.r||"",notes:o.n||"",expect:o.e||"",rows:(o.rows||[]).map(r=>({lpn:String(r[0]),type:normT(r[1]),fsdu:!!r[2]})),unk:unk};
   }
   let g;
   if(name.endsWith(".xlsx")){
@@ -1448,13 +1635,15 @@ async function parseExported(f){
     const l=String(g[i][col]==null?"":g[i][col]).trim();if(!l)break;
     rw.push({lpn:l,type:normT(g[i][col+1]),fsdu:/^y/i.test(String(g[i][col+2]||"").trim())});
   }
-  let date="",recv="";
+  let date="",recv="",notes="",expect="";
   g.forEach(r=>r.forEach((c,k)=>{
     const t=String(c).trim().toLowerCase(),nx=String(r[k+1]==null?"":r[k+1]).trim();
     if(t==="date"&&!date&&/^\d{4}-\d{2}-\d{2}$/.test(nx))date=nx;
     if(t==="received by"&&!recv)recv=nx;
+    if(t==="notes"&&!notes)notes=nx;
+    if(t==="expected pallets"&&!expect)expect=nx;
   }));
-  return {date:date,recv:recv,rows:rw,unk:unk};
+  return {date:date,recv:recv,notes:notes,expect:expect,rows:rw,unk:unk};
 }
 HELP.history=`<p>Deliveries you save are kept in this browser on this device. Weeks run Sunday to Saturday, and only this week and last week are kept; older ones are removed automatically. Opening one puts it back in the log so you can change it or export it again.</p>
 <div class="row" style="margin:10px 0"><button id="histImport">Import an exported log</button><input type="file" id="histFile" accept=".xlsx,.csv,.xls,.pdf,application/pdf" hidden></div>
@@ -1469,12 +1658,14 @@ function initHistory(){
     const hd=document.createElement("div");hd.className="hd";hd.textContent=(h.date||"No date")+", "+h.rows.length+(h.rows.length===1?" pallet":" pallets");
     const sb=document.createElement("div");sb.className="sb";
     let when="";try{when=new Date(h.saved).toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}catch(e){}
+    const hc={BB:0,FMCG:0,FPP:0,Mixed:0};h.rows.forEach(z=>{if(hc[z.type]!==undefined)hc[z.type]++});
+    const tt=document.createElement("div");tt.className="sb";tt.textContent="BB "+hc.BB+", FMCG "+hc.FMCG+", FPP "+hc.FPP+", Mixed "+hc.Mixed+", FSDU "+h.rows.filter(z=>z.fsdu).length;
     sb.textContent=(h.recv?"Received by "+h.recv+". ":"")+"Saved "+when+".";
     const r=document.createElement("div");r.className="row";
     const o=document.createElement("button");o.className="p";o.textContent="Open";o.onclick=()=>openHist(h.id);
     const x=document.createElement("button");x.className="d";x.textContent="Delete";
     x.onclick=()=>{if(confirm("Delete this saved delivery?")){hist=hist.filter(z=>z.id!==h.id);saveHist();initHistory()}};
-    r.append(o,x);d.append(hd,sb,r);root.appendChild(d);
+    r.append(o,x);d.append(hd,tt,sb,r);root.appendChild(d);
   });
   $("histImport").onclick=()=>{$("histFile").value="";$("histFile").click()};
   $("histFile").onchange=async e=>{
@@ -1483,7 +1674,7 @@ function initHistory(){
     try{
       const r=await parseExported(f);
       if(!r.rows.length)throw new Error("No pallets were found in that file.");
-      pushHist({saved:new Date().toISOString(),date:r.date,recv:r.recv,rows:r.rows});
+      pushHist({saved:new Date().toISOString(),date:r.date,recv:r.recv,notes:r.notes,expect:r.expect,rows:r.rows});
       $("histMsg").textContent="Imported "+r.rows.length+" pallets."+(r.unk?" "+r.unk+" had a pallet type that couldn’t be read, so they were set to Mixed.":"")+" Tap Open to use it.";
       initHistory();
     }catch(err){$("histMsg").textContent=(err&&err.message)||"Couldn’t read that file."}
@@ -1492,7 +1683,32 @@ function initHistory(){
 $("newDel").onclick=newDelivery;
 $("histBtn").onclick=()=>openHelp("history","Saved deliveries");
 function initSettings(){
-  $("setDef").value=cfg.defType;$("setDef").onchange=()=>{cfg.defType=$("setDef").value;saveCfg();$("type").value=cfg.defType;$("type").dataset.t=cfg.defType};
+  $("bkDl").onclick=async()=>{
+    try{
+      const data={};
+      for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^lpn/.test(k))data[k]=localStorage.getItem(k)}
+      const json=JSON.stringify({app:"lpn-pallet-log",version:1,saved:new Date().toISOString(),data:data});
+      await saveOnly(new TextEncoder().encode(json).buffer,"lpn-backup-"+new Date().toISOString().slice(0,10)+".json","application/json");
+      $("bkMsg").textContent="Backup downloaded.";
+    }catch(e){$("bkMsg").textContent="Couldn’t create the backup: "+((e&&e.message)||"error")}
+  };
+  $("bkUp").onclick=()=>{$("bkFile").value="";$("bkFile").click()};
+  $("bkFile").onchange=async e=>{
+    const f=e.target.files&&e.target.files[0];if(!f)return;
+    try{
+      const o=JSON.parse(await f.text());
+      if(!o||o.app!=="lpn-pallet-log"||!o.data||typeof o.data!=="object")throw new Error("That isn’t a backup from this app.");
+      const old=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^lpn/.test(k))old.push(k)}
+      old.forEach(k=>localStorage.removeItem(k));
+      Object.keys(o.data).forEach(k=>{if(/^lpn/.test(k)&&typeof o.data[k]==="string")localStorage.setItem(k,o.data[k])});
+      $("bkMsg").textContent="Backup restored. Reloading…";
+      setTimeout(()=>location.reload(),700);
+    }catch(err){$("bkMsg").textContent=(err&&err.message)||"Couldn’t read that backup."}
+  };
+  $("setDef").value=cfg.defType;$("setDef").onchange=()=>{cfg.defType=$("setDef").value;saveCfg();$("type").value=cfg.defType;syncType()};
+  $("setVib").checked=cfg.vibrate;$("setVib").onchange=()=>{cfg.vibrate=$("setVib").checked;saveCfg();if(cfg.vibrate)sfx("ok")};
+  $("setConf").checked=cfg.confirmScan;$("setConf").onchange=()=>{cfg.confirmScan=$("setConf").checked;saveCfg()};
+  $("setKeep").checked=cfg.keepType;$("setKeep").onchange=()=>{cfg.keepType=$("setKeep").checked;saveCfg()};
   $("setCheck").checked=cfg.check;$("setCheck").onchange=()=>{cfg.check=$("setCheck").checked;saveCfg();if(!cfg.check)hideCheck()};
   $("setSound").checked=cfg.sound;$("setSound").onchange=()=>{cfg.sound=$("setSound").checked;saveCfg();if(cfg.sound)sfx("ok")};
   $("setSize").value=cfg.size;$("setSize").onchange=()=>{cfg.size=$("setSize").value;saveCfg();applyCfg()};
@@ -1550,7 +1766,7 @@ $("panelBody").addEventListener("click",e=>{if(e.target&&e.target.id==="showInst
 })();
 if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
 setTimeout(()=>{loadExcel().catch(()=>{});loadJsPdf().catch(()=>{})},2500);
-load();render();$("type").value=cfg.defType;
+load();render();$("type").value=cfg.defType;syncType();
 </script>
 </body>
 </html>
