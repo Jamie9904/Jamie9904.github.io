@@ -25,7 +25,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16.5px/1.55 "Atkinson H
 .top h1{font:700 1.3rem/1.15 "Atkinson Hyperlegible",sans-serif;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top .sub{font-size:.82rem;color:var(--mu)}
 #logoImg{display:block;height:38px;max-width:110px;object-fit:contain;flex:none}
-#side{display:flex;gap:16px;flex:none}
+#side{display:flex;gap:14px;flex:none}
 #side button{min-height:40px;padding:0;font-size:.95rem;font-weight:700;background:transparent;border:0;border-bottom:2px solid var(--ac);border-radius:0;color:var(--ac)}
 #side button:hover{background:transparent;color:var(--ac2);border-color:var(--ac2)}
 #side .lbl{display:inline}
@@ -48,7 +48,7 @@ button{cursor:pointer;min-height:46px;font-weight:700;font-size:.95rem}
 button:hover{background:var(--sel)}
 button:active{transform:translateY(1px)}
 button:disabled{opacity:.55;cursor:default}
-button.p{background:var(--ac);border-color:var(--ac);color:#0c1830}
+button.p{background:var(--ac);border-color:var(--ac);color:var(--onac,#0c1830)}
 button.p:hover{background:var(--ac2);border-color:var(--ac2)}
 button.d{color:var(--dg);background:transparent}
 button.d:hover{background:color-mix(in srgb,var(--dg) 12%,var(--paper));border-color:var(--dg)}
@@ -88,7 +88,7 @@ td button{min-height:34px;padding:2px 10px}
 #type{font-weight:700}
 textarea{font:400 14px/1.5 "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;display:block;width:100%;max-width:100%;min-width:0;resize:vertical}
 .chk{display:flex;align-items:flex-start;gap:10px;font-size:.95rem;font-weight:400;color:var(--ink);margin-top:14px}
-.chk input,#cmpMerge{width:21px;height:21px;margin:1px 0 0;flex:none;accent-color:var(--ac)}
+.chk input,#setMerge{width:21px;height:21px;margin:1px 0 0;flex:none;accent-color:var(--ac)}
 #fsdu{display:block;width:30px;height:30px;margin:0;accent-color:var(--ac);padding:0}
 td input[type=checkbox]{width:21px;height:21px;accent-color:var(--ac)}
 #scanbox{margin-top:10px}
@@ -135,6 +135,15 @@ button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
 #instBox h3{font:700 1.05rem/1.3 "Atkinson Hyperlegible",sans-serif;margin:14px 0 4px;color:var(--ac)}
 #instBox ol{padding-left:20px;margin:4px 0}
 #instBox li,#instBox p{font-size:.95rem;margin:4px 0}
+.setrow{margin:12px 0}
+.setfields{display:flex;gap:10px;align-items:center}
+.setfields input[type=color]{width:56px;height:48px;padding:3px;cursor:pointer;flex:none}
+.setfields input:not([type=color]){flex:1;min-width:0;font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace}
+.swatches{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0 14px}
+.sw{display:flex;align-items:center;gap:10px;text-align:left;font-size:.88rem;padding:8px 10px}
+.sw .chip{width:34px;height:34px;border-radius:6px;border:1px solid var(--line);position:relative;flex:none}
+.sw .chip i{position:absolute;right:4px;bottom:4px;width:14px;height:14px;border-radius:50%}
+@media (max-width:400px){.swatches{grid-template-columns:1fr}}
 [hidden]{display:none!important}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media print{.top,#side,#shade,#panel,.entry{display:none}}
@@ -150,6 +159,7 @@ button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
   <aside id="side" aria-label="Help">
     <button id="btnGuide" aria-label="Guide">📖<span class="lbl"> Guide</span></button>
     <button id="btnLog" aria-label="Changelog">📝<span class="lbl"> Changelog</span></button>
+    <button id="btnSet" aria-label="Settings">⚙<span class="lbl"> Settings</span></button>
   </aside>
 </header>
 <main>
@@ -239,7 +249,6 @@ button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
   <div class="msg" id="cmpMsg"></div>
   <label for="cmpNums" style="margin-top:10px">Numbers read from the manifest (one per line: fix any mistakes or type them in)</label>
   <textarea id="cmpNums" rows="6"></textarea>
-  <label class="chk"><input type="checkbox" id="cmpMerge" checked><span>Include a copy of the log with the comparison (a tab in the spreadsheet, extra pages at the end of the PDF)</span></label>
   <div class="sum" id="cmpSum" style="margin-top:10px"></div>
   <div class="act"><button class="d" id="cmpClear">Clear</button><div class="row" style="gap:8px"><button id="cmpMail">✉ Compare and email PDF</button><button class="p" id="cmpGo">Compare and download</button></div></div>
   </div>
@@ -760,6 +769,7 @@ $("logoFile").onchange=async e=>{
 $("logoRm").onclick=()=>{custom="";try{localStorage.removeItem("lpnlogo")}catch(e){}showLogo()};
 loadLogo();
 /* ---- manifest check ---- */
+let mergeLog=true;try{if(localStorage.getItem("lpnmergelog")==="0")mergeLog=false}catch(e){}
 let logLpns=null,logSrc=null,logPdfSrc=null,logSheets=null;
 const norm=v=>String(v).toUpperCase().replace(/[^A-Z0-9]/g,"");
 const cmpMsg=t=>{$("cmpMsg").textContent=t};
@@ -907,7 +917,7 @@ $("cmpLogBtn").onclick=()=>{$("cmpLogFile").value="";$("cmpLogFile").click()};
 $("cmpLogFile").onchange=async e=>{
   const f=e.target.files&&e.target.files[0];if(!f)return;
   cmpMsg("Reading log…");
-  try{const l=await readLog(f);$("cmpLogNums").value=l.join("\n");$("cmpLogName").textContent=f.name+": "+l.length+" LPNs found"+(logSrc&&$("cmpMerge").checked?". The comparison will be added to this file as a new tab.":"");cmpMsg(/\.pdf$/i.test(f.name)?"Read from PDF. Check the log numbers are correct, then compare."+oddNote("cmpLogNums"):"")}
+  try{const l=await readLog(f);$("cmpLogNums").value=l.join("\n");$("cmpLogName").textContent=f.name+": "+l.length+" LPNs found"+(logSrc&&mergeLog?". The comparison will be added to this file as a new tab.":"");cmpMsg(/\.pdf$/i.test(f.name)?"Read from PDF. Check the log numbers are correct, then compare."+oddNote("cmpLogNums"):"")}
   catch(err){$("cmpLogName").textContent="";cmpMsg(err.message||"Couldn't read that file.")}
 };
 $("cmpLogPhotoBtn").onclick=()=>{$("cmpLogPhotoFile").value="";$("cmpLogPhotoFile").click()};
@@ -1023,7 +1033,7 @@ $("cmpGo").onclick=async()=>{
   try{
     await loadExcel();
     const d=$("cmpDate").value||"no-date";
-    const merge=$("cmpMerge").checked,mergeSrc=merge?logSrc:null;
+    const merge=mergeLog,mergeSrc=merge?logSrc:null;
     const wb=new ExcelJS.Workbook();
     if(mergeSrc)await wb.xlsx.load(mergeSrc.buf);
     let tab="Manifest Check",tn=2;
@@ -1110,8 +1120,6 @@ $("cmpGo").onclick=async()=>{
 };
 try{$("cmpDate").value=localStorage.getItem("lpncmpdate")||""}catch(e){}
 if(!$("cmpDate").value)$("cmpDate").value=new Date().toISOString().slice(0,10);
-try{const mv=localStorage.getItem("lpncmpmerge");if(mv!==null)$("cmpMerge").checked=mv==="1"}catch(e){}
-$("cmpMerge").onchange=()=>{try{localStorage.setItem("lpncmpmerge",$("cmpMerge").checked?"1":"0")}catch(e){}};
 $("cmpDate").onchange=()=>{try{localStorage.setItem("lpncmpdate",$("cmpDate").value)}catch(e){}};
 /* ---- prefix presets ---- */
 const PRESET_URL="presets.json";
@@ -1224,7 +1232,7 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <li>Press <b>Compare and download</b> to get a spreadsheet that lists every LPN from both sources. <b>✓ Matched</b> means it is on both. <b>✗ MISSING</b> means it is on the manifest but not the log, so report it as missing. <b>⚠ LOG ONLY</b> means it is on the log but not the manifest, so it still needs booking in. If you uploaded the log as an .xlsx file, the comparison is added as a new tab called <b>Manifest Check</b> in a copy of that file, so you get both in one workbook. With a photo of the printed log you get a separate spreadsheet.</li>
 </ol>
 <p>Photos are read with text recognition. It looks for entries that match the LPN format and fixes common lookalike characters in the number part, but it can still misread the letters, so check the lists before comparing. It cleans up the image and re-reads each number close up to improve accuracy, and flags numbers with an unusual number of digits.</p>
-<p><b>Include a copy of the log:</b> when this box is ticked (the default), the Excel comparison is added as a new tab on your uploaded log workbook. If the log came from a PDF or another type of file, the comparison workbook gets a <b>Log copy</b> tab with all of the log’s information. The emailed PDF has the log added as extra pages after the comparison: your uploaded PDF as it is, or a table copy of the spreadsheet’s information. If the log was read from a photo or a PDF not made by this app, only the LPN numbers are available to copy. Untick the box to get the comparison on its own.</p>
+<p><b>Include a copy of the log:</b> in <b>Settings</b>, this option is on by default. When it is on, the Excel comparison is added as a new tab on your uploaded log workbook. If the log came from a PDF or another type of file, the comparison workbook gets a <b>Log copy</b> tab with all of the log’s information. The emailed PDF has the log added as extra pages after the comparison: your uploaded PDF as it is, or a table copy of the spreadsheet’s information. If the log was read from a photo or a PDF not made by this app, only the LPN numbers are available to copy. Turn it off in Settings to get the comparison on its own.</p>
 <h3>6. Install it on your phone</h3>
 <ul>
 <li><b>Android (Chrome):</b> open the app’s web address, tap the ⋮ menu, then <b>Install app</b> or <b>Add to Home screen</b>.</li>
@@ -1232,12 +1240,21 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <li><button id="showInstall">Show the install pop-up again</button></li>
 <li>It then opens full screen from its own icon. You still need an internet connection for text recognition, the Excel builder and the PDF reader. This hasn’t been tested on every phone, so downloads may behave differently, for example going to the Files app on iPhone.</li>
 </ul>
+<p><b>Colours:</b> open <b>Settings</b> next to Guide and Changelog to choose your own background and accent colours with a colour picker or a hex code. They are saved on this device.</p>
 <h3>7. Good to know</h3>
 <ul>
 <li>Your entries, date, name and logo are saved in this browser on this device only. <b>Clear all</b> removes the entries.</li>
 <li>LPNs are expected as a letter prefix followed by digits, for example RUN000000000. The prefix list only affects numbers read from photos, not numbers you type in.</li>
 <li>Always check numbers read from photos before comparing, as photos can be misread.</li>
-</ul>`,log:`<h3>v3.13 <span class="ver">Current</span></h3>
+</ul>`,log:`<h3>v3.17 <span class="ver">Current</span></h3>
+<ul><li>Fixed the Comparison heading in Settings so it uses the accent colour.</li></ul>
+<h3>v3.16</h3>
+<ul><li>In Settings, the comparison option now sits below Quick themes.</li></ul>
+<h3>v3.15</h3>
+<ul><li>Moved the option to include a copy of the log with the comparison into Settings. It is on by default.</li></ul>
+<h3>v3.14</h3>
+<ul><li>Added a Settings tab to choose your own background and accent colours with a colour picker or hex code, plus quick themes and a reset button.</li></ul>
+<h3>v3.13</h3>
 <ul><li>New colours: navy blue background with orange accents. The layout is unchanged.</li></ul>
 <h3>v3.12</h3>
 <ul><li>New layout: one continuous sheet instead of separate boxes, the entry controls dock to the bottom of the screen on phones, counts shown as one line, and plain text Guide and Changelog links.</li></ul>
@@ -1315,11 +1332,78 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <ul><li>First version: log LPNs with a pallet type, set a date, and download the table.</li></ul>`};
 function openHelp(k,t){
   $("panelTitle").textContent=t;$("panelBody").innerHTML=HELP[k];
-  $("panel").hidden=false;$("shade").hidden=false;$("panel").scrollTop=0;
+  $("panel").hidden=false;$("shade").hidden=false;$("panel").scrollTop=0;if(k==="settings")initSettings();
 }
 function closeHelp(){$("panel").hidden=true;$("shade").hidden=true}
+/* ---- settings: custom colours ---- */
+const THEME_DEFAULT={bg:"#0c1830",ac:"#ff8a2a"};
+const THEME_QUICK=[["Navy and orange","#0c1830","#ff8a2a"],["Sage and teal","#e3e8e4","#2f6f68"],["Charcoal and amber","#1d1f23","#f5b324"],["Light and blue","#eef1f6","#2563eb"]];
+let theme=Object.assign({},THEME_DEFAULT);
+const hexOk=v=>/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(v).trim());
+function hexNorm(v){let h=String(v).trim().replace("#","").toLowerCase();if(h.length===3)h=h.split("").map(c=>c+c).join("");return "#"+h}
+const toRgb=h=>{h=hexNorm(h);return [1,3,5].map(i=>parseInt(h.substr(i,2),16))};
+const toHex=a=>"#"+a.map(n=>Math.max(0,Math.min(255,Math.round(n))).toString(16).padStart(2,"0")).join("");
+const mixC=(a,b,t)=>{const x=toRgb(a),y=toRgb(b);return toHex(x.map((v,i)=>v+(y[i]-v)*t))};
+const lumOf=h=>{const c=toRgb(h).map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)});return .2126*c[0]+.7152*c[1]+.0722*c[2]};
+function applyTheme(){
+  const bg=hexNorm(theme.bg),ac=hexNorm(theme.ac),dark=lumOf(bg)<.3;
+  const paper=dark?mixC(bg,"#ffffff",.08):mixC(bg,"#ffffff",.7);
+  const v={
+    "--bg":bg,"--paper":paper,
+    "--ink":dark?mixC(bg,"#ffffff",.92):mixC(bg,"#000000",.85),
+    "--mu":dark?mixC(bg,"#ffffff",.62):mixC(bg,"#000000",.55),
+    "--rule":dark?mixC(paper,"#ffffff",.1):mixC(paper,"#000000",.12),
+    "--line":dark?mixC(paper,"#ffffff",.22):mixC(paper,"#000000",.22),
+    "--ac":ac,"--ac2":dark?mixC(ac,"#ffffff",.25):mixC(ac,"#000000",.2),
+    "--acs":mixC(paper,ac,.2),"--sel":mixC(paper,ac,.12),
+    "--onac":(lumOf(ac)+.05)/.05>1.05/(lumOf(ac)+.05)?"#111111":"#ffffff",
+    "--bb":dark?"#dba56c":"#b07d4f","--fm":dark?"#6fa8ff":"#5382b8","--fp":dark?"#a9c95a":"#8a9a3b","--mx":dark?"#c79bf0":"#9a6aa6",
+    "--dg":dark?"#ff7b6e":"#b3392f","--wn":dark?"#ffcf8a":"#7a5a1c","--wns":dark?"#3a3020":"#f6ecd2"
+  };
+  const st=document.documentElement.style;
+  Object.keys(v).forEach(k=>st.setProperty(k,v[k]));
+  st.colorScheme=dark?"dark":"light";
+  const tc=document.querySelector('meta[name="theme-color"]');if(tc)tc.setAttribute("content",bg);
+}
+function saveTheme(){try{localStorage.setItem("lpntheme",JSON.stringify(theme))}catch(e){}}
+try{const t=JSON.parse(localStorage.getItem("lpntheme")||"null");if(t&&hexOk(t.bg)&&hexOk(t.ac))theme={bg:hexNorm(t.bg),ac:hexNorm(t.ac)}}catch(e){}
+applyTheme();
+HELP.settings=`<h3>Colours</h3>
+<p>Choose your own background and accent colours. Use the colour picker or type a hex code such as <b>#0c1830</b>. Changes apply straight away and are saved on this device.</p>
+<div class="setrow"><label for="setBgPick">Background</label><div class="setfields"><input type="color" id="setBgPick" aria-label="Background colour picker"><input id="setBgHex" maxlength="7" autocomplete="off" spellcheck="false" aria-label="Background hex code" placeholder="#0c1830"></div></div>
+<div class="setrow"><label for="setAcPick">Accent</label><div class="setfields"><input type="color" id="setAcPick" aria-label="Accent colour picker"><input id="setAcHex" maxlength="7" autocomplete="off" spellcheck="false" aria-label="Accent hex code" placeholder="#ff8a2a"></div></div>
+<div class="msg" id="setMsg"></div>
+<h3>Quick themes</h3>
+<div class="swatches" id="setQuick"></div>
+<div class="act"><button class="d" id="setReset">Reset to default colours</button></div>
+<p style="color:var(--mu)">Text, borders and shading adjust to suit the background. The pallet type colours stay the same.</p>
+<h3>Comparison</h3>
+<label class="chk"><input type="checkbox" id="setMerge"><span>Include a copy of the log with the manifest comparison (a tab in the spreadsheet, extra pages at the end of the PDF)</span></label>`;
+function initSettings(){
+  $("setMerge").checked=mergeLog;
+  $("setMerge").onchange=()=>{mergeLog=$("setMerge").checked;try{localStorage.setItem("lpnmergelog",mergeLog?"1":"0")}catch(e){}};
+  const sync=()=>{$("setBgPick").value=hexNorm(theme.bg);$("setAcPick").value=hexNorm(theme.ac);$("setBgHex").value=hexNorm(theme.bg);$("setAcHex").value=hexNorm(theme.ac)};
+  sync();
+  const pick=(id,key,hexId)=>{$(id).oninput=()=>{theme[key]=$(id).value;$(hexId).value=hexNorm(theme[key]);$("setMsg").textContent="";applyTheme();saveTheme()}};
+  pick("setBgPick","bg","setBgHex");pick("setAcPick","ac","setAcHex");
+  const typed=(hexId,key,pickId)=>{$(hexId).oninput=()=>{
+    const v=$(hexId).value;
+    if(hexOk(v)){theme[key]=hexNorm(v);$(pickId).value=theme[key];$("setMsg").textContent="";$(hexId).style.borderColor="";applyTheme();saveTheme()}
+    else{$("setMsg").textContent="Enter a hex code with 3 or 6 digits, for example #ff8a2a.";$(hexId).style.borderColor="var(--dg)"}
+  };$(hexId).onblur=()=>{$(hexId).value=hexNorm(theme[key]);$(hexId).style.borderColor="";$("setMsg").textContent=""}};
+  typed("setBgHex","bg","setBgPick");typed("setAcHex","ac","setAcPick");
+  const q=$("setQuick");q.innerHTML="";
+  THEME_QUICK.forEach(t=>{
+    const b=document.createElement("button");b.type="button";b.className="sw";
+    b.innerHTML='<span class="chip" style="background:'+t[1]+'"><i style="background:'+t[2]+'"></i></span>'+t[0];
+    b.onclick=()=>{theme={bg:t[1],ac:t[2]};sync();applyTheme();saveTheme()};
+    q.appendChild(b);
+  });
+  $("setReset").onclick=()=>{theme=Object.assign({},THEME_DEFAULT);sync();applyTheme();try{localStorage.removeItem("lpntheme")}catch(e){}};
+}
 $("btnGuide").onclick=()=>openHelp("guide","How to use this app");
 $("btnLog").onclick=()=>openHelp("log","Changelog");
+$("btnSet").onclick=()=>openHelp("settings","Settings");
 $("panelClose").onclick=closeHelp;$("shade").onclick=closeHelp;
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeHelp()});
 /* ---- install pop-up ---- */
