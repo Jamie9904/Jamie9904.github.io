@@ -161,6 +161,8 @@ button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
 #panel p,#panel li{font-size:.95rem;margin:5px 0}
 #panel ul,#panel ol{padding-left:20px;margin:6px 0}
 #panel .ver{font:700 .75rem "Atkinson Hyperlegible",sans-serif;background:var(--acs);color:var(--ac);border-radius:var(--r);padding:2px 8px;margin-left:8px;vertical-align:middle}
+.upd{position:fixed;top:0;left:0;right:0;z-index:70;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;background:var(--ac);color:var(--onac);font-weight:700}
+.upd button{min-height:38px;background:var(--onac);color:var(--ac);border-color:var(--onac)}
 #instShade{position:fixed;inset:0;background:rgba(3,8,20,.65);z-index:50}
 #instBox{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(450px,calc(100% - 32px));max-height:calc(100% - 32px);overflow-y:auto;background:var(--paper);color:var(--ink);border:2px solid var(--ac);border-radius:var(--r);padding:20px;z-index:60}
 #instBox h2{font:700 1.3rem/1.2 "Atkinson Hyperlegible",sans-serif;margin:0 0 6px}
@@ -243,7 +245,7 @@ button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
       <button id="stopscan">Stop scanning</button>
     </div>
   </div>
-  <div class="msg" id="msg"></div>
+  <div class="msg" id="msg" role="status" aria-live="polite"></div>
   <div class="chkbar" id="chkBar" hidden role="alert"><div id="chkTxt"></div><div class="row"><button id="chkSkip">Skip</button><button class="p" id="chkAdd">Add anyway</button></div></div>
 </div>
 
@@ -266,7 +268,7 @@ button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
     <div class="row" style="gap:8px"><button class="p" id="expBtn" aria-expanded="false" aria-controls="expMenu">Export ▾</button></div>
   </div>
   <div class="menu" id="expMenu" hidden><button class="p" id="dl">Download (Excel)</button><button id="dlMail">✉ Email PDF</button><button id="prn">🖨 Print</button></div>
-  <div class="msg" id="dlmsg"></div>
+  <div class="msg" id="dlmsg" role="status" aria-live="polite"></div>
 </div>
 <div class="card" id="cmpCard">
   <button type="button" class="tgl" id="cmpToggle" aria-expanded="false" aria-controls="cmpBody"><span class="tt">Manifest check</span><span class="chev" aria-hidden="true">▾</span></button>
@@ -284,20 +286,20 @@ button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
       <button class="d" id="pfxDel">Delete preset</button>
       <button id="pfxDl">Download presets file</button>
     </div>
-    <div class="msg" id="pfxMsg" style="color:var(--mu)"></div>
+    <div class="msg" id="pfxMsg" role="status" aria-live="polite" style="color:var(--mu)"></div>
   </div>
   <div class="row">
     <div class="grow"><label>1. LPN log</label><div class="row"><button class="p" id="cmpUseLog">Use current log</button><button id="cmpLogBtn">Upload log file</button><button id="cmpLogPhotoBtn">📷 Photo of printed log</button></div><select id="cmpHist" style="width:100%;margin-top:8px" aria-label="Use a saved delivery"></select></div>
     <div class="grow"><label>2. Manifest photos or PDFs</label><div class="row"><button id="cmpPhotoBtn">📷 Add manifest photo</button><button id="cmpPdfBtn">📄 Add manifest PDFs</button></div></div>
   </div>
-  <div class="msg" id="cmpLogName" style="color:var(--mu)"></div>
+  <div class="msg" id="cmpLogName" role="status" aria-live="polite" style="color:var(--mu)"></div>
   <label for="cmpLogNums" style="margin-top:10px">Numbers in the log (one per line: fix any mistakes)</label>
   <textarea id="cmpLogNums" rows="5"></textarea>
   <input type="file" id="cmpLogFile" accept=".xlsx,.xls,.csv,.pdf,application/pdf" hidden>
   <input type="file" id="cmpLogPhotoFile" accept="image/*" multiple hidden>
   <input type="file" id="cmpPhotoFile" accept="image/*" multiple hidden>
   <input type="file" id="cmpPdfFile" accept="application/pdf,.pdf" multiple hidden>
-  <div class="msg" id="cmpMsg"></div>
+  <div class="msg" id="cmpMsg" role="status" aria-live="polite"></div>
   <label for="cmpNums" style="margin-top:10px">Numbers read from the manifest (one per line: fix any mistakes or type them in)</label>
   <textarea id="cmpNums" rows="6"></textarea>
   <div class="sum" id="cmpSum" style="margin-top:10px"></div>
@@ -315,6 +317,7 @@ button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
   </div>
   <div id="panelBody"></div>
 </section>
+<div class="upd" id="updBar" hidden role="status"><span>A new version is available.</span><button class="p" id="updBtn">Refresh</button></div>
 <div id="instShade" hidden></div>
 <section id="instBox" role="dialog" aria-labelledby="instTitle" hidden>
   <h2 id="instTitle">Install this app on your phone</h2>
@@ -1507,7 +1510,7 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <li>LPNs are expected as a letter prefix followed by digits, for example RUN000000000. The prefix list only affects numbers read from photos, not numbers you type in.</li>
 <li>Always check numbers read from photos before comparing, as photos can be misread.</li>
 </ul>`,log:`<h3>v3.19 <span class="ver">Current</span></h3>
-<ul><li>Warnings before adding duplicate or unusual LPNs, with a skip or add anyway choice.</li><li>Undo for removed pallets.</li><li>Start new delivery, a Saved deliveries list, and importing an exported log. Saved deliveries older than the start of last week (weeks start on Sunday) are removed automatically.</li><li>The install pop-up can now be opened again from Settings as well as the Guide.</li><li>Manifest check: Use current log or a saved delivery as the log, a Check results panel on screen, and Fix or remove buttons for misread numbers.</li><li>Pallet type buttons, an expected pallets count, an Export menu with Print, confirm-each-scan option, separate sound and vibration settings, and backup and restore in Settings.</li><li>Tap an LPN to edit it, search and filter the log, delivery notes in the exports, Clear all now has Undo, saved deliveries show their totals, and the screen stays awake while live scanning.</li><li>New Settings: default pallet type, keep last type, warnings on or off, sound and vibration, and text size.</li></ul>
+<ul><li>Warnings before adding duplicate or unusual LPNs, with a skip or add anyway choice.</li><li>Undo for removed pallets.</li><li>Start new delivery, a Saved deliveries list, and importing an exported log. Saved deliveries older than the start of last week (weeks start on Sunday) are removed automatically.</li><li>The install pop-up can now be opened again from Settings as well as the Guide.</li><li>Settings now warns when your accent colour is hard to see against your background, and status messages are announced by screen readers.</li><li>An “update available” banner appears in installed apps when a new version has been uploaded.</li><li>Manifest check: Use current log or a saved delivery as the log, a Check results panel on screen, and Fix or remove buttons for misread numbers.</li><li>Pallet type buttons, an expected pallets count, an Export menu with Print, confirm-each-scan option, separate sound and vibration settings, and backup and restore in Settings.</li><li>Tap an LPN to edit it, search and filter the log, delivery notes in the exports, Clear all now has Undo, saved deliveries show their totals, and the screen stays awake while live scanning.</li><li>New Settings: default pallet type, keep last type, warnings on or off, sound and vibration, and text size.</li></ul>
 <h3>v3.0</h3>
 <ul><li>New navy and orange design with a single-sheet layout, colour-coded pallet types and a docked entry bar on phones.</li><li>Settings tab: your own background and accent colours (picker or hex), quick themes, reset, and the option to include a copy of the log with the comparison.</li><li>Stacked header on phones. The manifest comparison section can be shown or hidden and starts hidden.</li></ul>
 <h3>v2.0</h3>
@@ -1550,6 +1553,9 @@ function applyTheme(){
   Object.keys(v).forEach(k=>st.setProperty(k,v[k]));
   st.colorScheme=dark?"dark":"light";
   const tc=document.querySelector('meta[name="theme-color"]');if(tc)tc.setAttribute("content",bg);
+  const rt=(a,b)=>{const x=lumOf(a)+.05,y=lumOf(b)+.05;return Math.max(x,y)/Math.min(x,y)};
+  const w=document.getElementById("setWarn");
+  if(w){const r=Math.min(rt(ac,bg),rt(ac,paper));w.textContent=r<3?"Low contrast: the accent colour is hard to see against this background (ratio "+r.toFixed(1)+", aim for 3 or more). Headings, links and highlights may be hard to read. Try a lighter or darker accent.":""}
 }
 function saveTheme(){try{localStorage.setItem("lpntheme",JSON.stringify(theme))}catch(e){}}
 try{const t=JSON.parse(localStorage.getItem("lpntheme")||"null");if(t&&hexOk(t.bg)&&hexOk(t.ac))theme={bg:hexNorm(t.bg),ac:hexNorm(t.ac)}}catch(e){}
@@ -1558,7 +1564,8 @@ HELP.settings=`<h3>Colours</h3>
 <p>Choose your own background and accent colours. Use the colour picker or type a hex code such as <b>#0c1830</b>. Changes apply straight away and are saved on this device.</p>
 <div class="setrow"><label for="setBgPick">Background</label><div class="setfields"><input type="color" id="setBgPick" aria-label="Background colour picker"><input id="setBgHex" maxlength="7" autocomplete="off" spellcheck="false" aria-label="Background hex code" placeholder="#0c1830"></div></div>
 <div class="setrow"><label for="setAcPick">Accent</label><div class="setfields"><input type="color" id="setAcPick" aria-label="Accent colour picker"><input id="setAcHex" maxlength="7" autocomplete="off" spellcheck="false" aria-label="Accent hex code" placeholder="#ff8a2a"></div></div>
-<div class="msg" id="setMsg"></div>
+<div class="msg" id="setMsg" role="status" aria-live="polite"></div>
+<div class="msg" id="setWarn" role="status" aria-live="polite"></div>
 <h3>Quick themes</h3>
 <div class="swatches" id="setQuick"></div>
 <div class="act"><button class="d" id="setReset">Reset to default colours</button></div>
@@ -1582,7 +1589,7 @@ HELP.settings=`<h3>Colours</h3>
 <h3>Backup</h3>
 <p>Your log, saved deliveries and settings live in this browser only. Download a backup to keep a copy or move to another device, then restore it there.</p>
 <div class="row"><button id="bkDl">Download backup</button><button id="bkUp">Restore backup</button><input type="file" id="bkFile" accept=".json,application/json" hidden></div>
-<div class="msg" id="bkMsg"></div>`;
+<div class="msg" id="bkMsg" role="status" aria-live="polite"></div>`;
 /* ---- saved deliveries ---- */
 let hist=[];try{hist=JSON.parse(localStorage.getItem("lpnhist")||"[]")||[]}catch(e){hist=[]}
 const saveHist=()=>{try{localStorage.setItem("lpnhist",JSON.stringify(hist))}catch(e){}};
@@ -1650,7 +1657,7 @@ async function parseExported(f){
 }
 HELP.history=`<p>Deliveries you save are kept in this browser on this device. Weeks run Sunday to Saturday, and only this week and last week are kept; older ones are removed automatically. Opening one puts it back in the log so you can change it or export it again.</p>
 <div class="row" style="margin:10px 0"><button id="histImport">Import an exported log</button><input type="file" id="histFile" accept=".xlsx,.csv,.xls,.pdf,application/pdf" hidden></div>
-<div class="msg" id="histMsg"></div>
+<div class="msg" id="histMsg" role="status" aria-live="polite"></div>
 <div id="histRoot"></div>`;
 function initHistory(){
   pruneHist();
@@ -1686,6 +1693,7 @@ function initHistory(){
 $("newDel").onclick=newDelivery;
 $("histBtn").onclick=()=>openHelp("history","Saved deliveries");
 function initSettings(){
+  applyTheme();
   $("bkDl").onclick=async()=>{
     try{
       const data={};
@@ -1767,7 +1775,15 @@ $("panelBody").addEventListener("click",e=>{if(e.target&&e.target.id==="showInst
   try{localStorage.setItem("lpninstallshown","1")}catch(e){}
   setTimeout(openInstall,700);
 })();
-if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
+if("serviceWorker" in navigator){
+  const hadSW=!!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(hadSW)$("updBar").hidden=false});
+  $("updBtn").onclick=()=>location.reload();
+  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").then(reg=>{
+    const chk=()=>{reg.update().catch(()=>{})};
+    chk();document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")chk()});
+  }).catch(()=>{}));
+}
 setTimeout(()=>{loadExcel().catch(()=>{});loadJsPdf().catch(()=>{})},2500);
 load();render();$("type").value=cfg.defType;syncType();
 </script>
