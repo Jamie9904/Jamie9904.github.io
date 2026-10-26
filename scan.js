@@ -90,7 +90,7 @@ syncType();
 $("type").addEventListener("change",syncType);
 document.querySelectorAll("#tyb button").forEach(b=>{b.onclick=()=>{$("type").value=b.dataset.t;syncType()}});
 $("add").onclick=add;
-$("flt").oninput=render;$("fltType").onchange=render;
+$("flt").oninput=render;$("fltType").onchange=render;$("fltFsdu").onchange=render;
 $("lpn").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();add()}});
 $("date").onchange=save;
 $("recv").oninput=save;

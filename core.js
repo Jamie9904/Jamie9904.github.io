@@ -34,11 +34,13 @@ function render(){
   syncType();
   const b=$("body");b.innerHTML="";
   if(!rows.length){b.innerHTML='<tr><td colspan="5" class="empty">No pallets logged yet</td></tr>'}
-  const q=($("flt").value||"").trim().toUpperCase().replace(/\s+/g,""),ft=$("fltType").value;
+  const q=($("flt").value||"").trim().toUpperCase().replace(/\s+/g,""),ft=$("fltType").value,ff=$("fltFsdu").value;
   let shown=0;
   rows.forEach((r,i)=>{
     if(q&&r.lpn.toUpperCase().replace(/\s+/g,"").indexOf(q)<0)return;
     if(ft&&r.type!==ft)return;
+    if(ff==="y"&&!r.fsdu)return;
+    if(ff==="n"&&r.fsdu)return;
     shown++;
     const tr=document.createElement("tr");tr.dataset.t=r.type;
     const n=document.createElement("td");n.textContent=i+1;

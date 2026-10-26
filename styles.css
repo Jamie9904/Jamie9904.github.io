@@ -234,3 +234,4 @@ button.tgl .chev .chv{margin:0;width:18px;height:18px}
   main .wrap{margin:0}
   .foot{grid-row:4}
 }
+@media(max-width:560px){.flt{flex-wrap:wrap}.flt input{flex:1 1 100%}.flt select{flex:1 1 0}}
