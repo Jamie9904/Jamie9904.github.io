@@ -306,7 +306,7 @@ $("dl").onclick=async()=>{
         cell.value=val;
         cell.font={name:o.mono?"Courier New":"Arial",size:14,bold:!!o.bold,color:XL_BLACK};
         cell.border=o.box;
-        cell.alignment={vertical:"middle",horizontal:o.center?"center":"left",wrapText:!o.big};
+        cell.alignment=o.center?{vertical:"middle",horizontal:"center",wrapText:!o.big}:{vertical:"middle",horizontal:"left",indent:1,wrapText:!o.big};
         if(o.fill)cell.fill=xlFill(o.fill);
       };
       if(left)left.forEach((v,k)=>put(k+1,v,{bold:head,big:head,mono:!head&&k===1,center:head?k!==1:k!==1,fill:head?XL_HEAD:(i%2?XL_ZEBRA:null),box:xlBox(1,4,H,lastL,k+1,r.number)}));

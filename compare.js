@@ -380,7 +380,7 @@ $("cmpGo").onclick=async()=>{
         const c=r.getCell(col);c.value=val;
         c.font={name:o.mono?"Courier New":"Arial",size:14,bold:!!o.bold,color:bc};
         c.border=o.box;
-        c.alignment={vertical:"middle",horizontal:o.center?"center":"left",wrapText:true};
+        c.alignment=o.center?{vertical:"middle",horizontal:"center",wrapText:true}:{vertical:"middle",horizontal:"left",indent:1,wrapText:true};
         if(o.fill)c.fill=xlFill(o.fill);
       };
       if(left)left.forEach((v,k)=>put(k+1,v,{bold:head||k0!=="ok",mono:!head&&k===1,fill:head?HD:(st.f||(i%2?XL_ZEBRA:null)),center:k!==1&&k!==4,box:xlBox(1,5,H,lastL,k+1,r.number)}));
