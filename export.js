@@ -1,3 +1,24 @@
+/* ---- shared spreadsheet look: thin inner lines, medium outline, light-grey zebra rows ---- */
+const XL_BLACK={argb:"FF000000"},XL_THIN={style:"thin",color:XL_BLACK},XL_MED={style:"medium",color:XL_BLACK};
+const XL_HEAD="FFE6E9ED",XL_ZEBRA="FFF2F2F2";
+const xlFill=a=>({type:"pattern",pattern:"solid",fgColor:{argb:a}});
+function xlBox(c1,c2,r1,r2,col,row){
+  return {top:(row===r1||row===r1+1)?XL_MED:XL_THIN,bottom:(row===r2||row===r1)?XL_MED:XL_THIN,left:col===c1?XL_MED:XL_THIN,right:col===c2?XL_MED:XL_THIN};
+}
+function xlTitle(ws,off,lastCol,title,sub){
+  const t=ws.getRow(off+1),s=ws.getRow(off+2);
+  t.height=32;s.height=20;ws.getRow(off+3).height=8;
+  ws.mergeCells(off+1,1,off+1,lastCol);ws.mergeCells(off+2,1,off+2,lastCol);
+  const a=t.getCell(1),b=s.getCell(1);
+  a.value=title;a.font={name:"Arial",size:22,bold:true};a.alignment={vertical:"middle",horizontal:"left"};
+  b.value=sub;b.font={name:"Arial",size:12,color:{argb:"FF404040"}};b.alignment={vertical:"middle",horizontal:"left"};
+  return off+4;
+}
+function xlPrint(ws,hdrRow,landscape){
+  ws.pageSetup={orientation:landscape?"landscape":"portrait",paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0,horizontalCentered:true,printTitlesRow:hdrRow+":"+hdrRow,margins:{left:0.4,right:0.4,top:0.6,bottom:0.7,header:0.3,footer:0.3}};
+  ws.headerFooter.oddFooter="&L&9LPN Pallet Log&C&9Page &P of &N&R&9Printed &D";
+  ws.views=[{state:"frozen",ySplit:hdrRow}];
+}
 function saveBlob(data,type,name){
   const blob=new Blob([data],{type:type});
   const url=URL.createObjectURL(blob);
@@ -10,15 +31,15 @@ async function fallbackXls(d){
   const esc=v=>String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   const who=($("recv").value||"").trim();
   const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
-  const side=[["Pallet Type","Count","h"],["Brown Box",c.BB],["FMCG",c.FMCG],["FPP",c.FPP],["Mixed",c.Mixed],["Total",rows.length,"b"],["FSDU (not in total)",rows.filter(r=>r.fsdu).length],null,["Delivery Details","","h2"],["Date",d,"l"],["Received by",who,"l"]].concat(extras().map(e=>[e[0],e[1],"l"]));
+  const side=[["Pallet Type","Count","h"],["Brown Box",c.BB],["FMCG",c.FMCG],["FPP",c.FPP],["Mixed",c.Mixed],["Total",rows.length,"b"],["FSDU (not in total)",rows.filter(r=>r.fsdu).length],null,["Delivery Details","","h2"],["Date",ukDate(d),"l"],["Received by",who,"l"]].concat(extras().map(e=>[e[0],e[1],"l"]));
   const n=Math.max(rows.length,side.length-1);
-  let h='<html><head><meta charset="utf-8"><style>td,th{font-family:Arial;font-size:14pt;border:2px solid #000;padding:4px;text-align:left}th{font-size:16pt;background:#e6e9ed}</style></head><body><table>';
+  let h='<html><head><meta charset="utf-8"><style>td,th{font-family:Arial;font-size:14pt;border:1px solid #000;padding:4px;text-align:left}th{font-size:16pt;background:#e6e9ed}td.c{text-align:center}td.m{font-family:\'Courier New\'}</style></head><body><h2 style="font-family:Arial">Goods-in pallet log</h2><table>';
   for(let i=-1;i<n;i++){
     const head=i<0,t=head?"th":"td";
-    const l=head?["LPN","Pallet Type","FSDU"]:rows[i]?[rows[i].lpn,rows[i].type,rows[i].fsdu?"Yes":"No"]:null;
+    const l=head?["#","LPN","Pallet Type","FSDU"]:rows[i]?[i+1,rows[i].lpn,rows[i].type,rows[i].fsdu?"Yes":"No"]:null;
     const r=side[i+1]||null;
     h+="<tr>";
-    h+=l?l.map((v,k)=>"<"+t+(k===0&&!head?' style="mso-number-format:\'\\@\'"':"")+">"+esc(v)+"</"+t+">").join(""):"<td></td><td></td><td></td>";
+    h+=l?l.map((v,k)=>"<"+t+(head?"":k===1?' class="m" style="mso-number-format:\'\\@\'"':k===0||k>=2?' class="c"':"")+">"+esc(v)+"</"+t+">").join(""):"<td></td><td></td><td></td><td></td>";
     h+='<td style="border:none"></td>';
     if(r){
       const tt=(r[2]==="h"||r[2]==="b")?"th":"td";
@@ -60,7 +81,21 @@ async function loadJsPdf(){
     await loadScript("https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js",ok);
   }
 }
-const PDF_HEAD=[230,233,237],PDF_BASE={theme:"grid",styles:{font:"helvetica",fontSize:11,cellPadding:2.2,textColor:0,lineColor:0,lineWidth:0.4,valign:"middle"},headStyles:{fillColor:PDF_HEAD,textColor:0,fontStyle:"bold",lineColor:0,lineWidth:0.4}};
+const PDF_HEAD=[230,233,237],PDF_BASE={theme:"grid",styles:{font:"helvetica",fontSize:11,cellPadding:2.2,textColor:0,lineColor:0,lineWidth:0.25,valign:"middle"},headStyles:{fillColor:PDF_HEAD,textColor:0,fontStyle:"bold",lineColor:0,lineWidth:0.25},alternateRowStyles:{fillColor:[242,242,242]}};
+const PDF_PLAIN={alternateRowStyles:{fillColor:[255,255,255]}};
+function pdfTitle(doc,x,y,title,sub){
+  doc.setFont("helvetica","bold");doc.setFontSize(18);doc.setTextColor(0);doc.text(title,x,y+6);
+  doc.setFont("helvetica","normal");doc.setFontSize(10);doc.setTextColor(60);doc.text(sub,x,y+12);doc.setTextColor(0);
+  return y+17;
+}
+function pdfFooter(doc,extra){
+  const n=doc.getNumberOfPages(),tot=n+(extra||0),pw=doc.internal.pageSize.getWidth(),ph=doc.internal.pageSize.getHeight();
+  const now=new Date(),pd=String(now.getDate()).padStart(2,"0")+"/"+String(now.getMonth()+1).padStart(2,"0")+"/"+now.getFullYear();
+  for(let i=1;i<=n;i++){doc.setPage(i);doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(90);
+    doc.text("LPN Pallet Log",10,ph-7);doc.text("Page "+i+" of "+tot,pw/2,ph-7,{align:"center"});doc.text("Printed "+pd,pw-10,ph-7,{align:"right"});}
+  doc.setTextColor(0);
+}
+
 async function pdfBanner(doc,x,width){
   let y=12;
   if(logo){
@@ -80,65 +115,70 @@ async function buildLogPdf(d){
   const who=($("recv").value||"").trim();
   const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
   const L=10,LW=100,RX=L+LW+8,RW=190-LW-8;
-  const y0=await pdfBanner(doc,L,LW);
+  const yb=await pdfBanner(doc,L,LW);
+  const exp=$("expect").value;
+  const y0=pdfTitle(doc,L,yb-6<12?12:yb-6,"Goods-in pallet log",ukDate(d)+(who?"   |   Received by "+who:"")+(exp?"   |   Expected pallets "+exp:""))+2;
   const bold={fontStyle:"bold",fillColor:PDF_HEAD};
-  doc.autoTable(Object.assign({},PDF_BASE,{
-    startY:y0,margin:{left:RX,right:10,top:12,bottom:12},tableWidth:RW,
+  doc.autoTable(Object.assign({},PDF_BASE,PDF_PLAIN,{
+    startY:y0,margin:{left:RX,right:10,top:12,bottom:16},tableWidth:RW,
     head:[["Pallet Type","Count"]],
     body:[["Brown Box",c.BB],["FMCG",c.FMCG],["FPP",c.FPP],["Mixed",c.Mixed],
       [pdfCell("Total",bold),pdfCell(rows.length,bold)],
       ["FSDU (not in total)",rows.filter(r=>r.fsdu).length]],
     columnStyles:{1:{halign:"center",cellWidth:22}}
   }));
-  doc.autoTable(Object.assign({},PDF_BASE,{
-    startY:doc.lastAutoTable.finalY+8,margin:{left:RX,right:10,top:12,bottom:12},tableWidth:RW,
+  doc.autoTable(Object.assign({},PDF_BASE,PDF_PLAIN,{
+    startY:doc.lastAutoTable.finalY+8,margin:{left:RX,right:10,top:12,bottom:16},tableWidth:RW,
     head:[[{content:"Delivery Details",colSpan:2}]],
-    body:[[pdfCell("Date",bold),d],[pdfCell("Received by",bold),who]].concat(extras().map(e=>[pdfCell(e[0],bold),e[1]])),
+    body:[[pdfCell("Date",bold),ukDate(d)],[pdfCell("Received by",bold),who]].concat(extras().map(e=>[pdfCell(e[0],bold),e[1]])),
     columnStyles:{0:{cellWidth:32}}
   }));
   doc.setPage(1);
   doc.autoTable(Object.assign({},PDF_BASE,{
-    startY:y0,margin:{left:L,right:210-L-LW,top:12,bottom:12},tableWidth:LW,
-    head:[["LPN","Pallet Type","FSDU"]],
-    body:rows.map(r=>[r.lpn,r.type,r.fsdu?"Yes":"No"]),
-    columnStyles:{0:{cellWidth:46},1:{cellWidth:32},2:{cellWidth:22,halign:"center"}}
+    startY:y0,margin:{left:L,right:210-L-LW,top:12,bottom:16},tableWidth:LW,
+    head:[["#","LPN","Pallet Type","FSDU"]],
+    body:rows.map((r,i)=>[i+1,r.lpn,r.type,r.fsdu?"Yes":"No"]),
+    columnStyles:{0:{cellWidth:12,halign:"center"},1:{cellWidth:42,font:"courier"},2:{cellWidth:28,halign:"center"},3:{cellWidth:18,halign:"center"}}
   }));
+  pdfFooter(doc);
   return doc.output("arraybuffer");
 }
 async function buildCmpPdf(res,cnt,manCount,d,logCopy){
   await loadJsPdf();
   const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:"portrait"});
   const L=10,LW=112,RX=L+LW+6,RW=190-LW-6;
-  const y0=await pdfBanner(doc,L,LW);
+  const yb=await pdfBanner(doc,L,LW);
+  const y0=pdfTitle(doc,L,yb-6<12?12:yb-6,"Manifest check",ukDate(d))+2;
   const bold={fontStyle:"bold",fillColor:PDF_HEAD};
-  doc.autoTable(Object.assign({},PDF_BASE,{
-    startY:y0,margin:{left:RX,right:10,top:12,bottom:12},tableWidth:RW,
+  doc.autoTable(Object.assign({},PDF_BASE,PDF_PLAIN,{
+    startY:y0,margin:{left:RX,right:10,top:12,bottom:16},tableWidth:RW,
     head:[["Summary","Count"]],
     body:[["On manifest",manCount],["Matched",cnt.ok],["Missing",cnt.missing],["Log only",cnt.book]],
     columnStyles:{1:{halign:"center",cellWidth:22}}
   }));
-  doc.autoTable(Object.assign({},PDF_BASE,{
-    startY:doc.lastAutoTable.finalY+8,margin:{left:RX,right:10,top:12,bottom:12},tableWidth:RW,
+  doc.autoTable(Object.assign({},PDF_BASE,PDF_PLAIN,{
+    startY:doc.lastAutoTable.finalY+8,margin:{left:RX,right:10,top:12,bottom:16},tableWidth:RW,
     head:[[{content:"Delivery Details",colSpan:2}]],
-    body:[[pdfCell("Date",bold),d]],
+    body:[[pdfCell("Date",bold),ukDate(d)]],
     columnStyles:{0:{cellWidth:26}}
   }));
   doc.setPage(1);
   const ST={ok:{t:"Matched",s:{}},missing:{t:"MISSING",s:{fontStyle:"bold",fillColor:[166,166,166]}},book:{t:"LOG ONLY",s:{fontStyle:"bold",fillColor:[208,208,208]}}};
   const kd=x=>x.man&&x.log?"ok":x.man?"missing":"book";
   doc.autoTable(Object.assign({},PDF_BASE,{
-    startY:y0,margin:{left:L,right:210-L-LW,top:12,bottom:12},tableWidth:LW,
-    head:[["LPN","On manifest","On log","Result"]],
-    body:res.map(x=>{const st=ST[kd(x)];return [pdfCell(x.n,st.s),pdfCell(x.man?"Yes":"No",st.s),pdfCell(x.log?"Yes":"No",st.s),pdfCell(st.t,st.s)]}),
-    columnStyles:{0:{cellWidth:38},1:{cellWidth:28,halign:"center"},2:{cellWidth:20,halign:"center"},3:{cellWidth:26}}
+    startY:y0,margin:{left:L,right:210-L-LW,top:12,bottom:16},tableWidth:LW,
+    head:[["#","LPN","On manifest","On log","Result"]],
+    body:res.map((x,i)=>{const st=ST[kd(x)];return [pdfCell(i+1,st.s),pdfCell(x.n,st.s),pdfCell(x.man?"Yes":"No",st.s),pdfCell(x.log?"Yes":"No",st.s),pdfCell(st.t,st.s)]}),
+    columnStyles:{0:{cellWidth:11,halign:"center"},1:{cellWidth:36,font:"courier"},2:{cellWidth:24,halign:"center"},3:{cellWidth:16,halign:"center"},4:{cellWidth:25}}
   }));
   if(logCopy){
     if(logCopy.pdf){
       await loadPdfLib();
-      const base=await PDFLib.PDFDocument.load(doc.output("arraybuffer"));
       const src=await PDFLib.PDFDocument.load(logCopy.pdf.buf.slice(0),{ignoreEncryption:true});
-      (await base.copyPages(src,src.getPageIndices())).forEach(pg=>base.addPage(pg));
-      return await base.save();
+      pdfFooter(doc,src.getPageCount());
+      const base2=await PDFLib.PDFDocument.load(doc.output("arraybuffer"));
+      (await base2.copyPages(src,src.getPageIndices())).forEach(pg=>base2.addPage(pg));
+      return await base2.save();
     }
     if(logCopy.sheets&&logCopy.sheets.length){
       logCopy.sheets.forEach(sh=>pdfLogSheet(doc,sh,logCopy.sheets.length>1));
@@ -151,6 +191,7 @@ async function buildCmpPdf(res,cnt,manCount,d,logCopy){
       }));
     }
   }
+  pdfFooter(doc);
   return doc.output("arraybuffer");
 }
 let pdfJob=null;
@@ -215,7 +256,7 @@ $("dl").onclick=async()=>{
     }
     const wb=new ExcelJS.Workbook();
     const ws=wb.addWorksheet("LPN Log");
-    ws.columns=[{width:30},{width:18},{width:11},{width:3},{width:26},{width:18}];
+    ws.columns=[{width:6},{width:26},{width:15},{width:9},{width:3},{width:26},{width:18}];
     const who=($("recv").value||"").trim();
     const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
     const side=[
@@ -225,7 +266,7 @@ $("dl").onclick=async()=>{
       {v:["FSDU (not in total)",rows.filter(r=>r.fsdu).length]},
       null,
       {v:["Delivery Details",""],h:1,merge:1},
-      {v:["Date",d],l:1},
+      {v:["Date",ukDate(d)],l:1},
       {v:["Received by",who],l:1}
     ].concat(extras().map(e=>({v:[e[0],e[1]],l:1,note:e[0]==="Notes"?1:0})));
     const n=Math.max(rows.length,side.length-1);
@@ -234,41 +275,39 @@ $("dl").onclick=async()=>{
       off=5;
       try{
         const dim=await new Promise((res,rej)=>{const im=new Image();im.onload=()=>res([im.width,im.height]);im.onerror=rej;im.src=logo});
-        const hPx=Math.max(50,Math.min(140,Math.round(428*dim[1]/dim[0])));
+        const hPx=Math.max(50,Math.min(140,Math.round(406*dim[1]/dim[0])));
         const id=wb.addImage({base64:logo,extension:"png"});
         for(let k=1;k<=4;k++)ws.getRow(k).height=hPx*0.75/4;
-        ws.addImage(id,{tl:{col:0,row:0},br:{col:3,row:4},editAs:"oneCell"});
+        ws.addImage(id,{tl:{col:0,row:0},br:{col:4,row:4},editAs:"oneCell"});
       }catch(e){off=0}
     }
-    const bc={argb:"FF000000"};
-    const border={top:{style:"medium",color:bc},left:{style:"medium",color:bc},bottom:{style:"medium",color:bc},right:{style:"medium",color:bc}};
+    const exp=$("expect").value;
+    const H=xlTitle(ws,off,7,"Goods-in pallet log","Date: "+ukDate(d)+(who?"     Received by: "+who:"")+(exp?"     Expected pallets: "+exp:""));
+    const lastL=H+rows.length,s1=H+6,s2a=H+8,s2b=H+side.length-1;
     for(let i=-1;i<n;i++){
-      const r=ws.getRow(i+2+off);
+      const r=ws.getRow(H+i+1);
       const head=i<0;
-      const left=head?["LPN","Pallet Type","FSDU"]:rows[i]?[rows[i].lpn,rows[i].type,rows[i].fsdu?"Yes":"No"]:null;
+      const left=head?["#","LPN","Pallet Type","FSDU"]:rows[i]?[i+1,rows[i].lpn,rows[i].type,rows[i].fsdu?"Yes":"No"]:null;
       const right=side[i+1]||null;
-      const put=(col,val,bold,isNum,big)=>{
+      const put=(col,val,o)=>{
         const cell=r.getCell(col);
         cell.value=val;
-        cell.font={name:"Arial",size:big?16:14,bold:!!bold};
-        cell.border=big?{...border,top:{style:"medium",color:bc}}:border;
-        cell.alignment={vertical:"middle",horizontal:isNum?"center":"left",wrapText:true};
-        if(bold)cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFE6E9ED"}};
+        cell.font={name:o.mono?"Courier New":"Arial",size:o.big?16:14,bold:!!o.bold,color:XL_BLACK};
+        cell.border=o.box;
+        cell.alignment={vertical:"middle",horizontal:o.center?"center":"left",wrapText:true};
+        if(o.fill)cell.fill=xlFill(o.fill);
       };
-      if(left)left.forEach((v,k)=>put(k+1,v,head,false,head));
+      if(left)left.forEach((v,k)=>put(k+1,v,{bold:head,big:head,mono:!head&&k===1,center:head?k!==1:k!==1,fill:head?XL_HEAD:(i%2?XL_ZEBRA:null),box:xlBox(1,4,H,lastL,k+1,r.number)}));
       if(right){
-        put(5,right.v[0],right.h||right.b||right.l,false,right.h);
-        put(6,right.v[1],right.h||right.b,typeof right.v[1]==="number",right.h);
-        if(right.merge)ws.mergeCells(r.number,5,r.number,6);
-      }
-      if(r.number>1&&(head||(right&&right.h))){
-        const up=ws.getRow(r.number-1);
-        (head?[1,2,3,5,6]:[5,6]).forEach(col=>{up.getCell(col).border={bottom:{style:"medium",color:bc}}});
+        const inB1=i+1<=6,bx=c=>inB1?xlBox(6,7,H,s1,c,r.number):xlBox(6,7,s2a,s2b,c,r.number);
+        const fl=right.h||right.b||right.l;
+        put(6,right.v[0],{bold:fl,big:right.h,fill:fl?XL_HEAD:null,box:bx(6)});
+        put(7,right.v[1],{bold:right.h||right.b,big:right.h,center:typeof right.v[1]==="number",fill:(right.h||right.b)?XL_HEAD:null,box:bx(7)});
+        if(right.merge)ws.mergeCells(r.number,6,r.number,7);
       }
       r.height=(head||(right&&right.h))?26:(right&&right.note?Math.max(22,Math.ceil(String(right.v[1]).length/16)*20):22);
     }
-    ws.pageSetup={orientation:"portrait",paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:(1+off)+":"+(1+off),margins:{left:0.4,right:0.4,top:0.6,bottom:0.6,header:0.3,footer:0.3}};
-    ws.views=[{state:"frozen",ySplit:1+off}];
+    xlPrint(ws,H);
     const buf=await wb.xlsx.writeBuffer();
     pdfJob=()=>buildLogPdf(d);
     await deliver(buf,"LPN-log-"+d+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");

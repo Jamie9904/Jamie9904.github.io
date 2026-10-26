@@ -2,7 +2,7 @@ const TYPES=["BB","FMCG","FPP","Mixed"];
 let rows=[];
 const $=id=>document.getElementById(id);
 function syncType(){const v=$("type").value;$("type").dataset.t=v;document.querySelectorAll("#tyb button").forEach(b=>{const on=b.dataset.t===v;b.classList.toggle("on",on);b.setAttribute("aria-pressed",on)})}
-let cfg={defType:"BB",check:true,sound:true,size:"1",keepType:true,vibrate:true,confirmScan:false};
+let cfg={defType:"BB",check:true,sound:true,size:"1",keepType:true,vibrate:true,confirmScan:false,dateFmt:"uk"};
 try{const c=JSON.parse(localStorage.getItem("lpncfg")||"null");if(c)cfg=Object.assign(cfg,c)}catch(e){}
 if(!TYPES.includes(cfg.defType))cfg.defType="BB";
 const saveCfg=()=>{try{localStorage.setItem("lpncfg",JSON.stringify(cfg))}catch(e){}};
@@ -154,3 +154,6 @@ function loadScript(src,test){
     document.head.appendChild(el);
   });
 }
+
+function ukDate(iso){const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||""));if(!m)return String(iso||"");const f=cfg.dateFmt;return f==="iso"?iso:f==="us"?m[2]+"/"+m[3]+"/"+m[1]:m[3]+"/"+m[2]+"/"+m[1]}
+function isoDate(t){t=String(t||"").trim();let m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(t);if(m)return t;m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(t);if(!m)return "";let a=+m[1],b=+m[2],us=cfg.dateFmt==="us";if(a>12)us=false;else if(b>12)us=true;const dd=us?b:a,mm=us?a:b;return m[3]+"-"+String(mm).padStart(2,"0")+"-"+String(dd).padStart(2,"0")}

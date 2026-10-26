@@ -312,12 +312,12 @@ $("cmpUseLog").onclick=()=>{
 function fillCmpHist(){
   try{pruneHist()}catch(e){}
   const sel=$("cmpHist");sel.innerHTML="";sel.add(new Option(hist.length?"Or use a saved delivery…":"No saved deliveries yet",""));
-  hist.forEach(h=>sel.add(new Option((h.date||"No date")+", "+h.rows.length+" pallets"+(h.recv?" ("+h.recv+")":""),h.id)));
+  hist.forEach(h=>sel.add(new Option((ukDate(h.date)||"No date")+", "+h.rows.length+" pallets"+(h.recv?" ("+h.recv+")":""),h.id)));
 }
 $("cmpHist").addEventListener("pointerdown",fillCmpHist);$("cmpHist").addEventListener("focus",fillCmpHist);
 $("cmpHist").onchange=()=>{
   const h=hist.find(x=>x.id===$("cmpHist").value);if(!h)return;
-  setLogFrom(h.rows.map(r=>r.lpn),h.rows,h.date,h.recv,"Saved delivery: "+(h.date||"No date")+", "+h.rows.length+" LPNs");
+  setLogFrom(h.rows.map(r=>r.lpn),h.rows,h.date,h.recv,"Saved delivery: "+(ukDate(h.date)||"No date")+", "+h.rows.length+" LPNs");
   $("cmpHist").value="";
 };
 $("cmpCheck").onclick=()=>{
@@ -342,7 +342,7 @@ $("cmpGo").onclick=async()=>{
     let tab="Manifest Check",tn=2;
     while(wb.getWorksheet(tab))tab="Manifest Check "+(tn++);
     const ws=wb.addWorksheet(tab);
-    ws.columns=[{width:21},{width:17},{width:10},{width:19},{width:3},{width:25},{width:18}];
+    ws.columns=[{width:6},{width:21},{width:17},{width:10},{width:19},{width:3},{width:25},{width:18}];
     const bc={argb:"FF000000"},med={style:"medium",color:bc};
     const border={top:med,left:med,bottom:med,right:med};
     let off=0;
@@ -350,10 +350,10 @@ $("cmpGo").onclick=async()=>{
       off=5;
       try{
         const dim=await new Promise((res2,rej)=>{const im=new Image();im.onload=()=>res2([im.width,im.height]);im.onerror=rej;im.src=logo});
-        const hPx=Math.max(50,Math.min(140,Math.round(489*dim[1]/dim[0])));
+        const hPx=Math.max(50,Math.min(140,Math.round(533*dim[1]/dim[0])));
         const id=wb.addImage({base64:logo,extension:"png"});
         for(let k=1;k<=4;k++)ws.getRow(k).height=hPx*0.75/4;
-        ws.addImage(id,{tl:{col:0,row:0},br:{col:4,row:4},editAs:"oneCell"});
+        ws.addImage(id,{tl:{col:0,row:0},br:{col:5,row:4},editAs:"oneCell"});
       }catch(e){off=0}
     }
     const side=[
@@ -364,37 +364,35 @@ $("cmpGo").onclick=async()=>{
       {v:["⚠ Log only",cnt.book]},
       null,
       {v:["Delivery Details",""],h:1,merge:1},
-      {v:["Date",d],l:1}
+      {v:["Date",ukDate(d)],l:1}
     ];
     const ST={ok:{t:"✓ Matched",f:null},missing:{t:"✗ MISSING",f:"FFA6A6A6"},book:{t:"⚠ LOG ONLY",f:"FFD0D0D0"}};
     const HD="FFE6E9ED";
     const n=Math.max(res.length,side.length-1);
+    const H=xlTitle(ws,off,8,"Manifest check","Date: "+ukDate(d)+"     On manifest: "+man.length+"     Matched: "+cnt.ok+"     Missing: "+cnt.missing+"     Log only: "+cnt.book);
+    const lastL=H+res.length,s1=H+4,s2a=H+6,s2b=H+7;
     for(let i=-1;i<n;i++){
-      const r=ws.getRow(i+2+off);
+      const r=ws.getRow(H+i+1);
       const head=i<0,x=head?null:res[i],k0=x?kind(x):null,st=k0?ST[k0]:null;
-      const left=head?["LPN","On manifest","On log","Result"]:x?[x.n,x.man?"Yes":"No",x.log?"Yes":"No",st.t]:null;
+      const left=head?["#","LPN","On manifest","On log","Result"]:x?[i+1,x.n,x.man?"Yes":"No",x.log?"Yes":"No",st.t]:null;
       const right=side[i+1]||null;
       const put=(col,val,o)=>{
         const c=r.getCell(col);c.value=val;
-        c.font={name:"Arial",size:14,bold:!!o.bold,color:bc};
-        c.border=border;
+        c.font={name:o.mono?"Courier New":"Arial",size:14,bold:!!o.bold,color:bc};
+        c.border=o.box;
         c.alignment={vertical:"middle",horizontal:o.center?"center":"left",wrapText:true};
-        if(o.fill)c.fill={type:"pattern",pattern:"solid",fgColor:{argb:o.fill}};
+        if(o.fill)c.fill=xlFill(o.fill);
       };
-      if(left)left.forEach((v,k)=>put(k+1,v,{bold:head||k0!=="ok",fill:head?HD:st.f,center:k>=1}));
+      if(left)left.forEach((v,k)=>put(k+1,v,{bold:head||k0!=="ok",mono:!head&&k===1,fill:head?HD:(st.f||(i%2?XL_ZEBRA:null)),center:k!==1&&k!==4,box:xlBox(1,5,H,lastL,k+1,r.number)}));
       if(right){
-        const hd=!!right.h;
-        put(6,right.v[0],{bold:hd||!!right.l,fill:(hd||right.l)?HD:null});
-        put(7,right.v[1],{bold:hd,fill:hd?HD:null,center:typeof right.v[1]==="number"});
-        if(right.merge)ws.mergeCells(r.number,6,r.number,7);
+        const hd=!!right.h,inB1=i+1<=4,bx=c=>inB1?xlBox(7,8,H,s1,c,r.number):xlBox(7,8,s2a,s2b,c,r.number);
+        put(7,right.v[0],{bold:hd||!!right.l,fill:(hd||right.l)?HD:null,box:bx(7)});
+        put(8,right.v[1],{bold:hd,fill:hd?HD:null,center:typeof right.v[1]==="number",box:bx(8)});
+        if(right.merge)ws.mergeCells(r.number,7,r.number,8);
       }
-      if(r.number>1&&(head||(right&&right.h))){
-        const up=ws.getRow(r.number-1);
-        (head?[1,2,3,4,6,7]:[6,7]).forEach(col=>{up.getCell(col).border={bottom:med}});
-      }
-      r.height=(head||(right&&right.h))?26:(right&&right.note?Math.max(22,Math.ceil(String(right.v[1]).length/16)*20):22);
+      r.height=(head||(right&&right.h))?26:22;
     }
-    ws.pageSetup={orientation:"portrait",paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:(1+off)+":"+(1+off),margins:{left:0.4,right:0.4,top:0.6,bottom:0.6,header:0.3,footer:0.3}};
+    xlPrint(ws,H);
     if(merge&&!logSrc){
       const sheets=logSheets&&logSheets.length?logSheets:[{name:"Log copy",grid:[["LPN"],...logList.map(n=>[n])]}];
       sheets.forEach(sh=>{
