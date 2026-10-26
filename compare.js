@@ -342,7 +342,7 @@ $("cmpGo").onclick=async()=>{
     let tab="Manifest Check",tn=2;
     while(wb.getWorksheet(tab))tab="Manifest Check "+(tn++);
     const ws=wb.addWorksheet(tab);
-    ws.columns=[{width:6},{width:21},{width:17},{width:10},{width:19},{width:3},{width:25},{width:18}];
+    ws.columns=[{width:7},{width:21},{width:18},{width:12},{width:19},{width:3},{width:25},{width:18}];
     const bc={argb:"FF000000"},med={style:"medium",color:bc};
     const border={top:med,left:med,bottom:med,right:med};
     let off=0;
@@ -350,7 +350,7 @@ $("cmpGo").onclick=async()=>{
       off=5;
       try{
         const dim=await new Promise((res2,rej)=>{const im=new Image();im.onload=()=>res2([im.width,im.height]);im.onerror=rej;im.src=logo});
-        const hPx=Math.max(50,Math.min(140,Math.round(533*dim[1]/dim[0])));
+        const hPx=Math.max(50,Math.min(140,Math.round(547*dim[1]/dim[0])));
         const id=wb.addImage({base64:logo,extension:"png"});
         for(let k=1;k<=4;k++)ws.getRow(k).height=hPx*0.75/4;
         ws.addImage(id,{tl:{col:0,row:0},br:{col:5,row:4},editAs:"oneCell"});
@@ -390,7 +390,7 @@ $("cmpGo").onclick=async()=>{
         put(8,right.v[1],{bold:hd,fill:hd?HD:null,center:typeof right.v[1]==="number",box:bx(8)});
         if(right.merge)ws.mergeCells(r.number,7,r.number,8);
       }
-      r.height=(head||(right&&right.h))?26:22;
+      r.height=(head||(right&&right.h))?32:24;
     }
     xlPrint(ws,H);
     if(merge&&!logSrc){

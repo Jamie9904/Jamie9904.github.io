@@ -7,7 +7,7 @@ function xlBox(c1,c2,r1,r2,col,row){
 }
 function xlTitle(ws,off,lastCol,title,sub){
   const t=ws.getRow(off+1),s=ws.getRow(off+2);
-  t.height=32;s.height=20;ws.getRow(off+3).height=8;
+  t.height=38;s.height=22;ws.getRow(off+3).height=10;
   ws.mergeCells(off+1,1,off+1,lastCol);ws.mergeCells(off+2,1,off+2,lastCol);
   const a=t.getCell(1),b=s.getCell(1);
   a.value=title;a.font={name:"Arial",size:22,bold:true};a.alignment={vertical:"middle",horizontal:"left"};
@@ -268,7 +268,7 @@ $("dl").onclick=async()=>{
     }
     const wb=new ExcelJS.Workbook();
     const ws=wb.addWorksheet("LPN Log");
-    ws.columns=[{width:6},{width:26},{width:21},{width:9},{width:3},{width:26},{width:18}];
+    ws.columns=[{width:7},{width:26},{width:22},{width:12},{width:3},{width:26},{width:20}];
     const who=($("recv").value||"").trim();
     const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
     const side=[
@@ -287,7 +287,7 @@ $("dl").onclick=async()=>{
       off=5;
       try{
         const dim=await new Promise((res,rej)=>{const im=new Image();im.onload=()=>res([im.width,im.height]);im.onerror=rej;im.src=logo});
-        const hPx=Math.max(50,Math.min(140,Math.round(450*dim[1]/dim[0])));
+        const hPx=Math.max(50,Math.min(140,Math.round(489*dim[1]/dim[0])));
         const id=wb.addImage({base64:logo,extension:"png"});
         for(let k=1;k<=4;k++)ws.getRow(k).height=hPx*0.75/4;
         ws.addImage(id,{tl:{col:0,row:0},br:{col:4,row:4},editAs:"oneCell"});
@@ -304,9 +304,9 @@ $("dl").onclick=async()=>{
       const put=(col,val,o)=>{
         const cell=r.getCell(col);
         cell.value=val;
-        cell.font={name:o.mono?"Courier New":"Arial",size:o.big?16:14,bold:!!o.bold,color:XL_BLACK};
+        cell.font={name:o.mono?"Courier New":"Arial",size:14,bold:!!o.bold,color:XL_BLACK};
         cell.border=o.box;
-        cell.alignment={vertical:"middle",horizontal:o.center?"center":"left",wrapText:true};
+        cell.alignment={vertical:"middle",horizontal:o.center?"center":"left",wrapText:!o.big};
         if(o.fill)cell.fill=xlFill(o.fill);
       };
       if(left)left.forEach((v,k)=>put(k+1,v,{bold:head,big:head,mono:!head&&k===1,center:head?k!==1:k!==1,fill:head?XL_HEAD:(i%2?XL_ZEBRA:null),box:xlBox(1,4,H,lastL,k+1,r.number)}));
@@ -317,7 +317,7 @@ $("dl").onclick=async()=>{
         put(7,right.v[1],{bold:right.h||right.b,big:right.h,center:typeof right.v[1]==="number",fill:(right.h||right.b)?XL_HEAD:null,box:bx(7)});
         if(right.merge)ws.mergeCells(r.number,6,r.number,7);
       }
-      r.height=(head||(right&&right.h))?26:(right&&right.note?Math.max(22,Math.ceil(String(right.v[1]).length/16)*20):22);
+      r.height=(head||(right&&right.h))?32:(right&&right.note?Math.max(24,Math.ceil(String(right.v[1]).length/16)*20):24);
     }
     xlPrint(ws,H);
     const buf=await wb.xlsx.writeBuffer();
