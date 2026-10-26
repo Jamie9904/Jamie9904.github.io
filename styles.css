@@ -1,3 +1,8 @@
+@font-face{font-family:"Atkinson Hyperlegible";font-style:normal;font-weight:400;font-display:swap;src:url("fonts/AtkinsonHyperlegible-Regular.woff2") format("woff2")}
+@font-face{font-family:"Atkinson Hyperlegible";font-style:normal;font-weight:700;font-display:swap;src:url("fonts/AtkinsonHyperlegible-Bold.woff2") format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:400;font-display:swap;src:url("fonts/IBMPlexMono-Regular.woff2") format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:500;font-display:swap;src:url("fonts/IBMPlexMono-Medium.woff2") format("woff2")}
+@font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:600;font-display:swap;src:url("fonts/IBMPlexMono-SemiBold.woff2") format("woff2")}
 :root{color-scheme:dark;--bg:#0c1830;--paper:#13264a;--ink:#eaf0fa;--mu:#9db0d0;--rule:#223a63;--ac:#ff8a2a;--ac2:#ffa24f;--acs:#3a3550;--bb:#dba56c;--fm:#6fa8ff;--fp:#a9c95a;--mx:#c79bf0;--dg:#ff7b6e;--wn:#ffcf8a;--wns:#3a3020;--sel:#1a3562;--line:#35507f;--r:6px;box-sizing:border-box;padding-bottom:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;font-size:calc(16px*var(--ts,1))}

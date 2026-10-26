@@ -1,6 +1,6 @@
-const CACHE="lpn-log-v14";
+const CACHE="lpn-log-v15";
 const LIBS="lpn-libs-v1";
-const SHELL=["./","index.html","styles.css","core.js","scan.js","export.js","compare.js","panels.js","manifest.webmanifest","icon-192.png","icon-512.png","apple-touch-icon.png"];
+const SHELL=["./","index.html","styles.css","core.js","scan.js","export.js","compare.js","panels.js","manifest.webmanifest","icon-192.png","icon-512.png","apple-touch-icon.png","fonts/AtkinsonHyperlegible-Regular.woff2","fonts/AtkinsonHyperlegible-Bold.woff2","fonts/IBMPlexMono-Regular.woff2","fonts/IBMPlexMono-Medium.woff2","fonts/IBMPlexMono-SemiBold.woff2"];
 // Libraries and fonts the app loads from these hosts are saved the first time they load, so Excel, PDF, print and the manifest check keep working offline.
 const CDN=["cdnjs.cloudflare.com","cdn.jsdelivr.net","unpkg.com","fonts.googleapis.com","fonts.gstatic.com","tessdata.projectnaptha.com"];
 self.addEventListener("install",e=>{
