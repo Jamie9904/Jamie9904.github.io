@@ -31,7 +31,12 @@ function serve() {
 let failed = 0, passed = 0;
 function check(name, ok, detail) {
   if (ok) { passed++; console.log("  ok   " + name); }
-  else { failed++; console.log("  FAIL " + name + (detail !== undefined ? "  (" + JSON.stringify(detail) + ")" : "")); }
+  else {
+    failed++;
+    const msg = name + (detail !== undefined ? "  (" + JSON.stringify(detail) + ")" : "");
+    console.log("  FAIL " + msg);
+    if (process.env.GITHUB_ACTIONS) console.log("::error title=Check failed::" + msg.replace(/[\r\n%]/g, " "));
+  }
 }
 
 /* Recording stand-in for ExcelJS: keeps every cell, border, merge and print setting. */
@@ -175,4 +180,8 @@ async function page(browser, width, opts = {}) {
   await browser.close(); srv.close();
   console.log("\n" + passed + " passed, " + failed + " failed");
   process.exit(failed ? 1 : 0);
-})().catch(e => { console.error(e); process.exit(1); });
+})().catch(e => {
+  console.error(e);
+  if (process.env.GITHUB_ACTIONS) console.log("::error title=Test run stopped::" + String(e && e.message || e).replace(/[\r\n%]/g, " ").slice(0, 900));
+  process.exit(1);
+});
