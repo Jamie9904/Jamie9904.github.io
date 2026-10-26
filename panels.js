@@ -1,63 +1,65 @@
 /* ---- help panel ---- */
-const HELP={guide:`<h3>1. Set up the delivery</h3>
-<p>Enter the <b>Date</b> and the name of the person who <b>Received</b> the delivery at the top. Use <b>Add logo</b> if you want a logo on the page and on the spreadsheet. If a file called logo.png sits next to the app, it is used as the default logo. <b>Change logo</b> overrides it on this device and <b>Reset to default logo</b> brings it back.</p>
-<h3>2. Log pallets</h3>
+const HELP={guide:`<h3>1. Quick start</h3>
 <ol>
-<li>Type or scan the LPN into the LPN box.</li>
-<li>Choose the pallet type: BB, FMCG, FPP or Mixed.</li>
-<li>Tick <b>FSDU</b> if the pallet contains one.</li>
-<li>Press <b>Add</b> (or Enter).</li>
+<li><b>Fill in the delivery:</b> date, who received it, and optionally expected pallets, trailer and seals.</li>
+<li><b>Add the manifest</b> (optional) in Manifest check, so the log can tick pallets off as you scan.</li>
+<li><b>Scan or type each pallet:</b> pick the type, tick FSDU if needed, then Add.</li>
+<li><b>Export:</b> Download (Excel), Email PDF or Print from the Export menu.</li>
+<li><b>Start new delivery:</b> saves this one to Saved deliveries and clears the page for the next.</li>
 </ol>
-<p>The FSDU tick box clears after every pallet. The pallet type stays as you left it, unless you turn that off in Settings. If an LPN is already in the log, or doesn’t look right, you get a warning and can choose Skip or Add anyway.</p>
-<p>In the table you can change a pallet’s type or FSDU tick afterwards, or remove it with ✕. The totals above the table count each pallet once. The FSDU count is shown separately and is not part of the total.</p>
-<p><b>Warnings:</b> before a pallet is added, the app checks the LPN. If it is already in the log, doesn’t look like an LPN, uses a prefix that isn’t in your prefix list, or has an unusual number of digits, a red warning appears with a vibration and a sound. Tap <b>Skip</b> to leave it out or <b>Add anyway</b> to log it. You can switch the warnings off in Settings.</p>
-<p><b>Undo:</b> when you remove a pallet with ✕, edit an LPN or use Clear all, an <b>Undo</b> bar appears for a few seconds.</p>
-<p><b>Pallet type buttons:</b> tap BB, FMCG, FPP or Mixed above the LPN box before adding. The chosen type stays selected unless you change that in Settings.</p>
-<p><b>Expected pallets:</b> enter how many pallets you expect and the log shows a running count, for example “12 of 14 expected”, turning green when they match. It appears in the exports.</p>
-<p><b>Export menu:</b> Export opens Download (Excel), Email PDF and Print. Print opens the print dialog for the PDF layout, or saves the PDF if printing isn’t available.</p>
-<p><b>Confirming scans:</b> turn on “Ask me to confirm each scanned barcode” in Settings to see each scan and tap Add or Skip before it is logged.</p>
-<p><b>Backup:</b> Settings has Download backup and Restore backup for your log, saved deliveries and settings.</p>
-<p><b>Editing and finding pallets:</b> tap an LPN in the log to correct it. Use the search box and type filter above the log to find pallets; the counts at the top always cover the whole log. Delivery notes are optional and appear in the exports.</p>
-<p><b>Saved deliveries:</b> <b>Start new delivery</b> saves the current log to history and clears the page. <b>Saved deliveries</b> lists them (this week and last week, with weeks starting on Sunday) so you can open one again, delete it, or import an exported spreadsheet or app-made PDF. The history is stored on this device only.</p>
-<h3>3. Scanning barcodes</h3>
-<p>On phones the scan options are tucked away: tap <b>Scan</b> next to the Add button to show <b>Live scan</b> and <b>Scan by photo</b>.</p>
+<h3>2. Set up the delivery</h3>
+<p>Enter the <b>Date</b> and who <b>Received</b> the delivery. Names you have used before appear underneath as buttons, so one tap fills them in. <b>Expected pallets</b>, <b>Trailer number</b>, <b>Seal in</b>, <b>Seal out</b> and <b>Delivery notes</b> are optional and appear on the exports.</p>
+<p>If the log is dated before today you are asked whether to use today’s date. On a phone, once you start logging, the delivery details fold into one line to save space. Tap it to change them.</p>
+<p><b>Logo:</b> logo.png next to the app is used by default. <b>Change logo</b> uses your own on this device, and <b>Reset to default logo</b> brings the default back.</p>
+<h3>3. Log pallets</h3>
+<ol>
+<li>Tap the pallet type: BB, FMCG, FPP or Mixed. It stays selected for the next pallet unless you change that in Settings.</li>
+<li>Tick <b>FSDU</b> if the pallet has one. It clears after each pallet.</li>
+<li>Scan or type the LPN and press <b>Add</b> (or Enter).</li>
+</ol>
+<p>A short “Added” message confirms each pallet, and the bar at the bottom of a phone shows how many are logged. If an LPN is already in the log or doesn’t look right, you get a warning with <b>Skip</b> or <b>Add anyway</b>. The warnings can be switched off in Settings.</p>
+<p><b>Changing the log:</b> tap an LPN to correct it, change its type or FSDU in the table, or remove it with ✕. An <b>Undo</b> bar appears after removing, editing or Clear all. Search and the type and FSDU filters help find pallets; the totals always cover the whole log, and FSDUs are counted separately from the total.</p>
+<h3>4. Scanning barcodes</h3>
+<p>On phones, tap <b>Scan</b> next to Add to show the scan options.</p>
 <ul>
-<li><b>Scan by photo:</b> take a clear photo of the barcode. Its contents are added as an LPN with the selected type.</li>
-<li><b>Handheld or Bluetooth scanner:</b> click the LPN box and scan. It types the code and presses Enter for you. This hasn’t been tested, so it may not work.</li>
-<li><b>Live scan:</b> opens the camera and adds each barcode it sees. It needs the app to be opened over HTTPS and camera permission. If Live scan doesn’t work, try Scan by photo.</li>
+<li><b>Live scan:</b> opens the camera and adds each barcode it sees. The screen stays on while it runs. It needs camera permission.</li>
+<li><b>Scan by photo:</b> take a clear photo of the barcode. Use it if Live scan doesn’t work.</li>
+<li><b>Handheld or Bluetooth scanner:</b> tap the LPN box and scan. Not yet tested, so it may not work.</li>
 </ul>
-<h3>4. Download the spreadsheet</h3>
-<p>Press <b>Download (Excel)</b>. The file has your logo, the Pallet table (LPN, pallet type, FSDU), a breakdown of pallets by type with a Total, an FSDU line that is not included in the Total, and Delivery Details with the date and who received it. It is set up to print on A4 portrait. In the spreadsheet BB is shown as “Brown Box”. If the spreadsheet builder can’t load (for example no internet), a basic .xls file is saved instead.</p>
-<p><b>Emailing it:</b> press <b>Email PDF</b> and your phone’s share sheet opens with a PDF copy of the spreadsheet attached, because phones don’t allow Excel files to be shared this way. The Excel download is unchanged. Choose your email app from the list. <b>Compare and email PDF</b> does the same for the comparison (just the comparison, not the merged workbook). If it says the file is ready, tap <b>Tap to share</b>. If the browser can’t attach files, the file is saved and you are asked to attach it to your email yourself.</p>
-<h3>5. Check a delivery against the manifest</h3>
-<ol>
-<li><b>Showing the section:</b> the manifest check is hidden by default. Tap its heading to show or hide it.</li>
-<li><b>Quick start:</b> tap <b>Use current log</b> (or pick a saved delivery) for step 1, add the manifest, then press <b>Check results</b>. The results appear on screen: Missing (report), On the log only (book in), and Matched. Tap <b>Fix</b> on any number to correct a misread or mistype, or ✕ to remove it, and the results update straight away. Then open the <b>Export</b> menu and choose Download (Excel), Email PDF or Print.</li>
-<li><b>Live tracking:</b> add the manifest numbers before you start scanning and the Pallet log counts them off as you go: found, still to find and not on the manifest. Tap Show missing for the list. Start new delivery clears the manifest numbers.</li>
-<li><b>Manifest date:</b> set the date of the manifest. It can be different from today and is used on the comparison spreadsheet.</li>
-<li><b>Prefix preset:</b> choose a preset to fill the list of LPN prefixes, then edit the list if a delivery is different. Only numbers starting with these prefixes are picked up from photos. Leave the list blank, or choose <b>All prefixes</b>, to pick up any LPN made of 1 to 3 letters followed by digits. Use <b>Save as preset</b> to keep a list under a name. <b>Download presets file</b> creates an updated copy from your current presets.</li>
-<li><b>LPN log:</b> upload an exported spreadsheet or a PDF of the log, or take a photo of the printed log. PDFs made by this app’s email button are read exactly. Other PDFs are read like manifests.</li>
-<li><b>Manifest:</b> add one or more photos or PDF files of the manifest. You can choose several PDFs at once. PDFs with selectable text are read directly, and scanned PDFs are read like photos.</li>
-<li>Check the two lists of numbers and fix any mistakes. You can also type numbers in.</li>
-<li>In the <b>Export</b> menu, <b>Download (Excel)</b> gives you a spreadsheet that lists every LPN from both sources. <b>✓ Matched</b> means it is on both. <b>✗ MISSING</b> means it is on the manifest but not the log, so report it as missing. <b>⚠ LOG ONLY</b> means it is on the log but not the manifest, so it still needs booking in. If you uploaded the log as an .xlsx file, the comparison is added as a new tab called <b>Manifest Check</b> in a copy of that file, so you get both in one workbook. With a photo of the printed log you get a separate spreadsheet.</li>
-</ol>
-<p>Photos are read with text recognition. It looks for entries that match the LPN format and fixes common lookalike characters in the number part, but it can still misread the letters, so check the lists before comparing. It cleans up the image and re-reads each number close up to improve accuracy, and flags numbers with an unusual number of digits.</p>
-<p><b>Include a copy of the log:</b> in <b>Settings</b>, this option is on by default. When it is on, the Excel comparison is added as a new tab on your uploaded log workbook. If the log came from a PDF or another type of file, the comparison workbook gets a <b>Log copy</b> tab with all of the log’s information. The emailed PDF has the log added as extra pages after the comparison: your uploaded PDF as it is, or a table copy of the spreadsheet’s information. If the log was read from a photo or a PDF not made by this app, only the LPN numbers are available to copy. Turn it off in Settings to get the comparison on its own.</p>
-<h3>6. Install it on your phone</h3>
+<p>Turn on “Ask me to confirm each scanned barcode” in Settings to check each scan before it is logged.</p>
+<h3>5. Check against the manifest</h3>
+<p>Tap the <b>Manifest check</b> heading to open it.</p>
+<ul>
+<li><b>Add the manifest:</b> photos or PDFs of the manifest (several at once is fine), or type or paste the numbers. PDFs with selectable text are read exactly; photos and scans are read with text recognition, so check the numbers.</li>
+<li><b>Live tracking:</b> while manifest numbers are there, the Pallet log shows how many are found and which are still missing as you scan, and warns about pallets not on the manifest. Tap <b>Show missing</b> for the list.</li>
+<li><b>The log:</b> tap <b>Use current log</b>, pick a saved delivery, or upload an exported spreadsheet, a PDF or a photo of a printed log.</li>
+<li><b>Check results:</b> shows Missing (report it), On the log only (book it in) and Matched. Tap <b>Fix</b> to correct a misread number or ✕ to remove it.</li>
+<li><b>Export</b> gives the comparison as Excel, Email PDF or Print. ✓ Matched is on both, ✗ MISSING is on the manifest but not the log, ⚠ LOG ONLY is on the log but not the manifest.</li>
+</ul>
+<p><b>Prefix presets</b> limit which numbers are picked up from photos: choose a preset, edit the list, or leave it blank for any LPN made of 1 to 3 letters then digits. <b>Include a copy of the log</b> in Settings adds the log to the comparison (a tab in the spreadsheet, extra pages in the PDF). Start new delivery clears the manifest numbers.</p>
+<h3>6. Export</h3>
+<p>The <b>Export</b> menu has <b>Download (Excel)</b>, <b>Email PDF</b> and <b>Print</b>. If an expected pallet count is set and the total doesn’t match, the first try shows a reminder; choose it again to go ahead.</p>
+<p>The spreadsheet and PDF have your logo, a title with the delivery details, the numbered pallet list, the totals by type (FSDUs listed separately), and the Delivery Details. They fit A4 portrait with page numbers. BB is shown as “Brown Box”.</p>
+<p><b>Email PDF</b> opens your phone’s share sheet with a PDF attached, as phones can’t share Excel files that way. If it says the file is ready, tap <b>Tap to share</b>. If sharing isn’t possible, the file is saved for you to attach yourself.</p>
+<h3>7. Saved deliveries and backups</h3>
+<p><b>Start new delivery</b> saves the log and clears the page (with Undo). <b>Saved deliveries</b> lists this week and last week (weeks start on Sunday): open one, export or email it directly, delete it, or import an exported spreadsheet or app-made PDF.</p>
+<p>Everything is stored on this device only. The Saved deliveries list shows when you last backed up; use <b>Back up now</b> there, or Settings, to download a backup, and <b>Restore backup</b> in Settings to bring it back.</p>
+<h3>8. Install it on your phone</h3>
 <ul>
 <li><b>Android (Chrome):</b> open the app’s web address, tap the ⋮ menu, then <b>Install app</b> or <b>Add to Home screen</b>.</li>
-<li><b>iPhone (Safari):</b> open the web address in Safari, tap the <b>Share</b> button, then <b>Add to Home Screen</b>. It must be Safari, not another browser.</li>
+<li><b>iPhone (Safari):</b> open the web address in Safari, tap <b>Share</b>, then <b>Add to Home Screen</b>.</li>
 <li><button id="showInstall">Show the install pop-up again</button> You can also open it from the Install section in <b>Settings</b>.</li>
-<li>It then opens full screen from its own icon. It keeps working without a connection once it has been opened online. The Excel builder, PDF maker and text recognition are saved the first time you use each one, so use Download (Excel), Email PDF and the Manifest check once while online. Until you have, they need a connection. This hasn’t been tested on every phone, so downloads may behave differently, for example going to the Files app on iPhone.</li>
+<li>It works offline once opened online. Use Download (Excel), Email PDF and the Manifest check once while online so they are saved too. When a new version is uploaded, tap <b>Refresh</b> on the banner.</li>
 </ul>
-<p><b>Colours:</b> open <b>Settings</b> next to Guide and Changelog to choose your own background and accent colours with a colour picker or a hex code. They are saved on this device.</p>
-<h3>7. Good to know</h3>
+<h3>9. Settings and good to know</h3>
 <ul>
-<li>Your entries, date, name and logo are saved in this browser on this device only. <b>Clear all</b> removes the entries.</li>
-<li>LPNs are expected as a letter prefix followed by digits, for example RUN000000000. The prefix list only affects numbers read from photos, not numbers you type in.</li>
-<li>Always check numbers read from photos before comparing, as photos can be misread.</li>
-</ul>`,log:`<h3>v3.20 <span class="ver">Current</span></h3>
-<ul><li>The manifest check now has the same Export menu as the log: Download (Excel), Email PDF or Print.</li><li>A date reminder when the log is dated before today, remembered “Received by” names you can tap, a warning when the logged total differs from the expected pallets, bigger buttons on touch screens, Excel and Email PDF buttons on saved deliveries, and an offline notice.</li><li>Importing an exported log older than last week now explains why it isn’t kept and offers to load it straight into the log.</li><li>Trailer number, Seal in and Seal out boxes in Delivery, shown on exports and saved deliveries.</li><li>Live manifest tracking: once the manifest numbers are in the Manifest check, the Pallet log shows how many are found and which are still missing as you scan, and warns when a pallet isn’t on the manifest.</li><li>Saved deliveries shows when you last backed up, with a Back up now button.</li><li>Phone layout: a pallet counter on the entry bar, a short “Added” confirmation after each pallet, the Delivery details fold into one line once you start logging (tap it to edit), neater top buttons and a clearer ✕ on each row. The date box now follows your Date format setting.</li><li>Filter the log by pallets with or without an FSDU.</li><li>Tidier spreadsheets and PDFs: a title band, numbered rows, clear grid lines, light-grey alternate rows and page numbers. Gridlines are hidden on screen in the log and manifest check sheets. Dates show as dd/mm/yyyy by default; change this under Settings, Date format.</li><li>Warnings before adding duplicate or unusual LPNs, with a skip or add anyway choice.</li><li>Undo for removed pallets.</li><li>Start new delivery, a Saved deliveries list, and importing an exported log. Saved deliveries older than the start of last week (weeks start on Sunday) are removed automatically.</li><li>The install pop-up can now be opened again from Settings as well as the Guide, and the pop-up itself says so.</li><li>Settings now warns when your accent colour is hard to see against your background, and status messages are announced by screen readers.</li><li>An “update available” banner appears in installed apps when a new version has been uploaded.</li><li>Look and feel: a header mark, quieter buttons and delete icons, tidier fields, a two-column layout on wide screens, a version line at the bottom, one chevron style, and a contents bar at the top of the Guide.</li><li>Accessibility and layout fixes: the log fits on phones with larger tap targets, rows and sections are labelled for screen readers, placeholder text is easier to read, the entry bar is shorter on phones, and the Add button sits next to the LPN box on larger screens.</li><li>Icons are now simple line icons instead of emoji, and deleting a saved delivery has an Undo instead of a confirmation box.</li><li>Exports and the manifest check can now work offline after the first online use.</li><li>Manifest check: Use current log or a saved delivery as the log, a Check results panel on screen, and Fix or remove buttons for misread numbers.</li><li>Pallet type buttons, an expected pallets count, an Export menu with Print, confirm-each-scan option, separate sound and vibration settings, and backup and restore in Settings.</li><li>Tap an LPN to edit it, search and filter the log, delivery notes in the exports, Clear all now has Undo, saved deliveries show their totals, and the screen stays awake while live scanning.</li><li>New Settings: default pallet type, keep last type, warnings on or off, sound and vibration, and text size.</li></ul>
+<li><b>Settings</b> has your colours, text size, date format, default pallet type, warnings, sound and vibration.</li>
+<li>LPNs are a letter prefix followed by digits, for example RUN000000000.</li>
+<li>Always check numbers read from photos before relying on them.</li>
+</ul>`,log:`<h3>v3.30 <span class="ver">Current</span></h3>
+<ul><li>Trailer number, Seal in and Seal out in Delivery, shown on exports and saved deliveries.</li><li>Live manifest tracking: add the manifest numbers first and the Pallet log counts them off as you scan, shows which are still missing and warns about pallets not on the manifest.</li><li>Phone layout: a pallet counter on the entry bar, an “Added” confirmation after each pallet, Delivery folds into one line once you start logging, neater top buttons and a clearer ✕ on each row.</li><li>Smaller tweaks: a reminder when the log is dated before today, tap-to-fill “Received by” names, a check when the total differs from the expected pallets, an FSDU filter, Excel and Email PDF buttons on saved deliveries, a last-backed-up note, and an offline notice.</li><li>Exports: a title band, numbered rows, clearer grid lines, page numbers, gridlines hidden on screen, roomier headers, the logo kept in proportion and much smaller PDFs. The manifest check has the same Export menu as the log.</li><li>Date format setting (dd/mm/yyyy by default), used in exports, lists and the date box.</li><li>Fonts are now part of the app, updates show up straight away, and the tablet layout and field alignment are fixed.</li></ul>
+<h3>v3.20</h3>
+<ul><li>Start new delivery, Saved deliveries (this week and last week) and importing an exported log.</li><li>Warnings for duplicate or unusual LPNs, Undo for removed pallets and Clear all, and tap an LPN to edit it.</li><li>Pallet type buttons, expected pallets, delivery notes, search and filter, and an Export menu with Print.</li><li>Manifest check: use the current log or a saved delivery, a Check results panel, and Fix or remove for misread numbers.</li><li>Settings: default and keep-last type, warnings, sound, vibration, confirm each scan, text size, colour contrast warning, backup and restore, and the install pop-up.</li><li>Works offline after the first use, shows an “update available” banner, a two-column layout on wide screens, line icons, and accessibility fixes.</li></ul>
 <h3>v3.0</h3>
 <ul><li>New navy and orange design with a single-sheet layout, colour-coded pallet types and a docked entry bar on phones.</li><li>Settings tab: your own background and accent colours (picker or hex), quick themes, reset, and the option to include a copy of the log with the comparison.</li><li>Stacked header on phones. The manifest comparison section can be shown or hidden and starts hidden.</li></ul>
 <h3>v2.0</h3>
@@ -69,7 +71,7 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 function guideToc(html){
   const items=[];
   html=html.replace(/<h3>(\d+)\. ([^<]+)<\/h3>/g,(m,n,t)=>{items.push([n,t]);return '<h3 id="g'+n+'">'+n+'. '+t+'</h3>'});
-  const short=t=>t.replace(/^(Set up the delivery)$/,"Delivery").replace(/^Log pallets$/,"Logging").replace(/^Scanning barcodes$/,"Scanning").replace(/^Download the spreadsheet$/,"Export").replace(/^Check a delivery against the manifest$/,"Manifest check").replace(/^Install it on your phone$/,"Install").replace(/^Good to know$/,"Good to know");
+  const short=t=>({"Quick start":"Start","Set up the delivery":"Delivery","Log pallets":"Logging","Scanning barcodes":"Scanning","Check against the manifest":"Manifest","Export":"Export","Saved deliveries and backups":"Saved","Install it on your phone":"Install","Settings and good to know":"Settings"})[t]||t;
   return '<nav class="guidetoc" aria-label="Guide sections">'+items.map(x=>'<a href="#g'+x[0]+'" data-g="g'+x[0]+'">'+short(x[1])+'</a>').join("")+'</nav>'+html;
 }
 function openHelp(k,t){

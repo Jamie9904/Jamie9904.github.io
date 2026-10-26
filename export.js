@@ -96,15 +96,34 @@ function pdfFooter(doc,extra){
   doc.setTextColor(0);
 }
 
+/* The logo for exports: a JPEG on white, at most 600px, keeping its shape. Keeps files small. */
+let logoX=null,logoXsrc="";
+async function exportLogo(){
+  if(!logo)return null;
+  if(logoX&&logoXsrc===logo)return logoX;
+  const im=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=logo});
+  const sc=Math.min(1,600/Math.max(im.width,im.height));
+  const c=document.createElement("canvas");c.width=Math.max(1,Math.round(im.width*sc));c.height=Math.max(1,Math.round(im.height*sc));
+  const g=c.getContext("2d");g.fillStyle="#fff";g.fillRect(0,0,c.width,c.height);g.drawImage(im,0,0,c.width,c.height);
+  logoX={data:c.toDataURL("image/jpeg",0.9),r:c.height/c.width};logoXsrc=logo;
+  return logoX;
+}
+/* Fit the logo inside maxW x maxH without stretching it. */
+function fitLogo(r,maxW,maxH){let w=maxW,h=w*r;if(h>maxH){h=maxH;w=h/r}return {w:w,h:h}}
+async function xlLogo(wb,ws,maxWpx){
+  const L=await exportLogo();if(!L)return 0;
+  const f=fitLogo(L.r,maxWpx,110);
+  const id=wb.addImage({base64:L.data,extension:"jpeg"});
+  for(let k=1;k<=4;k++)ws.getRow(k).height=f.h*0.75/4;
+  ws.addImage(id,{tl:{col:0,row:0},ext:{width:Math.round(f.w),height:Math.round(f.h)},editAs:"oneCell"});
+  return 5;
+}
 async function pdfBanner(doc,x,width){
   let y=12;
-  if(logo){
-    try{
-      const dim=await new Promise((res,rej)=>{const im=new Image();im.onload=()=>res([im.width,im.height]);im.onerror=rej;im.src=logo});
-      const h=Math.max(12,Math.min(32,width*dim[1]/dim[0]));
-      doc.addImage(logo,"PNG",x,y,width,h);y+=h+6;
-    }catch(e){}
-  }
+  try{
+    const L=await exportLogo();
+    if(L){const f=fitLogo(L.r,width,30);doc.addImage(L.data,"JPEG",x,y,f.w,f.h);y+=f.h+6}
+  }catch(e){}
   return y;
 }
 const pdfCell=(t,o)=>({content:String(t),styles:Object.assign({},o||{})});
@@ -283,16 +302,7 @@ $("dl").onclick=async()=>{
     ].concat(extras().map(e=>({v:[e[0],e[1]],l:1,note:e[0]==="Notes"?1:0})));
     const n=Math.max(rows.length,side.length-1);
     let off=0;
-    if(logo){
-      off=5;
-      try{
-        const dim=await new Promise((res,rej)=>{const im=new Image();im.onload=()=>res([im.width,im.height]);im.onerror=rej;im.src=logo});
-        const hPx=Math.max(50,Math.min(140,Math.round(489*dim[1]/dim[0])));
-        const id=wb.addImage({base64:logo,extension:"png"});
-        for(let k=1;k<=4;k++)ws.getRow(k).height=hPx*0.75/4;
-        ws.addImage(id,{tl:{col:0,row:0},br:{col:4,row:4},editAs:"oneCell"});
-      }catch(e){off=0}
-    }
+    try{off=await xlLogo(wb,ws,489)}catch(e){off=0}
     const exp=$("expect").value;
     const H=xlTitle(ws,off,7,"Goods-in pallet log","Date: "+ukDate(d)+(who?"     Received by: "+who:"")+(exp?"     Expected pallets: "+exp:"")+(($("trailer").value||"").trim()?"     Trailer: "+$("trailer").value.trim():""));
     const lastL=H+rows.length,s1=H+6,s2a=H+8,s2b=H+side.length-1;

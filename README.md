@@ -21,6 +21,7 @@ Keep these together in the same folder (the root of the GitHub Pages site):
 | `presets.json` | Shared LPN prefix presets for the manifest check | Optional |
 | `logo.png` | Default logo shown in the app and on exports | Optional |
 | `fonts/` | The two fonts (five `.woff2` files) and their licences | Yes |
+| `tests/run.js`, `package.json`, `.github/workflows/test.yml` | Automatic checks (not used by the app itself) | No |
 
 ## Updating the app
 
@@ -51,6 +52,15 @@ Edit it in any text editor. In the app, the manifest check also lets people save
 ## Data and backups
 
 The current log, saved deliveries (this week and last week only), settings and colours are stored in the browser on each device. Clearing site data removes them. Use Settings, then Backup, to download a backup file and restore it on the same or another device.
+
+## Automatic checks
+
+`tests/run.js` opens the app in a browser at phone, tablet and desktop sizes and checks the main features: layout, adding pallets, duplicate warnings, live manifest tracking, saved deliveries and undo, importing, the date format, the Excel layout (using a stand-in for the Excel library) and working offline.
+
+- On GitHub they run automatically after every upload. See the **Actions** tab: a green tick means everything passed, a red cross means something needs looking at.
+- To run them on a computer with Node.js: open a terminal in the site folder, run `npm install`, then `npx playwright install chromium` once, then `npm test`.
+
+They can't check the camera, the real Excel and PDF libraries, or how a phone opens the files.
 
 ## Quick check after an update
 

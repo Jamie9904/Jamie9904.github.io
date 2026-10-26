@@ -1,0 +1,11 @@
+{
+  "name": "lpn-pallet-log",
+  "private": true,
+  "description": "Automatic checks for the LPN Pallet Log site. The site itself needs no build step.",
+  "scripts": {
+    "test": "node tests/run.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.47.0"
+  }
+}

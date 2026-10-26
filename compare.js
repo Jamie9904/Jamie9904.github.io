@@ -346,16 +346,7 @@ $("cmpGo").onclick=async()=>{
     const bc={argb:"FF000000"},med={style:"medium",color:bc};
     const border={top:med,left:med,bottom:med,right:med};
     let off=0;
-    if(logo){
-      off=5;
-      try{
-        const dim=await new Promise((res2,rej)=>{const im=new Image();im.onload=()=>res2([im.width,im.height]);im.onerror=rej;im.src=logo});
-        const hPx=Math.max(50,Math.min(140,Math.round(547*dim[1]/dim[0])));
-        const id=wb.addImage({base64:logo,extension:"png"});
-        for(let k=1;k<=4;k++)ws.getRow(k).height=hPx*0.75/4;
-        ws.addImage(id,{tl:{col:0,row:0},br:{col:5,row:4},editAs:"oneCell"});
-      }catch(e){off=0}
-    }
+    try{off=await xlLogo(wb,ws,547)}catch(e){off=0}
     const side=[
       {v:["Summary","Count"],h:1},
       {v:["On manifest",man.length]},
