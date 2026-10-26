@@ -1,5 +1,6 @@
 const TYPES=["BB","FMCG","FPP","Mixed"];
 let rows=[];
+let delCollapsed=false;
 const $=id=>document.getElementById(id);
 function syncType(){const v=$("type").value;$("type").dataset.t=v;document.querySelectorAll("#tyb button").forEach(b=>{const on=b.dataset.t===v;b.classList.toggle("on",on);b.setAttribute("aria-pressed",on)})}
 let cfg={defType:"BB",check:true,sound:true,size:"1",keepType:true,vibrate:true,confirmScan:false,dateFmt:"uk"};
@@ -89,6 +90,7 @@ function render(){
 }
 function extras(){const o=[];const e=parseInt($("expect").value,10);if(e>=0)o.push(["Expected pallets",String(e)]);const n=($("notes").value||"").trim();if(n)o.push(["Notes",n]);return o}
 function summary(){
+  updateDel();$("dockCnt").textContent=rows.length?rows.length+(parseInt($("expect").value,10)>=0?" of "+parseInt($("expect").value,10):"")+" logged":"";
   const ei=$("expInfo"),ex=parseInt($("expect").value,10);
   if(ex>=0){const d=rows.length-ex;ei.hidden=false;ei.className="expinfo "+(d===0?"ok":"bad");ei.textContent=rows.length+" of "+ex+" expected"+(d===0?" ✓ all accounted for":d<0?" ("+(-d)+" to go)":" ("+d+" more than expected)")}else ei.hidden=true;
   const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
@@ -135,6 +137,26 @@ function addValue(v,o){
   if(o===undefined||!arguments[1])$("fsdu").checked=false;
   if(!cfg.keepType){$("type").value=cfg.defType;$("type").dataset.t=cfg.defType}
   save();render();sfx("ok");
+  if(rows.length===1&&($("recv").value||"").trim())delCollapsed=true;
+  updateDel();flashAdded(v,o.type,!!o.fsdu);
+}
+let flashTimer=null;
+function flashAdded(v,t,f){
+  const el=$("flash");el.dataset.t=t;el.hidden=false;const en=document.querySelector(".entry");el.style.bottom=(matchMedia("(max-width:759px)").matches&&en?en.offsetHeight+10:20)+"px";
+  el.textContent="Added #"+rows.length+": "+v+" · "+t+(f?" · FSDU":"");
+  clearTimeout(flashTimer);flashTimer=setTimeout(()=>{el.hidden=true},2200);
+}
+function updateDel(){
+  const card=$("delCard");if(!card)return;
+  if(!rows.length)delCollapsed=false;
+  const d=$("date").value,r=($("recv").value||"").trim(),e=parseInt($("expect").value,10);
+  $("delSumTxt").textContent=[ukDate(d)||"No date",r||"No name",e>=0?e+" expected":""].filter(Boolean).join(" · ");
+  card.classList.toggle("hasrows",rows.length>0);
+  card.classList.toggle("dcollapsed",delCollapsed&&rows.length>0);
+  $("delSum").setAttribute("aria-expanded",String(!(delCollapsed&&rows.length>0)));
+}
+function showDate(){
+  const v=$("date").value;$("dateShow").textContent=v?ukDate(v):"Pick a date";$("dateShow").classList.toggle("ph",!v);
 }
 $("chkSkip").onclick=()=>{hideCheck();$("lpn").focus()};
 $("chkAdd").onclick=()=>{const p=pendingAdd;hideCheck();if(p)addValue(p.v,{type:p.type,fsdu:p.fsdu});$("lpn").focus()};
@@ -161,3 +183,13 @@ function ukDate(iso){const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||""));i
 function isoDate(t){t=String(t||"").trim();let m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(t);if(m)return t;m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(t);if(!m)return "";let a=+m[1],b=+m[2],us=cfg.dateFmt==="us";if(a>12)us=false;else if(b>12)us=true;const dd=us?b:a,mm=us?a:b;return m[3]+"-"+String(mm).padStart(2,"0")+"-"+String(dd).padStart(2,"0")}
 
 function localToday(){const n=new Date();return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-"+String(n.getDate()).padStart(2,"0")}
+
+(function(){
+  const el=$("date"),d=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value");
+  Object.defineProperty(el,"value",{get(){return d.get.call(this)},set(v){d.set.call(this,v);showDate()},configurable:true});
+  ["input","change"].forEach(ev=>el.addEventListener(ev,()=>{showDate();updateDel()}));
+  el.addEventListener("click",()=>{try{el.showPicker&&el.showPicker()}catch(e){}});
+  ["recv","expect"].forEach(id=>$(id).addEventListener("input",updateDel));
+  $("delSum").onclick=()=>{delCollapsed=!delCollapsed;updateDel()};
+  showDate();
+})();

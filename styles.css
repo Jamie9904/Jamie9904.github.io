@@ -26,7 +26,9 @@ body{margin:0;background:var(--bg);color:var(--ink);font:1.03rem/1.55 "Atkinson 
   .top h1{white-space:normal;overflow:visible;text-overflow:clip;font-size:1.25rem}
   .top .sub{white-space:normal}
   #side{flex:1 1 100%;gap:8px}
-  #side button{flex:1;min-height:44px;padding:6px 8px;border:1px solid var(--line);border-radius:var(--r);background:var(--sel);font-size:.9rem;text-align:center}
+  #side button{flex:1;min-height:42px;padding:4px 6px;border:1px solid var(--line);border-radius:var(--r);background:var(--sel);font-size:.9rem;display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
+  #side .ic{width:18px;height:18px;flex:none}
+  .top .sub{display:none}
   #side button:hover{background:var(--acs);border-color:var(--ac)}
 }
 main{max-width:720px;margin:0 auto;background:var(--paper);padding:6px 18px 280px;border:1px solid var(--rule);border-bottom:0;min-height:70vh}
@@ -208,7 +210,7 @@ button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
 }
 
 #notes{font-family:inherit;font-size:1rem;line-height:1.5}
-td button.d{color:var(--mu);border-color:transparent;background:transparent}
+td button.d{color:var(--ink);border-color:var(--line);background:transparent;font-size:1rem}
 td button.d:hover,td button.d:focus-visible{color:var(--dg);border-color:var(--dg);background:color-mix(in srgb,var(--dg) 12%,var(--paper))}
 .chv{width:1em;height:1em;vertical-align:-.12em;margin-left:6px;flex:none;transition:transform .15s}
 button[aria-expanded="true"]>.chv{transform:rotate(180deg)}
@@ -257,3 +259,22 @@ button.tgl .chev .chv{margin:0;width:18px;height:18px}
   .chips button{min-height:44px}
 }
 .dc-row input{min-height:50px}
+
+/* date display that follows the Date format setting */
+.dwrap{position:relative;min-width:150px}
+.dwrap input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:1}
+.dshow{display:flex;align-items:center;min-height:50px;padding:0 12px;border:1px solid var(--line);border-radius:var(--r);background:var(--bg);color:var(--ink);font-size:1.05rem}
+.dshow.ph{color:var(--mu)}
+.dwrap:focus-within .dshow{outline:2px solid var(--ac);outline-offset:1px}
+/* pallet counter on the entry bar and "added" confirmation */
+.dockcnt{margin-left:auto;font-weight:700;color:var(--ink);font-size:.95rem;white-space:nowrap}
+.flash{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;z-index:30;width:min(92vw,520px);padding:10px 14px;border:1px solid var(--line);border-left:6px solid var(--ac);border-radius:var(--r);background:var(--sel);font-weight:700;overflow-wrap:anywhere;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.flash[data-t=BB]{border-left-color:var(--bb)}.flash[data-t=FMCG]{border-left-color:var(--fm)}.flash[data-t=FPP]{border-left-color:var(--fp)}.flash[data-t=Mixed]{border-left-color:var(--mx)}
+.delsum{display:none}
+@media (min-width:760px){.dockcnt{display:none}}
+@media (max-width:759px){
+  #delCard.hasrows .delsum{display:flex;align-items:center;gap:8px;width:100%;text-align:left;min-height:46px;padding:8px 12px;margin-bottom:8px;background:var(--sel);border:1px solid var(--line);font-weight:700}
+  #delCard.hasrows .delsum .tt{flex:1;overflow-wrap:anywhere}
+  #delCard.hasrows .delsum[aria-expanded="true"] .chv{transform:rotate(180deg)}
+  #delCard.dcollapsed>:not(.ct):not(.delsum):not(#dateBar){display:none}
+}

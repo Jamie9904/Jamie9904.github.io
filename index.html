@@ -33,9 +33,10 @@
 
 <div class="card" id="delCard">
   <h2 class="ct">Delivery</h2>
+  <button type="button" class="delsum" id="delSum" aria-expanded="true" aria-controls="delCard"><span class="tt" id="delSumTxt"></span><svg class="chv" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
   <div class="undo" id="dateBar" hidden role="status"><span id="dateTxt"></span><span class="row" style="gap:6px;flex-wrap:nowrap"><button class="p" id="dateFix">Use today</button><button id="dateKeep">Keep</button></span></div>
   <div class="row dc-row">
-    <div><label for="date">Date</label><input type="date" id="date"></div>
+    <div><label for="date">Date</label><div class="dwrap"><input type="date" id="date"><span class="dshow" id="dateShow" aria-hidden="true"></span></div></div>
     <div class="grow"><label for="recv">Received by</label><input id="recv" placeholder="Name" autocomplete="off"><div class="chips" id="recvChips" hidden></div></div>
   </div>
   <div class="dc-exp" style="margin-top:12px;max-width:220px"><label for="expect">Expected pallets</label><input type="number" id="expect" min="0" inputmode="numeric" placeholder="Optional" style="width:100%"></div>
@@ -52,7 +53,7 @@
   <div class="tyb" id="tyb" role="group" aria-label="Pallet type"><button type="button" data-t="BB">BB</button><button type="button" data-t="FMCG">FMCG</button><button type="button" data-t="FPP">FPP</button><button type="button" data-t="Mixed">Mixed</button><select id="type" hidden aria-hidden="true"><option>BB</option><option>FMCG</option><option>FPP</option><option>Mixed</option></select></div>
   <div class="addgrid">
     <div class="lp"><label for="lpn">LPN number</label><input id="lpn" style="width:100%;font-size:1.05rem" autocomplete="off" autocapitalize="characters" placeholder="Scan or type LPN, press Enter"></div>
-    <div><label for="fsdu">FSDU</label><input type="checkbox" id="fsdu" aria-label="Pallet contains an FSDU"></div>
+    <div><label for="fsdu">FSDU</label><input type="checkbox" id="fsdu" aria-label="Pallet contains an FSDU"><span class="dockcnt" id="dockCnt" aria-live="polite"></span></div>
     <button class="p" id="add" style="min-width:90px">Add</button>
     <button type="button" id="scanBtn" aria-expanded="false" aria-controls="btnrow">Scan<svg class="chv" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
   </div>
@@ -132,6 +133,7 @@
   <div class="menu" id="cmpExpMenu" hidden><button id="cmpGo">Download (Excel)</button><button id="cmpMail">Email PDF</button><button id="cmpPrn">Print</button></div>
   </div>
 </div>
+<div class="flash" id="flash" role="status" aria-live="polite" hidden></div>
 <footer class="foot"><span id="verText"></span> <button type="button" class="linkbtn" id="footLog">Changelog</button></footer>
 </main>
 
