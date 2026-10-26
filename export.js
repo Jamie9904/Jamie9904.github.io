@@ -17,7 +17,7 @@ function xlTitle(ws,off,lastCol,title,sub){
 function xlPrint(ws,hdrRow,landscape){
   ws.pageSetup={orientation:landscape?"landscape":"portrait",paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0,horizontalCentered:true,printTitlesRow:hdrRow+":"+hdrRow,margins:{left:0.4,right:0.4,top:0.6,bottom:0.7,header:0.3,footer:0.3}};
   ws.headerFooter.oddFooter="&L&9LPN Pallet Log&C&9Page &P of &N&R&9Printed &D";
-  ws.views=[{state:"frozen",ySplit:hdrRow}];
+  ws.views=[{state:"frozen",ySplit:hdrRow,showGridLines:false}];
 }
 function saveBlob(data,type,name){
   const blob=new Blob([data],{type:type});
