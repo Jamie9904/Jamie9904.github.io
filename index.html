@@ -129,7 +129,8 @@
   <textarea id="cmpNums" rows="6"></textarea>
   <div class="sum" id="cmpSum" style="margin-top:10px"></div>
   <div class="cmpres" id="cmpRes" hidden></div>
-  <div class="act"><button class="d" id="cmpClear">Clear</button><div class="row" style="gap:8px"><button class="p" id="cmpCheck">Check results</button><button id="cmpMail">Compare and email PDF</button><button id="cmpGo">Compare and download</button></div></div>
+  <div class="act"><button class="d" id="cmpClear">Clear</button><div class="row" style="gap:8px"><button class="p" id="cmpCheck">Check results</button><button class="p" id="cmpExpBtn" aria-expanded="false" aria-controls="cmpExpMenu">Export<svg class="chv" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button></div></div>
+  <div class="menu" id="cmpExpMenu" hidden><button id="cmpGo">Download (Excel)</button><button id="cmpMail">Email PDF</button><button id="cmpPrn">Print</button></div>
   </div>
 </div>
 <footer class="foot"><span id="verText"></span> <button type="button" class="linkbtn" id="footLog">Changelog</button></footer>

@@ -498,28 +498,40 @@ $("pfxDl").onclick=()=>{
 $("dlMail").onclick=()=>emailVia($("dl").onclick,"dlmsg");
 $("expBtn").onclick=()=>{const m=$("expMenu");m.hidden=!m.hidden;$("expBtn").setAttribute("aria-expanded",!m.hidden);};
 $("expMenu").addEventListener("click",e=>{if(e.target.closest("button")){$("expMenu").hidden=true;$("expBtn").setAttribute("aria-expanded","false")}});
+async function printBuf(buf,fname,m){
+  let printed=false;
+  try{
+    const url=URL.createObjectURL(new Blob([buf],{type:"application/pdf"}));
+    const fr=document.createElement("iframe");fr.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+    fr.onload=()=>{try{fr.contentWindow.focus();fr.contentWindow.print();printed=true}catch(e){}};
+    fr.src=url;document.body.appendChild(fr);
+    await new Promise(r=>setTimeout(r,1500));
+    setTimeout(()=>{fr.remove();URL.revokeObjectURL(url)},60000);
+  }catch(e){}
+  if(printed){m.textContent="";return}
+  await saveOnly(buf,fname,"application/pdf");
+  m.textContent="Print view isn’t available here, so a PDF was saved instead. Open it to print.";
+}
 $("prn").onclick=async()=>{
   const m=$("dlmsg");m.textContent="";
   if(!rows.length){m.textContent="Add at least one LPN before printing.";return}
   const d=$("date").value||"no-date";
   try{
     m.textContent="Preparing the print copy…";
-    const buf=await buildLogPdf(d);
-    let printed=false;
-    if(typeof saveBlob==="function"){
-      try{
-        const url=URL.createObjectURL(new Blob([buf],{type:"application/pdf"}));
-        const fr=document.createElement("iframe");fr.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0";
-        fr.onload=()=>{try{fr.contentWindow.focus();fr.contentWindow.print();printed=true}catch(e){}};
-        fr.src=url;document.body.appendChild(fr);
-        await new Promise(r=>setTimeout(r,1500));
-        setTimeout(()=>{fr.remove();URL.revokeObjectURL(url)},60000);
-      }catch(e){}
-    }
-    if(printed){m.textContent="";return}
-    await saveOnly(buf,"LPN-log-"+d+".pdf","application/pdf");
-    m.textContent="Print view isn’t available here, so a PDF was saved instead. Open it to print.";
+    await printBuf(await buildLogPdf(d),"LPN-log-"+d+".pdf",m);
   }catch(e){m.textContent="Couldn’t prepare the print copy: "+((e&&e.message)||"unknown error")}
+};
+$("cmpExpBtn").onclick=()=>{const m=$("cmpExpMenu");m.hidden=!m.hidden;$("cmpExpBtn").setAttribute("aria-expanded",!m.hidden)};
+$("cmpExpMenu").addEventListener("click",e=>{if(e.target.closest("button")){$("cmpExpMenu").hidden=true;$("cmpExpBtn").setAttribute("aria-expanded","false")}});
+$("cmpPrn").onclick=async()=>{
+  const C=cmpData();if(!C)return;
+  renderCmp(C);
+  const d=$("cmpDate").value||"no-date",merge=mergeLog;
+  try{
+    cmpMsg("Preparing the print copy…");
+    const buf=await buildCmpPdf(C.res,C.cnt,C.man.length,d,merge?{list:C.logList,pdf:logPdfSrc,sheets:logSheets}:null);
+    await printBuf(buf,"Manifest-check-"+d+".pdf",{set textContent(t){cmpMsg(t)}});
+  }catch(e){cmpMsg("Couldn’t prepare the print copy: "+((e&&e.message)||"error"))}
 };
 $("cmpMail").onclick=()=>emailVia($("cmpGo").onclick,"cmpMsg");
 $("cmpToggle").onclick=()=>{

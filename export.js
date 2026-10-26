@@ -1,5 +1,5 @@
 /* ---- shared spreadsheet look: thin inner lines, medium outline, light-grey zebra rows ---- */
-const XL_BLACK={argb:"FF000000"},XL_THIN={style:"thin",color:XL_BLACK},XL_MED={style:"medium",color:XL_BLACK};
+const XL_BLACK={argb:"FF000000"},XL_THIN={style:"medium",color:XL_BLACK},XL_MED={style:"thick",color:XL_BLACK};
 const XL_HEAD="FFE6E9ED",XL_ZEBRA="FFF2F2F2";
 const xlFill=a=>({type:"pattern",pattern:"solid",fgColor:{argb:a}});
 function xlBox(c1,c2,r1,r2,col,row){
@@ -256,7 +256,7 @@ $("dl").onclick=async()=>{
     }
     const wb=new ExcelJS.Workbook();
     const ws=wb.addWorksheet("LPN Log");
-    ws.columns=[{width:6},{width:26},{width:15},{width:9},{width:3},{width:26},{width:18}];
+    ws.columns=[{width:6},{width:26},{width:21},{width:9},{width:3},{width:26},{width:18}];
     const who=($("recv").value||"").trim();
     const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
     const side=[
@@ -275,7 +275,7 @@ $("dl").onclick=async()=>{
       off=5;
       try{
         const dim=await new Promise((res,rej)=>{const im=new Image();im.onload=()=>res([im.width,im.height]);im.onerror=rej;im.src=logo});
-        const hPx=Math.max(50,Math.min(140,Math.round(406*dim[1]/dim[0])));
+        const hPx=Math.max(50,Math.min(140,Math.round(450*dim[1]/dim[0])));
         const id=wb.addImage({base64:logo,extension:"png"});
         for(let k=1;k<=4;k++)ws.getRow(k).height=hPx*0.75/4;
         ws.addImage(id,{tl:{col:0,row:0},br:{col:4,row:4},editAs:"oneCell"});
