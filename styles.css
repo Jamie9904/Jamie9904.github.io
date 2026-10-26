@@ -217,9 +217,10 @@ button.tgl .chev .chv{margin:0;width:18px;height:18px}
 @media (min-width:760px) and (max-width:1099px){
   #delCard{display:grid;grid-template-columns:172px minmax(0,1fr) 150px;gap:12px 10px;align-items:end}
   #delCard>.ct{grid-column:1/3;grid-row:1;margin:8px 0 2px}
-  #delCard>.row:nth-child(2){display:contents}
-  #delCard>div:nth-child(3){margin:0!important;max-width:none!important}
-  #delCard>div:nth-child(4){grid-column:1/-1;margin:0!important}
+  #delCard>#dateBar{grid-column:1/-1;grid-row:2}
+  #delCard>.dc-row{display:contents}
+  #delCard>.dc-exp{margin:0!important;max-width:none!important}
+  #delCard>.dc-notes{grid-column:1/-1;margin:0!important}
   #delCard>.row:last-child{grid-column:2/4;grid-row:1;justify-self:end;margin:0!important;align-self:center}
   #delCard .grow{min-width:0}
 }

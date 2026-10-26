@@ -37,12 +37,12 @@
 <div class="card" id="delCard">
   <h2 class="ct">Delivery</h2>
   <div class="undo" id="dateBar" hidden role="status"><span id="dateTxt"></span><span class="row" style="gap:6px;flex-wrap:nowrap"><button class="p" id="dateFix">Use today</button><button id="dateKeep">Keep</button></span></div>
-  <div class="row">
+  <div class="row dc-row">
     <div><label for="date">Date</label><input type="date" id="date"></div>
-    <div class="grow"><label for="recv">Received by</label><input id="recv" placeholder="Name of person who received the delivery" autocomplete="off"><div class="chips" id="recvChips" hidden></div></div>
+    <div class="grow"><label for="recv">Received by</label><input id="recv" placeholder="Name" autocomplete="off"><div class="chips" id="recvChips" hidden></div></div>
   </div>
-  <div style="margin-top:12px;max-width:220px"><label for="expect">Expected pallets</label><input type="number" id="expect" min="0" inputmode="numeric" placeholder="Optional" style="width:100%"></div>
-  <div style="margin-top:12px"><label for="notes">Delivery notes</label><textarea id="notes" rows="2" placeholder="Optional. For example: 2 pallets damaged, driver name"></textarea></div>
+  <div class="dc-exp" style="margin-top:12px;max-width:220px"><label for="expect">Expected pallets</label><input type="number" id="expect" min="0" inputmode="numeric" placeholder="Optional" style="width:100%"></div>
+  <div class="dc-notes" style="margin-top:12px"><label for="notes">Delivery notes</label><textarea id="notes" rows="2" placeholder="Optional. For example: 2 pallets damaged, driver name"></textarea></div>
   <div class="row" style="margin-top:12px;align-items:center">
     <button id="logoBtn">Add logo</button><button class="d" id="logoRm" hidden>Remove logo</button>
     <input type="file" id="logoFile" accept="image/*" hidden>
