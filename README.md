@@ -1,71 +1,89 @@
 # LPN Pallet Log
 
-A goods-in web app for logging pallet LPNs, exporting the log, and checking a delivery against its manifest. It runs entirely in the browser: there is no server, and data is stored on the device.
+## 📚 Documentation
+| | |
+|---|---|
+| [⚙️ Architecture](docs/architecture.md) | System design, components and flow |
+| [📁 Structure](docs/structure.md) | Project organization and responsibilities |
+| [🚀 Installation](docs/installation.md) | Requirements, publishing and updating |
+| [🧠 Technical decisions](docs/decisions.md) | Trade-offs and design justifications |
+| [📖 Usage guide](docs/usage.md) | Day-to-day flows, settings and troubleshooting |
+| [🧪 Testing](docs/testing.md) | How to run the automatic checks and what they cover |
 
-## Files
+---
 
-Keep these together in the same folder (the root of the GitHub Pages site):
+## Description
 
-| File | Purpose | Required |
-| --- | --- | --- |
-| `index.html` | The page layout and structure | Yes |
-| `styles.css` | All styling and themes | Yes |
-| `core.js` | Logging, the pallet table, duplicate checks, undo, settings values | Yes |
-| `scan.js` | Barcode scanning (live and by photo) | Yes |
-| `export.js` | Excel, PDF and print output, and the logo | Yes |
-| `compare.js` | Manifest check, text recognition and prefix presets | Yes |
-| `panels.js` | Guide, changelog, Settings, saved deliveries, install pop-up and update banner | Yes |
-| `manifest.webmanifest` | Lets the app be installed on a phone | For install |
-| `sw.js` | Service worker: offline copy and the "new version available" banner | For install |
-| `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` | App icons | For install |
-| `presets.json` | Shared LPN prefix presets for the manifest check | Optional |
-| `logo.png` | Default logo shown in the app and on exports | Optional |
-| `fonts/` | The two fonts (five `.woff2` files) and their licences | Yes |
-| `tests/run.js`, `package.json`, `.github/workflows/test.yml` | Automatic checks (not used by the app itself) | No |
+A goods-in web app for documenting pallet deliveries. Staff scan or type each pallet's LPN (licence plate number), tag its type (Brown Box, FMCG, FPP, Mixed) and whether it carries an FSDU, then export a print-ready Excel or PDF log.
 
-## Updating the app
+It also checks a delivery against the supplier's manifest. Manifest numbers can come from photos (OCR), PDFs or typing, and while they are loaded the log counts them off live as pallets are scanned.
 
-1. Replace the changed files in the repository (usually just the ones that changed; each file has a single job, listed above) and commit them.
-2. If you add a file, add it to the list at the top of `sw.js`. If you change `sw.js` or any icon, also change the cache name at the top of `sw.js` (for example `lpn-log-v4` to `lpn-log-v5`) so phones pick up the new files.
-3. Wait a minute for Pages to publish.
+- Runs entirely in the browser: no server, no accounts. Data stays on the device.
+- Installable on Android and iPhone as a home-screen app, and works offline after the first visit.
+- Built for a phone in one hand on a loading bay: big touch targets, a docked entry bar, sound and vibration feedback.
 
-Phones that already have the app open will show a "A new version is available" banner. Tap Refresh to load it. Nothing in the log is lost, because it is saved on the device as you work.
+## Quick start
 
-## Working offline
+Serve the folder with any static web server and open it:
 
-After the app has been opened once with a connection, it keeps a copy of itself and of the libraries it loads (Excel, PDF and text recognition), so it can be used without signal. The libraries are saved the first time each one is used, so open Export and the manifest check once while online.
-
-## Fonts
-
-The two fonts (Atkinson Hyperlegible and IBM Plex Mono) are included in the `fonts/` folder and loaded from the site itself, so the app looks the same offline and makes no requests to Google. Upload the whole `fonts/` folder with the other files. Both fonts are under the SIL Open Font License; the licence texts are in the same folder.
-
-## Presets
-
-`presets.json` is a simple list of named prefix sets, for example:
-
-```json
-{ "Standard": "RUN, QUB, VLT, RBY, IM, MDW, V, R, Q, M" }
+```bash
+git clone https://github.com/Jamie9904/Jamie9904.github.io.git
+cd Jamie9904.github.io
+python3 -m http.server 8000
+# open http://localhost:8000/
 ```
 
-Edit it in any text editor. In the app, the manifest check also lets people save their own presets on their device.
+Then: fill in the delivery details → type `RUN000000001` into the LPN box → **Add** → **Export → Download (Excel)**.
 
-## Data and backups
+## Technologies used
 
-The current log, saved deliveries (this week and last week only), settings and colours are stored in the browser on each device. Clearing site data removes them. Use Settings, then Backup, to download a backup file and restore it on the same or another device.
+| Area | Technology |
+|---|---|
+| App | Plain HTML, CSS and JavaScript (no framework, no build step) |
+| Offline / install | Service worker (`sw.js`), Web App Manifest |
+| Spreadsheets | ExcelJS 4.4.0 |
+| PDFs | jsPDF 2.5.1 + jspdf-autotable 3.8.2, pdf-lib 1.17.1 (merging), pdf.js 3.11.174 (reading) |
+| Barcodes | Native `BarcodeDetector`, falling back to ZXing 0.21.3 |
+| OCR | Tesseract.js 5.1.1 |
+| Storage | `localStorage` (keys prefixed `lpn`) |
+| Fonts | Atkinson Hyperlegible, IBM Plex Mono (self-hosted, SIL OFL) |
+| Hosting | GitHub Pages |
+| Checks | Node.js + Playwright, run by GitHub Actions |
 
-## Automatic checks
+Libraries load from cdnjs with jsDelivr as fallback, only when a feature first needs them.
 
-`tests/run.js` opens the app in a browser at phone, tablet and desktop sizes and checks the main features: layout, adding pallets, duplicate warnings, live manifest tracking, saved deliveries and undo, importing, the date format, the Excel layout (using a stand-in for the Excel library) and working offline.
+## Quick installation
 
-- On GitHub they run automatically after every upload. See the **Actions** tab: a green tick means everything passed, a red cross means something needs looking at.
-- To run them on a computer with Node.js: open a terminal in the site folder, run `npm install`, then `npx playwright install chromium` once, then `npm test`.
+1. Put the files at the root of a GitHub Pages repository (or any HTTPS static host).
+2. Enable Pages on the `main` branch, root folder.
+3. Open the site on a phone and install it from the browser menu.
 
-They can't check the camera, the real Excel and PDF libraries, or how a phone opens the files.
+Details, including how to publish updates: [docs/installation.md](docs/installation.md).
 
-## Quick check after an update
+## Architecture (summary)
 
-- The app loads and the log keeps its pallets.
-- Add a pallet, change its type, and download the Excel file.
-- Email PDF opens the share sheet on a phone.
-- Print opens the print dialog (or saves a PDF if printing isn't available).
-- Settings, then Backup, downloads a file.
+A single page (`index.html`) loads five classic scripts in a fixed order that share globals: `core.js` (state, log, rendering), `scan.js` (barcodes), `export.js` (Excel/PDF/print), `compare.js` (manifest check, OCR, live tracking) and `panels.js` (guide, settings, saved deliveries, install, update banner). State lives in memory and is mirrored to `localStorage` on every change. A network-first service worker keeps the app usable offline and caches CDN libraries on first use. See [docs/architecture.md](docs/architecture.md).
+
+## Project structure
+
+```
+.
+├── index.html          page layout
+├── styles.css          all styling and theme tokens
+├── core.js             state, logging, table, warnings, undo
+├── scan.js             live and photo barcode scanning
+├── export.js           Excel, PDF, print, email sharing, logo
+├── compare.js          manifest check, OCR, presets, live tracking
+├── panels.js           guide, changelog, settings, saved deliveries
+├── sw.js               service worker
+├── manifest.webmanifest, icon-*.png, apple-touch-icon.png
+├── fonts/              self-hosted fonts + licences
+├── logo.png            default logo (optional)
+├── presets.json        shared LPN prefix presets (optional)
+├── DESIGN.md           design system notes
+├── tests/run.js        automatic checks
+├── package.json        test dependencies only
+└── .github/workflows/test.yml
+```
+
+See [docs/structure.md](docs/structure.md).
