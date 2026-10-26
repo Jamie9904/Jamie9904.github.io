@@ -111,13 +111,13 @@ const pdfCell=(t,o)=>({content:String(t),styles:Object.assign({},o||{})});
 async function buildLogPdf(d){
   await loadJsPdf();
   const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:"portrait"});
-  doc.setProperties({title:"LPN log "+d,subject:"LPN log",keywords:"LPNLOG2:"+encodeURIComponent(JSON.stringify({d:d,r:($("recv").value||"").trim(),n:($("notes").value||"").trim(),e:$("expect").value||"",rows:rows.map(r=>[r.lpn,r.type,r.fsdu?1:0])}))});
+  doc.setProperties({title:"LPN log "+d,subject:"LPN log",keywords:"LPNLOG2:"+encodeURIComponent(JSON.stringify({d:d,r:($("recv").value||"").trim(),n:($("notes").value||"").trim(),e:$("expect").value||"",t:($("trailer").value||"").trim(),si:($("sealIn").value||"").trim(),so:($("sealOut").value||"").trim(),rows:rows.map(r=>[r.lpn,r.type,r.fsdu?1:0])}))});
   const who=($("recv").value||"").trim();
   const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
   const L=10,LW=100,RX=L+LW+8,RW=190-LW-8;
   const yb=await pdfBanner(doc,L,LW);
   const exp=$("expect").value;
-  const y0=pdfTitle(doc,L,yb-6<12?12:yb-6,"Goods-in pallet log",ukDate(d)+(who?"   |   Received by "+who:"")+(exp?"   |   Expected pallets "+exp:""))+2;
+  const y0=pdfTitle(doc,L,yb-6<12?12:yb-6,"Goods-in pallet log",ukDate(d)+(who?"   |   Received by "+who:"")+(exp?"   |   Expected pallets "+exp:"")+(($("trailer").value||"").trim()?"   |   Trailer "+$("trailer").value.trim():""))+2;
   const bold={fontStyle:"bold",fillColor:PDF_HEAD};
   doc.autoTable(Object.assign({},PDF_BASE,PDF_PLAIN,{
     startY:y0,margin:{left:RX,right:10,top:12,bottom:16},tableWidth:RW,
@@ -294,7 +294,7 @@ $("dl").onclick=async()=>{
       }catch(e){off=0}
     }
     const exp=$("expect").value;
-    const H=xlTitle(ws,off,7,"Goods-in pallet log","Date: "+ukDate(d)+(who?"     Received by: "+who:"")+(exp?"     Expected pallets: "+exp:""));
+    const H=xlTitle(ws,off,7,"Goods-in pallet log","Date: "+ukDate(d)+(who?"     Received by: "+who:"")+(exp?"     Expected pallets: "+exp:"")+(($("trailer").value||"").trim()?"     Trailer: "+$("trailer").value.trim():""));
     const lastL=H+rows.length,s1=H+6,s2a=H+8,s2b=H+side.length-1;
     for(let i=-1;i<n;i++){
       const r=ws.getRow(H+i+1);

@@ -1,6 +1,9 @@
 const TYPES=["BB","FMCG","FPP","Mixed"];
 let rows=[];
 let delCollapsed=false;
+const DEL_F=["date","recv","notes","expect","trailer","sealIn","sealOut"];
+function getDel(){const o={};DEL_F.forEach(k=>{o[k]=$(k).value});return o}
+function setDel(o){o=o||{};DEL_F.forEach(k=>{$(k).value=k==="date"?(o.date||localToday()):(o[k]||"")})}
 const $=id=>document.getElementById(id);
 function syncType(){const v=$("type").value;$("type").dataset.t=v;document.querySelectorAll("#tyb button").forEach(b=>{const on=b.dataset.t===v;b.classList.toggle("on",on);b.setAttribute("aria-pressed",on)})}
 let cfg={defType:"BB",check:true,sound:true,size:"1",keepType:true,vibrate:true,confirmScan:false,dateFmt:"uk"};
@@ -24,12 +27,12 @@ function sfx(kind){
 function load(){
   try{
     const d=localStorage.getItem("lpnlog");
-    if(d){const o=JSON.parse(d);rows=o.rows||[];$("date").value=o.date||"";$("recv").value=o.recv||"";$("notes").value=o.notes||"";$("expect").value=o.expect||"";}
+    if(d){const o=JSON.parse(d);rows=o.rows||[];setDel(o);}
   }catch(e){}
   if(!$("date").value)$("date").value=localToday();
 }
 function save(){
-  try{localStorage.setItem("lpnlog",JSON.stringify({rows,date:$("date").value,recv:$("recv").value,notes:$("notes").value,expect:$("expect").value}))}catch(e){}
+  try{localStorage.setItem("lpnlog",JSON.stringify(Object.assign({rows:rows},getDel())))}catch(e){}
 }
 function render(){
   syncType();
@@ -88,9 +91,10 @@ function render(){
   const fi=$("fltInfo");const fa=!!(q||ft);fi.hidden=!fa;if(fa)fi.textContent="Showing "+shown+" of "+rows.length+" pallets (counts above are for the whole log).";
   summary();
 }
-function extras(){const o=[];const e=parseInt($("expect").value,10);if(e>=0)o.push(["Expected pallets",String(e)]);const n=($("notes").value||"").trim();if(n)o.push(["Notes",n]);return o}
+function extras(){const o=[];const e=parseInt($("expect").value,10);if(e>=0)o.push(["Expected pallets",String(e)]);[["trailer","Trailer number"],["sealIn","Seal in"],["sealOut","Seal out"]].forEach(f=>{const v=($(f[0]).value||"").trim();if(v)o.push([f[1],v])});const n=($("notes").value||"").trim();if(n)o.push(["Notes",n]);return o}
 function summary(){
-  updateDel();$("dockCnt").textContent=rows.length?rows.length+(parseInt($("expect").value,10)>=0?" of "+parseInt($("expect").value,10):"")+" logged":"";
+  const ms=typeof manLive==="function"?manLive():null;
+  updateDel();$("dockCnt").textContent=ms?ms.found+" of "+ms.total+" on manifest":rows.length?rows.length+(parseInt($("expect").value,10)>=0?" of "+parseInt($("expect").value,10):"")+" logged":"";
   const ei=$("expInfo"),ex=parseInt($("expect").value,10);
   if(ex>=0){const d=rows.length-ex;ei.hidden=false;ei.className="expinfo "+(d===0?"ok":"bad");ei.textContent=rows.length+" of "+ex+" expected"+(d===0?" ✓ all accounted for":d<0?" ("+(-d)+" to go)":" ("+d+" more than expected)")}else ei.hidden=true;
   const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
@@ -136,21 +140,25 @@ function addValue(v,o){
   rows.push({lpn:v,type:o.type,fsdu:!!o.fsdu});
   if(o===undefined||!arguments[1])$("fsdu").checked=false;
   if(!cfg.keepType){$("type").value=cfg.defType;$("type").dataset.t=cfg.defType}
-  save();render();sfx("ok");
+  const off=typeof manState==="function"&&(()=>{const s=manState();return s.total&&!s.has(v)})();
+  save();render();sfx(off?"warn":"ok");
   if(rows.length===1&&($("recv").value||"").trim())delCollapsed=true;
   updateDel();flashAdded(v,o.type,!!o.fsdu);
 }
 let flashTimer=null;
 function flashAdded(v,t,f){
   const el=$("flash");el.dataset.t=t;el.hidden=false;const en=document.querySelector(".entry");el.style.bottom=(matchMedia("(max-width:759px)").matches&&en?en.offsetHeight+10:20)+"px";
-  el.textContent="Added #"+rows.length+": "+v+" · "+t+(f?" · FSDU":"");
-  clearTimeout(flashTimer);flashTimer=setTimeout(()=>{el.hidden=true},2200);
+  let man="";
+  if(typeof manState==="function"){const s=manState();if(s.total)man=s.has(v)?" · ✓ on manifest":" · ⚠ NOT on manifest"}
+  el.classList.toggle("warn",man.indexOf("NOT")>=0);
+  el.textContent="Added #"+rows.length+": "+v+" · "+t+(f?" · FSDU":"")+man;
+  clearTimeout(flashTimer);flashTimer=setTimeout(()=>{el.hidden=true},man.indexOf("NOT")>=0?4000:2200);
 }
 function updateDel(){
   const card=$("delCard");if(!card)return;
   if(!rows.length)delCollapsed=false;
-  const d=$("date").value,r=($("recv").value||"").trim(),e=parseInt($("expect").value,10);
-  $("delSumTxt").textContent=[ukDate(d)||"No date",r||"No name",e>=0?e+" expected":""].filter(Boolean).join(" · ");
+  const d=$("date").value,r=($("recv").value||"").trim(),e=parseInt($("expect").value,10),tr=($("trailer").value||"").trim();
+  $("delSumTxt").textContent=[ukDate(d)||"No date",r||"No name",e>=0?e+" expected":"",tr?"Trailer "+tr:""].filter(Boolean).join(" · ");
   card.classList.toggle("hasrows",rows.length>0);
   card.classList.toggle("dcollapsed",delCollapsed&&rows.length>0);
   $("delSum").setAttribute("aria-expanded",String(!(delCollapsed&&rows.length>0)));
@@ -190,6 +198,7 @@ function localToday(){const n=new Date();return n.getFullYear()+"-"+String(n.get
   ["input","change"].forEach(ev=>el.addEventListener(ev,()=>{showDate();updateDel()}));
   el.addEventListener("click",()=>{try{el.showPicker&&el.showPicker()}catch(e){}});
   ["recv","expect"].forEach(id=>$(id).addEventListener("input",updateDel));
+  ["trailer","sealIn","sealOut"].forEach(id=>$(id).addEventListener("input",()=>{save();updateDel()}));
   $("delSum").onclick=()=>{delCollapsed=!delCollapsed;updateDel()};
   showDate();
 })();

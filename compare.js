@@ -540,3 +540,34 @@ $("cmpToggle").onclick=()=>{
   const open=$("cmpBody").hidden;
   $("cmpBody").hidden=!open;$("cmpToggle").setAttribute("aria-expanded",open?"true":"false");
 };
+
+/* ---- live manifest tracking in the Pallet log ---- */
+function manState(){
+  const mp=new Map();
+  $("cmpNums").value.split(/\r?\n/).forEach(s=>{s=s.trim();const k=norm(s);if(k&&!mp.has(k))mp.set(k,s)});
+  const logged=new Set(rows.map(r=>norm(r.lpn)));
+  let found=0;const missing=[];
+  mp.forEach((v,k)=>{if(logged.has(k))found++;else missing.push(v)});
+  return {total:mp.size,found:found,missing:missing,extra:rows.filter(r=>!mp.has(norm(r.lpn))).length,has:x=>mp.has(norm(x))};
+}
+function manLive(){
+  const box=$("manLive");if(!box)return null;
+  const s=manState();
+  if(!s.total){box.hidden=true;return null}
+  box.hidden=false;
+  box.className="manlive "+(s.missing.length||s.extra?"bad":"ok");
+  $("manTxt").textContent="Manifest: "+s.found+" of "+s.total+" found"+(s.missing.length?" · "+s.missing.length+" still to find":" ✓ all found")+(s.extra?" · "+s.extra+" not on manifest":"");
+  $("manShow").hidden=!s.missing.length;
+  if(!s.missing.length){$("manList").hidden=true;$("manShow").setAttribute("aria-expanded","false");$("manShow").textContent="Show missing"}
+  $("manList").textContent=s.missing.join("\n");
+  return s;
+}
+$("manShow").onclick=()=>{const open=$("manList").hidden;$("manList").hidden=!open;$("manShow").setAttribute("aria-expanded",String(open));$("manShow").textContent=open?"Hide missing":"Show missing"};
+(function(){
+  const el=$("cmpNums"),d=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,"value");
+  const keep=()=>{try{localStorage.setItem("lpncmpman",d.get.call(el))}catch(e){}if(typeof summary==="function")summary()};
+  Object.defineProperty(el,"value",{get(){return d.get.call(this)},set(v){d.set.call(this,v);keep()},configurable:true});
+  el.addEventListener("input",keep);
+  try{const v=localStorage.getItem("lpncmpman");if(v)d.set.call(el,v)}catch(e){}
+  summary();
+})();

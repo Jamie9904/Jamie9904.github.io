@@ -263,7 +263,7 @@ button.tgl .chev .chv{margin:0;width:18px;height:18px}
 /* date display that follows the Date format setting */
 .dwrap{position:relative;min-width:150px}
 .dwrap input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;z-index:1}
-.dshow{display:flex;align-items:center;min-height:50px;padding:0 12px;border:1px solid var(--line);border-radius:var(--r);background:var(--bg);color:var(--ink);font-size:1.05rem}
+.dshow{display:flex;align-items:center;min-height:50px;padding:0 12px;border:1px solid var(--line);border-radius:var(--r);background:var(--paper);color:var(--ink);font-size:1.05rem}
 .dshow.ph{color:var(--mu)}
 .dwrap:focus-within .dshow{outline:2px solid var(--ac);outline-offset:1px}
 /* pallet counter on the entry bar and "added" confirmation */
@@ -278,3 +278,22 @@ button.tgl .chev .chv{margin:0;width:18px;height:18px}
   #delCard.hasrows .delsum[aria-expanded="true"] .chv{transform:rotate(180deg)}
   #delCard.dcollapsed>:not(.ct):not(.delsum):not(#dateBar){display:none}
 }
+
+/* trailer and seals */
+.trl{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.trl>div:first-child{grid-column:1/-1}
+.trl input{width:100%}
+@media (min-width:560px){.trl{grid-template-columns:1.2fr 1fr 1fr}.trl>div:first-child{grid-column:auto}}
+@media (min-width:760px) and (max-width:1099px){#delCard>.dc-trl{grid-column:1/-1;margin:0!important}}
+/* live manifest tracking */
+.manlive{margin:-2px 0 10px;padding:8px 10px;border:1px solid var(--line);border-left:6px solid var(--fp);border-radius:var(--r);background:var(--sel)}
+.manlive.bad{border-left-color:var(--wn)}
+.manlive .mlrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between;font-weight:700}
+.manlive .mlrow button{min-height:40px;padding:4px 12px}
+.manlist{margin-top:8px;font:600 .95rem/1.6 "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;max-height:40vh;overflow:auto}
+.flash.warn{border-left-color:var(--dg);background:var(--wns);color:var(--wn)}
+/* backup note */
+.bkinfo{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between;margin:4px 0 10px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--r);background:var(--sel);font-size:.92rem}
+.bkinfo .old{color:var(--wn);font-weight:700}
+.bkinfo button{min-height:40px;padding:4px 12px}
+.dc-exp input{min-height:50px}
