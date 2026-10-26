@@ -21,14 +21,6 @@ Keep these together in the same folder (the root of the GitHub Pages site):
 | `presets.json` | Shared LPN prefix presets for the manifest check | Optional |
 | `logo.png` | Default logo shown in the app and on exports | Optional |
 
-## Publishing on GitHub Pages
-
-1. Create a repository and upload all the files above to the main branch.
-2. In the repository go to Settings, then Pages, choose "Deploy from a branch", pick the main branch and the root folder, and save.
-3. After a minute or two the site is live at `https://<username>.github.io/<repository>/`.
-
-The page must be served over https for the camera, installing and sharing to work. GitHub Pages does this for you.
-
 ## Updating the app
 
 1. Replace the changed files in the repository (usually just the ones that changed; each file has a single job, listed above) and commit them.
