@@ -515,6 +515,7 @@ async function printBuf(buf,fname,m){
 $("prn").onclick=async()=>{
   const m=$("dlmsg");m.textContent="";
   if(!rows.length){m.textContent="Add at least one LPN before printing.";return}
+  if(!expectCheck(m))return;
   const d=$("date").value||"no-date";
   try{
     m.textContent="Preparing the print copy…";

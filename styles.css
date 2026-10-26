@@ -235,3 +235,18 @@ button.tgl .chev .chv{margin:0;width:18px;height:18px}
   .foot{grid-row:4}
 }
 @media(max-width:560px){.flt{flex-wrap:wrap}.flt input{flex:1 1 100%}.flt select{flex:1 1 0}}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chips button{min-height:38px;padding:2px 12px;font-size:.88rem;font-weight:600}
+#dateBar{flex-wrap:wrap}
+#dateBar button{min-height:40px}
+.off{max-width:720px;margin:8px auto 0}
+@media (pointer:coarse){
+  td button{min-width:48px;min-height:48px}
+  td button.d{margin-left:4px}
+  .cmpres .ri{gap:10px}
+  .cmpres .ri button{min-height:46px;min-width:56px;padding:4px 14px}
+  .cmpres .ri input{min-height:46px}
+  .hist .row button{min-height:46px}
+  .chips button{min-height:44px}
+}

@@ -239,9 +239,21 @@ async function emailVia(handler,msgId){
   }else if(emailNote)el.textContent=emailNote;
 }
 async function saveOnly(buf,name,mime){saveBlob(buf,mime,name)}
+let expAck="";
+/* If an expected pallet count is set and doesn't match, ask once before exporting (the second try goes through). */
+function expectCheck(m){
+  const e=parseInt($("expect").value,10);
+  if(isNaN(e)||e===rows.length)return true;
+  const key=e+":"+rows.length;
+  if(expAck===key)return true;
+  expAck=key;
+  m.textContent="Expected "+e+" pallets but "+rows.length+" "+(rows.length===1?"is":"are")+" logged. Open Export and choose it again if that is right.";
+  return false;
+}
 $("dl").onclick=async()=>{
   const m=$("dlmsg");m.textContent="";
   if(!rows.length){m.textContent="Add at least one LPN before downloading.";return}
+  if(!expectCheck(m))return;
   const d=$("date").value||"no-date";
   try{
     m.textContent="Preparing spreadsheet…";

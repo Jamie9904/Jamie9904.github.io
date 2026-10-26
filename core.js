@@ -25,7 +25,7 @@ function load(){
     const d=localStorage.getItem("lpnlog");
     if(d){const o=JSON.parse(d);rows=o.rows||[];$("date").value=o.date||"";$("recv").value=o.recv||"";$("notes").value=o.notes||"";$("expect").value=o.expect||"";}
   }catch(e){}
-  if(!$("date").value)$("date").value=new Date().toISOString().slice(0,10);
+  if(!$("date").value)$("date").value=localToday();
 }
 function save(){
   try{localStorage.setItem("lpnlog",JSON.stringify({rows,date:$("date").value,recv:$("recv").value,notes:$("notes").value,expect:$("expect").value}))}catch(e){}
@@ -159,3 +159,5 @@ function loadScript(src,test){
 
 function ukDate(iso){const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso||""));if(!m)return String(iso||"");const f=cfg.dateFmt;return f==="iso"?iso:f==="us"?m[2]+"/"+m[3]+"/"+m[1]:m[3]+"/"+m[2]+"/"+m[1]}
 function isoDate(t){t=String(t||"").trim();let m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(t);if(m)return t;m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(t);if(!m)return "";let a=+m[1],b=+m[2],us=cfg.dateFmt==="us";if(a>12)us=false;else if(b>12)us=true;const dd=us?b:a,mm=us?a:b;return m[3]+"-"+String(mm).padStart(2,"0")+"-"+String(dd).padStart(2,"0")}
+
+function localToday(){const n=new Date();return n.getFullYear()+"-"+String(n.getMonth()+1).padStart(2,"0")+"-"+String(n.getDate()).padStart(2,"0")}

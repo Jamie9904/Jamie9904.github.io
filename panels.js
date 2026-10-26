@@ -56,7 +56,7 @@ const HELP={guide:`<h3>1. Set up the delivery</h3>
 <li>LPNs are expected as a letter prefix followed by digits, for example RUN000000000. The prefix list only affects numbers read from photos, not numbers you type in.</li>
 <li>Always check numbers read from photos before comparing, as photos can be misread.</li>
 </ul>`,log:`<h3>v3.20 <span class="ver">Current</span></h3>
-<ul><li>The manifest check now has the same Export menu as the log: Download (Excel), Email PDF or Print.</li><li>Importing an exported log older than last week now explains why it isn’t kept and offers to load it straight into the log.</li><li>Filter the log by pallets with or without an FSDU.</li><li>Tidier spreadsheets and PDFs: a title band, numbered rows, clear grid lines, light-grey alternate rows and page numbers. Gridlines are hidden on screen in the log and manifest check sheets. Dates show as dd/mm/yyyy by default; change this under Settings, Date format.</li><li>Warnings before adding duplicate or unusual LPNs, with a skip or add anyway choice.</li><li>Undo for removed pallets.</li><li>Start new delivery, a Saved deliveries list, and importing an exported log. Saved deliveries older than the start of last week (weeks start on Sunday) are removed automatically.</li><li>The install pop-up can now be opened again from Settings as well as the Guide, and the pop-up itself says so.</li><li>Settings now warns when your accent colour is hard to see against your background, and status messages are announced by screen readers.</li><li>An “update available” banner appears in installed apps when a new version has been uploaded.</li><li>Look and feel: a header mark, quieter buttons and delete icons, tidier fields, a two-column layout on wide screens, a version line at the bottom, one chevron style, and a contents bar at the top of the Guide.</li><li>Accessibility and layout fixes: the log fits on phones with larger tap targets, rows and sections are labelled for screen readers, placeholder text is easier to read, the entry bar is shorter on phones, and the Add button sits next to the LPN box on larger screens.</li><li>Icons are now simple line icons instead of emoji, and deleting a saved delivery has an Undo instead of a confirmation box.</li><li>Exports and the manifest check can now work offline after the first online use.</li><li>Manifest check: Use current log or a saved delivery as the log, a Check results panel on screen, and Fix or remove buttons for misread numbers.</li><li>Pallet type buttons, an expected pallets count, an Export menu with Print, confirm-each-scan option, separate sound and vibration settings, and backup and restore in Settings.</li><li>Tap an LPN to edit it, search and filter the log, delivery notes in the exports, Clear all now has Undo, saved deliveries show their totals, and the screen stays awake while live scanning.</li><li>New Settings: default pallet type, keep last type, warnings on or off, sound and vibration, and text size.</li></ul>
+<ul><li>The manifest check now has the same Export menu as the log: Download (Excel), Email PDF or Print.</li><li>A date reminder when the log is dated before today, remembered “Received by” names you can tap, a warning when the logged total differs from the expected pallets, bigger buttons on touch screens, Excel and Email PDF buttons on saved deliveries, and an offline notice.</li><li>Importing an exported log older than last week now explains why it isn’t kept and offers to load it straight into the log.</li><li>Filter the log by pallets with or without an FSDU.</li><li>Tidier spreadsheets and PDFs: a title band, numbered rows, clear grid lines, light-grey alternate rows and page numbers. Gridlines are hidden on screen in the log and manifest check sheets. Dates show as dd/mm/yyyy by default; change this under Settings, Date format.</li><li>Warnings before adding duplicate or unusual LPNs, with a skip or add anyway choice.</li><li>Undo for removed pallets.</li><li>Start new delivery, a Saved deliveries list, and importing an exported log. Saved deliveries older than the start of last week (weeks start on Sunday) are removed automatically.</li><li>The install pop-up can now be opened again from Settings as well as the Guide, and the pop-up itself says so.</li><li>Settings now warns when your accent colour is hard to see against your background, and status messages are announced by screen readers.</li><li>An “update available” banner appears in installed apps when a new version has been uploaded.</li><li>Look and feel: a header mark, quieter buttons and delete icons, tidier fields, a two-column layout on wide screens, a version line at the bottom, one chevron style, and a contents bar at the top of the Guide.</li><li>Accessibility and layout fixes: the log fits on phones with larger tap targets, rows and sections are labelled for screen readers, placeholder text is easier to read, the entry bar is shorter on phones, and the Add button sits next to the LPN box on larger screens.</li><li>Icons are now simple line icons instead of emoji, and deleting a saved delivery has an Undo instead of a confirmation box.</li><li>Exports and the manifest check can now work offline after the first online use.</li><li>Manifest check: Use current log or a saved delivery as the log, a Check results panel on screen, and Fix or remove buttons for misread numbers.</li><li>Pallet type buttons, an expected pallets count, an Export menu with Print, confirm-each-scan option, separate sound and vibration settings, and backup and restore in Settings.</li><li>Tap an LPN to edit it, search and filter the log, delivery notes in the exports, Clear all now has Undo, saved deliveries show their totals, and the screen stays awake while live scanning.</li><li>New Settings: default pallet type, keep last type, warnings on or off, sound and vibration, and text size.</li></ul>
 <h3>v3.0</h3>
 <ul><li>New navy and orange design with a single-sheet layout, colour-coded pallet types and a docked entry bar on phones.</li><li>Settings tab: your own background and accent colours (picker or hex), quick themes, reset, and the option to include a copy of the log with the comparison.</li><li>Stacked header on phones. The manifest comparison section can be shown or hidden and starts hidden.</li></ul>
 <h3>v2.0</h3>
@@ -125,6 +125,7 @@ HELP.settings=`<h3>Colours</h3>
 <h3>Comparison</h3>
 <label class="chk"><input type="checkbox" id="setMerge"><span>Include a copy of the log with the manifest comparison (a tab in the spreadsheet, extra pages at the end of the PDF)</span></label>
 <h3>Logging</h3>
+<div class="row" style="margin-bottom:10px"><button id="setForget">Forget remembered names</button></div>
 <label for="setDef">Default pallet type</label>
 <select id="setDef"><option>BB</option><option>FMCG</option><option>FPP</option><option>Mixed</option></select>
 <label class="chk"><input type="checkbox" id="setKeep"><span>Keep the last pallet type selected after adding (otherwise go back to the default type)</span></label>
@@ -153,7 +154,7 @@ function keepFrom(){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()
 function pruneHist(){const k=keepFrom(),n=hist.length;hist=hist.filter(h=>{let d=h.date;if(!/^\d{4}-\d{2}-\d{2}$/.test(d||"")){const s=new Date(h.saved);d=isNaN(s)?k:s.getFullYear()+"-"+String(s.getMonth()+1).padStart(2,"0")+"-"+String(s.getDate()).padStart(2,"0")}return d>=k});if(hist.length!==n)saveHist()}
 pruneHist();
 function pushHist(entry){const id=String(Date.now())+Math.floor(Math.random()*1e4);hist.unshift(Object.assign({id:id},entry));pruneHist();hist=hist.slice(0,50);saveHist();return id}
-const todayStr=()=>new Date().toISOString().slice(0,10);
+const todayStr=localToday;
 function newDelivery(){
   if(!rows.length){$("dlmsg").textContent="The log is empty, so there is nothing to save.";return}
   const prev={rows:rows.slice(),date:$("date").value,recv:$("recv").value,notes:$("notes").value,expect:$("expect").value};
@@ -210,10 +211,23 @@ async function parseExported(f){
   }));
   return {date:date,recv:recv,notes:notes,expect:expect,rows:rw,unk:unk};
 }
-HELP.history=`<p>Deliveries you save are kept in this browser on this device. Weeks run Sunday to Saturday, and only this week and last week are kept; older ones are removed automatically. Opening one puts it back in the log so you can change it or export it again.</p>
+HELP.history=`<p>Deliveries you save are kept in this browser on this device. Weeks run Sunday to Saturday, and only this week and last week are kept; older ones are removed automatically. Opening one puts it back in the log so you can change it or export it again. You can also export or email a saved delivery directly, without opening it.</p>
 <div class="row" style="margin:10px 0"><button id="histImport">Import an exported log</button><input type="file" id="histFile" accept=".xlsx,.csv,.xls,.pdf,application/pdf" hidden></div>
 <div class="msg" id="histMsg" role="status" aria-live="polite"></div>
 <div id="histRoot"></div>`;
+async function histExport(h,mail){
+  const msg=$("histMsg"),sv={rows:rows,date:$("date").value,recv:$("recv").value,notes:$("notes").value,expect:$("expect").value};
+  msg.textContent="Preparing…";$("dlmsg").textContent="";
+  rows=h.rows.map(r=>Object.assign({},r));$("date").value=h.date||todayStr();$("recv").value=h.recv||"";$("notes").value=h.notes||"";$("expect").value=h.expect||"";
+  const e=parseInt($("expect").value,10);expAck=isNaN(e)?"":e+":"+rows.length;
+  try{
+    if(mail)await emailVia($("dl").onclick,"histMsg");else await $("dl").onclick();
+  }finally{
+    rows=sv.rows;$("date").value=sv.date;$("recv").value=sv.recv;$("notes").value=sv.notes;$("expect").value=sv.expect;
+  }
+  const t=$("dlmsg").textContent;$("dlmsg").textContent="";
+  if(msg.textContent==="Preparing…")msg.textContent=t;
+}
 function initHistory(){
   pruneHist();
   const root=$("histRoot");root.innerHTML="";
@@ -228,6 +242,8 @@ function initHistory(){
     sb.textContent=(h.recv?"Received by "+h.recv+". ":"")+"Saved "+when+".";
     const r=document.createElement("div");r.className="row";
     const o=document.createElement("button");o.className="p";o.textContent="Open";o.onclick=()=>openHist(h.id);
+    const xl=document.createElement("button");xl.textContent="Excel";xl.setAttribute("aria-label","Download Excel for "+(ukDate(h.date)||"this delivery"));xl.onclick=()=>histExport(h,false);
+    const em=document.createElement("button");em.textContent="Email PDF";em.onclick=()=>histExport(h,true);
     const x=document.createElement("button");x.className="d";x.textContent="Delete";
     x.onclick=()=>{
       const at=Math.max(0,hist.findIndex(z=>z.id===h.id));
@@ -239,7 +255,7 @@ function initHistory(){
       const row=document.createElement("div");row.className="row";row.style.alignItems="center";row.append(t,u);d.appendChild(row);
       d.setAttribute("role","status");
     };
-    r.append(o,x);d.append(hd,tt,sb,r);root.appendChild(d);
+    r.append(o,xl,em,x);d.append(hd,tt,sb,r);root.appendChild(d);
   });
   $("histImport").onclick=()=>{$("histFile").value="";$("histFile").click()};
   $("histFile").onchange=async e=>{
@@ -292,6 +308,7 @@ function initSettings(){
       setTimeout(()=>location.reload(),700);
     }catch(err){$("bkMsg").textContent=(err&&err.message)||"Couldn’t read that backup."}
   };
+  $("setForget").onclick=()=>{names=[];saveNames();drawNames();$("setForget").textContent="Names forgotten"};
   $("setDef").value=cfg.defType;$("setDef").onchange=()=>{cfg.defType=$("setDef").value;saveCfg();$("type").value=cfg.defType;syncType()};
   $("setVib").checked=cfg.vibrate;$("setVib").onchange=()=>{cfg.vibrate=$("setVib").checked;saveCfg();if(cfg.vibrate)sfx("ok")};
   $("setConf").checked=cfg.confirmScan;$("setConf").onchange=()=>{cfg.confirmScan=$("setConf").checked;saveCfg()};
@@ -365,3 +382,43 @@ if("serviceWorker" in navigator){
 }
 setTimeout(()=>{loadExcel().catch(()=>{});loadJsPdf().catch(()=>{})},2500);
 load();render();$("type").value=cfg.defType;syncType();
+
+/* ---- date reminder, remembered names, offline notice ---- */
+let dateSkip="";
+function checkDate(noReset){
+  const t=localToday(),d=$("date").value,bar=$("dateBar");
+  if(!d||d===t||(!rows.length)){
+    if(!noReset&&!rows.length&&d!==t){$("date").value=t;save()}
+    bar.hidden=true;return;
+  }
+  if(dateSkip===d+"|"+t){bar.hidden=true;return}
+  $("dateTxt").textContent="This log is dated "+ukDate(d)+", but today is "+ukDate(t)+".";
+  bar.hidden=false;
+}
+$("dateFix").onclick=()=>{$("date").value=localToday();save();$("dateBar").hidden=true};
+$("dateKeep").onclick=()=>{dateSkip=$("date").value+"|"+localToday();$("dateBar").hidden=true};
+$("date").addEventListener("change",()=>{dateSkip="";checkDate(true)});
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkDate()});
+checkDate();
+let names=[];try{names=JSON.parse(localStorage.getItem("lpnnames")||"[]")||[]}catch(e){names=[]}
+const saveNames=()=>{try{localStorage.setItem("lpnnames",JSON.stringify(names))}catch(e){}};
+function drawNames(){
+  const box=$("recvChips"),cur=($("recv").value||"").trim().toLowerCase();
+  box.innerHTML="";
+  names.filter(x=>x.toLowerCase()!==cur).forEach(x=>{
+    const b=document.createElement("button");b.type="button";b.textContent=x;b.onclick=()=>{$("recv").value=x;save();rememberName();drawNames()};
+    box.appendChild(b);
+  });
+  box.hidden=!box.children.length;
+}
+function rememberName(){
+  const v=($("recv").value||"").trim();if(!v)return;
+  names=[v].concat(names.filter(x=>x.toLowerCase()!==v.toLowerCase())).slice(0,6);saveNames();
+}
+$("recv").addEventListener("change",rememberName);
+$("recv").addEventListener("input",drawNames);
+drawNames();
+function showOffline(){$("offBar").hidden=navigator.onLine!==false}
+window.addEventListener("online",()=>{$("offBar").hidden=true});
+window.addEventListener("offline",()=>{$("offBar").hidden=false});
+$("offBar").hidden=navigator.onLine!==false;

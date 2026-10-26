@@ -31,13 +31,15 @@
     <button id="btnSet" aria-label="Settings"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><span class="lbl">Settings</span></button>
   </aside>
 </header>
+<div class="undo off" id="offBar" hidden role="status"><span>You’re offline. Logging still works. Exports, barcode scanning and photo reading only work offline if you’ve already used them on this device.</span></div>
 <main>
 
 <div class="card" id="delCard">
   <h2 class="ct">Delivery</h2>
+  <div class="undo" id="dateBar" hidden role="status"><span id="dateTxt"></span><span class="row" style="gap:6px;flex-wrap:nowrap"><button class="p" id="dateFix">Use today</button><button id="dateKeep">Keep</button></span></div>
   <div class="row">
     <div><label for="date">Date</label><input type="date" id="date"></div>
-    <div class="grow"><label for="recv">Received by</label><input id="recv" placeholder="Name of person who received the delivery"></div>
+    <div class="grow"><label for="recv">Received by</label><input id="recv" placeholder="Name of person who received the delivery" autocomplete="off"><div class="chips" id="recvChips" hidden></div></div>
   </div>
   <div style="margin-top:12px;max-width:220px"><label for="expect">Expected pallets</label><input type="number" id="expect" min="0" inputmode="numeric" placeholder="Optional" style="width:100%"></div>
   <div style="margin-top:12px"><label for="notes">Delivery notes</label><textarea id="notes" rows="2" placeholder="Optional. For example: 2 pallets damaged, driver name"></textarea></div>
