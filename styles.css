@@ -333,3 +333,7 @@ details.opts>summary::-webkit-details-marker{display:none}
 details.opts>summary::after{content:"";margin-left:auto;width:9px;height:9px;border-right:2.5px solid var(--ac);border-bottom:2.5px solid var(--ac);transform:rotate(45deg);transition:transform .15s;flex:none}
 details.opts[open]>summary::after{transform:rotate(-135deg)}
 @media (max-width:759px){td.l{white-space:normal;overflow-wrap:anywhere;word-break:break-all}}
+.cmpsteps{align-items:flex-start}
+details.opts>summary{white-space:nowrap;overflow:hidden}
+details.opts>summary .note{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#cmpToggle,#manShow{min-height:44px}

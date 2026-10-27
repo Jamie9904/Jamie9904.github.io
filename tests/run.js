@@ -137,6 +137,8 @@ async function page(browser, width, opts = {}) {
   await p.click("#cmpToggle");
   await p.evaluate(() => openHelp("settings", "Settings"));
   check("logo can be changed from Settings", /logo/i.test(await p.textContent("#setLogo")));
+  s = await p.evaluate(() => ["cmpToggle", "manShow"].map(id => Math.round(document.getElementById(id).getBoundingClientRect().height)));
+  check("Manifest check buttons are 44px tall", s.every(h => h >= 44 || h === 0), s);
   await p.evaluate(() => closeHelp());
 
   console.log("Quick actions");
