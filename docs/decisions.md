@@ -86,3 +86,18 @@ Atkinson Hyperlegible (chosen for legibility) and IBM Plex Mono (LPNs and number
 
 - **Why:** runs offline, quickly and deterministically in CI, and can assert on cell values, borders and print settings.
 - **Trade-off:** the real Excel/PDF libraries, the camera and phone file viewers are not covered; those are checked manually.
+
+## Claude automations kept in the repository
+
+The hooks, agents and working notes for Claude Code are committed in `.claude/` on `main` rather than kept in one person's local settings.
+
+- **Why:** the rules they enforce belong to the project, not to a machine: bump `CACHE` in `sw.js` with every app change, keep `docs/` off `main`, and only push when the checks pass. Kept in the repository, they apply in every fresh checkout and cloud session, change through normal commits, and can be read by anyone.
+- **Cost:** none for the site. Jekyll leaves dot-folders out of the published site, so `.claude/` is not served and is not in the service worker cache.
+- **Limit:** they only run inside Claude Code. Manual commits and edits on the GitHub website are still covered only by the `test.yml` checks after the push.
+
+## Weekly health check as a GitHub workflow
+
+The weekly check of the live site, the CDN libraries and the tests is `.github/workflows/health.yml`, not a Claude scheduled task.
+
+- **Why:** GitHub's runners can reach the live site and cdnjs and jsDelivr, which the Claude cloud sandbox cannot, so only a runner can actually test that the libraries still download and that the live site serves the current `sw.js`. GitHub also emails on a failed run without any extra setup, and a passing run stays quiet.
+- **Trade-off:** it only reports. A broken CDN URL or an unpublished update still needs someone to act on the email.

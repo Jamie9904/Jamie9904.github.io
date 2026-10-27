@@ -49,7 +49,7 @@ Then: fill in the delivery details → type `RUN000000001` into the LPN box → 
 | Storage | `localStorage` (keys prefixed `lpn`) |
 | Fonts | Atkinson Hyperlegible, IBM Plex Mono (self-hosted, SIL OFL) |
 | Hosting | GitHub Pages |
-| Checks | Node.js + Playwright, run by GitHub Actions |
+| Checks | Node.js + Playwright, run by GitHub Actions on every push and in a weekly health check |
 
 Libraries load from cdnjs with jsDelivr as fallback, only when a feature first needs them.
 
@@ -84,7 +84,8 @@ A single page (`index.html`) loads five classic scripts in a fixed order that sh
 ├── DESIGN.md           design system notes
 ├── tests/run.js        automatic checks
 ├── package.json        test dependencies only
-└── .github/workflows/test.yml
+├── .github/workflows/  test.yml (checks on every push), health.yml (weekly health check)
+└── .claude/            Claude Code hooks, agents and working notes
 ```
 
 See [docs/structure.md](docs/structure.md).

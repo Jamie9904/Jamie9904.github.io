@@ -27,15 +27,27 @@ Open `http://localhost:8000/`. `localhost` counts as a secure origin, so the ser
 
 ## Publishing an update
 
-1. Commit the changed files.
-2. If any app file changed, increase the cache name at the top of `sw.js`:
+1. If any app file changed, increase the cache name at the top of `sw.js`:
 
    ```js
-   const CACHE="lpn-log-v22";   // → "lpn-log-v23"
+   const CACHE="lpn-log-v23";   // → "lpn-log-v24"
    ```
 
    This installs a new service worker, which removes the old cache and triggers the "A new version is available" banner. If you add a new app file, also add it to the `SHELL` list in `sw.js`.
+2. Commit the changed files together with `sw.js`.
 3. Push. Pages publishes in about a minute; the **Checks** workflow runs the automatic tests at the same time.
+
+### Guards when working with Claude Code
+
+`.claude/settings.json` registers hooks that run when Claude Code edits files or runs git commands in this repository:
+
+- **Syntax check:** after a `.js` file is edited or written, `node --check` runs on it and a syntax error is reported straight away.
+- **Cache bump:** a `git commit` is blocked if any app file (`index.html`, `styles.css`, the five scripts, `manifest.webmanifest`, the icons or `fonts/`) changed but the `CACHE` line in `sw.js` did not.
+- **Docs stay off `main`:** a `git commit` on `main` is blocked if it would include files in `docs/`, and merging `docs` into `main` or pushing `docs` to `main` is blocked. The documentation is updated on the `docs` branch instead.
+- **Checks before push:** a `git push` runs `node tests/run.js` (the `npm test` checks) first and is blocked if any fail (see [testing.md](testing.md)). Pushes of only the `docs` branch skip this.
+- **Docs reminder:** at the end of a Claude Code turn, if `origin/main` has app changes that `origin/docs` does not, Claude is reminded once per `main` commit to update the docs branch.
+
+These hooks only run inside Claude Code. Commits and pushes made by hand or through the GitHub website are not checked by them, so the cache bump is still your responsibility there.
 
 Users tap **Refresh** on the banner. The log is kept, because it is stored on the device.
 

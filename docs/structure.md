@@ -18,15 +18,24 @@
 │   ├── AtkinsonHyperlegible-{Regular,Bold}.woff2
 │   ├── IBMPlexMono-{Regular,Medium,SemiBold}.woff2
 │   └── OFL-*.txt            font licences
-├── docs/                    this documentation
+├── docs/                    this documentation (docs branch only, not on main)
 ├── DESIGN.md                colours, type, spacing, components, export look
 ├── README.md
 ├── _config.yml              GitHub Pages (Jekyll) site settings
 ├── package.json             test dependency (Playwright) and `npm test`
 ├── tests/
 │   └── run.js               automatic checks
-└── .github/workflows/
-    └── test.yml             runs the checks on every push
+├── .github/workflows/
+│   ├── test.yml             runs the checks on every push and pull request
+│   └── health.yml           weekly health check of the live site, CDN libraries and checks
+└── .claude/                 Claude Code automations (development only)
+    ├── CLAUDE.md            working notes: branches, release steps, user decisions
+    ├── settings.json        registers the hooks below
+    ├── hooks/
+    │   ├── syntax-check.sh  `node --check` after a `.js` file is edited
+    │   ├── lpn_git_guard.py commit and push guard (cache bump, docs on main, tests before push)
+    │   └── docs_reminder.py reminds when the docs branch is behind main
+    └── agents/              export-reviewer, phone-layout-checker, docs-updater, release-reviewer
 ```
 
 ## What goes where
@@ -52,4 +61,8 @@
 
 ## Files the app does not use
 
-`tests/`, `package.json`, `.github/`, `docs/`, `DESIGN.md` and `README.md` are for development only. They are published by GitHub Pages but never loaded by the app or cached by `sw.js`.
+`tests/`, `package.json`, `.github/`, `.claude/`, `docs/`, `DESIGN.md` and `README.md` are for development only. None of them is loaded by the app or cached by `sw.js`.
+
+- `tests/`, `package.json`, `DESIGN.md` and `README.md` are on `main`, so GitHub Pages publishes them alongside the app.
+- `.github/` and `.claude/` are on `main` but not published: Jekyll, which GitHub Pages uses to build the site, leaves out files and folders whose names start with a dot.
+- `docs/`, and the version of `README.md` that goes with it, live only on the `docs` branch (`main` has its own `README.md`). Pages publishes from `main`, so they are not on the site. The git guard in `.claude/hooks/lpn_git_guard.py` blocks committing `docs/` files on `main` and merging or pushing `docs` into `main`.
