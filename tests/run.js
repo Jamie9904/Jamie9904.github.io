@@ -125,6 +125,15 @@ async function page(browser, width, opts = {}) {
   check("entry bar steps aside in the Manifest check", s.focus && s.top >= s.h - 5, s);
   await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(400);
   check("entry bar comes back above it", !(await p.evaluate(() => document.body.classList.contains("cmpfocus"))));
+  await p.focus("#lpn");
+  await p.evaluate(() => { document.getElementById("cmpCard").scrollIntoView({ block: "start" }); }); await p.waitForTimeout(300);
+  check("entry bar stays while typing into it", !(await p.evaluate(() => document.body.classList.contains("cmpfocus"))));
+  await p.evaluate(() => { document.activeElement.blur(); window.scrollTo(0, 0); }); await p.waitForTimeout(300);
+  s = await p.evaluate(() => { const sv = rows; rows = sv.concat([{ lpn: "RUNXYZ100000000000", type: "BB", fsdu: false }]); render(); const w = document.documentElement.scrollWidth - innerWidth; rows = sv; render(); return w; });
+  await p.setViewportSize({ width: 360, height: 740 });
+  s = await p.evaluate(() => { const sv = rows; rows = sv.concat([{ lpn: "RUNXYZ100000000000", type: "BB", fsdu: false }]); render(); const w = document.documentElement.scrollWidth - innerWidth; rows = sv; render(); return w; });
+  check("a very long LPN doesn't push the page sideways at 360px", s <= 0, s);
+  await p.setViewportSize({ width: 375, height: 900 });
   await p.click("#cmpToggle");
   await p.evaluate(() => openHelp("settings", "Settings"));
   check("logo can be changed from Settings", /logo/i.test(await p.textContent("#setLogo")));

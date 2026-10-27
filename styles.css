@@ -328,3 +328,8 @@ details.opts[open]{padding-bottom:10px}
   .card.entry,.card+.card.entry{transition:transform .2s ease}
   body.cmpfocus .card.entry{transform:translateY(105%)}
 }
+details.opts>summary{list-style:none}
+details.opts>summary::-webkit-details-marker{display:none}
+details.opts>summary::after{content:"";margin-left:auto;width:9px;height:9px;border-right:2.5px solid var(--ac);border-bottom:2.5px solid var(--ac);transform:rotate(45deg);transition:transform .15s;flex:none}
+details.opts[open]>summary::after{transform:rotate(-135deg)}
+@media (max-width:759px){td.l{white-space:normal;overflow-wrap:anywhere;word-break:break-all}}

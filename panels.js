@@ -32,6 +32,7 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <ul>
 <li><b>Add the manifest:</b> photos or PDFs of the manifest (several at once is fine), or type or paste the numbers. PDFs with selectable text are read exactly; photos and scans are read with text recognition, so check the numbers.</li>
 <li><b>Live tracking:</b> while manifest numbers are there, the Pallet log shows how many are found and which are still missing as you scan, and warns about pallets not on the manifest. Tap <b>Show missing</b> for the list, and <b>Use n as expected</b> to copy the manifest count into Expected pallets.</li>
+<li><b>On a phone</b>, the pallet entry bar slides out of the way while you work in the Manifest check, and comes back when you scroll up to the log.</li>
 <li><b>The log:</b> tap <b>Use current log</b>, pick a saved delivery, or upload an exported spreadsheet, a PDF or a photo of a printed log.</li>
 <li><b>Check results:</b> shows Missing (report it), On the log only (book it in) and Matched. Tap <b>Fix</b> to correct a misread number or ✕ to remove it.</li>
 <li><b>Export</b> gives the comparison as Excel, Email PDF or Print. ✓ Matched is on both, ✗ MISSING is on the manifest but not the log, ⚠ LOG ONLY is on the log but not the manifest.</li>
@@ -466,15 +467,21 @@ $("nextNew").onclick=()=>{$("nextBar").hidden=true;newDelivery()};
 
 (function(){
   let t=0;
+  const entry=document.querySelector(".card.entry");
   const upd=()=>{t=0;const open=!$("cmpBody").hidden,top=$("cmpCard").getBoundingClientRect().top;
-    document.body.classList.toggle("cmpfocus",open&&top<innerHeight*0.45)};
+    /* phones only, and never while someone is typing or scanning into the bar */
+    const hide=open&&top<innerHeight*0.45&&matchMedia("(max-width:759px)").matches&&!entry.contains(document.activeElement);
+    document.body.classList.toggle("cmpfocus",hide);entry.inert=hide;};
+  entry.addEventListener("focusin",()=>{if(!t)t=requestAnimationFrame(upd)});
   addEventListener("scroll",()=>{if(!t)t=requestAnimationFrame(upd)},{passive:true});
   addEventListener("resize",()=>{if(!t)t=requestAnimationFrame(upd)});
   $("cmpToggle").addEventListener("click",()=>setTimeout(upd,0));
   upd();
 })();
 /* show the chosen preset in the closed Prefix presets heading */
-(function(){
-  const s=()=>{const sel=$("cmpPreset"),v=($("cmpPfx").value||"").trim();$("pfxSum").textContent=v?"("+(sel&&sel.selectedOptions[0]&&sel.value?sel.selectedOptions[0].textContent:v)+")":"(all prefixes)"};
-  ["change","input"].forEach(ev=>{$("cmpPreset").addEventListener(ev,()=>setTimeout(s,0));$("cmpPfx").addEventListener(ev,s)});s();
-})();
+function pfxSummary(){
+  const sel=$("cmpPreset"),v=($("cmpPfx").value||"").trim();
+  const named=sel&&sel.value&&sel.value!=="__custom"&&sel.value!=="__all"&&sel.selectedOptions[0];
+  $("pfxSum").textContent="("+(!v?"all prefixes":named?named.textContent:v)+")";
+}
+["change","input"].forEach(ev=>{$("cmpPreset").addEventListener(ev,()=>setTimeout(pfxSummary,0));$("cmpPfx").addEventListener(ev,pfxSummary)});pfxSummary();

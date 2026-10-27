@@ -431,9 +431,10 @@ function fillPresets(){
 }
 function syncSelect(){
   const cur=normList($("cmpPfx").value),p=presets();
-  if(!cur){$("cmpPreset").value="__all";return}
+  if(!cur){$("cmpPreset").value="__all";if(typeof pfxSummary==="function")pfxSummary();return}
   const hit=Object.keys(p).find(n=>normList(p[n])===cur);
   $("cmpPreset").value=hit||"__custom";
+  if(typeof pfxSummary==="function")pfxSummary();
 }
 function applyPreset(){
   const n=$("cmpPreset").value,p=presets();
