@@ -21,7 +21,7 @@ A client-only progressive web app. There is no backend: the browser renders the 
 | `scan.js` | Live camera scanning and photo decoding; screen wake lock while scanning; input event wiring | `startScan`, `stopScan`, `decodePhoto`, `onCode` |
 | `export.js` | Spreadsheet styling helpers, Excel log, PDF log and manifest PDF, print, file delivery (download / share sheet / mailto fallback), logo handling, expected-count check | `xlBox`, `xlTitle`, `xlPrint`, `buildLogPdf`, `buildCmpPdf`, `deliver`, `emailVia`, `expectCheck`, `exportLogo` |
 | `compare.js` | Manifest check: reading logs and manifests (xlsx, csv, PDF, photos), OCR, prefix presets, comparison, results panel, manifest Excel, live tracking in the log | `readLog`, `readPdf`, `ocrLpns`, `extractLpns`, `cmpData`, `renderCmp`, `manState`, `manLive` |
-| `panels.js` | Guide/changelog content, side panel, theming, Settings, saved deliveries (history), import of exported logs, backups, install pop-up, date reminder, remembered names, offline notice, service worker registration | `applyTheme`, `initSettings`, `newDelivery`, `openHist`, `parseExported`, `backupNow`, `checkDate` |
+| `panels.js` | Guide/changelog content, side panel, theming, Settings (including the Logo buttons), saved deliveries (history), import of exported logs, backups, install pop-up, date reminder, remembered names, offline notice, service worker registration, prefix preset summary, entry bar stepping aside on phones | `applyTheme`, `initSettings`, `newDelivery`, `openHist`, `parseExported`, `backupNow`, `checkDate`, `pfxSummary` |
 | `sw.js` | Offline shell and library cache | install / activate / fetch handlers |
 
 Scripts are loaded in that order at the end of `index.html`. Later files call functions from earlier ones directly; where an earlier file needs something defined later (for example `summary()` in `core.js` calling `manLive()` from `compare.js`), it checks `typeof fn === "function"` first.
@@ -40,6 +40,9 @@ Dates are stored as ISO `yyyy-mm-dd` and only formatted for display (`ukDate()` 
 **Adding a pallet**
 `Enter`/Add → `tryAdd()` runs `lpnIssues()` (duplicate, format, prefix list, digit count) → either the warning bar (Skip / Add anyway) or `addValue()` → `rows.push()` → `save()` → `render()` → `summary()` (totals, expected count, live manifest progress, entry-bar counter) → confirmation toast.
 
+**Expected-count line**
+`summary()` fills `#expInfo` from Expected pallets (`#expect`). If a manifest is loaded and `manState().total` equals the expected number, the line is hidden (the manifest progress line already says the same). Otherwise its class is `expinfo prog` while under the expected count (normal text colour, "(n to go)"), `expinfo ok` when equal (green, "✓ all accounted for") and `expinfo bad` when over (red, "(n more than expected)").
+
 **Undo last pallet**
 `#undoLast` pops the newest row and offers Undo through `showUndo()`. Its visibility is set in `summary()`; CSS shows it on phones only.
 
@@ -55,8 +58,30 @@ Dates are stored as ISO `yyyy-mm-dd` and only formatted for display (`ukDate()` 
 **Manifest check**
 Numbers come from `readPdf()` (text via pdf.js, scanned pages via OCR), `ocrLpns()` (Tesseract with image clean-up and close-up re-reads) or typing. `extractLpns()` matches `prefix + 8–12 characters`, then repairs look-alike characters in the number part (O/D→0, I/L→1, S→5, B→8, Z→2). `cmpData()` normalises both lists and classifies each LPN as matched, missing or log only.
 
+The prefix preset controls (`#cmpPreset`, `#cmpPfx`, preset save/delete/download buttons) sit inside a closed `<details id="pfxBox">` below the two steps (`.cmpsteps`). `pfxSummary()` in `panels.js` writes the current choice into `#pfxSum` in the summary line: "(all prefixes)" when the list is empty, the preset name when the list matches a named preset, otherwise the typed list. It runs on `change`/`input` of both fields and from `syncSelect()` in `compare.js` (guarded with `typeof pfxSummary === "function"`, since `panels.js` loads later).
+
+**Logo**
+`export.js` owns the logo (`loadLogo()`, `showLogo()`, `lpnlogo` in `localStorage`). The original controls (`#logoBtn`, `#logoRm`, `#logoFile`) are still in `index.html` inside the Delivery card, but in a `div.row.dc-logo` with the `hidden` attribute, so they are never shown. The visible buttons are `#setLogo` and `#setLogoRm` in the Settings panel (`HELP.settings`, Logo section). `initSettings()` forwards their clicks to `#logoBtn` / `#logoRm` and calls `showLogo()`, which copies the label and visibility of the hidden buttons onto the Settings ones whenever they exist.
+
 **Reading back exports**
 `parseExported()` (import) and `readLog()` (manifest check) find the cell `LPN` in any sheet and read rows below it, and read labelled cells (Date, Received by, Trailer number…) from the side table. App-made PDFs embed the whole log as JSON in the PDF keywords (`LPNLOG2:` prefix), so they import exactly without OCR.
+
+## Phone layout notes
+
+The phone breakpoint is `max-width:759px` in `styles.css`.
+
+- **Pallet table:** `.wrap` normally has its own scroll area (`max-height:60vh; overflow-y:auto`). On phones it is set to `max-height:none; overflow:visible`, so the table scrolls with the page. The `th` cells are `position:sticky; top:0`, and with no scrolling ancestor they stick to the top of the viewport. LPN cells (`td.l`) wrap with `overflow-wrap:anywhere; word-break:break-all`, so a long LPN cannot push the page sideways.
+- **Touch targets:** header buttons (`#side button`) are at least 44px tall on phones; `#cmpToggle`, `#manShow` and the Prefix presets summary are at least 44px at every width; the FSDU tick boxes (`#fsdu` and the table's checkboxes) are 32px.
+
+**Entry bar stepping aside (`cmpfocus`)**
+An IIFE at the end of `panels.js` runs `upd()` (throttled with `requestAnimationFrame`) on window `scroll` and `resize`, on `focusin` inside the entry bar (`.card.entry`), after a click on `#cmpToggle`, and once at load. It hides the bar when all of these are true:
+
+1. the Manifest check body (`#cmpBody`) is open;
+2. the top of `#cmpCard` is above 45% of the window height (`innerHeight * 0.45`);
+3. the screen matches `(max-width:759px)`;
+4. focus is not inside the entry bar.
+
+Hiding toggles `body.cmpfocus`, which slides the bar down with `transform: translateY(105%)` (0.2s transition), and sets `entry.inert`, so its fields and buttons cannot be focused or tapped while off screen. When any condition stops holding, the class and `inert` are removed and the bar slides back.
 
 ## Offline and updates
 

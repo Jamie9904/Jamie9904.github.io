@@ -53,7 +53,7 @@ Users tap **Refresh** on the banner. The log is kept, because it is stored on th
 
 ## Optional files
 
-- `logo.png`: used as the default logo in the header and on exports. Users can override it per device in the app.
+- `logo.png`: used as the default logo in the header and on exports. Users can override it per device in **Settings → Logo**.
 - `presets.json`: named lists of LPN prefixes for the manifest check, for example:
 
   ```json

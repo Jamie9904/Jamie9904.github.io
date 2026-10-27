@@ -23,6 +23,7 @@
 ├── README.md
 ├── _config.yml              GitHub Pages (Jekyll) site settings
 ├── package.json             test dependency (Playwright) and `npm test`
+├── .gitignore               keeps `__pycache__/`, `*.pyc` and `node_modules/` out of git
 ├── tests/
 │   └── run.js               automatic checks
 ├── .github/workflows/
@@ -61,7 +62,7 @@
 
 ## Files the app does not use
 
-`tests/`, `package.json`, `.github/`, `.claude/`, `docs/`, `DESIGN.md` and `README.md` are for development only. None of them is loaded by the app or cached by `sw.js`.
+`tests/`, `package.json`, `.gitignore`, `.github/`, `.claude/`, `docs/`, `DESIGN.md` and `README.md` are for development only. None of them is loaded by the app or cached by `sw.js`.
 
 - `tests/`, `package.json`, `DESIGN.md` and `README.md` are on `main`, so GitHub Pages publishes them alongside the app.
 - `.github/` and `.claude/` are on `main` but not published: Jekyll, which GitHub Pages uses to build the site, leaves out files and folders whose names start with a dot.

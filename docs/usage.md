@@ -23,6 +23,9 @@ The in-app **Guide** covers the same ground for staff. This page is the referenc
 - The ↶ button next to the entry-bar counter (phones only) removes the most recent pallet, with Undo.
 - Tap an LPN to edit it; change type or FSDU in the table; ✕ removes it. Undo appears after removing, editing or Clear all.
 - Search and the type and FSDU filters only change what is shown; totals always cover the whole log. FSDUs are counted separately and are not part of the total.
+- With Expected pallets set, the line under the totals reads "n of x expected" with "(n to go)" in the normal text colour while counting, turns green with "✓ all accounted for" when the count matches, and turns red with "(n more than expected)" only when there are more pallets than expected. When a manifest is loaded and Expected pallets equals the manifest count, this line is hidden, because the manifest progress line already shows the same count.
+- On phones (under 760px wide) the pallet table has no scroll box of its own: it scrolls with the page, and the column headings stay pinned at the top of the screen while you scroll through it. Long LPNs wrap onto a second line instead of pushing the page sideways. On wider screens the table keeps its own scroll area (up to 60% of the screen height).
+- The FSDU tick box in the entry bar and the FSDU tick boxes in the table are 32px; the Guide, Changelog and Settings buttons in the header are at least 44px tall on phones.
 
 ## Scanning
 
@@ -36,10 +39,15 @@ The in-app **Guide** covers the same ground for staff. This page is the referenc
 
 ## Manifest check
 
+The section opens (tap **Manifest check**) on **Manifest date**, then the two steps side by side: **1. LPN log** and **2. Manifest photos or PDFs**. Below them is the closed **Prefix presets** section; its heading shows the current choice in brackets, for example "(all prefixes)", the preset name, or the typed prefix list. The **Manifest check** heading button and **Show missing** are at least 44px tall.
+
+On phones, while the Manifest check is open and its top is in the upper part of the screen (above 45% of the screen height), the pallet entry bar slides down out of view so it does not cover the section. It slides back when you scroll up towards the log, and it never slides away while you are typing or scanning into it.
+
 - **Manifest sources:** photos (OCR), PDFs (text read exactly, scanned pages by OCR, several at once), or typed/pasted numbers.
 - **Log sources:** Use current log, a saved delivery, an exported `.xlsx`/`.csv`/`.xls`, an app-made PDF (read exactly), another PDF, or a photo of a printed log.
 - **Use n as expected:** while a manifest is loaded and Expected pallets is empty, the progress line offers to copy the manifest count into Expected pallets.
-- **Prefix presets** limit which numbers OCR picks up. Leave the list empty for any 1–3 letter prefix. Presets come from `presets.json` and from presets saved on the device.
+- **Prefix presets** (tap the heading to open) limit which numbers OCR picks up. Leave the list empty for any 1–3 letter prefix. Presets come from `presets.json` and from presets saved on the device.
+- A note under the manifest numbers box reminds you that numbers read from photos can be misread, so check them first. (This replaced the earlier "still being tested" warning at the top of the section.)
 - **Check results** lists Missing (on the manifest, not logged: report), Log only (logged, not on the manifest: book in) and Matched. **Fix** corrects a misread number, ✕ removes it.
 - **Export** gives the comparison as Excel (`Manifest-check-<date>.xlsx`), Email PDF or Print. With "Include a copy of the log" on, an uploaded `.xlsx` log gets the comparison as a new tab, and PDFs get the log appended.
 
@@ -64,7 +72,9 @@ After a log export (Excel, Email PDF or Print) the log shows "Exported at hh:mm"
 
 ## Settings
 
-Colours (two colours drive the whole theme, with a contrast warning), quick themes, default pallet type, keep last type, warnings, sound, vibration, confirm scans, text size, date format (dd/mm/yyyy, mm/dd/yyyy, yyyy-mm-dd), include log copy in comparisons, forget remembered names, backup and restore, install pop-up.
+Colours (two colours drive the whole theme, with a contrast warning), quick themes, logo, default pallet type, keep last type, warnings, sound, vibration, confirm scans, text size, date format (dd/mm/yyyy, mm/dd/yyyy, yyyy-mm-dd), include log copy in comparisons, forget remembered names, backup and restore, install pop-up.
+
+**Logo** (under the colours): **Add logo** / **Change logo** picks an image that is kept on this device and used in the header and on exports. `logo.png` next to the app is the default; when a custom logo is set, **Reset to default logo** (or **Remove logo** if there is no default) appears. The logo controls are no longer in the Delivery card.
 
 ## Common problems
 
@@ -76,4 +86,7 @@ Colours (two colours drive the whole theme, with a contrast warning), quick them
 | Changes don't appear after an update | Tap **Refresh** on the update banner, or close and reopen the app. |
 | Spreadsheet looks cut off on a phone | Mobile viewers open sheets zoomed in; pinch out. Desktop and print are unaffected. |
 | Data missing on another phone | Data is per device. Use Back up now, then Restore backup on the other device. |
+| Can't find the logo button | It is in **Settings → Logo**, not in Delivery. |
+| Entry bar disappeared on a phone | The Manifest check is open and scrolled into view. Scroll up towards the log and the bar comes back. |
+| Prefix preset list not visible | It is in the closed **Prefix presets** section below the two steps; tap its heading. |
 | Numbers from photos are wrong | OCR can misread letters. Check and Fix them before comparing; set a prefix preset to reduce noise. |

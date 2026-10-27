@@ -28,13 +28,14 @@ If any step fails, GitHub sends its standard failed-workflow email (for schedule
 
 ## What is covered
 
-End-to-end checks in headless Chromium against the real page:
+End-to-end checks in headless Chromium against the real page (63 checks at the time of writing):
 
 | Group | Checks |
 |---|---|
 | Layout (375, 768, 1300px) | No sideways scrolling, Date and Received by aligned, usable field widths, no script errors |
 | Logging on a phone | Add flow, confirmation toast, entry-bar counter, Delivery folding, trailer/seal persistence, duplicate warning and Skip |
 | Live manifest tracking | Progress text, "not on manifest" warning |
+| Phone usability | Pallet table scrolls with the page (`.wrap` overflow is `visible`); logo controls hidden in Delivery; Manifest check has no "still being tested" warning and Prefix presets starts closed; expected-count line is `prog` when under, `bad` when over and hidden when Expected pallets equals the manifest count; entry bar gets `cmpfocus` and moves below the screen when the Manifest check is scrolled to the top, comes back at the top of the page, and stays while `#lpn` has focus; an 18-character LPN causes no sideways scrolling at 360px; `#setLogo` is in Settings; `#cmpToggle` and `#manShow` are at least 44px tall |
 | Quick actions | Undo-last button and its Undo, "Use n as expected", entry bar fits at 375px and at 360px with a long counter |
 | Saved deliveries | Start new delivery warns when not exported, then saves and clears (including manifest), Undo restores, backup note |
 | Settings and dates | Date format setting, importing an exported CSV (date, trailer, seals, FSDU), Guide contents bar |
