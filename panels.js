@@ -17,7 +17,7 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <li>Tick <b>FSDU</b> if the pallet has one. It clears after each pallet.</li>
 <li>Scan or type the LPN and press <b>Add</b> (or Enter).</li>
 </ol>
-<p>A short “Added” message confirms each pallet, and the bar at the bottom of a phone shows how many are logged. If an LPN is already in the log or doesn’t look right, you get a warning with <b>Skip</b> or <b>Add anyway</b>. The warnings can be switched off in Settings.</p>
+<p>A short “Added” message confirms each pallet, and the bar at the bottom of a phone shows how many are logged. The ↶ button next to the count removes the last pallet (with Undo). If an LPN is already in the log or doesn’t look right, you get a warning with <b>Skip</b> or <b>Add anyway</b>. The warnings can be switched off in Settings.</p>
 <p><b>Changing the log:</b> tap an LPN to correct it, change its type or FSDU in the table, or remove it with ✕. An <b>Undo</b> bar appears after removing, editing or Clear all. Search and the type and FSDU filters help find pallets; the totals always cover the whole log, and FSDUs are counted separately from the total.</p>
 <h3>4. Scanning barcodes</h3>
 <p>On phones, tap <b>Scan</b> next to Add to show the scan options.</p>
@@ -31,7 +31,7 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <p>Tap the <b>Manifest check</b> heading to open it.</p>
 <ul>
 <li><b>Add the manifest:</b> photos or PDFs of the manifest (several at once is fine), or type or paste the numbers. PDFs with selectable text are read exactly; photos and scans are read with text recognition, so check the numbers.</li>
-<li><b>Live tracking:</b> while manifest numbers are there, the Pallet log shows how many are found and which are still missing as you scan, and warns about pallets not on the manifest. Tap <b>Show missing</b> for the list.</li>
+<li><b>Live tracking:</b> while manifest numbers are there, the Pallet log shows how many are found and which are still missing as you scan, and warns about pallets not on the manifest. Tap <b>Show missing</b> for the list, and <b>Use n as expected</b> to copy the manifest count into Expected pallets.</li>
 <li><b>The log:</b> tap <b>Use current log</b>, pick a saved delivery, or upload an exported spreadsheet, a PDF or a photo of a printed log.</li>
 <li><b>Check results:</b> shows Missing (report it), On the log only (book it in) and Matched. Tap <b>Fix</b> to correct a misread number or ✕ to remove it.</li>
 <li><b>Export</b> gives the comparison as Excel, Email PDF or Print. ✓ Matched is on both, ✗ MISSING is on the manifest but not the log, ⚠ LOG ONLY is on the log but not the manifest.</li>
@@ -42,7 +42,7 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <p>The spreadsheet and PDF have your logo, a title with the delivery details, the numbered pallet list, the totals by type (FSDUs listed separately), and the Delivery Details. They fit A4 portrait with page numbers. BB is shown as “Brown Box”.</p>
 <p><b>Email PDF</b> opens your phone’s share sheet with a PDF attached, as phones can’t share Excel files that way. If it says the file is ready, tap <b>Tap to share</b>. If sharing isn’t possible, the file is saved for you to attach yourself.</p>
 <h3>7. Saved deliveries and backups</h3>
-<p><b>Start new delivery</b> saves the log and clears the page (with Undo). <b>Saved deliveries</b> lists this week and last week (weeks start on Sunday): open one, export or email it directly, delete it, or import an exported spreadsheet or app-made PDF.</p>
+<p>After an export the log shows when it was exported and offers to start a new delivery. <b>Start new delivery</b> saves the log and clears the page (with Undo); if the delivery hasn’t been exported since its last change it asks you to export first, and pressing it again goes ahead anyway. <b>Saved deliveries</b> lists this week and last week (weeks start on Sunday): open one, export or email it directly, delete it, or import an exported spreadsheet or app-made PDF.</p>
 <p>Everything is stored on this device only. The Saved deliveries list shows when you last backed up; use <b>Back up now</b> there, or Settings, to download a backup, and <b>Restore backup</b> in Settings to bring it back.</p>
 <h3>8. Install it on your phone</h3>
 <ul>
@@ -57,7 +57,7 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <li>LPNs are a letter prefix followed by digits, for example RUN000000000.</li>
 <li>Always check numbers read from photos before relying on them.</li>
 </ul>`,log:`<h3>v3.30 <span class="ver">Current</span></h3>
-<ul><li>Trailer number, Seal in and Seal out in Delivery, shown on exports and saved deliveries.</li><li>Live manifest tracking: add the manifest numbers first and the Pallet log counts them off as you scan, shows which are still missing and warns about pallets not on the manifest.</li><li>Phone layout: a pallet counter on the entry bar, an “Added” confirmation after each pallet, Delivery folds into one line once you start logging, neater top buttons and a clearer ✕ on each row.</li><li>Smaller tweaks: a reminder when the log is dated before today, tap-to-fill “Received by” names, a check when the total differs from the expected pallets, an FSDU filter, Excel and Email PDF buttons on saved deliveries, a last-backed-up note, and an offline notice.</li><li>Exports: a title band, numbered rows, clearer grid lines, page numbers, gridlines hidden on screen, roomier headers, the logo kept in proportion and much smaller PDFs. The manifest check has the same Export menu as the log.</li><li>Date format setting (dd/mm/yyyy by default), used in exports, lists and the date box.</li><li>Fonts are now part of the app, updates show up straight away, and the tablet layout and field alignment are fixed.</li></ul>
+<ul><li>Undo last pallet button on the phone entry bar, “Use n as expected” from the manifest count, an “Exported at” note with a warning before starting a new delivery that hasn’t been exported, and a “Start a new delivery?” prompt after exporting.</li><li>Trailer number, Seal in and Seal out in Delivery, shown on exports and saved deliveries.</li><li>Live manifest tracking: add the manifest numbers first and the Pallet log counts them off as you scan, shows which are still missing and warns about pallets not on the manifest.</li><li>Phone layout: a pallet counter on the entry bar, an “Added” confirmation after each pallet, Delivery folds into one line once you start logging, neater top buttons and a clearer ✕ on each row.</li><li>Smaller tweaks: a reminder when the log is dated before today, tap-to-fill “Received by” names, a check when the total differs from the expected pallets, an FSDU filter, Excel and Email PDF buttons on saved deliveries, a last-backed-up note, and an offline notice.</li><li>Exports: a title band, numbered rows, clearer grid lines, page numbers, gridlines hidden on screen, roomier headers, the logo kept in proportion and much smaller PDFs. The manifest check has the same Export menu as the log.</li><li>Date format setting (dd/mm/yyyy by default), used in exports, lists and the date box.</li><li>Fonts are now part of the app, updates show up straight away, and the tablet layout and field alignment are fixed.</li></ul>
 <h3>v3.20</h3>
 <ul><li>Start new delivery, Saved deliveries (this week and last week) and importing an exported log.</li><li>Warnings for duplicate or unusual LPNs, Undo for removed pallets and Clear all, and tap an LPN to edit it.</li><li>Pallet type buttons, expected pallets, delivery notes, search and filter, and an Export menu with Print.</li><li>Manifest check: use the current log or a saved delivery, a Check results panel, and Fix or remove for misread numbers.</li><li>Settings: default and keep-last type, warnings, sound, vibration, confirm each scan, text size, colour contrast warning, backup and restore, and the install pop-up.</li><li>Works offline after the first use, shows an “update available” banner, a two-column layout on wide screens, line icons, and accessibility fixes.</li></ul>
 <h3>v3.0</h3>
@@ -158,12 +158,19 @@ function pruneHist(){const k=keepFrom(),n=hist.length;hist=hist.filter(h=>{let d
 pruneHist();
 function pushHist(entry){const id=String(Date.now())+Math.floor(Math.random()*1e4);hist.unshift(Object.assign({id:id},entry));pruneHist();hist=hist.slice(0,50);saveHist();return id}
 const todayStr=localToday;
+let newAck="";
 function newDelivery(){
   if(!rows.length){$("dlmsg").textContent="The log is empty, so there is nothing to save.";return}
+  if(!(exported&&exported.sig===logSig())&&newAck!==logSig()){
+    newAck=logSig();
+    $("dlmsg").textContent=(exported?"This delivery has changed since it was exported.":"This delivery hasn’t been exported or emailed yet.")+" Export it first, or press Start new delivery again to save it and start a new one anyway.";
+    return;
+  }
+  newAck="";$("nextBar").hidden=true;
   const prev=Object.assign({rows:rows.slice(),man:$("cmpNums").value},getDel());
   pushHist(Object.assign({saved:new Date().toISOString()},getDel(),{rows:prev.rows}));
   const id=hist[0].id;
-  rows=[];setDel({recv:prev.recv,date:todayStr()});$("cmpNums").value="";$("type").value=cfg.defType;$("type").dataset.t=cfg.defType;
+  rows=[];setDel({recv:prev.recv,date:todayStr()});exported=null;$("cmpNums").value="";$("type").value=cfg.defType;$("type").dataset.t=cfg.defType;
   save();render();
   $("dlmsg").textContent="Saved to history and started a new delivery.";
   showUndo("Saved to history. Started a new delivery.",()=>{hist=hist.filter(h=>h.id!==id);saveHist();rows=prev.rows;setDel(prev);$("cmpNums").value=prev.man||"";save();render();$("dlmsg").textContent=""});
@@ -227,9 +234,11 @@ async function histExport(h,mail){
   msg.textContent="Preparing…";$("dlmsg").textContent="";
   rows=h.rows.map(r=>Object.assign({},r));setDel(h);
   const e=parseInt($("expect").value,10);expAck=isNaN(e)?"":e+":"+rows.length;
+  window.__histExporting=true;
   try{
     if(mail)await emailVia($("dl").onclick,"histMsg");else await $("dl").onclick();
   }finally{
+    window.__histExporting=false;
     rows=sv.rows;setDel(sv);
   }
   const t=$("dlmsg").textContent;$("dlmsg").textContent="";
@@ -449,3 +458,4 @@ window.addEventListener("offline",()=>{$("offBar").hidden=false});
 $("offBar").hidden=navigator.onLine!==false;
 
 delCollapsed=!!(rows.length&&($("recv").value||"").trim());updateDel();
+$("nextNew").onclick=()=>{$("nextBar").hidden=true;newDelivery()};
