@@ -62,6 +62,12 @@ Tesseract reads photos, then `extractLpns()` only accepts `prefix + 8–12 chara
 
 - **Why:** mobile browsers only allow some file types to be shared from a web page, and `.xlsx` is often refused. When sharing fails the file is saved and a `mailto:` opened so the user can attach it.
 
+## Soft reminders instead of blocking dialogs
+
+The expected-count check and the "not exported yet" check on Start new delivery show a message and let a second press go ahead, rather than using `confirm()` or disabling the button.
+
+- **Why:** a native dialog can use up the tap that the share sheet needs (Email PDF), and on the loading bay there are legitimate reasons to continue (a short delivery, a log sent another way). Remembering the acknowledgement per log state (`expAck`, `newAck`) means a changed log asks again.
+
 ## Live manifest tracking from the same data
 
 Live tracking reads the manifest box in the Manifest check section rather than a separate list.

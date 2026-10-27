@@ -21,9 +21,10 @@ End-to-end checks in headless Chromium against the real page:
 | Layout (375, 768, 1300px) | No sideways scrolling, Date and Received by aligned, usable field widths, no script errors |
 | Logging on a phone | Add flow, confirmation toast, entry-bar counter, Delivery folding, trailer/seal persistence, duplicate warning and Skip |
 | Live manifest tracking | Progress text, "not on manifest" warning |
-| Saved deliveries | Start new delivery saves and clears (including manifest), Undo restores, backup note |
+| Quick actions | Undo-last button and its Undo, "Use n as expected", entry bar fits at 375px and at 360px with a long counter |
+| Saved deliveries | Start new delivery warns when not exported, then saves and clears (including manifest), Undo restores, backup note |
 | Settings and dates | Date format setting, importing an exported CSV (date, trailer, seals, FSDU), Guide contents bar |
-| Excel export | Expected-count check blocks the first try; title band and logo placement; header, row borders, Courier New LPNs, footer, fit-to-width and repeated header; trailer in Delivery Details |
+| Excel export | Expected-count check blocks the first try; "Exported at" note and new-delivery prompt; title band and logo placement; header, row borders, Courier New LPNs, footer, fit-to-width and repeated header; trailer in Delivery Details |
 | Offline | Service worker caches the app; reload works offline |
 
 ## Strategy

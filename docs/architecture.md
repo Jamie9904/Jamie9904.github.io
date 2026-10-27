@@ -28,7 +28,7 @@ Scripts are loaded in that order at the end of `index.html`. Later files call fu
 
 ## Data model
 
-- **Current log** (`lpnlog`): `{rows:[{lpn,type,fsdu}], date, recv, notes, expect, trailer, sealIn, sealOut}`. Written by `save()` after every change.
+- **Current log** (`lpnlog`): `{rows:[{lpn,type,fsdu}], date, recv, notes, expect, trailer, sealIn, sealOut, exp}`. Written by `save()` after every change. `exp` is `{at, sig}`: when the log was last exported and a hash of its rows (`logSig()`) at that moment, so a later change can be detected.
 - **Saved deliveries** (`lpnhist`): array of the same shape plus `id` and `saved` timestamp. `pruneHist()` keeps only entries dated from the start of last week (weeks start on Sunday); `pushHist()` also caps the list at 50.
 - **Manifest numbers** (`lpncmpman`): the raw text of the manifest box, so live tracking survives a reload.
 - **Settings and preferences**: `lpncfg`, `lpntheme`, `lpnlogo`, `lpnnames`, `lpnpresets`, `lpncmppfx`, `lpncmpdate`, `lpnmergelog`, `lpnbackup`, `lpninstallshown`.
@@ -40,11 +40,17 @@ Dates are stored as ISO `yyyy-mm-dd` and only formatted for display (`ukDate()` 
 **Adding a pallet**
 `Enter`/Add → `tryAdd()` runs `lpnIssues()` (duplicate, format, prefix list, digit count) → either the warning bar (Skip / Add anyway) or `addValue()` → `rows.push()` → `save()` → `render()` → `summary()` (totals, expected count, live manifest progress, entry-bar counter) → confirmation toast.
 
+**Undo last pallet**
+`#undoLast` pops the newest row and offers Undo through `showUndo()`. Its visibility is set in `summary()`; CSS shows it on phones only.
+
 **Excel export**
-`$("dl").onclick` → `expectCheck()` (first attempt blocked if the expected count differs) → `loadScript()` ExcelJS → build sheet: logo rows, `xlTitle()` band, numbered table and side tables with `xlBox()` borders → `xlPrint()` (A4, fit to width, repeated header row, footer) → `deliver()`. If ExcelJS cannot load, `fallbackXls()` writes an HTML-based `.xls`.
+`$("dl").onclick` → `expectCheck()` (first attempt blocked if the expected count differs) → `loadScript()` ExcelJS → build sheet: logo rows, `xlTitle()` band, numbered table and side tables with `xlBox()` borders → `xlPrint()` (A4, fit to width, repeated header row, footer) → `deliver()` → `markExported()` (skipped when exporting a saved delivery). `deliver()` returns `false` when the user cancels the share sheet, so a cancelled email is not counted as an export. If ExcelJS cannot load, `fallbackXls()` writes an HTML-based `.xls`.
 
 **Email PDF**
 `emailVia()` sets email mode and runs the Excel handler; `deliver()` swaps the spreadsheet for the PDF built by `pdfJob` and calls `navigator.share({files})`. If sharing is refused because the user gesture expired, a "Tap to share" button is offered; otherwise the file is saved and a `mailto:` opened.
+
+**Starting a new delivery**
+`newDelivery()` compares `exported.sig` with `logSig()`. If the log was never exported or has changed since, the first call only shows a reminder (remembered in `newAck`); a second call, or starting from the post-export prompt, saves to history, clears the delivery fields and manifest numbers and resets `exported`.
 
 **Manifest check**
 Numbers come from `readPdf()` (text via pdf.js, scanned pages via OCR), `ocrLpns()` (Tesseract with image clean-up and close-up re-reads) or typing. `extractLpns()` matches `prefix + 8–12 characters`, then repairs look-alike characters in the number part (O/D→0, I/L→1, S→5, B→8, Z→2). `cmpData()` normalises both lists and classifies each LPN as matched, missing or log only.

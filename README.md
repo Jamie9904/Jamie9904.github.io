@@ -20,7 +20,8 @@ It also checks a delivery against the supplier's manifest. Manifest numbers can 
 
 - Runs entirely in the browser: no server, no accounts. Data stays on the device.
 - Installable on Android and iPhone as a home-screen app, and works offline after the first visit.
-- Built for a phone in one hand on a loading bay: big touch targets, a docked entry bar, sound and vibration feedback.
+- Built for a phone in one hand on a loading bay: big touch targets, a docked entry bar with a counter and undo-last button, sound and vibration feedback.
+- Guards against common slips: duplicate and malformed LPN warnings, an expected-count check, and a reminder before starting a new delivery that hasn't been exported.
 
 ## Quick start
 
