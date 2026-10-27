@@ -225,7 +225,7 @@ async function deliver(buf,name,mime){
   if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
     try{await navigator.share(data);return}
     catch(e){
-      if(e&&e.name==="AbortError")return;
+      if(e&&e.name==="AbortError")return false;
       if(e&&e.name==="NotAllowedError"&&!(navigator.userActivation&&navigator.userActivation.isActive)){pendingShare={data,buf,name,mime};return}
       reason=(e&&e.name==="NotAllowedError")?"the browser blocked sharing it from a web app (NotAllowedError). Chrome only allows some file types to be shared this way, and Excel files may not be one of them":"sharing failed ("+((e&&e.name)||"error")+")";
     }
@@ -281,7 +281,7 @@ $("dl").onclick=async()=>{
     try{await loadScript("https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js",hasX)}
     catch(e1){try{await loadScript("https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js",hasX)}catch(e2){ok=false}}
     if(!ok){
-      await fallbackXls(d);
+      await fallbackXls(d);markExported();
       m.textContent="The full spreadsheet builder couldn't load (no internet or it's blocked), so a basic Excel file (.xls) was saved instead. Excel may warn about the format when opening: click Yes.";
       return;
     }
@@ -332,8 +332,9 @@ $("dl").onclick=async()=>{
     xlPrint(ws,H);
     const buf=await wb.xlsx.writeBuffer();
     pdfJob=()=>buildLogPdf(d);
-    await deliver(buf,"LPN-log-"+d+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    const done=await deliver(buf,"LPN-log-"+d+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     m.textContent="";
+    if(done!==false)markExported();
   }catch(e){
     m.textContent="Couldn't create the spreadsheet: "+((e&&e.message)||"unknown error")+". Please try again or tell me this message.";
   }

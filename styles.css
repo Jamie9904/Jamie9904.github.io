@@ -297,3 +297,20 @@ button.tgl .chev .chv{margin:0;width:18px;height:18px}
 .bkinfo .old{color:var(--wn);font-weight:700}
 .bkinfo button{min-height:40px;padding:4px 12px}
 .dc-exp input{min-height:50px}
+
+/* undo last pallet, export note */
+.undolast{display:none}
+@media (max-width:759px){
+  .undolast:not([hidden]){display:inline-grid;place-items:center;min-width:44px;min-height:44px;padding:0;margin-left:4px;background:transparent}
+  .undolast svg{width:22px;height:22px}
+  .dockcnt{overflow:hidden;text-overflow:ellipsis}
+}
+.expnote{margin:6px 0 0}
+.expnote.stale{color:var(--wn);font-weight:700}
+#nextBar{margin-top:10px;flex-wrap:wrap}
+#manUseExp{min-height:40px;padding:4px 12px}
+@media (max-width:759px){
+  .addgrid{grid-template-columns:minmax(0,1fr) auto}
+  .addgrid>div:nth-child(2){min-width:0}
+  .dockcnt{min-width:0;flex:0 1 auto;white-space:nowrap}
+}

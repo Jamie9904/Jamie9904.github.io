@@ -511,6 +511,7 @@ $("prn").onclick=async()=>{
   try{
     m.textContent="Preparing the print copy…";
     await printBuf(await buildLogPdf(d),"LPN-log-"+d+".pdf",m);
+    markExported();
   }catch(e){m.textContent="Couldn’t prepare the print copy: "+((e&&e.message)||"unknown error")}
 };
 $("cmpExpBtn").onclick=()=>{const m=$("cmpExpMenu");m.hidden=!m.hidden;$("cmpExpBtn").setAttribute("aria-expanded",!m.hidden)};
@@ -549,6 +550,8 @@ function manLive(){
   box.className="manlive "+(s.missing.length||s.extra?"bad":"ok");
   $("manTxt").textContent="Manifest: "+s.found+" of "+s.total+" found"+(s.missing.length?" · "+s.missing.length+" still to find":" ✓ all found")+(s.extra?" · "+s.extra+" not on manifest":"");
   $("manShow").hidden=!s.missing.length;
+  const ub=$("manUseExp"),ex=($("expect").value||"").trim();
+  ub.hidden=!!ex;ub.textContent="Use "+s.total+" as expected";
   if(!s.missing.length){$("manList").hidden=true;$("manShow").setAttribute("aria-expanded","false");$("manShow").textContent="Show missing"}
   $("manList").textContent=s.missing.join("\n");
   return s;
@@ -562,3 +565,4 @@ $("manShow").onclick=()=>{const open=$("manList").hidden;$("manList").hidden=!op
   try{const v=localStorage.getItem("lpncmpman");if(v)d.set.call(el,v)}catch(e){}
   summary();
 })();
+$("manUseExp").onclick=()=>{const s=manState();if(!s.total)return;$("expect").value=String(s.total);save();summary();if(typeof updateDel==="function")updateDel()};

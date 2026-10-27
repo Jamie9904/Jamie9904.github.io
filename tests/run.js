@@ -92,12 +92,12 @@ async function page(browser, width, opts = {}) {
   await p.fill("#recv", "Tester"); await p.fill("#expect", "3");
   await p.fill("#trailer", "TR1"); await p.fill("#sealIn", "SI1"); await p.fill("#sealOut", "SO1");
   await p.fill("#lpn", "VLT003977037"); await p.press("#lpn", "Enter"); await p.waitForTimeout(100);
-  let s = await p.evaluate(() => ({ rows: rows.length, flash: document.getElementById("flash").textContent, dock: document.getElementById("dockCnt").textContent,
+  let s = await p.evaluate(() => ({ rows: rows.length, flash: document.getElementById("flash").textContent, dock: document.getElementById("dockCnt").getAttribute("aria-label"), dockShort: document.getElementById("dockCnt").textContent,
     collapsed: document.getElementById("delCard").classList.contains("dcollapsed"), sum: document.getElementById("delSumTxt").textContent,
     saved: JSON.parse(localStorage.getItem("lpnlog")) }));
   check("pallet added", s.rows === 1, s.rows);
   check("added confirmation shown", /Added #1: VLT003977037/.test(s.flash), s.flash);
-  check("entry bar counter", s.dock === "1 of 3 logged", s.dock);
+  check("entry bar counter (short on narrow phones)", s.dock === "1 of 3 logged" && s.dockShort === "1/3", [s.dock, s.dockShort]);
   check("Delivery folds into one line", s.collapsed && /Tester/.test(s.sum) && /Trailer TR1/.test(s.sum), s.sum);
   check("trailer and seals saved", s.saved.trailer === "TR1" && s.saved.sealIn === "SI1" && s.saved.sealOut === "SO1", s.saved);
   await p.fill("#lpn", "VLT003977037"); await p.press("#lpn", "Enter"); await p.waitForTimeout(100);
@@ -113,7 +113,33 @@ async function page(browser, width, opts = {}) {
   s = await p.evaluate(() => ({ t: document.getElementById("manTxt").textContent, warn: document.getElementById("flash").classList.contains("warn") }));
   check("pallet not on manifest is flagged", s.warn && /1 not on manifest/.test(s.t), s);
 
+  console.log("Quick actions");
+  s = await p.evaluate(() => ({ use: !document.getElementById("manUseExp").hidden || document.getElementById("expect").value !== "", undo: !document.getElementById("undoLast").hidden }));
+  check("undo-last button shown once pallets are logged", s.undo, s);
+  await p.evaluate(() => { document.getElementById("expect").value = ""; save(); summary(); });
+  check("offers the manifest count as expected", !(await p.evaluate(() => document.getElementById("manUseExp").hidden)) && /Use 2 as expected/.test(await p.textContent("#manUseExp")));
+  await p.click("#manUseExp");
+  check("manifest count copied into Expected pallets", await p.inputValue("#expect") === "2");
+  await p.fill("#lpn", "QUB001859261"); await p.press("#lpn", "Enter"); await p.waitForTimeout(100);
+  if (await p.isVisible("#chkBar")) await p.click("#chkAdd");
+  const before = await p.evaluate(() => rows.length);
+  await p.click("#undoLast");
+  s = await p.evaluate(() => ({ n: rows.length, last: rows[rows.length - 1].lpn }));
+  check("undo-last removes the newest pallet", s.n === before - 1 && s.last === "RBY006266507", s);
+  await p.click("#undoBtn");
+  check("and Undo puts it back", await p.evaluate(() => rows.length) === before);
+  await p.evaluate(() => { rows.pop(); save(); render(); });
+  const dock = await p.evaluate(() => { const d = document.getElementById("dockCnt"), r = d.getBoundingClientRect(), u = document.getElementById("undoLast").getBoundingClientRect(), s2 = document.getElementById("scanBtn").getBoundingClientRect(); return { fits: d.scrollWidth <= d.clientWidth + 1, overlap: u.right > s2.left + 1, text: d.textContent }; });
+  check("entry bar counter fits beside the undo button", dock.fits && !dock.overlap, dock);
+  await p.setViewportSize({ width: 360, height: 740 });
+  await p.evaluate(() => { document.getElementById("cmpNums").value = Array.from({ length: 34 }, (_, i) => "VLT" + String(3977037 + i).padStart(9, "0")).join("\n"); });
+  s = await p.evaluate(() => ["add", "scanBtn", "undoLast", "lpn"].map(id => Math.round(document.getElementById(id).getBoundingClientRect().right)).concat(innerWidth));
+  check("entry bar fits a 360px phone with a long counter", s.slice(0, 4).every(r => r <= s[4]), s);
+  await p.setViewportSize({ width: 375, height: 900 });
+
   console.log("Saved deliveries");
+  await p.evaluate(() => newDelivery());
+  check("Start new delivery warns when not exported", /hasn’t been exported/.test(await p.textContent("#dlmsg")) && await p.evaluate(() => rows.length) > 0);
   await p.evaluate(() => newDelivery());
   s = await p.evaluate(() => ({ rows: rows.length, hist: hist.length, trailer: document.getElementById("trailer").value, man: document.getElementById("cmpNums").value, recv: document.getElementById("recv").value, histTrailer: hist[0] && hist[0].trailer }));
   check("Start new delivery saves and clears", s.rows === 0 && s.hist === 1 && s.trailer === "" && s.man === "" && s.recv === "Tester" && s.histTrailer === "TR1", s);
@@ -167,6 +193,10 @@ async function page(browser, width, opts = {}) {
     check("delivery details include the trailer", s.side.includes("Trailer number"), s.side);
   }
   check("file handed over", await p.evaluate(() => window.__saved) === 1);
+  s = await p.evaluate(() => ({ note: document.getElementById("expNote").textContent, next: !document.getElementById("nextBar").hidden }));
+  check("export is noted and a new delivery is offered", /Exported at \d\d:\d\d/.test(s.note) && s.next, s);
+  await p.click("#nextNew");
+  check("Start new delivery from the prompt goes straight through", await p.evaluate(() => rows.length) === 0);
   check("no script errors", p.errors.length === 0, p.errors);
   await p.ctx.close();
 

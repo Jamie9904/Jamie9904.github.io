@@ -2,8 +2,10 @@ const TYPES=["BB","FMCG","FPP","Mixed"];
 let rows=[];
 let delCollapsed=false;
 const DEL_F=["date","recv","notes","expect","trailer","sealIn","sealOut"];
-function getDel(){const o={};DEL_F.forEach(k=>{o[k]=$(k).value});return o}
-function setDel(o){o=o||{};DEL_F.forEach(k=>{$(k).value=k==="date"?(o.date||localToday()):(o[k]||"")})}
+let exported=null;
+function logSig(){let h=0;const s=rows.map(r=>r.lpn+"|"+r.type+"|"+(r.fsdu?1:0)).join(",");for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return rows.length+":"+h}
+function getDel(){const o={};DEL_F.forEach(k=>{o[k]=$(k).value});o.exp=exported;return o}
+function setDel(o){o=o||{};DEL_F.forEach(k=>{$(k).value=k==="date"?(o.date||localToday()):(o[k]||"")});exported=o.exp||null}
 const $=id=>document.getElementById(id);
 function syncType(){const v=$("type").value;$("type").dataset.t=v;document.querySelectorAll("#tyb button").forEach(b=>{const on=b.dataset.t===v;b.classList.toggle("on",on);b.setAttribute("aria-pressed",on)})}
 let cfg={defType:"BB",check:true,sound:true,size:"1",keepType:true,vibrate:true,confirmScan:false,dateFmt:"uk"};
@@ -93,8 +95,15 @@ function render(){
 }
 function extras(){const o=[];const e=parseInt($("expect").value,10);if(e>=0)o.push(["Expected pallets",String(e)]);[["trailer","Trailer number"],["sealIn","Seal in"],["sealOut","Seal out"]].forEach(f=>{const v=($(f[0]).value||"").trim();if(v)o.push([f[1],v])});const n=($("notes").value||"").trim();if(n)o.push(["Notes",n]);return o}
 function summary(){
+  $("undoLast").hidden=!rows.length;
+  {const en=$("expNote"),fresh=exported&&exported.sig===logSig();
+   if(exported&&rows.length){const t=new Date(exported.at),hm=String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0");en.hidden=false;en.textContent=fresh?"Exported at "+hm+".":"Changed since it was exported at "+hm+".";en.classList.toggle("stale",!fresh)}else en.hidden=true;
+   if(!fresh)$("nextBar").hidden=true;}
   const ms=typeof manLive==="function"?manLive():null;
-  updateDel();$("dockCnt").textContent=ms?ms.found+" of "+ms.total+" on manifest":rows.length?rows.length+(parseInt($("expect").value,10)>=0?" of "+parseInt($("expect").value,10):"")+" logged":"";
+  updateDel();{const ex=parseInt($("expect").value,10),nar=innerWidth<400,dc=$("dockCnt");
+    const full=ms?ms.found+" of "+ms.total+" on manifest":rows.length?rows.length+(ex>=0?" of "+ex:"")+" logged":"";
+    dc.textContent=!rows.length&&!ms?"":ms?(nar?ms.found+"/"+ms.total:ms.found+"/"+ms.total+" on manifest"):(ex>=0?(nar?rows.length+"/"+ex:rows.length+" of "+ex+" logged"):rows.length+" logged");
+    dc.title=full;dc.setAttribute("aria-label",full);}
   const ei=$("expInfo"),ex=parseInt($("expect").value,10);
   if(ex>=0){const d=rows.length-ex;ei.hidden=false;ei.className="expinfo "+(d===0?"ok":"bad");ei.textContent=rows.length+" of "+ex+" expected"+(d===0?" ✓ all accounted for":d<0?" ("+(-d)+" to go)":" ("+d+" more than expected)")}else ei.hidden=true;
   const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
@@ -202,3 +211,16 @@ function localToday(){const n=new Date();return n.getFullYear()+"-"+String(n.get
   $("delSum").onclick=()=>{delCollapsed=!delCollapsed;updateDel()};
   showDate();
 })();
+
+function markExported(){
+  if(window.__histExporting)return;
+  exported={at:new Date().toISOString(),sig:logSig()};save();summary();
+  $("nextBar").hidden=false;
+}
+$("undoLast").onclick=()=>{
+  if(!rows.length)return;
+  const r=rows.pop();save();render();$("flash").hidden=true;
+  showUndo("Removed "+r.lpn,()=>{rows.push(r);save();render()});
+  $("lpn").focus();
+};
+$("nextNo").onclick=()=>{$("nextBar").hidden=true};
