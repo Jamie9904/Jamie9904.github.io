@@ -1,0 +1,39 @@
+name: Weekly health check
+# Every Monday morning: checks the live site is up and running the latest version,
+# that every library the app loads from a CDN still downloads, and runs the automatic checks.
+# GitHub emails a failure notice if any step fails; a passing run sends nothing.
+on:
+  schedule:
+    - cron: "36 7 * * 1"
+  workflow_dispatch:
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+      - name: Live site is up and on the latest version
+        run: |
+          set -e
+          page=$(curl -fsSL --retry 3 "https://jamie9904.github.io/?health=$(date +%s)")
+          echo "$page" | grep -q "<title>LPN Pallet Log</title>" || { echo "::error title=Live site::The page loaded but isn't the LPN Pallet Log"; exit 1; }
+          live=$(curl -fsSL --retry 3 "https://jamie9904.github.io/sw.js?health=$(date +%s)" | grep -o 'lpn-log-v[0-9]*' | head -1)
+          repo=$(grep -o 'lpn-log-v[0-9]*' sw.js | head -1)
+          echo "Live: $live  Repo: $repo"
+          [ "$live" = "$repo" ] || { echo "::error title=Live site out of date::The live site serves $live but main has $repo"; exit 1; }
+      - name: CDN libraries still download
+        run: |
+          fail=0
+          urls=$(grep -ohE "https://(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net)/[^\"' )]+" *.js | sort -u)
+          for u in $urls; do
+            case "$u" in */) u="${u}pdf.worker.min.js";; esac
+            if curl -fsSL --retry 2 -o /dev/null "$u"; then echo "ok   $u"; else echo "FAIL $u"; echo "::error title=Library unavailable::$u"; fail=1; fi
+          done
+          exit $fail
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
