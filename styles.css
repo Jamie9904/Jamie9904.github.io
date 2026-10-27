@@ -223,7 +223,7 @@ button.tgl .chev .chv{margin:0;width:18px;height:18px}
 .guidetoc a:hover{border-color:var(--ac);color:var(--ac)}
 @media (min-width:760px) and (max-width:1099px){
   #delCard{display:grid;grid-template-columns:172px minmax(0,1fr) 150px;gap:12px 10px;align-items:end}
-  #delCard>.ct{grid-column:1/3;grid-row:1;margin:8px 0 2px}
+  #delCard>.ct{grid-column:1/-1;grid-row:1;margin:8px 0 2px}
   #delCard>#dateBar{grid-column:1/-1;grid-row:2}
   #delCard>.dc-row{display:contents}
   #delCard>.dc-exp{margin:0!important;max-width:none!important}
@@ -313,4 +313,18 @@ button.tgl .chev .chv{margin:0;width:18px;height:18px}
   .addgrid{grid-template-columns:minmax(0,1fr) auto}
   .addgrid>div:nth-child(2){min-width:0}
   .dockcnt{min-width:0;flex:0 1 auto;white-space:nowrap}
+}
+
+/* review fixes */
+.expinfo.prog{color:var(--ink)}
+details.opts{margin:12px 0 4px;border:1px solid var(--line);border-radius:var(--r);padding:0 12px}
+details.opts>summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center;gap:6px}
+details.opts>summary .note{margin:0;font-weight:400}
+details.opts[open]{padding-bottom:10px}
+#fsdu,td input[type=checkbox]{width:32px;height:32px;accent-color:var(--ac)}
+@media (max-width:759px){
+  .wrap{max-height:none;overflow:visible}
+  #side button{min-height:44px}
+  .card.entry,.card+.card.entry{transition:transform .2s ease}
+  body.cmpfocus .card.entry{transform:translateY(105%)}
 }

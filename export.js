@@ -356,6 +356,7 @@ function showLogo(){
   $("logoBtn").textContent=logo?"Change logo":"Add logo";
   $("logoRm").hidden=!custom;
   $("logoRm").textContent=defaultLogo?"Reset to default logo":"Remove logo";
+  if($("setLogo")){$("setLogo").textContent=$("logoBtn").textContent;$("setLogoRm").hidden=$("logoRm").hidden;$("setLogoRm").textContent=$("logoRm").textContent}
 }
 async function loadLogo(){
   try{custom=localStorage.getItem("lpnlogo")||""}catch(e){}

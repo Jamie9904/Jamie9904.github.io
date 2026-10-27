@@ -10,7 +10,7 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <h3>2. Set up the delivery</h3>
 <p>Enter the <b>Date</b> and who <b>Received</b> the delivery. Names you have used before appear underneath as buttons, so one tap fills them in. <b>Expected pallets</b>, <b>Trailer number</b>, <b>Seal in</b>, <b>Seal out</b> and <b>Delivery notes</b> are optional and appear on the exports.</p>
 <p>If the log is dated before today you are asked whether to use today’s date. On a phone, once you start logging, the delivery details fold into one line to save space. Tap it to change them.</p>
-<p><b>Logo:</b> logo.png next to the app is used by default. <b>Change logo</b> uses your own on this device, and <b>Reset to default logo</b> brings the default back.</p>
+<p><b>Logo:</b> set it in <b>Settings</b>. logo.png next to the app is used by default; <b>Change logo</b> uses your own on this device, and <b>Reset to default logo</b> brings the default back.</p>
 <h3>3. Log pallets</h3>
 <ol>
 <li>Tap the pallet type: BB, FMCG, FPP or Mixed. It stays selected for the next pallet unless you change that in Settings.</li>
@@ -36,7 +36,7 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <li><b>Check results:</b> shows Missing (report it), On the log only (book it in) and Matched. Tap <b>Fix</b> to correct a misread number or ✕ to remove it.</li>
 <li><b>Export</b> gives the comparison as Excel, Email PDF or Print. ✓ Matched is on both, ✗ MISSING is on the manifest but not the log, ⚠ LOG ONLY is on the log but not the manifest.</li>
 </ul>
-<p><b>Prefix presets</b> limit which numbers are picked up from photos: choose a preset, edit the list, or leave it blank for any LPN made of 1 to 3 letters then digits. <b>Include a copy of the log</b> in Settings adds the log to the comparison (a tab in the spreadsheet, extra pages in the PDF). Start new delivery clears the manifest numbers.</p>
+<p><b>Prefix presets</b> (tap to open, below the two steps) limit which numbers are picked up from photos: choose a preset, edit the list, or leave it blank for any LPN made of 1 to 3 letters then digits. <b>Include a copy of the log</b> in Settings adds the log to the comparison (a tab in the spreadsheet, extra pages in the PDF). Start new delivery clears the manifest numbers.</p>
 <h3>6. Export</h3>
 <p>The <b>Export</b> menu has <b>Download (Excel)</b>, <b>Email PDF</b> and <b>Print</b>. If an expected pallet count is set and the total doesn’t match, the first try shows a reminder; choose it again to go ahead.</p>
 <p>The spreadsheet and PDF have your logo, a title with the delivery details, the numbered pallet list, the totals by type (FSDUs listed separately), and the Delivery Details. They fit A4 portrait with page numbers. BB is shown as “Brown Box”.</p>
@@ -57,7 +57,7 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <li>LPNs are a letter prefix followed by digits, for example RUN000000000.</li>
 <li>Always check numbers read from photos before relying on them.</li>
 </ul>`,log:`<h3>v3.30 <span class="ver">Current</span></h3>
-<ul><li>Undo last pallet button on the phone entry bar, “Use n as expected” from the manifest count, an “Exported at” note with a warning before starting a new delivery that hasn’t been exported, and a “Start a new delivery?” prompt after exporting.</li><li>Trailer number, Seal in and Seal out in Delivery, shown on exports and saved deliveries.</li><li>Live manifest tracking: add the manifest numbers first and the Pallet log counts them off as you scan, shows which are still missing and warns about pallets not on the manifest.</li><li>Phone layout: a pallet counter on the entry bar, an “Added” confirmation after each pallet, Delivery folds into one line once you start logging, neater top buttons and a clearer ✕ on each row.</li><li>Smaller tweaks: a reminder when the log is dated before today, tap-to-fill “Received by” names, a check when the total differs from the expected pallets, an FSDU filter, Excel and Email PDF buttons on saved deliveries, a last-backed-up note, and an offline notice.</li><li>Exports: a title band, numbered rows, clearer grid lines, page numbers, gridlines hidden on screen, roomier headers, the logo kept in proportion and much smaller PDFs. The manifest check has the same Export menu as the log.</li><li>Date format setting (dd/mm/yyyy by default), used in exports, lists and the date box.</li><li>Fonts are now part of the app, updates show up straight away, and the tablet layout and field alignment are fixed.</li></ul>
+<ul><li>Easier to use: the pallet table scrolls with the page on phones, progress only turns red when something is wrong, one count line when the manifest sets the expected number, the Manifest check starts with its steps (prefix presets tucked away), the logo moved to Settings, the entry bar steps aside in the Manifest check, and bigger tick boxes and header buttons.</li><li>Undo last pallet button on the phone entry bar, “Use n as expected” from the manifest count, an “Exported at” note with a warning before starting a new delivery that hasn’t been exported, and a “Start a new delivery?” prompt after exporting.</li><li>Trailer number, Seal in and Seal out in Delivery, shown on exports and saved deliveries.</li><li>Live manifest tracking: add the manifest numbers first and the Pallet log counts them off as you scan, shows which are still missing and warns about pallets not on the manifest.</li><li>Phone layout: a pallet counter on the entry bar, an “Added” confirmation after each pallet, Delivery folds into one line once you start logging, neater top buttons and a clearer ✕ on each row.</li><li>Smaller tweaks: a reminder when the log is dated before today, tap-to-fill “Received by” names, a check when the total differs from the expected pallets, an FSDU filter, Excel and Email PDF buttons on saved deliveries, a last-backed-up note, and an offline notice.</li><li>Exports: a title band, numbered rows, clearer grid lines, page numbers, gridlines hidden on screen, roomier headers, the logo kept in proportion and much smaller PDFs. The manifest check has the same Export menu as the log.</li><li>Date format setting (dd/mm/yyyy by default), used in exports, lists and the date box.</li><li>Fonts are now part of the app, updates show up straight away, and the tablet layout and field alignment are fixed.</li></ul>
 <h3>v3.20</h3>
 <ul><li>Start new delivery, Saved deliveries (this week and last week) and importing an exported log.</li><li>Warnings for duplicate or unusual LPNs, Undo for removed pallets and Clear all, and tap an LPN to edit it.</li><li>Pallet type buttons, expected pallets, delivery notes, search and filter, and an Export menu with Print.</li><li>Manifest check: use the current log or a saved delivery, a Check results panel, and Fix or remove for misread numbers.</li><li>Settings: default and keep-last type, warnings, sound, vibration, confirm each scan, text size, colour contrast warning, backup and restore, and the install pop-up.</li><li>Works offline after the first use, shows an “update available” banner, a two-column layout on wide screens, line icons, and accessibility fixes.</li></ul>
 <h3>v3.0</h3>
@@ -125,6 +125,9 @@ HELP.settings=`<h3>Colours</h3>
 <div class="swatches" id="setQuick"></div>
 <div class="act"><button class="d" id="setReset">Reset to default colours</button></div>
 <p style="color:var(--mu)">Text, borders and shading adjust to suit the background. The pallet type colours stay the same.</p>
+<h3>Logo</h3>
+<p class="note" style="margin-top:0">Shown in the header and on exported files. logo.png next to the app is the default; your own logo is kept on this device.</p>
+<div class="row"><button id="setLogo">Add logo</button><button class="d" id="setLogoRm" hidden>Remove logo</button></div>
 <h3>Comparison</h3>
 <label class="chk"><input type="checkbox" id="setMerge"><span>Include a copy of the log with the manifest comparison (a tab in the spreadsheet, extra pages at the end of the PDF)</span></label>
 <h3>Logging</h3>
@@ -327,6 +330,7 @@ function initHistory(){
 $("newDel").onclick=newDelivery;
 $("histBtn").onclick=()=>openHelp("history","Saved deliveries");
 function initSettings(){
+  $("setLogo").onclick=()=>$("logoBtn").click();$("setLogoRm").onclick=()=>$("logoRm").click();showLogo();
   applyTheme();
   $("bkDl").onclick=()=>backupNow("bkMsg");
   $("bkUp").onclick=()=>{$("bkFile").value="";$("bkFile").click()};
@@ -459,3 +463,18 @@ $("offBar").hidden=navigator.onLine!==false;
 
 delCollapsed=!!(rows.length&&($("recv").value||"").trim());updateDel();
 $("nextNew").onclick=()=>{$("nextBar").hidden=true;newDelivery()};
+
+(function(){
+  let t=0;
+  const upd=()=>{t=0;const open=!$("cmpBody").hidden,top=$("cmpCard").getBoundingClientRect().top;
+    document.body.classList.toggle("cmpfocus",open&&top<innerHeight*0.45)};
+  addEventListener("scroll",()=>{if(!t)t=requestAnimationFrame(upd)},{passive:true});
+  addEventListener("resize",()=>{if(!t)t=requestAnimationFrame(upd)});
+  $("cmpToggle").addEventListener("click",()=>setTimeout(upd,0));
+  upd();
+})();
+/* show the chosen preset in the closed Prefix presets heading */
+(function(){
+  const s=()=>{const sel=$("cmpPreset"),v=($("cmpPfx").value||"").trim();$("pfxSum").textContent=v?"("+(sel&&sel.selectedOptions[0]&&sel.value?sel.selectedOptions[0].textContent:v)+")":"(all prefixes)"};
+  ["change","input"].forEach(ev=>{$("cmpPreset").addEventListener(ev,()=>setTimeout(s,0));$("cmpPfx").addEventListener(ev,s)});s();
+})();

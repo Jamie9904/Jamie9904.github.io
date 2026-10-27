@@ -113,6 +113,23 @@ async function page(browser, width, opts = {}) {
   s = await p.evaluate(() => ({ t: document.getElementById("manTxt").textContent, warn: document.getElementById("flash").classList.contains("warn") }));
   check("pallet not on manifest is flagged", s.warn && /1 not on manifest/.test(s.t), s);
 
+  console.log("Phone usability");
+  s = await p.evaluate(() => { const w = document.querySelector(".wrap"); return { oy: getComputedStyle(w).overflowY, logoHidden: !document.querySelector(".dc-logo").offsetParent, warn: !!document.querySelector("#cmpBody .warn"), pfxClosed: !document.getElementById("pfxBox").open }; });
+  check("pallet table scrolls with the page on phones", s.oy === "visible", s.oy);
+  check("logo controls moved out of Delivery", s.logoHidden, s);
+  check("Manifest check opens on its steps, presets tucked away", !s.warn && s.pfxClosed, s);
+  s = await p.evaluate(() => { const e = document.getElementById("expect"); const old = e.value; e.value = "9"; save(); summary(); const a = document.getElementById("expInfo").className; e.value = "1"; save(); summary(); const b2 = document.getElementById("expInfo").className; e.value = String(manState().total); save(); summary(); const c2 = document.getElementById("expInfo").hidden; e.value = old; save(); summary(); return [a, b2, c2]; });
+  check("progress is neutral, over-count is flagged, no duplicate line", s[0] === "expinfo prog" && s[1] === "expinfo bad" && s[2] === true, s);
+  await p.click("#cmpToggle"); await p.evaluate(() => document.getElementById("cmpCard").scrollIntoView({ block: "start" })); await p.waitForTimeout(400);
+  s = await p.evaluate(() => ({ focus: document.body.classList.contains("cmpfocus"), top: Math.round(document.querySelector(".card.entry").getBoundingClientRect().top), h: innerHeight }));
+  check("entry bar steps aside in the Manifest check", s.focus && s.top >= s.h - 5, s);
+  await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(400);
+  check("entry bar comes back above it", !(await p.evaluate(() => document.body.classList.contains("cmpfocus"))));
+  await p.click("#cmpToggle");
+  await p.evaluate(() => openHelp("settings", "Settings"));
+  check("logo can be changed from Settings", /logo/i.test(await p.textContent("#setLogo")));
+  await p.evaluate(() => closeHelp());
+
   console.log("Quick actions");
   s = await p.evaluate(() => ({ use: !document.getElementById("manUseExp").hidden || document.getElementById("expect").value !== "", undo: !document.getElementById("undoLast").hidden }));
   check("undo-last button shown once pallets are logged", s.undo, s);
