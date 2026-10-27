@@ -472,9 +472,9 @@ $("nextNew").onclick=()=>{$("nextBar").hidden=true;newDelivery()};
     /* phones only, and never while someone is typing or scanning into the bar */
     const hide=open&&top<innerHeight*0.45&&matchMedia("(max-width:759px)").matches&&!entry.contains(document.activeElement);
     document.body.classList.toggle("cmpfocus",hide);entry.inert=hide;};
-  entry.addEventListener("focusin",()=>{if(!t)t=requestAnimationFrame(upd)});
-  addEventListener("scroll",()=>{if(!t)t=requestAnimationFrame(upd)},{passive:true});
-  addEventListener("resize",()=>{if(!t)t=requestAnimationFrame(upd)});
+  entry.addEventListener("focusin",()=>{if(!t)t=setTimeout(upd,60)});
+  addEventListener("scroll",()=>{if(!t)t=setTimeout(upd,60)},{passive:true});
+  addEventListener("resize",()=>{if(!t)t=setTimeout(upd,60)});
   $("cmpToggle").addEventListener("click",()=>setTimeout(upd,0));
   upd();
 })();
