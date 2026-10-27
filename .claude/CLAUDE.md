@@ -1,6 +1,6 @@
 # LPN Pallet Log: working notes for Claude
 
-A static goods-in web app published by GitHub Pages from `main` of `Jamie9904/Jamie9904.github.io`. There is no build step. The full conventions are in the `project-conventions` skill.
+A static goods-in web app published by GitHub Pages from `main` of `Jamie9904/Jamie9904.github.io`. There is no build step. The full conventions are in the `project-conventions` skill (saved to the user's Claude account, like the other skills named below).
 
 ## Branches
 

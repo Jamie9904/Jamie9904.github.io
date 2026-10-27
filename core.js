@@ -105,7 +105,8 @@ function summary(){
     dc.textContent=!rows.length&&!ms?"":ms?(nar?ms.found+"/"+ms.total:ms.found+"/"+ms.total+" on manifest"):(ex>=0?(nar?rows.length+"/"+ex:rows.length+" of "+ex+" logged"):rows.length+" logged");
     dc.title=full;dc.setAttribute("aria-label",full);}
   const ei=$("expInfo"),ex=parseInt($("expect").value,10);
-  if(ex>=0){const d=rows.length-ex;ei.hidden=false;ei.className="expinfo "+(d===0?"ok":"bad");ei.textContent=rows.length+" of "+ex+" expected"+(d===0?" ✓ all accounted for":d<0?" ("+(-d)+" to go)":" ("+d+" more than expected)")}else ei.hidden=true;
+  if(ex>=0&&ms&&ms.total===ex)ei.hidden=true;
+  else if(ex>=0){const d=rows.length-ex;ei.hidden=false;ei.className="expinfo "+(d===0?"ok":d<0?"prog":"bad");ei.textContent=rows.length+" of "+ex+" expected"+(d===0?" ✓ all accounted for":d<0?" ("+(-d)+" to go)":" ("+d+" more than expected)")}else ei.hidden=true;
   const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
   $("sum").innerHTML="<span><b>"+rows.length+"</b>Total</span><span><b>"+c.BB+"</b>BB</span><span><b>"+c.FMCG+"</b>FMCG</span><span><b>"+c.FPP+"</b>FPP</span><span><b>"+c.Mixed+"</b>Mixed</span><span><b>"+rows.filter(r=>r.fsdu).length+"</b>FSDU</span>";
 }
