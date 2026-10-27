@@ -74,7 +74,7 @@ The phone breakpoint is `max-width:759px` in `styles.css`.
 - **Touch targets:** header buttons (`#side button`) are at least 44px tall on phones; `#cmpToggle`, `#manShow` and the Prefix presets summary are at least 44px at every width; the FSDU tick boxes (`#fsdu` and the table's checkboxes) are 32px.
 
 **Entry bar stepping aside (`cmpfocus`)**
-An IIFE at the end of `panels.js` runs `upd()` (throttled with `requestAnimationFrame`) on window `scroll` and `resize`, on `focusin` inside the entry bar (`.card.entry`), after a click on `#cmpToggle`, and once at load. It hides the bar when all of these are true:
+An IIFE at the end of `panels.js` runs `upd()` (throttled with a 60ms `setTimeout`, which keeps working when the page is in the background, unlike `requestAnimationFrame`) on window `scroll` and `resize`, on `focusin` inside the entry bar (`.card.entry`), after a click on `#cmpToggle`, and once at load. It hides the bar when all of these are true:
 
 1. the Manifest check body (`#cmpBody`) is open;
 2. the top of `#cmpCard` is above 45% of the window height (`innerHeight * 0.45`);
