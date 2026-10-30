@@ -41,9 +41,12 @@ def main():
         return 0
     cmd = (data.get("tool_input") or {}).get("command", "") or ""
     cwd = data.get("cwd") or os.getcwd()
-    is_commit = re.search(r"\bgit\b[^;&|]*\bcommit\b", cmd)
-    is_push = re.search(r"\bgit\b[^;&|]*\bpush\b", cmd)
-    is_merge = re.search(r"\bgit\b[^;&|]*\bmerge\b[^;&|]*\bdocs\b", cmd)
+    # Only real git subcommands count, so "git stash push", "echo push" or a script that mentions
+    # commit or push in its text don't trigger the checks.
+    GIT = r"(?:^|[;&|(]\s*|\s)git(?:\s+-[Cc]\s+(?:\"[^\"]+\"|'[^']+'|\S+))*\s+"
+    is_commit = re.search(GIT + r"commit\b", cmd)
+    is_push = re.search(GIT + r"push\b", cmd)
+    is_merge = re.search(GIT + r"merge\b[^;&|\n]*\bdocs\b", cmd)
     if not (is_commit or is_push or is_merge):
         return 0
     top = repo_for(cmd, cwd)
@@ -71,8 +74,19 @@ def main():
         changed |= set(run(["git", "ls-files", "--others", "--exclude-standard"], top).stdout.split())
         app = sorted(f for f in changed if APP.match(f))
         if app:
+            # The cache number only has to be higher than the live site's (origin/main), so a branch
+            # that already bumped it doesn't need a new bump for every commit.
+            def cache_of(text):
+                m = re.search(r'const CACHE="lpn-log-v(\d+)"', text or "")
+                return int(m.group(1)) if m else None
+            try:
+                now = cache_of(open(os.path.join(top, "sw.js"), encoding="utf8").read())
+            except Exception:
+                now = None
+            live = cache_of(run(["git", "show", "origin/main:sw.js"], top).stdout)
             sw = run(["git", "diff", "HEAD", "--", "sw.js"], top).stdout
-            if not re.search(r'^\+const CACHE="lpn-log-v\d+"', sw, re.M):
+            bumped = (now is not None and live is not None and now > live) or re.search(r'^\+const CACHE="lpn-log-v\d+"', sw, re.M)
+            if not bumped:
                 print("Cache-bump guard: these app files changed but the cache name in sw.js did not: "
                       + ", ".join(app) + ". Increase CACHE in sw.js (lpn-log-vN -> vN+1) so phones pick up the update, then commit again.",
                       file=sys.stderr)

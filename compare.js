@@ -23,7 +23,7 @@ function lpnsFromGrid(g){
   g.forEach((row,i)=>{if(col>=0)return;row.forEach((c,k)=>{if(col<0&&String(c).trim().toUpperCase()==="LPN"){col=k;start=i}})});
   if(col<0)throw new Error("Couldn't find an LPN column in that file.");
   const out=[];
-  for(let i=start+1;i<g.length;i++){const t=String(g[i][col]==null?"":g[i][col]).trim();if(!t)break;out.push(t)}
+  for(let i=start+1;i<g.length;i++){const t=String(g[i][col]==null?"":g[i][col]).trim();if(!t||/^Made with /.test(t))break;out.push(t)}
   return out;
 }
 function cellText(v){return v==null?"":v instanceof Date?v.toISOString().slice(0,10):typeof v==="object"?(v.richText?v.richText.map(x=>x.text).join(""):(v.text||v.result||"")):v}
@@ -53,7 +53,7 @@ async function readLog(f){
     await loadExcel();
     const ab=await f.arrayBuffer();const wb=new ExcelJS.Workbook();await wb.xlsx.load(ab);
     if(!wb.worksheets.length)throw new Error("That file has no sheets.");
-    const sheets=wb.worksheets.map(ws=>{const grid=[];ws.eachRow({includeEmpty:true},row=>{grid.push((row.values||[]).slice(1).map(cellText))});return {name:ws.name,grid}});
+    const sheets=wb.worksheets.map(ws=>{const grid=[];ws.eachRow({includeEmpty:true},row=>{const vals=(row.values||[]).slice(1).map(cellText);row.eachCell({includeEmpty:true},(cell,col)=>{if(cell.isMerged&&cell.master&&cell.master!==cell)vals[col-1]=""});grid.push(vals)});return {name:ws.name,grid}});
     const lp=lpnsFromGrid(sheets[0].grid);
     logSrc={buf:ab.slice(0),name:f.name};logSheets=sheets;return lp;
   }
@@ -337,16 +337,18 @@ $("cmpGo").onclick=async()=>{
     await loadExcel();
     const d=$("cmpDate").value||"no-date";
     const merge=mergeLog,mergeSrc=merge?logSrc:null;
+    await appVersion();
     const wb=new ExcelJS.Workbook();
     if(mergeSrc)await wb.xlsx.load(mergeSrc.buf);
     let tab="Manifest Check",tn=2;
     while(wb.getWorksheet(tab))tab="Manifest Check "+(tn++);
     const ws=wb.addWorksheet(tab);
-    ws.columns=[{width:7},{width:21},{width:18},{width:12},{width:19},{width:3},{width:25},{width:18}];
+    const lpnW=xlLpnWidth(res.map(x=>x.n),21);
+    ws.columns=[{width:7},{width:lpnW},{width:18},{width:12},{width:19},{width:3},{width:25},{width:18}];
     const bc={argb:"FF000000"},med={style:"medium",color:bc};
     const border={top:med,left:med,bottom:med,right:med};
     let off=0;
-    try{off=await xlLogo(wb,ws,547)}catch(e){off=0}
+    try{off=await xlLogo(wb,ws,Math.round((7+lpnW+18+12+19)*7.1))}catch(e){off=0}
     const side=[
       {v:["Summary","Count"],h:1},
       {v:["On manifest",man.length]},
@@ -381,8 +383,9 @@ $("cmpGo").onclick=async()=>{
         put(8,right.v[1],{bold:hd,fill:hd?HD:null,center:typeof right.v[1]==="number",box:bx(8)});
         if(right.merge)ws.mergeCells(r.number,7,r.number,8);
       }
-      r.height=(head||(right&&right.h))?32:24;
+      r.height=(head||(right&&right.h))?32:Math.max(24,x?xlLpnLines(x.n,lpnW)*18+6:0);
     }
+    xlMadeWith(ws,H+n+2,8);
     xlPrint(ws,H);
     if(merge&&!logSrc){
       const sheets=logSheets&&logSheets.length?logSheets:[{name:"Log copy",grid:[["LPN"],...logList.map(n=>[n])]}];
