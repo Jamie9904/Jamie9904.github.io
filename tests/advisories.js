@@ -12,7 +12,7 @@ const fs = require("fs");
 const path = require("path");
 
 const ROOT = path.resolve(__dirname, "..");
-const LIBS = ["exceljs", "jspdf", "jspdf-autotable", "pdfjs-dist"];
+const LIBS = ["exceljs", "jspdf", "jspdf-autotable", "pdfjs-dist", "pdf-lib", "tesseract.js", "@zxing/library"];
 const GH = !!process.env.GITHUB_ACTIONS;
 const say = (kind, title, msg) => console.log(GH ? "::" + kind + " title=" + title + "::" + msg.replace(/[\r\n%]/g, " ") : kind.toUpperCase() + "  " + title + ": " + msg);
 

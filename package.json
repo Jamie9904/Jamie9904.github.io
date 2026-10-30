@@ -10,6 +10,9 @@
     "exceljs": "4.4.0",
     "jspdf": "2.5.1",
     "jspdf-autotable": "3.8.2",
-    "pdfjs-dist": "6.4.299"
+    "pdfjs-dist": "6.4.299",
+    "pdf-lib": "1.17.1",
+    "tesseract.js": "5.1.1",
+    "@zxing/library": "0.21.3"
   }
 }

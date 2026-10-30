@@ -345,9 +345,10 @@ async function page(browser, width, opts = {}) {
   {
     // The checks must test the same library versions the app loads from the CDN.
     const dev = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8")).devDependencies || {};
-    const code = ["export.js", "compare.js"].map(f => fs.readFileSync(path.join(ROOT, f), "utf8")).join("\n");
+    const code = ["export.js", "compare.js", "scan.js"].map(f => fs.readFileSync(path.join(ROOT, f), "utf8")).join("\n");
     const want = { exceljs: /exceljs\/(\d[\d.]*)\/|exceljs@(\d[\d.]*)/g, jspdf: /jspdf\/(\d[\d.]*)\/jspdf\.umd|jspdf@(\d[\d.]*)\//g,
-      "jspdf-autotable": /jspdf-autotable[\/@](\d[\d.]*)\//g, "pdfjs-dist": /pdf\.js\/(\d[\d.]*)\/|pdfjs-dist@(\d[\d.]*)\//g };
+      "jspdf-autotable": /jspdf-autotable[\/@](\d[\d.]*)\//g, "pdfjs-dist": /pdf\.js\/(\d[\d.]*)\/|pdfjs-dist@(\d[\d.]*)\//g,
+      "pdf-lib": /pdf-lib[\/@](\d[\d.]*)\//g, "tesseract.js": /tesseract\.js@(\d[\d.]*)\//g, "@zxing/library": /@zxing\/library@(\d[\d.]*)\//g };
     const off = Object.keys(want).map(k => { const v = [...code.matchAll(want[k])].map(m => m[1] || m[2]); return { k, app: [...new Set(v)], test: dev[k] }; })
       .filter(x => x.app.length !== 1 || x.app[0] !== x.test);
     check("the checks use the same library versions as the app", off.length === 0, off);
