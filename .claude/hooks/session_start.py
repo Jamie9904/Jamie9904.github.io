@@ -77,6 +77,13 @@ def main():
         else:
             notes.append("not on GitHub yet")
 
+    # The Guide's demo video shows the app's screens: say when they changed after it was recorded.
+    if os.path.isfile(os.path.join(top, "media", "demo.mp4")):
+        last = git(["log", "-1", "--format=%H", "--", "media/demo.mp4"], top).stdout.strip()
+        if last:
+            ui = git(["rev-list", "--count", last + "..HEAD", "--", "index.html", "styles.css", "core.js", "scan.js", "export.js", "compare.js", "panels.js"], top).stdout.strip()
+            if ui and ui != "0":
+                notes.append("demo video recorded before %s app change(s): check it still matches, re-record with sh tools/demo-video/make.sh" % ui)
     # One working branch, "updates": say so when the session starts elsewhere or it has fallen behind main.
     if git(["rev-parse", "--verify", "-q", "refs/remotes/origin/updates"], top).returncode == 0:
         if branch != "updates" and branch != "docs":

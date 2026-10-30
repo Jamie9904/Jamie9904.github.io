@@ -32,7 +32,7 @@ def find_repo(data):
     return None
 
 def site_file(p):
-    return not (p.startswith(".claude/") or p.startswith("docs/") or p == ".mcp.json")
+    return not (p.startswith(".claude/") or p.startswith("docs/") or p.startswith("tools/") or p == ".mcp.json")
 
 def main():
     try:

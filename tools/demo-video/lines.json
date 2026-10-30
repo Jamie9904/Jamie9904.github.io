@@ -1,0 +1,9 @@
+[
+ {"id":"hook","say":"Goods in, without the paper tally sheet."},
+ {"id":"intro","say":"Meet LPN Pallet Log. It runs right in your phone's browser."},
+ {"id":"scan","say":"Scan or type each LPN, and tap the pallet type. It stays selected for the next one."},
+ {"id":"totals","say":"Live totals count every type, and show how many pallets are still to come."},
+ {"id":"manifest","say":"Then check the delivery against the manifest. Missing pallets to report, extras to book in."},
+ {"id":"export","say":"Export the log to Excel or PDF, ready to print or email."},
+ {"id":"outro","say":"It works offline, needs no account, and saves as you go. LPN Pallet Log."}
+]
