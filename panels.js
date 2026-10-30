@@ -153,8 +153,8 @@ HELP.settings=`<h3>Colours</h3>
 <p>Your log, saved deliveries and settings live in this browser only. Download a backup to keep a copy or move to another device, then restore it there.</p>
 <div class="row"><button id="bkDl">Download backup</button><button id="bkUp">Restore backup</button><input type="file" id="bkFile" accept=".json,application/json" hidden></div>
 <div class="msg" id="bkMsg" role="status" aria-live="polite"></div>
-<div class="row" id="bkAsk" hidden><button id="bkGo">Replace my data with this backup</button><button id="bkNo">Cancel</button></div>
-<div class="row" id="bkDone" hidden><button id="bkReload">Reload the app</button></div>`;
+<div class="row" id="bkAsk" style="margin-top:10px" hidden><button id="bkGo">Replace my data with this backup</button><button id="bkNo">Cancel</button></div>
+<div class="row" id="bkDone" style="margin-top:10px" hidden><button id="bkReload">Reload the app</button></div>`;
 /* ---- saved deliveries ---- */
 let hist=[];try{hist=cleanHist(JSON.parse(localStorage.getItem("lpnhist")||"[]"))}catch(e){hist=[]}
 const saveHist=()=>{try{localStorage.setItem("lpnhist",JSON.stringify(hist))}catch(e){}};
