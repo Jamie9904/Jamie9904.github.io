@@ -179,7 +179,8 @@ async function loadPdfJs(){
   catch(e){await loadScript("https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js",t);set("https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/")}
 }
 /* Opens a PDF with pdf.js. Supplier PDFs come from outside, so pdf.js must never turn anything in the file
-   into running code (CVE-2024-4367): isEvalSupported:false stops that. Every PDF the app opens goes through here. */
+   into running code (CVE-2024-4367): isEvalSupported:false stops that. Every PDF that pdf.js reads goes through here
+   (pdf-lib, used to merge PDFs, only copies objects and never runs anything from a file). */
 function openPdf(bytes){return pdfjsLib.getDocument({data:bytes,isEvalSupported:false}).promise}
 function lpnsFromText(text){
   const pf=getPfx().sort((a,b)=>b.length-a.length);
