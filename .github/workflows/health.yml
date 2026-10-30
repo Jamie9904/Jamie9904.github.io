@@ -39,6 +39,8 @@ jobs:
           node-version: 22
       - name: Security advisories for the app's libraries
         run: node tests/advisories.js
+      - name: Library files still match their fingerprints
+        run: node tests/sri.js
       - run: npm install --ignore-scripts
       - run: npx playwright install --with-deps chromium
       - run: npm test

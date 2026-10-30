@@ -16,6 +16,9 @@ jobs:
       - name: Security advisories for the app's libraries
         run: node tests/advisories.js
         continue-on-error: true
+      - name: Library files still match their fingerprints
+        run: node tests/sri.js
+        continue-on-error: true
       - run: npm install --ignore-scripts
       - run: npx playwright install --with-deps chromium
       - run: npm test

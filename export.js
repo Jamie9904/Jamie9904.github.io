@@ -81,7 +81,7 @@ async function fallbackXls(d){
   const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
   const side=[["Pallet Type","Count","h"],["Brown Box",c.BB],["FMCG",c.FMCG],["FPP",c.FPP],["Mixed",c.Mixed],["Total",rows.length,"b"],["FSDU (not in total)",rows.filter(r=>r.fsdu).length],null,["Delivery Details","","h2"],["Date",ukDate(d),"l"],["Received by",who,"l"]].concat(extras().map(e=>[e[0],e[1],"l"]));
   const n=Math.max(rows.length,side.length-1);
-  let h='<html><head><meta charset="utf-8"><style>td,th{font-family:Arial;font-size:14pt;border:1px solid #000;padding:4px;text-align:left}th{font-size:16pt;background:#e6e9ed}td.c{text-align:center}td.m{font-family:\'Courier New\'}</style></head><body><h2 style="font-family:Arial">Goods-in pallet log</h2><table>';
+  let h='<html><head><meta charset="utf-8"><style>td,th{font-family:Arial;font-size:14pt;border:1px solid #000;padding:4px;text-align:left}th{font-size:16pt;background:#e6e9ed}td.c{text-align:center}td.m{font-family:\'Courier New\'}td{mso-number-format:"\\@"}</style></head><body><h2 style="font-family:Arial">Goods-in pallet log</h2><table>';
   for(let i=-1;i<n;i++){
     const head=i<0,t=head?"th":"td";
     const l=head?["#","LPN","Pallet Type","FSDU"]:rows[i]?[i+1,rows[i].lpn,rows[i].type,rows[i].fsdu?"Yes":"No"]:null;
@@ -246,7 +246,9 @@ async function buildCmpPdf(res,cnt,manCount,d,logCopy){
       const src=await PDFLib.PDFDocument.load(logCopy.pdf.buf.slice(0),{ignoreEncryption:true});
       pdfFooter(doc,src.getPageCount());
       const base2=await PDFLib.PDFDocument.load(doc.output("arraybuffer"));
-      (await base2.copyPages(src,src.getPageIndices())).forEach(pg=>base2.addPage(pg));
+      // Copy only what's printed: page-open actions (which can be scripts) and links or other annotations are
+      // removed, so a log PDF from outside can't pass them on in the file that gets emailed and printed.
+      (await base2.copyPages(src,src.getPageIndices())).forEach(pg=>{pg.node.delete(PDFLib.PDFName.of("AA"));pg.node.delete(PDFLib.PDFName.of("Annots"));base2.addPage(pg)});
       return await base2.save();
     }
     if(logCopy.sheets&&logCopy.sheets.length){
@@ -412,7 +414,7 @@ function showLogo(){
   if($("setLogo")){$("setLogo").textContent=$("logoBtn").textContent;$("setLogoRm").hidden=$("logoRm").hidden;$("setLogoRm").textContent=$("logoRm").textContent}
 }
 async function loadLogo(){
-  try{custom=localStorage.getItem("lpnlogo")||""}catch(e){}
+  try{custom=localStorage.getItem("lpnlogo")||"";if(!okLogo(custom))custom=""}catch(e){}
   showLogo();
   try{
     const r=await fetch(DEFAULT_LOGO_URL);

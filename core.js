@@ -9,7 +9,22 @@ function setDel(o){o=o||{};DEL_F.forEach(k=>{$(k).value=k==="date"?(o.date||loca
 const $=id=>document.getElementById(id);
 function syncType(){const v=$("type").value;$("type").dataset.t=v;document.querySelectorAll("#tyb button").forEach(b=>{const on=b.dataset.t===v;b.classList.toggle("on",on);b.setAttribute("aria-pressed",on)})}
 let cfg={defType:"BB",check:true,sound:true,size:"1",keepType:true,vibrate:true,confirmScan:false,dateFmt:"uk"};
-try{const c=JSON.parse(localStorage.getItem("lpncfg")||"null");if(c)cfg=Object.assign(cfg,c)}catch(e){}
+/* Saved data can come back from a backup file, so everything read from storage is checked and tidied before use.
+   A damaged or crafted backup then can't stop the app starting or put anything odd into an export. */
+const isTxt=v=>typeof v==="string"||typeof v==="number";
+function cleanCfg(c){const out={};if(c&&typeof c==="object"&&!Array.isArray(c))Object.keys(cfg).forEach(k=>{if(typeof c[k]===typeof cfg[k])out[k]=c[k]});return out}
+function cleanRows(a){return (Array.isArray(a)?a:[]).filter(r=>r&&typeof r==="object"&&isTxt(r.lpn)&&String(r.lpn).trim()).map(r=>({lpn:String(r.lpn).trim().slice(0,100),type:TYPES.indexOf(r.type)>=0?r.type:"Mixed",fsdu:!!r.fsdu}))}
+function cleanDel(o){
+  o=o&&typeof o==="object"?o:{};const out={};
+  DEL_F.forEach(k=>{out[k]=isTxt(o[k])?String(o[k]).slice(0,2000):""});
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(out.date))out.date="";
+  const e=o.exp;out.exp=e&&typeof e==="object"&&typeof e.at==="string"&&typeof e.sig==="string"?{at:e.at,sig:e.sig}:null;
+  return out;
+}
+function cleanHist(a){return (Array.isArray(a)?a:[]).filter(h=>h&&typeof h==="object"&&!Array.isArray(h)).map((h,i)=>Object.assign(cleanDel(h),{id:isTxt(h.id)?String(h.id):"r"+Date.now()+i,saved:typeof h.saved==="string"?h.saved:"",rows:cleanRows(h.rows)}))}
+function cleanNames(a){return (Array.isArray(a)?a:[]).filter(v=>typeof v==="string"&&v.trim()).map(v=>v.trim().slice(0,60)).slice(0,6)}
+const okLogo=v=>typeof v==="string"&&/^data:image\/(png|jpeg);base64,[A-Za-z0-9+\/=]+$/.test(v);
+try{const c=JSON.parse(localStorage.getItem("lpncfg")||"null");cfg=Object.assign(cfg,cleanCfg(c))}catch(e){}
 if(!TYPES.includes(cfg.defType))cfg.defType="BB";
 const saveCfg=()=>{try{localStorage.setItem("lpncfg",JSON.stringify(cfg))}catch(e){}};
 const applyCfg=()=>{document.documentElement.style.setProperty("--ts",cfg.size||"1")};
@@ -29,7 +44,7 @@ function sfx(kind){
 function load(){
   try{
     const d=localStorage.getItem("lpnlog");
-    if(d){const o=JSON.parse(d);rows=o.rows||[];setDel(o);}
+    if(d){const o=JSON.parse(d);rows=cleanRows(o&&o.rows);setDel(cleanDel(o));}
   }catch(e){}
   if(!$("date").value)$("date").value=localToday();
 }
@@ -185,11 +200,26 @@ function showUndo(text,fn){
   $("undoBtn").onclick=()=>{clearTimeout(undoTimer);$("undoBar").hidden=true;fn()};
   undoTimer=setTimeout(()=>{$("undoBar").hidden=true},9000);
 }
+/* Each library file's fingerprint (Subresource Integrity). The browser refuses a file that doesn't match, so a
+   changed or tampered copy on a CDN can't run in the app. tests/sri.js checks these against the CDNs every week. */
+const SRI={
+  "https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js":"sha384-Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz",
+  "https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js":"sha384-Pqp51FUN2/qzfxZxBCtF0stpc9ONI6MYZpVqmo8m20SoaQCzf+arZvACkLkirlPz",
+  "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js":"sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk",
+  "https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js":"sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk",
+  "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js":"sha384-fCAW/rDWORTbQXSiB7mOg0QtQ5c+r0f544y6XoKjuVva0nMBlCpNUjiFeG5iMdS3",
+  "https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js":"sha384-fCAW/rDWORTbQXSiB7mOg0QtQ5c+r0f544y6XoKjuVva0nMBlCpNUjiFeG5iMdS3",
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js":"sha384-weMABwrltA6jWR8DDe9Jp5blk+tZQh7ugpCsF3JwSA53WZM9/14PjS5LAJNHNjAI",
+  "https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js":"sha384-weMABwrltA6jWR8DDe9Jp5blk+tZQh7ugpCsF3JwSA53WZM9/14PjS5LAJNHNjAI",
+  "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js":"sha384-GJqSu7vueQ9qN0E9yLPb3Wtpd7OrgK8KmYzC8T1IysG1bcvxvIO4qtYR/D3A991F",
+  "https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js":"sha384-BzBxP10ZE72aitqj5UMmUsbKFliP/DZqA8Wq+BNNhlIJDGoEd1tpkMYXOg9+n6sB"
+};
 function loadScript(src,test){
   return new Promise((res,rej)=>{
     if(test())return res();
     const el=document.createElement("script");
     const t=setTimeout(()=>rej(new Error("lib")),10000);
+    el.crossOrigin="anonymous";if(SRI[src])el.integrity=SRI[src];
     el.src=src;
     el.onload=()=>{clearTimeout(t);test()?res():rej(new Error("lib"))};
     el.onerror=()=>{clearTimeout(t);rej(new Error("lib"))};

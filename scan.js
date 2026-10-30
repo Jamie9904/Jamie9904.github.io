@@ -17,7 +17,8 @@ function loadZX(){
   return new Promise((res,rej)=>{
     if(window.ZXing)return res();
     const s=document.createElement("script");
-    s.src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js";
+    const u="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js";
+    s.crossOrigin="anonymous";if(typeof SRI==="object"&&SRI[u])s.integrity=SRI[u];s.src=u;
     s.onload=res;s.onerror=()=>rej(new Error("scanner library failed to load"));
     document.head.appendChild(s);
   });
