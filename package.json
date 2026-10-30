@@ -1,11 +1,15 @@
 {
   "name": "lpn-pallet-log",
   "private": true,
-  "description": "Automatic checks for the LPN Pallet Log site. The site itself needs no build step.",
+  "description": "Automatic checks for the LPN Pallet Log site. The site itself needs no build step. The export libraries are only used by the checks, at the same versions the app loads from the CDN.",
   "scripts": {
     "test": "node tests/run.js"
   },
   "devDependencies": {
-    "playwright": "^1.47.0"
+    "playwright": "^1.47.0",
+    "exceljs": "4.4.0",
+    "jspdf": "2.5.1",
+    "jspdf-autotable": "3.8.2",
+    "pdfjs-dist": "3.11.174"
   }
 }

@@ -16,6 +16,10 @@ def main():
     top = os.environ.get("CLAUDE_PROJECT_DIR") or data.get("cwd") or os.getcwd()
     t = git(["rev-parse", "--show-toplevel"], top).stdout.strip()
     if not t or not os.path.isfile(os.path.join(t, "sw.js")):
+        # Cloud sessions start one folder above the repo.
+        t = next((os.path.join(top, n) for n in sorted(os.listdir(top)) if os.path.isfile(os.path.join(top, n, "sw.js"))
+                  and os.path.isdir(os.path.join(top, n, ".git"))), "") if os.path.isdir(top) else ""
+    if not t or not os.path.isfile(os.path.join(t, "sw.js")):
         return 0
     if git(["rev-parse", "--verify", "-q", "refs/remotes/origin/docs"], t).returncode != 0:
         return 0

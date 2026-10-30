@@ -50,12 +50,27 @@ const EXCEL_STUB = () => {
   window.ExcelJS = { Workbook: WB };
 };
 
+/* The real export libraries, at the versions the app loads. npm install puts them in node_modules (GitHub
+   always does). Pages opened with {real:true} get them in place of the CDN copies, from either CDN. */
+const LIBS = { "exceljs.min.js": "exceljs/dist/exceljs.min.js", "jspdf.umd.min.js": "jspdf/dist/jspdf.umd.min.js",
+  "jspdf.plugin.autotable.min.js": "jspdf-autotable/dist/jspdf.plugin.autotable.min.js",
+  "pdf.min.js": "pdfjs-dist/build/pdf.min.js", "pdf.worker.min.js": "pdfjs-dist/build/pdf.worker.min.js" };
+const libFile = n => Object.prototype.hasOwnProperty.call(LIBS, n) ? path.join(ROOT, "node_modules", LIBS[n]) : null;
+const REAL_LIBS = Object.keys(LIBS).every(n => fs.existsSync(libFile(n)));
+
 async function page(browser, width, opts = {}) {
-  const ctx = await browser.newContext({ viewport: { width, height: 900 } });
+  // With the real libraries the service worker is turned off, so every library request reaches the router.
+  const ctx = await browser.newContext({ viewport: { width, height: 900 }, serviceWorkers: opts.real ? "block" : "allow" });
   const p = await ctx.newPage();
   const errors = [];
   p.on("pageerror", e => errors.push(e.message));
-  await p.route("**/*", r => { const u = new URL(r.request().url()); return u.hostname === "127.0.0.1" ? r.continue() : r.abort(); });
+  const router = r => {
+    const u = new URL(r.request().url());
+    if (u.hostname === "127.0.0.1") return r.continue();
+    const f = opts.real && libFile(u.pathname.split("/").pop());
+    return f && fs.existsSync(f) ? r.fulfill({ path: f, contentType: "text/javascript" }) : r.abort();
+  };
+  if (opts.real) await ctx.route("**/*", router); else await p.route("**/*", router);
   await p.addInitScript(() => { try { localStorage.setItem("lpninstallshown", "1"); } catch (e) {} });
   if (opts.excel) await p.addInitScript(EXCEL_STUB);
   if (opts.init) await p.addInitScript(opts.init);
@@ -305,6 +320,81 @@ async function page(browser, width, opts = {}) {
   check("no script errors", p.errors.length === 0, p.errors);
   await p.ctx.close();
 
+  console.log("Real export libraries" + (REAL_LIBS ? "" : " (skipped here: npm install hasn't fetched ExcelJS, jsPDF and pdf.js; GitHub always runs these)"));
+  {
+    // The checks must test the same library versions the app loads from the CDN.
+    const dev = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8")).devDependencies || {};
+    const code = ["export.js", "compare.js"].map(f => fs.readFileSync(path.join(ROOT, f), "utf8")).join("\n");
+    const want = { exceljs: /exceljs\/(\d[\d.]*)\/|exceljs@(\d[\d.]*)/g, jspdf: /jspdf\/(\d[\d.]*)\/jspdf\.umd|jspdf@(\d[\d.]*)\//g,
+      "jspdf-autotable": /jspdf-autotable[\/@](\d[\d.]*)\//g, "pdfjs-dist": /pdf\.js\/(\d[\d.]*)\/|pdfjs-dist@(\d[\d.]*)\//g };
+    const off = Object.keys(want).map(k => { const v = [...code.matchAll(want[k])].map(m => m[1] || m[2]); return { k, app: [...new Set(v)], test: dev[k] }; })
+      .filter(x => x.app.length !== 1 || x.app[0] !== x.test);
+    check("the checks use the same library versions as the app", off.length === 0, off);
+  }
+  if (REAL_LIBS) {
+    const LOG = [{ lpn: "VLT003977037", type: "BB", fsdu: false }, { lpn: "RUN0001830763", type: "FMCG", fsdu: true }, { lpn: "RBY006291167", type: "Mixed", fsdu: false }];
+    const NOTE = "Two pallets wrapped badly, driver waited twenty minutes, seal checked against the paperwork and matched";
+    p = await page(browser, 1300, { real: true, init: `localStorage.setItem("lpnlog", ${JSON.stringify(JSON.stringify({ rows: LOG, date: "2026-10-26", recv: "Tester", expect: "3", trailer: "TR4471", sealIn: "S1001", sealOut: "S2002", notes: NOTE }))})` });
+    await p.goto(URL0); await p.waitForTimeout(300);
+    s = await p.evaluate(async () => {
+      const saved = []; window.saveOnly = async (buf, name) => { saved.push(new File([buf], name)); };
+      await document.getElementById("dl").onclick();
+      const xf = saved.find(f => /\.xlsx$/.test(f.name));
+      if (!xf) return { err: "no .xlsx was saved", names: saved.map(f => f.name), msg: document.getElementById("dlmsg").textContent };
+      const imp = await parseExported(xf);
+      const wb = new ExcelJS.Workbook(); await wb.xlsx.load(await xf.arrayBuffer()); const ws = wb.worksheets[0];
+      const grid = sheetGrid(ws);
+      const made = grid.find(r => r.some(c => /^Made with /.test(String(c))));
+      let notesH = 0; ws.eachRow(row => row.eachCell(c => { if (c.value === "Notes") notesH = row.height; }));
+      const cmp = await readLog(new File([await xf.arrayBuffer()], xf.name));
+      return { size: xf.size, rows: imp.rows, unk: imp.unk, details: [imp.date, imp.recv, imp.expect, imp.trailer, imp.sealIn, imp.sealOut, imp.notes],
+        lpnW: ws.getColumn(2).width, madeCells: made ? made.filter(Boolean).length : 0, made: made ? made.find(Boolean) : null,
+        footer: ws.headerFooter && ws.headerFooter.oddFooter, notesH, cmp };
+    });
+    check("real ExcelJS: the log spreadsheet is made", !s.err && s.size > 4000, s.err ? s : s.size);
+    if (!s.err) {
+      check("real ExcelJS: importing the log gives back the same pallets", JSON.stringify(s.rows) === JSON.stringify(LOG) && s.unk === 0, s.rows);
+      check("real ExcelJS: importing the log gives back the delivery details", JSON.stringify(s.details) === JSON.stringify(["2026-10-26", "Tester", "3", "TR4471", "S1001", "S2002", NOTE]), s.details);
+      check("real ExcelJS: the Manifest check reads the same LPNs from the log", JSON.stringify(s.cmp) === JSON.stringify(LOG.map(r => r.lpn)), s.cmp);
+      check("real ExcelJS: LPN column fits a 13-character LPN", s.lpnW >= 27, s.lpnW);
+      check("real ExcelJS: the version line is one line under the table", s.madeCells === 1 && /^Made with LPN Pallet Log v\d+\.\d+ \(build \d+\) on /.test(s.made || ""), s.made);
+      check("real ExcelJS: the page footer names the version", /LPN Pallet Log v\d+\.\d+ \(build \d+\)/.test(s.footer || "") && /Page &P of &N/.test(s.footer || ""), s.footer);
+      check("real ExcelJS: the notes row is tall enough for a long note", s.notesH >= 100, s.notesH);
+    }
+    s = await p.evaluate(async () => {
+      const buf = await buildLogPdf("2026-10-26");
+      const imp = await parseExported(new File([buf], "log.pdf"));
+      const cmp = await readLogPdf(new File([buf], "log.pdf"), () => {});
+      const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf.slice(0)) }).promise;
+      const words = (await (await pdf.getPage(1)).getTextContent()).items.map(i => i.str.trim()).filter(Boolean);
+      return { size: buf.byteLength, rows: imp.rows, notes: imp.notes, sealOut: imp.sealOut, cmp, oneLine: words.includes("RUN0001830763"), footer: words.find(w => /^LPN Pallet Log v/.test(w)) || null };
+    });
+    check("real jsPDF: the log PDF is made", s.size > 4000, s.size);
+    check("real jsPDF: importing the PDF gives back the same pallets and notes", JSON.stringify(s.rows) === JSON.stringify(LOG) && s.notes === NOTE && s.sealOut === "S2002", s);
+    check("real jsPDF: the Manifest check reads the same LPNs from the PDF", JSON.stringify(s.cmp) === JSON.stringify(LOG.map(r => r.lpn)), s.cmp);
+    check("real jsPDF: a 13-character LPN stays on one line", s.oneLine, s);
+    check("real jsPDF: the footer names the version", /^LPN Pallet Log v\d+\.\d+ \(build \d+\)/.test(s.footer || ""), s.footer);
+    s = await p.evaluate(async () => {
+      let out = null; window.sendFile = async (buf, name) => { out = new File([buf], name); };
+      document.getElementById("cmpLogNums").value = "VLT003977037\nRUN0001830763"; document.getElementById("cmpNums").value = "VLT003977037\nRUN0001830763\nRBY006291167";
+      await document.getElementById("cmpGo").onclick();
+      if (!out) return { err: document.getElementById("cmpMsg").textContent };
+      const wb = new ExcelJS.Workbook(); await wb.xlsx.load(await out.arrayBuffer());
+      const ws = wb.worksheets.find(w => /Manifest/.test(w.name)) || wb.worksheets[0];
+      const grid = sheetGrid(ws); let lp = []; try { lp = lpnsFromGrid(grid); } catch (e) { lp = [String(e.message)]; }
+      return { sheets: wb.worksheets.map(w => w.name), lpnW: ws.getColumn(2).width, lp,
+        made: grid.some(r => r.filter(Boolean).length === 1 && /^Made with LPN Pallet Log v/.test(String(r.find(Boolean)))) };
+    });
+    check("real ExcelJS: the manifest check spreadsheet is made", !s.err, s);
+    if (!s.err) {
+      check("real ExcelJS: manifest check lists every LPN and nothing else", ["VLT003977037", "RUN0001830763", "RBY006291167"].every(n => s.lp.includes(n)) && !s.lp.some(n => /Made with/.test(n)), s);
+      check("real ExcelJS: manifest check LPN column fits a 13-character LPN", s.lpnW >= 27, s.lpnW);
+      check("real ExcelJS: manifest check has the version line", s.made, s);
+    }
+    check("no script errors", p.errors.length === 0, p.errors);
+    await p.ctx.close();
+  }
+
   console.log("Offline");
   p = await page(browser, 375);
   await p.goto(URL0); await p.waitForTimeout(1500); await p.reload(); await p.waitForTimeout(800);
@@ -316,6 +406,11 @@ async function page(browser, width, opts = {}) {
 
   await browser.close(); srv.close();
   console.log("\n" + passed + " passed, " + failed + " failed");
+  // On GitHub the real libraries must be there; a summary note shows whether they ran.
+  if (process.env.GITHUB_ACTIONS) {
+    if (!REAL_LIBS) { failed++; console.log("::error title=Real export libraries missing::npm install didn't fetch ExcelJS, jsPDF and pdf.js, so the real export checks were skipped."); }
+    console.log("::notice title=Checks::" + passed + " passed, " + failed + " failed" + (REAL_LIBS ? ", including the real export library checks" : ", real export library checks skipped"));
+  }
   process.exit(failed ? 1 : 0);
 })().catch(e => {
   console.error(e);
