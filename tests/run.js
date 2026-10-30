@@ -54,7 +54,7 @@ const EXCEL_STUB = () => {
    always does). Pages opened with {real:true} get them in place of the CDN copies, from either CDN. */
 const LIBS = { "exceljs.min.js": "exceljs/dist/exceljs.min.js", "jspdf.umd.min.js": "jspdf/dist/jspdf.umd.min.js",
   "jspdf.plugin.autotable.min.js": "jspdf-autotable/dist/jspdf.plugin.autotable.min.js",
-  "pdf.min.js": "pdfjs-dist/build/pdf.min.js", "pdf.worker.min.js": "pdfjs-dist/build/pdf.worker.min.js" };
+  "pdf.min.mjs": "pdfjs-dist/legacy/build/pdf.min.mjs", "pdf.worker.min.mjs": "pdfjs-dist/legacy/build/pdf.worker.min.mjs" };
 const libFile = n => Object.prototype.hasOwnProperty.call(LIBS, n) ? path.join(ROOT, "node_modules", LIBS[n]) : null;
 const REAL_LIBS = Object.keys(LIBS).every(n => fs.existsSync(libFile(n)));
 
@@ -294,13 +294,13 @@ async function page(browser, width, opts = {}) {
   check("PDF records the version in its data and footer", /^LPN Pallet Log v\d+\.\d+/.test(s.app || "") && s.rows === 1 && /^LPN Pallet Log v/.test(s.footer || ""), s);
   s = await p.evaluate(async () => { const csv = "#,LPN,Pallet Type,FSDU\n1,A1,BB,No\n2,A2,FMCG,Yes\nMade with LPN Pallet Log v3.30 (build 26),Made with LPN Pallet Log v3.30 (build 26),,"; const r = await parseExported(new File([csv], "x.csv")); return r.rows.length; });
   check("importing stops at the version line", s === 2, s);
-  // Every PDF must be opened with isEvalSupported:false (CVE-2024-4367). A stand-in pdf.js records the options.
+  // Every PDF must be opened with isEvalSupported:false and enableScripting:false. A stand-in pdf.js records the options.
   s = await p.evaluate(async () => {
     const seen = []; const kw = "LPNLOG2:" + encodeURIComponent(JSON.stringify({ d: "2026-10-26", r: "T", rows: [["VLT003977037", "BB", 0]] }));
     const doc = { numPages: 1, getMetadata: async () => ({ info: { Keywords: kw } }),
       getPage: async () => ({ getTextContent: async () => ({ items: [{ str: "VLT003977037", hasEOL: true }] }) }) };
     const keep = [window.pdfjsLib, window.loadPdfJs];
-    window.pdfjsLib = { getDocument: o => { seen.push(o.isEvalSupported); return { promise: Promise.resolve(doc) }; } }; window.loadPdfJs = async () => {};
+    window.pdfjsLib = { getDocument: o => { seen.push(o.isEvalSupported === false && o.enableScripting === false); return { promise: Promise.resolve(doc) }; } }; window.loadPdfJs = async () => {};
     try {
       await parseExported(new File(["%PDF"], "log.pdf"));
       await readLogPdf(new File(["%PDF"], "log.pdf"), () => {});
@@ -308,11 +308,11 @@ async function page(browser, width, opts = {}) {
     } finally { window.pdfjsLib = keep[0]; window.loadPdfJs = keep[1]; }
     return seen;
   });
-  check("every PDF is opened with pdf.js code running turned off", s.length === 3 && s.every(v => v === false), s);
+  check("every PDF is opened with pdf.js code running turned off", s.length === 3 && s.every(v => v === true), s);
   {
     const src = ["core.js", "scan.js", "export.js", "compare.js", "panels.js"].map(f => [f, fs.readFileSync(path.join(ROOT, f), "utf8")]);
     const direct = src.flatMap(([f, t]) => (t.match(/getDocument\(/g) || []).map(() => f));
-    check("PDFs are only opened through openPdf()", direct.length === 1 && direct[0] === "compare.js" && /getDocument\(\{data:bytes,isEvalSupported:false\}\)/.test(src[3][1]), direct);
+    check("PDFs are only opened through openPdf()", direct.length === 1 && direct[0] === "compare.js" && /getDocument\(\{data:bytes,isEvalSupported:false,enableScripting:false\}\)/.test(src[3][1]), direct);
   }
   // A stand-in ExcelJS sheet that behaves like the real one for merged cells: every cell in a merged block
   // reports the block's text, and only the top-left cell is its own master. Here the version line comes
@@ -386,10 +386,16 @@ async function page(browser, width, opts = {}) {
       const imp = await parseExported(new File([buf], "log.pdf"));
       const cmp = await readLogPdf(new File([buf], "log.pdf"), () => {});
       const pdf = await openPdf(new Uint8Array(buf.slice(0)));
-      const words = (await (await pdf.getPage(1)).getTextContent()).items.map(i => i.str.trim()).filter(Boolean);
-      return { size: buf.byteLength, rows: imp.rows, notes: imp.notes, sealOut: imp.sealOut, cmp, oneLine: words.includes("RUN0001830763"), footer: words.find(w => /^LPN Pallet Log v/.test(w)) || null };
+      const pg = await pdf.getPage(1); const words = (await pg.getTextContent()).items.map(i => i.str.trim()).filter(Boolean);
+      // Drawing a page is what the photo-reading fallback does with scanned PDFs.
+      const vp = pg.getViewport({ scale: 1 }); const cv = document.createElement("canvas"); cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+      await pg.render({ canvasContext: cv.getContext("2d"), viewport: vp }).promise;
+      const px = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; let ink = 0; for (let i = 3; i < px.length; i += 4) if (px[i] > 0 && px[i - 1] < 128) ink++;
+      return { version: pdfjsLib.version, ink, size: buf.byteLength, rows: imp.rows, notes: imp.notes, sealOut: imp.sealOut, cmp, oneLine: words.includes("RUN0001830763"), footer: words.find(w => /^LPN Pallet Log v/.test(w)) || null };
     });
     check("real jsPDF: the log PDF is made", s.size > 4000, s.size);
+    check("real pdf.js: the pinned version is the one loaded", s.version === JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8")).devDependencies["pdfjs-dist"], s.version);
+    check("real pdf.js: a page can be drawn (used for scanned PDFs)", s.ink > 500, s.ink);
     check("real jsPDF: importing the PDF gives back the same pallets and notes", JSON.stringify(s.rows) === JSON.stringify(LOG) && s.notes === NOTE && s.sealOut === "S2002", s);
     check("real jsPDF: the Manifest check reads the same LPNs from the PDF", JSON.stringify(s.cmp) === JSON.stringify(LOG.map(r => r.lpn)), s.cmp);
     check("real jsPDF: a 13-character LPN stays on one line", s.oneLine, s);

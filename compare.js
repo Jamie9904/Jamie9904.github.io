@@ -172,16 +172,28 @@ $("cmpLogPhotoFile").onchange=async e=>{
   logSrc=null;logPdfSrc=null;logSheets=null;$("cmpLogName").textContent="Read from photo of printed log";
   cmpMsg("Done. Check the log numbers are correct, then compare."+oddNote("cmpLogNums"));
 };
+/* pdf.js 6 (the "legacy" build, made for older browsers and phones). It is an ES module, so it's loaded with
+   import() rather than a script tag. Only jsDelivr and unpkg host the legacy build. The worker can come from
+   another site: pdf.js wraps it itself. */
+const PDFJS_SRC=[
+  ["https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/legacy/build/pdf.min.mjs","https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/legacy/build/pdf.worker.min.mjs"],
+  ["https://unpkg.com/pdfjs-dist@6.4.299/legacy/build/pdf.min.mjs","https://unpkg.com/pdfjs-dist@6.4.299/legacy/build/pdf.worker.min.mjs"]
+];
 async function loadPdfJs(){
-  const t=()=>window.pdfjsLib;
-  const set=b=>{pdfjsLib.GlobalWorkerOptions.workerSrc=b+"pdf.worker.min.js"};
-  try{await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",t);set("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/")}
-  catch(e){await loadScript("https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js",t);set("https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/")}
+  if(window.pdfjsLib&&window.pdfjsLib.getDocument)return;
+  for(const [lib,worker] of PDFJS_SRC){
+    try{
+      const m=await Promise.race([import(lib),new Promise((_,rej)=>setTimeout(()=>rej(new Error("lib")),15000))]);
+      m.GlobalWorkerOptions.workerSrc=worker;window.pdfjsLib=m;return;
+    }catch(e){}
+  }
+  throw new Error("lib");
 }
 /* Opens a PDF with pdf.js. Supplier PDFs come from outside, so pdf.js must never turn anything in the file
-   into running code (CVE-2024-4367): isEvalSupported:false stops that. Every PDF that pdf.js reads goes through here
+   into running code. pdf.js 6 fixes the known flaws (CVE-2024-4367, CVE-2026-16633); isEvalSupported:false and
+   enableScripting:false stay as a second line of defence. Every PDF that pdf.js reads goes through here
    (pdf-lib, used to merge PDFs, only copies objects and never runs anything from a file). */
-function openPdf(bytes){return pdfjsLib.getDocument({data:bytes,isEvalSupported:false}).promise}
+function openPdf(bytes){return pdfjsLib.getDocument({data:bytes,isEvalSupported:false,enableScripting:false}).promise}
 function lpnsFromText(text){
   const pf=getPfx().sort((a,b)=>b.length-a.length);
   const re=new RegExp("\\b("+(pf.length?pf.join("|"):"[A-Z]{1,3}")+")[ \\t]?([0-9]{8,12})\\b","gi");
