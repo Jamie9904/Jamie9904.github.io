@@ -294,6 +294,26 @@ async function page(browser, width, opts = {}) {
   check("PDF records the version in its data and footer", /^LPN Pallet Log v\d+\.\d+/.test(s.app || "") && s.rows === 1 && /^LPN Pallet Log v/.test(s.footer || ""), s);
   s = await p.evaluate(async () => { const csv = "#,LPN,Pallet Type,FSDU\n1,A1,BB,No\n2,A2,FMCG,Yes\nMade with LPN Pallet Log v3.30 (build 26),Made with LPN Pallet Log v3.30 (build 26),,"; const r = await parseExported(new File([csv], "x.csv")); return r.rows.length; });
   check("importing stops at the version line", s === 2, s);
+  // Every PDF must be opened with isEvalSupported:false (CVE-2024-4367). A stand-in pdf.js records the options.
+  s = await p.evaluate(async () => {
+    const seen = []; const kw = "LPNLOG2:" + encodeURIComponent(JSON.stringify({ d: "2026-10-26", r: "T", rows: [["VLT003977037", "BB", 0]] }));
+    const doc = { numPages: 1, getMetadata: async () => ({ info: { Keywords: kw } }),
+      getPage: async () => ({ getTextContent: async () => ({ items: [{ str: "VLT003977037", hasEOL: true }] }) }) };
+    const keep = [window.pdfjsLib, window.loadPdfJs];
+    window.pdfjsLib = { getDocument: o => { seen.push(o.isEvalSupported); return { promise: Promise.resolve(doc) }; } }; window.loadPdfJs = async () => {};
+    try {
+      await parseExported(new File(["%PDF"], "log.pdf"));
+      await readLogPdf(new File(["%PDF"], "log.pdf"), () => {});
+      await readPdf(new File(["%PDF"], "manifest.pdf"), () => {});
+    } finally { window.pdfjsLib = keep[0]; window.loadPdfJs = keep[1]; }
+    return seen;
+  });
+  check("every PDF is opened with pdf.js code running turned off", s.length === 3 && s.every(v => v === false), s);
+  {
+    const src = ["core.js", "scan.js", "export.js", "compare.js", "panels.js"].map(f => [f, fs.readFileSync(path.join(ROOT, f), "utf8")]);
+    const direct = src.flatMap(([f, t]) => (t.match(/getDocument\(/g) || []).map(() => f));
+    check("PDFs are only opened through openPdf()", direct.length === 1 && direct[0] === "compare.js" && /getDocument\(\{data:bytes,isEvalSupported:false\}\)/.test(src[3][1]), direct);
+  }
   // A stand-in ExcelJS sheet that behaves like the real one for merged cells: every cell in a merged block
   // reports the block's text, and only the top-left cell is its own master. Here the version line comes
   // straight after the pallets (no blank row), as it would if someone tidied the sheet before sending it.
@@ -365,7 +385,7 @@ async function page(browser, width, opts = {}) {
       const buf = await buildLogPdf("2026-10-26");
       const imp = await parseExported(new File([buf], "log.pdf"));
       const cmp = await readLogPdf(new File([buf], "log.pdf"), () => {});
-      const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf.slice(0)) }).promise;
+      const pdf = await openPdf(new Uint8Array(buf.slice(0)));
       const words = (await (await pdf.getPage(1)).getTextContent()).items.map(i => i.str.trim()).filter(Boolean);
       return { size: buf.byteLength, rows: imp.rows, notes: imp.notes, sealOut: imp.sealOut, cmp, oneLine: words.includes("RUN0001830763"), footer: words.find(w => /^LPN Pallet Log v/.test(w)) || null };
     });
