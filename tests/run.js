@@ -60,7 +60,7 @@ const REAL_LIBS = Object.keys(LIBS).every(n => fs.existsSync(libFile(n)));
 
 async function page(browser, width, opts = {}) {
   // With the real libraries the service worker is turned off, so every library request reaches the router.
-  const ctx = await browser.newContext({ viewport: { width, height: 900 }, serviceWorkers: opts.real ? "block" : "allow" });
+  const ctx = await browser.newContext({ viewport: { width, height: 900 }, serviceWorkers: opts.real || opts.noSW ? "block" : "allow" });
   const p = await ctx.newPage();
   const errors = [];
   p.on("pageerror", e => errors.push(e.message));
@@ -302,8 +302,14 @@ async function page(browser, width, opts = {}) {
     const bad = vers.filter(v => lt(v, [4, 2, 67]) || (!lt(v, [5, 6, 83]) && lt(v, [6, 2, 109])));
     check("the PDF reader is a version without the known flaws", vers.length === 1 && bad.length === 0, { vers, bad });
   }
-  s = await p.evaluate(async () => { try { await parseExported(new File(["%PDF"], "log.pdf")); return "no error"; } catch (e) { return e.message; } });
-  check("a PDF reader that can't load gives a plain message", /^The PDF reader couldn’t load\. Check you’re online/.test(s), s);
+  {
+    // Every outside request is blocked. The service worker is off too, or it would fetch pdf.js itself where there is internet.
+    const q = await page(browser, 375, { noSW: true });
+    await q.goto(URL0); await q.waitForTimeout(200);
+    s = await q.evaluate(async () => { try { await parseExported(new File(["%PDF"], "log.pdf")); return "no error"; } catch (e) { return e.message; } });
+    check("a PDF reader that can't load gives a plain message", /^The PDF reader couldn’t load\. Check you’re online/.test(s), s);
+    await q.ctx.close();
+  }
   {
     const src = ["core.js", "scan.js", "export.js", "compare.js", "panels.js"].map(f => [f, fs.readFileSync(path.join(ROOT, f), "utf8")]);
     const direct = src.flatMap(([f, t]) => (t.match(/getDocument\(/g) || []).map(() => f));
