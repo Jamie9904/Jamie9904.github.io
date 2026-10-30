@@ -29,6 +29,15 @@ App files are fetched network-first with `cache:"no-cache"`, and the install ste
 - **Why:** an earlier cache-friendly setup let GitHub Pages' 10-minute HTTP cache serve stale files after an update. Revalidating every request makes updates appear immediately when online while still falling back to the cache offline.
 - **Discarded:** cache-first for app files (fast, but updates lag until the cache is bumped and the user reloads twice).
 
+## PDFs opened with code running turned off
+
+Every PDF is opened with pdf.js through one function, `openPdf()` in `compare.js`, which passes `isEvalSupported:false` to `getDocument()`.
+
+- **Why:** the app opens PDFs it did not make: supplier manifests in the Manifest check, and exported logs that may have been passed around before being loaded back. pdf.js 3.11.174, the version the app loads, has a flaw (CVE-2024-4367, advisory GHSA-wgrm-67xf-hhpq) where a specially made font in a PDF can make pdf.js run code in the page. The advisory's workaround for versions before the fix is `isEvalSupported:false`, which makes pdf.js draw fonts without generating code. It covers both reading the text and drawing pages for the OCR fallback, because both use the same opened document.
+- **One function for every reader:** `readPdf()`, `readLogPdf()` and `parseExported()` all call `openPdf()`, so a new PDF reader can't forget the flag by calling `getDocument()` directly. `tests/run.js` checks both: a stand-in pdf.js records that all three readers pass `isEvalSupported:false`, and a scan of the app scripts fails if `getDocument(` appears anywhere other than inside `openPdf()`.
+- **pdf-lib not affected:** pdf-lib (merging the uploaded log PDF into the manifest check PDF) only copies objects from one PDF into another and never runs anything from the file, so it does not need the same treatment.
+- **Planned:** the full fix is pdf.js 4.2.67 or later. That version is published as an ES module, so moving to it needs the legacy build and a change to how `loadPdfJs()` loads the library (and the version in `package.json`, which must match the CDN URLs). That is planned as a separate change; until then the flag is the protection.
+
 ## Exports designed to be read back
 
 The Excel log keeps an `LPN` header cell and labelled delivery cells (Date, Received by, Trailer number…), and PDFs carry the whole log as JSON in the PDF keywords (`LPNLOG2:`).

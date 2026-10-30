@@ -20,7 +20,7 @@ A client-only progressive web app. There is no backend: the browser renders the 
 | `core.js` | Global state (`rows`, `cfg`), delivery fields, persistence, table rendering, LPN validation, add flow, undo, sound/vibration, date helpers, script loader | `load`, `save`, `render`, `summary`, `lpnIssues`, `tryAdd`, `addValue`, `getDel`/`setDel`, `ukDate`/`isoDate`, `loadScript` |
 | `scan.js` | Live camera scanning and photo decoding; screen wake lock while scanning; input event wiring | `startScan`, `stopScan`, `decodePhoto`, `onCode` |
 | `export.js` | Spreadsheet styling helpers, Excel log, PDF log and manifest PDF, print, file delivery (download / share sheet / mailto fallback), logo handling, expected-count check | `xlBox`, `xlTitle`, `xlLines`, `xlLpnWidth`, `xlLpnLines`, `xlMadeWith`, `xlPrint`, `appVersion`, `buildLogPdf`, `buildCmpPdf`, `deliver`, `emailVia`, `expectCheck`, `exportLogo` |
-| `compare.js` | Manifest check: reading logs and manifests (xlsx, csv, PDF, photos), OCR, prefix presets, comparison, results panel, manifest Excel, live tracking in the log | `readLog`, `sheetGrid`, `readPdf`, `ocrLpns`, `extractLpns`, `cmpData`, `renderCmp`, `manState`, `manLive` |
+| `compare.js` | Manifest check: reading logs and manifests (xlsx, csv, PDF, photos), OCR, prefix presets, comparison, results panel, manifest Excel, live tracking in the log | `readLog`, `sheetGrid`, `loadPdfJs`, `openPdf`, `readPdf`, `readLogPdf`, `ocrLpns`, `extractLpns`, `cmpData`, `renderCmp`, `manState`, `manLive` |
 | `panels.js` | Guide/changelog content, side panel, theming, Settings (including the Logo buttons), saved deliveries (history), import of exported logs, backups, install pop-up, date reminder, remembered names, offline notice, service worker registration, prefix preset summary, entry bar stepping aside on phones | `applyTheme`, `initSettings`, `newDelivery`, `openHist`, `parseExported`, `backupNow`, `checkDate`, `pfxSummary` |
 | `sw.js` | Offline shell and library cache | install / activate / fetch handlers |
 
@@ -75,6 +75,15 @@ Excel and Google Sheets don't grow a row whose height has been set, so `export.j
 
 **Starting a new delivery**
 `newDelivery()` compares `exported.sig` with `logSig()`. If the log was never exported or has changed since, the first call only shows a reminder (remembered in `newAck`); a second call, or starting from the post-export prompt, saves to history, clears the delivery fields and manifest numbers and resets `exported`.
+
+**Opening PDFs**
+Every PDF that pdf.js reads is opened by `openPdf(bytes)` in `compare.js`, which is `pdfjsLib.getDocument({data:bytes, isEvalSupported:false}).promise`. Its three callers each run `loadPdfJs()` first (pdf.js 3.11.174 from cdnjs, jsDelivr as fallback):
+
+- `readPdf()` (`compare.js`): a manifest PDF in the Manifest check. It reads the text layer, and if no LPNs are found it renders up to 20 pages to a canvas (scale 2) and reads them with OCR. Both steps use the document `openPdf()` returned.
+- `readLogPdf()` (`compare.js`): a log PDF in the Manifest check. It tries the `LPNLOG2:` (or older `LPNLOG|`) keywords first, then the column under the `LPN` heading, then falls back to `readPdf()`.
+- `parseExported()` (`panels.js`): importing an exported log PDF in Saved deliveries, which only accepts PDFs with `LPNLOG2:` keywords.
+
+`isEvalSupported:false` stops pdf.js from turning font data in the file into JavaScript that it then runs (CVE-2024-4367; see [decisions](decisions.md#pdfs-opened-with-code-running-turned-off)). It applies to both text extraction and page rendering, since both use the same document. pdf-lib (`PDFLib.PDFDocument.load()` in `export.js`, used to add the uploaded log PDF to the manifest check PDF) does not go through `openPdf()`: it only copies the file's objects into the new PDF and does not run anything from it.
 
 **Manifest check**
 Numbers come from `readPdf()` (text via pdf.js, scanned pages via OCR), `ocrLpns()` (Tesseract with image clean-up and close-up re-reads) or typing. `extractLpns()` matches `prefix + 8–12 characters`, then repairs look-alike characters in the number part (O/D→0, I/L→1, S→5, B→8, Z→2). `cmpData()` normalises both lists and classifies each LPN as matched, missing or log only.
