@@ -561,7 +561,8 @@ async function page(browser, width, opts = {}) {
       return { first: body.firstElementChild && body.firstElementChild.contains(b), hidden: v.hidden, preload: v.preload, fits: r.left >= 0 && r.right <= innerWidth && r.height >= 44 }; });
     check("the Guide starts with a button to play the demo video, and nothing loads until it's tapped", s.first && s.hidden && s.preload === "none" && s.fits, s);
     await p.click("#demoPlay"); await p.waitForTimeout(300);
-    s = await p.evaluate(() => { const v = document.getElementById("demoVid"); return { shown: !v.hidden, src: v.querySelector("source").getAttribute("src"), btn: document.getElementById("demoPlay").hidden, w: v.getBoundingClientRect().width }; });
+    s = await p.evaluate(() => { const v = document.getElementById("demoVid"); return { shown: !v.hidden, src: v.querySelector("source").getAttribute("src"), btn: document.getElementById("demoPlay").hidden, w: v.getBoundingClientRect().width, vol: v.volume }; });
+    check("the demo video starts at half volume", s.vol === 0.5, s.vol);
     check("tapping it shows the video player in the Guide", s.shown && s.src === "media/demo.mp4" && s.btn && s.w > 200 && s.w <= 375, s);
     s = await p.evaluate(() => { closeHelp(); return document.getElementById("demoVid").paused; });
     check("closing the Guide stops the video", s === true, s);

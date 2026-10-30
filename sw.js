@@ -1,4 +1,4 @@
-const CACHE="lpn-log-v32";
+const CACHE="lpn-log-v33";
 // v2: only complete, checkable downloads are kept (v1 could keep a failed one), so v1 is cleared once.
 const LIBS="lpn-libs-v2";
 const SHELL=["./","index.html","sw.js","styles.css","core.js","scan.js","export.js","compare.js","panels.js","manifest.webmanifest","icon-192.png","icon-512.png","apple-touch-icon.png","fonts/AtkinsonHyperlegible-Regular.woff2","fonts/AtkinsonHyperlegible-Bold.woff2","fonts/IBMPlexMono-Regular.woff2","fonts/IBMPlexMono-Medium.woff2","fonts/IBMPlexMono-SemiBold.woff2"];
