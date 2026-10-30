@@ -23,7 +23,7 @@ function lpnsFromGrid(g){
   g.forEach((row,i)=>{if(col>=0)return;row.forEach((c,k)=>{if(col<0&&String(c).trim().toUpperCase()==="LPN"){col=k;start=i}})});
   if(col<0)throw new Error("Couldn't find an LPN column in that file.");
   const out=[];
-  for(let i=start+1;i<g.length;i++){const t=String(g[i][col]==null?"":g[i][col]).trim();if(!t)break;out.push(t)}
+  for(let i=start+1;i<g.length;i++){const t=String(g[i][col]==null?"":g[i][col]).trim();if(!t||/^Made with /.test(t))break;out.push(t)}
   return out;
 }
 function cellText(v){return v==null?"":v instanceof Date?v.toISOString().slice(0,10):typeof v==="object"?(v.richText?v.richText.map(x=>x.text).join(""):(v.text||v.result||"")):v}
@@ -53,7 +53,7 @@ async function readLog(f){
     await loadExcel();
     const ab=await f.arrayBuffer();const wb=new ExcelJS.Workbook();await wb.xlsx.load(ab);
     if(!wb.worksheets.length)throw new Error("That file has no sheets.");
-    const sheets=wb.worksheets.map(ws=>{const grid=[];ws.eachRow({includeEmpty:true},row=>{grid.push((row.values||[]).slice(1).map(cellText))});return {name:ws.name,grid}});
+    const sheets=wb.worksheets.map(ws=>{const grid=[];ws.eachRow({includeEmpty:true},row=>{const vals=(row.values||[]).slice(1).map(cellText);row.eachCell({includeEmpty:true},(cell,col)=>{if(cell.isMerged&&cell.master&&cell.master!==cell)vals[col-1]=""});grid.push(vals)});return {name:ws.name,grid}});
     const lp=lpnsFromGrid(sheets[0].grid);
     logSrc={buf:ab.slice(0),name:f.name};logSheets=sheets;return lp;
   }
@@ -348,7 +348,7 @@ $("cmpGo").onclick=async()=>{
     const bc={argb:"FF000000"},med={style:"medium",color:bc};
     const border={top:med,left:med,bottom:med,right:med};
     let off=0;
-    try{off=await xlLogo(wb,ws,547)}catch(e){off=0}
+    try{off=await xlLogo(wb,ws,Math.round((7+lpnW+18+12+19)*7.1))}catch(e){off=0}
     const side=[
       {v:["Summary","Count"],h:1},
       {v:["On manifest",man.length]},

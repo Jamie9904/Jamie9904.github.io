@@ -254,6 +254,34 @@ async function page(browser, width, opts = {}) {
   check("no script errors", p.errors.length === 0, p.errors);
   await p.ctx.close();
 
+  console.log("Export version note");
+  // Make every request for sw.js hang for 15 seconds, as on a very weak signal.
+  p = await page(browser, 1300, { excel: true, init: () => {
+    localStorage.setItem("lpnlog", JSON.stringify({ rows: [{ lpn: "VLT003977037", type: "BB", fsdu: false }], date: "2026-10-26", recv: "Tester" }));
+    const f = window.fetch; window.fetch = (u, o) => /sw\.js/.test(String(u)) ? new Promise(res => setTimeout(() => res(f(u, o)), 15000)) : f(u, o);
+  } });
+  await p.goto(URL0); await p.waitForTimeout(300);
+  s = await p.evaluate(async () => { window.saveOnly = async () => {}; const t0 = Date.now(); await document.getElementById("dl").onclick(); return Date.now() - t0; });
+  check("a slow network doesn't hold up an export", s < 3000, s);
+  s = await p.evaluate(async () => {
+    let html = ""; window.saveOnly = async (buf) => { html = typeof buf === "string" ? buf : ""; };
+    await fallbackXls("2026-10-26"); return html.match(/Made with [^<]*/) ? html.match(/Made with [^<]*/)[0] : null;
+  });
+  check("basic .xls fallback has the version line with a time", /^Made with LPN Pallet Log v\d+\.\d+.* on \d\d\/\d\d\/\d{4} at \d\d:\d\d\.$/.test(s || ""), s);
+  s = await p.evaluate(async () => {
+    const texts = []; let kw = "";
+    const any = () => new Proxy(function () {}, { get: (t, k) => k === "lastAutoTable" ? { finalY: 60 } : k === "internal" ? { pageSize: { getWidth: () => 210, getHeight: () => 297 } } : k === "getNumberOfPages" ? () => 1 : k === "output" ? () => new ArrayBuffer(4) : k === "text" ? (x) => { texts.push(String(x)); } : k === "setProperties" ? (o) => { kw = o.keywords; } : () => {} , apply: () => {} });
+    window.jspdf = { jsPDF: function () { return any(); } }; window.jspdf.jsPDF.API = { autoTable: () => {} };
+    await buildLogPdf("2026-10-26");
+    const o = JSON.parse(decodeURIComponent(kw.slice(8)));
+    return { app: o.app, rows: o.rows.length, footer: texts.find(x => /^LPN Pallet Log/.test(x)) || null };
+  });
+  check("PDF records the version in its data and footer", /^LPN Pallet Log v\d+\.\d+/.test(s.app || "") && s.rows === 1 && /^LPN Pallet Log v/.test(s.footer || ""), s);
+  s = await p.evaluate(async () => { const csv = "#,LPN,Pallet Type,FSDU\n1,A1,BB,No\n2,A2,FMCG,Yes\nMade with LPN Pallet Log v3.30 (build 26),Made with LPN Pallet Log v3.30 (build 26),,"; const r = await parseExported(new File([csv], "x.csv")); return r.rows.length; });
+  check("importing stops at the version line", s === 2, s);
+  check("no script errors", p.errors.length === 0, p.errors);
+  await p.ctx.close();
+
   console.log("Offline");
   p = await page(browser, 375);
   await p.goto(URL0); await p.waitForTimeout(1500); await p.reload(); await p.waitForTimeout(800);

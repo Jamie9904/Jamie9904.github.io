@@ -212,7 +212,7 @@ async function parseExported(f){
   if(col<0)throw new Error("Couldn’t find an LPN column in that file.");
   const rw=[];
   for(let i=start+1;i<g.length;i++){
-    const l=String(g[i][col]==null?"":g[i][col]).trim();if(!l)break;
+    const l=String(g[i][col]==null?"":g[i][col]).trim();if(!l||/^Made with /.test(l))break;
     rw.push({lpn:l,type:normT(g[i][col+1]),fsdu:/^y/i.test(String(g[i][col+2]||"").trim())});
   }
   let date="",recv="",notes="",expect="",trailer="",sealIn="",sealOut="";

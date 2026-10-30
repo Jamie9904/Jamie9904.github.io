@@ -35,28 +35,38 @@ function xlTitle(ws,off,lastCol,title,sub){
 }
 /* Which version of the app made a file: the changelog version plus the cache build number from sw.js,
    for example "LPN Pallet Log v3.30 (build 26)". Worked out once and kept. */
-let appVer="";
+/* Which version of the app made a file: the changelog version plus the build number (the cache
+   number in sw.js), for example "LPN Pallet Log v3.30 (build 26)". The build is read once when the
+   page loads, through the same network-first route as the app's own files, so it matches the code
+   this page is running even if an update arrives later. Exports never wait more than 1.5 seconds for it. */
+let appVer="",appVerTry="";
+const appBuildP=(async()=>{
+  try{const t=await Promise.race([fetch("sw.js",{cache:"no-cache"}).then(r=>r.text()),new Promise((_,rej)=>setTimeout(()=>rej(new Error("slow")),4000))]);const m=t.match(/lpn-log-v(\d+)/);if(m)return m[1]}catch(e){}
+  try{if(window.caches){const ks=(await caches.keys()).map(k=>(k.match(/^lpn-log-v(\d+)$/)||[])[1]).filter(Boolean).map(Number);if(ks.length)return String(Math.min(...ks))}}catch(e){}
+  return "";
+})();
 async function appVersion(){
   if(appVer)return appVer;
   const v=(typeof HELP!=="undefined"&&(HELP.log.match(/<h3>(v\d+\.\d+)/)||[])[1])||"";
-  let b="";
-  try{const t=await (await fetch("sw.js",{cache:"no-cache"})).text();b=(t.match(/lpn-log-v(\d+)/)||[])[1]||""}catch(e){}
-  appVer="LPN Pallet Log"+(v?" "+v:"")+(b?" (build "+b+")":"");
-  return appVer;
+  const b=await Promise.race([appBuildP,new Promise(r=>setTimeout(()=>r(""),1500))]);
+  const out="LPN Pallet Log"+(v?" "+v:"")+(b?" (build "+b+")":"");
+  if(b)appVer=out;
+  appVerTry=out;
+  return out;
 }
 /* A small grey line under the tables saying when and with which version the file was made. */
 function xlMadeWith(ws,row,lastCol){
   const now=new Date(),t=String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0");
   ws.mergeCells(row,1,row,lastCol);
   const c=ws.getRow(row).getCell(1);
-  c.value="Made with "+(appVer||"LPN Pallet Log")+" on "+ukDate(localToday())+" at "+t+".";
+  c.value="Made with "+(appVer||appVerTry||"LPN Pallet Log")+" on "+ukDate(localToday())+" at "+t+".";
   c.font={name:"Arial",size:10,italic:true,color:{argb:"FF595959"}};
   c.alignment={vertical:"middle",horizontal:"left"};
   ws.getRow(row).height=18;
 }
 function xlPrint(ws,hdrRow,landscape){
   ws.pageSetup={orientation:landscape?"landscape":"portrait",paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0,horizontalCentered:true,printTitlesRow:hdrRow+":"+hdrRow,margins:{left:0.4,right:0.4,top:0.6,bottom:0.7,header:0.3,footer:0.3}};
-  ws.headerFooter.oddFooter="&L&9"+(appVer||"LPN Pallet Log").replace(/&/g,"&&")+"&C&9Page &P of &N&R&9Printed &D";
+  ws.headerFooter.oddFooter="&L&9"+(appVer||appVerTry||"LPN Pallet Log").replace(/&/g,"&&")+"&C&9Page &P of &N&R&9Printed &D";
   ws.views=[{state:"frozen",ySplit:hdrRow,showGridLines:false}];
 }
 function saveBlob(data,type,name){
@@ -90,7 +100,8 @@ async function fallbackXls(d){
     h+="</tr>";
   }
   await appVersion();
-  h+="</table><p style=\"font-family:Arial;font-size:10pt;color:#595959;font-style:italic\">Made with "+esc(appVer)+" on "+esc(ukDate(localToday()))+".</p></body></html>";
+  const nw=new Date(),hm=String(nw.getHours()).padStart(2,"0")+":"+String(nw.getMinutes()).padStart(2,"0");
+  h+="</table><p style=\"font-family:Arial;font-size:10pt;color:#595959;font-style:italic\">Made with "+esc(appVer||appVerTry)+" on "+esc(ukDate(localToday()))+" at "+hm+".</p></body></html>";
   await deliver(h,"LPN-log-"+d+".xls","application/vnd.ms-excel");
 }
 function pdfLogSheet(doc,sh,multi){
@@ -133,7 +144,7 @@ function pdfFooter(doc,extra){
   const n=doc.getNumberOfPages(),tot=n+(extra||0),pw=doc.internal.pageSize.getWidth(),ph=doc.internal.pageSize.getHeight();
   const now=new Date(),pd=String(now.getDate()).padStart(2,"0")+"/"+String(now.getMonth()+1).padStart(2,"0")+"/"+now.getFullYear();
   for(let i=1;i<=n;i++){doc.setPage(i);doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(90);
-    doc.text(appVer||"LPN Pallet Log",10,ph-7);doc.text("Page "+i+" of "+tot,pw/2,ph-7,{align:"center"});doc.text("Printed "+pd,pw-10,ph-7,{align:"right"});}
+    doc.text(appVer||appVerTry||"LPN Pallet Log",10,ph-7);doc.text("Page "+i+" of "+tot,pw/2,ph-7,{align:"center"});doc.text("Printed "+pd,pw-10,ph-7,{align:"right"});}
   doc.setTextColor(0);
 }
 
@@ -171,7 +182,7 @@ const pdfCell=(t,o)=>({content:String(t),styles:Object.assign({},o||{})});
 async function buildLogPdf(d){
   await loadJsPdf();await appVersion();
   const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:"portrait"});
-  doc.setProperties({title:"LPN log "+d,subject:"LPN log",keywords:"LPNLOG2:"+encodeURIComponent(JSON.stringify({app:appVer,d:d,r:($("recv").value||"").trim(),n:($("notes").value||"").trim(),e:$("expect").value||"",t:($("trailer").value||"").trim(),si:($("sealIn").value||"").trim(),so:($("sealOut").value||"").trim(),rows:rows.map(r=>[r.lpn,r.type,r.fsdu?1:0])}))});
+  doc.setProperties({title:"LPN log "+d,subject:"LPN log",keywords:"LPNLOG2:"+encodeURIComponent(JSON.stringify({app:appVer||appVerTry,d:d,r:($("recv").value||"").trim(),n:($("notes").value||"").trim(),e:$("expect").value||"",t:($("trailer").value||"").trim(),si:($("sealIn").value||"").trim(),so:($("sealOut").value||"").trim(),rows:rows.map(r=>[r.lpn,r.type,r.fsdu?1:0])}))});
   const who=($("recv").value||"").trim();
   const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
   const L=10,LW=100,RX=L+LW+8,RW=190-LW-8;
@@ -345,7 +356,7 @@ $("dl").onclick=async()=>{
     ].concat(extras().map(e=>({v:[e[0],e[1]],l:1})));
     const n=Math.max(rows.length,side.length-1);
     let off=0;
-    try{off=await xlLogo(wb,ws,489)}catch(e){off=0}
+    try{off=await xlLogo(wb,ws,Math.round((7+lpnW+22+12)*7.3))}catch(e){off=0}
     const exp=$("expect").value;
     const H=xlTitle(ws,off,7,"Goods-in pallet log","Date: "+ukDate(d)+(who?"     Received by: "+who:"")+(exp?"     Expected pallets: "+exp:"")+(($("trailer").value||"").trim()?"     Trailer: "+$("trailer").value.trim():""));
     const lastL=H+rows.length,s1=H+6,s2a=H+8,s2b=H+side.length-1;
