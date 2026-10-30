@@ -205,7 +205,7 @@ async function page(browser, width, opts = {}) {
     const all4 = c => c.border && ["top", "bottom", "left", "right"].every(x => c.border[x] && c.border[x].style);
     const titleRow = Object.keys(ws.rows).find(k => ws.rows[k]._c[1] && ws.rows[k]._c[1].value === "Goods-in pallet log");
     return { title: titleRow ? ws.rows[titleRow]._c[1].value : null, logo: ws.images.length, titleBelowLogo: !ws.images.length || +titleRow > 4, hdr: [1, 2, 3, 4].map(c => h._c[c].value), hdrH: h.height, borders: [1, 2, 3, 4].every(c => all4(h._c[c]) && all4(d._c[c])),
-      lpnFont: d._c[2].font.name, lpnW: ws.columns[1].width, notesH: (() => { const k = Object.keys(ws.rows).find(k => ws.rows[k]._c[6] && ws.rows[k]._c[6].value === "Notes"); return k ? ws.rows[k].height : null; })(), footer: ws.headerFooter.oddFooter, fit: ws.pageSetup.fitToWidth, titles: ws.pageSetup.printTitlesRow, hdrRow: hdr,
+      lpnFont: d._c[2].font.name, made: (() => { const k = Object.keys(ws.rows).find(k => ws.rows[k]._c[1] && /^Made with/.test(ws.rows[k]._c[1].value || "")); return k ? ws.rows[k]._c[1].value : null; })(), lpnW: ws.columns[1].width, notesH: (() => { const k = Object.keys(ws.rows).find(k => ws.rows[k]._c[6] && ws.rows[k]._c[6].value === "Notes"); return k ? ws.rows[k].height : null; })(), footer: ws.headerFooter.oddFooter, fit: ws.pageSetup.fitToWidth, titles: ws.pageSetup.printTitlesRow, hdrRow: hdr,
       side: Object.keys(ws.rows).map(k => ws.rows[k]._c[6] && ws.rows[k]._c[6].value).filter(Boolean) };
   });
   check("spreadsheet was built", !!s, s);
@@ -217,6 +217,8 @@ async function page(browser, width, opts = {}) {
     check("cells have all four borders", s.borders);
     check("LPNs in Courier New", s.lpnFont === "Courier New", s.lpnFont);
     check("page footer with page numbers", /Page &P of &N/.test(s.footer || ""), s.footer);
+    check("footer names the app version and build", /LPN Pallet Log v\d+\.\d+ \(build \d+\)/.test(s.footer || ""), s.footer);
+    check("note under the tables says which version made it", /^Made with LPN Pallet Log v\d+\.\d+ \(build \d+\) on \d\d\/\d\d\/\d{4} at \d\d:\d\d\.$/.test(s.made || ""), s.made);
     check("fits one page wide, header repeats", s.fit === 1 && s.titles === s.hdrRow + ":" + s.hdrRow, s);
     check("delivery details include the trailer", s.side.includes("Trailer number"), s.side);
     check("LPN column fits the longest LPN (13 characters)", s.lpnW >= 27, s.lpnW);
@@ -232,9 +234,10 @@ async function page(browser, width, opts = {}) {
     window.sendFile = async () => {}; window.__wb = null;
     document.getElementById("cmpLogNums").value = "VLT003977037\nRUN0001830763"; document.getElementById("cmpNums").value = "VLT003977037\nRUN0001830763\nRBY006291167";
     await document.getElementById("cmpGo").onclick();
-    const ws = window.__wb && window.__wb.sheets.find(w => /Manifest/.test(w.name)); return ws ? ws.columns[1].width : null;
+    const ws = window.__wb && window.__wb.sheets.find(w => /Manifest/.test(w.name)); window.__cmpMade = ws && Object.keys(ws.rows).some(k => ws.rows[k]._c[1] && /^Made with LPN Pallet Log v/.test(ws.rows[k]._c[1].value || "")); return ws ? ws.columns[1].width : null;
   });
   check("manifest check LPN column fits a 13-character LPN", s >= 27, s);
+  check("manifest check notes the app version too", await p.evaluate(() => window.__cmpMade));
   s = await p.evaluate(async () => {
     const junk = "HTTPSEXAMPLECOMTHISISNOTANLPNBUTAVERYLONGSCANNEDVALUE1234567890ABCDEFGHIJ";
     window.__wb = null; document.getElementById("cmpLogNums").value = "VLT003977037\n" + junk; document.getElementById("cmpNums").value = "VLT003977037";

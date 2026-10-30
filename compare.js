@@ -337,6 +337,7 @@ $("cmpGo").onclick=async()=>{
     await loadExcel();
     const d=$("cmpDate").value||"no-date";
     const merge=mergeLog,mergeSrc=merge?logSrc:null;
+    await appVersion();
     const wb=new ExcelJS.Workbook();
     if(mergeSrc)await wb.xlsx.load(mergeSrc.buf);
     let tab="Manifest Check",tn=2;
@@ -384,6 +385,7 @@ $("cmpGo").onclick=async()=>{
       }
       r.height=(head||(right&&right.h))?32:Math.max(24,x?xlLpnLines(x.n,lpnW)*18+6:0);
     }
+    xlMadeWith(ws,H+n+2,8);
     xlPrint(ws,H);
     if(merge&&!logSrc){
       const sheets=logSheets&&logSheets.length?logSheets:[{name:"Log copy",grid:[["LPN"],...logList.map(n=>[n])]}];
