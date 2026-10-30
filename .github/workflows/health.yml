@@ -30,7 +30,6 @@ jobs:
           fail=0
           urls=$(grep -ohE "https://(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com)/[^\"' )]+" *.js | sort -u)
           for u in $urls; do
-            case "$u" in */) u="${u}pdf.worker.min.js";; esac
             if curl -fsSL --retry 2 -o /dev/null "$u"; then echo "ok   $u"; else echo "FAIL $u"; echo "::error title=Library unavailable::$u"; fail=1; fi
           done
           exit $fail

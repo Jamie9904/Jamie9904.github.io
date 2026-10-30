@@ -179,6 +179,7 @@ const PDFJS_SRC=[
   ["https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/legacy/build/pdf.min.mjs","https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/legacy/build/pdf.worker.min.mjs"],
   ["https://unpkg.com/pdfjs-dist@6.4.299/legacy/build/pdf.min.mjs","https://unpkg.com/pdfjs-dist@6.4.299/legacy/build/pdf.worker.min.mjs"]
 ];
+const PDF_LOAD_MSG="The PDF reader couldn’t load. Check you’re online, then reload the page and try again. Very old phones can’t read PDFs: type the numbers in the box instead.";
 async function loadPdfJs(){
   if(window.pdfjsLib&&window.pdfjsLib.getDocument)return;
   for(const [lib,worker] of PDFJS_SRC){
@@ -187,13 +188,15 @@ async function loadPdfJs(){
       m.GlobalWorkerOptions.workerSrc=worker;window.pdfjsLib=m;return;
     }catch(e){}
   }
-  throw new Error("lib");
+  throw new Error(PDF_LOAD_MSG);
 }
-/* Opens a PDF with pdf.js. Supplier PDFs come from outside, so pdf.js must never turn anything in the file
-   into running code. pdf.js 6 fixes the known flaws (CVE-2024-4367, CVE-2026-16633); isEvalSupported:false and
-   enableScripting:false stay as a second line of defence. Every PDF that pdf.js reads goes through here
-   (pdf-lib, used to merge PDFs, only copies objects and never runs anything from a file). */
-function openPdf(bytes){return pdfjsLib.getDocument({data:bytes,isEvalSupported:false,enableScripting:false}).promise}
+/* Opens a PDF with pdf.js. Supplier PDFs come from outside, so the pdf.js version matters: 6.4.299 is past the
+   known flaws where a crafted PDF could run code (CVE-2024-4367, fixed in 4.2.67; CVE-2026-16633, which affected
+   5.6.83 up to 6.2.108). pdf.js 6 no longer compiles anything from a file, and this app never runs a PDF's own
+   scripts (that needs the pdf.js viewer, which isn't used). Every PDF that pdf.js reads goes through here, and a
+   check makes sure the version stays outside the known bad ranges. pdf-lib, used to merge PDFs, only copies
+   objects and never runs anything from a file. */
+function openPdf(bytes){return pdfjsLib.getDocument({data:bytes}).promise}
 function lpnsFromText(text){
   const pf=getPfx().sort((a,b)=>b.length-a.length);
   const re=new RegExp("\\b("+(pf.length?pf.join("|"):"[A-Z]{1,3}")+")[ \\t]?([0-9]{8,12})\\b","gi");
@@ -258,7 +261,7 @@ $("cmpPdfFile").onchange=async e=>{
     const tag="PDF "+(i+1)+" of "+files.length;
     cmpMsg("Reading "+tag+"…");
     try{const found=await readPdf(files[i],m=>cmpMsg(tag+": "+m));total+=found.length;addNums(found)}
-    catch(err){fails.push(files[i].name+" ("+((err&&err.message)||"error")+")")}
+    catch(err){if(err&&err.message===PDF_LOAD_MSG){cmpMsg(PDF_LOAD_MSG);return}fails.push(files[i].name+" ("+((err&&err.message)||"error")+")")}
   }
   cmpMsg("Read "+(files.length-fails.length)+" of "+files.length+" PDFs and found "+total+" LPNs."+(fails.length?" Couldn’t read: "+fails.join(", ")+". You can type those numbers in the box instead.":"")+" Check the numbers below are correct, then compare."+oddNote("cmpNums"));
 };
