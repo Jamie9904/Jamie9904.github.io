@@ -81,9 +81,11 @@ def main():
     if os.path.isfile(os.path.join(top, "media", "demo.mp4")):
         last = git(["log", "-1", "--format=%H", "--", "media/demo.mp4"], top).stdout.strip()
         if last:
-            ui = git(["rev-list", "--count", last + "..HEAD", "--", "index.html", "styles.css", "core.js", "scan.js", "export.js", "compare.js", "panels.js"], top).stdout.strip()
+            # Only the page and its styles: script changes rarely show. The checks compare the actual screens
+            # with the video's fingerprint (tools/demo-video/screens.json) and warn when they differ.
+            ui = git(["rev-list", "--count", last + "..HEAD", "--", "index.html", "styles.css"], top).stdout.strip()
             if ui and ui != "0":
-                notes.append("demo video recorded before %s app change(s): check it still matches, re-record with sh tools/demo-video/make.sh" % ui)
+                notes.append("page or styles changed %s time(s) since the demo video: npm test says if the screens differ" % ui)
     # One working branch, "updates": say so when the session starts elsewhere or it has fallen behind main.
     if git(["rev-parse", "--verify", "-q", "refs/remotes/origin/updates"], top).returncode == 0:
         if branch != "updates" and branch != "docs":

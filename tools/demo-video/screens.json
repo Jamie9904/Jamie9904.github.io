@@ -1,0 +1,94 @@
+{
+ "log": [
+  {
+   "s": "header h1",
+   "x": 68,
+   "y": 22,
+   "w": 139,
+   "h": 23,
+   "text": "LPN Pallet Log",
+   "bg": "rgba(0, 0, 0, 0)",
+   "fg": "rgb(236, 237, 238)"
+  },
+  {
+   "s": "#btnGuide",
+   "x": 18,
+   "y": 62,
+   "w": 111,
+   "h": 44,
+   "text": "Guide",
+   "bg": "rgb(58, 54, 62)",
+   "fg": "rgb(236, 237, 238)"
+  },
+  {
+   "s": "#delSum",
+   "x": 19,
+   "y": 171,
+   "w": 352,
+   "h": 65,
+   "text": "30/10/2026 · Jamie · 12 expected · Trailer TR4471",
+   "bg": "rgb(58, 54, 62)",
+   "fg": "rgb(236, 237, 238)"
+  },
+  {
+   "s": "#sum",
+   "x": 19,
+   "y": 327,
+   "w": 352,
+   "h": 109,
+   "text": "8 Total 3 BB 2 FMCG 2 FPP 1 Mixed 1 FSDU",
+   "bg": "rgba(0, 0, 0, 0)",
+   "fg": "rgb(236, 237, 238)"
+  },
+  {
+   "s": "#tyb",
+   "x": 14,
+   "y": 642,
+   "w": 362,
+   "h": 50,
+   "text": "BB FMCG FPP Mixed",
+   "bg": "rgba(0, 0, 0, 0)",
+   "fg": "rgb(236, 237, 238)"
+  },
+  {
+   "s": "#lpn",
+   "x": 14,
+   "y": 730,
+   "w": 262,
+   "h": 52,
+   "text": "",
+   "bg": "rgb(31, 42, 65)",
+   "fg": "rgb(236, 237, 238)"
+  },
+  {
+   "s": "#expBtn",
+   "x": 19,
+   "y": 1140,
+   "w": 352,
+   "h": 46,
+   "text": "Export",
+   "bg": "rgb(255, 138, 42)",
+   "fg": "rgb(17, 17, 17)"
+  }
+ ],
+ "cmp": [
+  {
+   "s": "#cmpSum",
+   "x": 19,
+   "w": 352,
+   "h": 64,
+   "text": "On manifest: 9 ✓ Matched: 7 ✗ Missing (report): 2 ⚠ On log only (book in): 1",
+   "bg": "rgba(0, 0, 0, 0)",
+   "fg": "rgb(236, 237, 238)"
+  },
+  {
+   "s": "#cmpRes",
+   "x": 19,
+   "w": 352,
+   "h": 390,
+   "text": "✗ Missing from the log (2) On the manifest but not in your log: report these. If",
+   "bg": "rgba(0, 0, 0, 0)",
+   "fg": "rgb(236, 237, 238)"
+  }
+ ]
+}

@@ -37,6 +37,19 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+      - name: Guide demo video is on the live site and plays
+        run: |
+          curl -fsSL --retry 2 -o demo.mp4 https://jamie9904.github.io/media/demo.mp4 || { echo "::error title=Demo video missing::https://jamie9904.github.io/media/demo.mp4 didn't download"; exit 1; }
+          curl -fsSL --retry 2 -o poster.jpg https://jamie9904.github.io/media/demo-poster.jpg || { echo "::error title=Demo poster missing::media/demo-poster.jpg didn't download"; exit 1; }
+          command -v ffprobe >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null; }
+          d=$(ffprobe -v error -show_entries format=duration -of csv=p=0 demo.mp4)
+          v=$(ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of csv=p=0 demo.mp4)
+          a=$(ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 demo.mp4)
+          echo "duration $d s, video $v, audio $a"
+          # Decode the whole file: a damaged video fails here.
+          ffmpeg -v error -i demo.mp4 -f null - || { echo "::error title=Demo video damaged::the video doesn't decode"; exit 1; }
+          awk "BEGIN{exit !($d > 20)}" && [ "$v" = h264 ] && [ "$a" = aac ] || { echo "::error title=Demo video wrong::duration $d s, video $v, audio $a"; exit 1; }
+          echo "::notice title=Demo video::plays: $d s, $v and $a"
       - name: Security advisories for the app's libraries
         run: node tests/advisories.js
       - name: Library files still match their fingerprints

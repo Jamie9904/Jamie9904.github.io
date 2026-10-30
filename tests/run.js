@@ -570,6 +570,23 @@ async function page(browser, width, opts = {}) {
     await p.ctx.close();
   }
 
+  {
+    // Does the Guide's demo video still show what the app looks like? Compares the key screens with the fingerprint
+    // taken when it was recorded (tools/demo-video/screens.json). A difference is a warning, never a failure.
+    const scr = require(path.join(ROOT, "tools", "demo-video", "screens.js"));
+    const want = fs.existsSync(scr.FILE) ? JSON.parse(fs.readFileSync(scr.FILE, "utf8")) : null;
+    check("the demo video's screen fingerprint is there", !!want && Array.isArray(want.log) && want.log.length > 3);
+    if (want) {
+      const q = await page(browser, 390);
+      await q.setViewportSize({ width: 390, height: 844 });
+      const diffs = scr.differences(want, await scr.fingerprint(q, URL0));
+      await q.ctx.close();
+      const msg = diffs.length ? "The screens differ from the Guide's demo video (" + diffs.slice(0, 6).join("; ") + "). Re-record it with sh tools/demo-video/make.sh if the change shows in the video." : "";
+      console.log("  note demo video vs screens: " + (diffs.length ? msg : "still matches"));
+      if (diffs.length && process.env.GITHUB_ACTIONS) console.log("::warning title=Demo video may be out of date::" + msg.replace(/[\r\n%]/g, " "));
+    }
+  }
+
   console.log("Offline store and failure paths");
   {
     // The service worker is on and every outside request goes through the test's router, including its own.
