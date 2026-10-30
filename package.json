@@ -10,6 +10,6 @@
     "exceljs": "4.4.0",
     "jspdf": "2.5.1",
     "jspdf-autotable": "3.8.2",
-    "pdfjs-dist": "3.11.174"
+    "pdfjs-dist": "6.4.299"
   }
 }
