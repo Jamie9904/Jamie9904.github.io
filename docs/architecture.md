@@ -21,7 +21,7 @@ A client-only progressive web app. There is no backend: the browser renders the 
 | `scan.js` | Live camera scanning and photo decoding; screen wake lock while scanning; input event wiring | `startScan`, `stopScan`, `decodePhoto`, `onCode` |
 | `export.js` | Spreadsheet styling helpers, Excel log, PDF log and manifest PDF, print, file delivery (download / share sheet / mailto fallback), logo handling, expected-count check | `xlBox`, `xlTitle`, `xlLines`, `xlLpnWidth`, `xlLpnLines`, `xlMadeWith`, `xlPrint`, `appVersion`, `buildLogPdf`, `buildCmpPdf`, `deliver`, `emailVia`, `expectCheck`, `exportLogo` |
 | `compare.js` | Manifest check: reading logs and manifests (xlsx, csv, PDF, photos), OCR, prefix presets, comparison, results panel, manifest Excel, live tracking in the log | `readLog`, `sheetGrid`, `PDFJS_SRC`, `PDF_LOAD_MSG`, `loadPdfJs`, `openPdf`, `readPdf`, `readLogPdf`, `ocrLpns`, `OCR_MSG`, `dropOcrCache`, `extractLpns`, `cmpData`, `renderCmp`, `manState`, `manLive` |
-| `panels.js` | Guide/changelog content, side panel, theming, Settings (including the Logo buttons), saved deliveries (history), import of exported logs, backups, install pop-up, date reminder, remembered names, offline notice, service worker registration, prefix preset summary, entry bar stepping aside on phones | `applyTheme`, `initSettings`, `newDelivery`, `openHist`, `parseExported`, `backupNow`, `checkBackup`, `checkDate`, `pfxSummary` |
+| `panels.js` | Guide/changelog content, side panel, theming, Settings (including the Logo buttons), saved deliveries (history), import of exported logs, backups, install pop-up, date reminder, remembered names, offline notice, service worker registration, prefix preset summary, entry bar stepping aside on phones | `applyTheme`, `initSettings`, `newDelivery`, `openHist`, `parseExported`, `backupNow`, `checkBackup`, `checkDate`, `pfxSummary`, `openHelp`, `closeHelp`, `initDemo` |
 | `sw.js` | Offline shell and library cache | install / activate / fetch handlers |
 
 Scripts are loaded in that order at the end of `index.html`. Later files call functions from earlier ones directly; where an earlier file needs something defined later (for example `summary()` in `core.js` calling `manLive()` from `compare.js`), it checks `typeof fn === "function"` first.
@@ -69,6 +69,17 @@ Anything in `localStorage` may have come from a restored backup file, so it is c
 
 **Email PDF**
 `emailVia()` sets email mode and runs the Excel handler; `deliver()` swaps the spreadsheet for the PDF built by `pdfJob` and calls `navigator.share({files})`. If sharing is refused because the user gesture expired, a "Tap to share" button is offered; otherwise the file is saved and a `mailto:` opened.
+
+**Guide and demo video**
+`openHelp("guide", title)` fills `#panelBody` with `DEMO_HTML` followed by `guideToc(HELP.guide)` (the contents bar and the guide sections), then calls `initDemo()`. `DEMO_HTML` (in `panels.js`) is a `div.demo` holding:
+
+- `#demoPlay`, a full-width button (at least 52px tall) labelled "▶ Watch the demo video (38 seconds)";
+- `#demoVid`, a `<video hidden controls playsinline preload="none" poster="media/demo-poster.jpg">` with one `<source src="media/demo.mp4" type="video/mp4">` and an `aria-label`;
+- `#demoNote`, a hidden `role="status"` paragraph: "The video couldn’t play. Check you’re online, then try again."
+
+`initDemo()` listens for `error` on both the `<source>` and the `<video>` and shows `#demoNote` when either fires. Clicking `#demoPlay` hides the note and the button, shows the video and calls `play()` (a refused `play()` promise is ignored; the user can press play on the controls). `closeHelp()` pauses `#demoVid` if it is on the page before hiding the panel. Each `openHelp()` rebuilds the panel contents, so the button comes back the next time the Guide opens. The CSS (`.demo`, `.demobtn`, `.demo video`, `.demonote` in `styles.css`) keeps the player at most 360px wide, centred, with a 9:16 aspect ratio and a black background.
+
+The video is a same-site file, so the existing `default-src 'self'` in the security policy covers it (there is no separate `media-src`).
 
 **Column widths and row heights in spreadsheets**
 Excel and Google Sheets don't grow a row whose height has been set, so `export.js` works out the sizes itself:
@@ -184,6 +195,8 @@ Older Safari doesn't understand `'wasm-unsafe-eval'`, so reading photos needs iO
 ## Offline and updates
 
 `sw.js` pre-caches the app shell (with `cache:"reload"` to bypass the HTTP cache) and serves app files network-first with `cache:"no-cache"`, so a published change appears on the next load and the cached copy is only used offline. `sw.js` is in its own `SHELL` list, so the page can still read the build number from it when offline. Bumping `CACHE` in `sw.js` installs a new worker; on `activate` it deletes every cache except `CACHE` and `LIBS`. `panels.js` shows the "new version available" banner on `controllerchange`.
+
+Requests whose path ends in `.mp4` or `.webm` are not handled by the service worker at all (the `fetch` handler returns without calling `respondWith`), so the browser loads them itself. Browsers fetch video in pieces (range requests answered with partial `206` responses), and the Cache API can't store those, so the demo video is not in `SHELL` and is never available offline. `media/demo-poster.jpg` is not in `SHELL` either; it goes through the normal network-first handler and is saved once it has loaded.
 
 Libraries from the hosts in the `CDN` list (`cdnjs.cloudflare.com`, `cdn.jsdelivr.net`, `unpkg.com` and Tesseract's language data host `tessdata.projectnaptha.com`; the Google Fonts hosts were removed, as the fonts are self-hosted) are cache-first in a separate cache, `LIBS = "lpn-libs-v2"`, because their versioned URLs never change. The rules:
 

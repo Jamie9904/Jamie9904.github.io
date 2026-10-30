@@ -64,7 +64,7 @@ Details, including how to publish updates: [docs/installation.md](docs/installat
 
 ## Architecture (summary)
 
-A single page (`index.html`) loads five classic scripts in a fixed order that share globals: `core.js` (state, log, rendering), `scan.js` (barcodes), `export.js` (Excel/PDF/print), `compare.js` (manifest check, OCR, live tracking) and `panels.js` (guide, settings, saved deliveries, install, update banner). State lives in memory and is mirrored to `localStorage` on every change. A network-first service worker keeps the app usable offline and caches CDN libraries on first use (only complete downloads, in `lpn-libs-v2`). See [docs/architecture.md](docs/architecture.md).
+A single page (`index.html`) loads five classic scripts in a fixed order that share globals: `core.js` (state, log, rendering), `scan.js` (barcodes), `export.js` (Excel/PDF/print), `compare.js` (manifest check, OCR, live tracking) and `panels.js` (guide with a demo video, settings, saved deliveries, install, update banner). State lives in memory and is mirrored to `localStorage` on every change. A network-first service worker keeps the app usable offline and caches CDN libraries on first use (only complete downloads, in `lpn-libs-v2`); the Guide's demo video is left to the browser and needs internet. See [docs/architecture.md](docs/architecture.md).
 
 ## Project structure
 
@@ -80,6 +80,7 @@ A single page (`index.html`) loads five classic scripts in a fixed order that sh
 ├── sw.js               service worker
 ├── manifest.webmanifest, icon-*.png, apple-touch-icon.png
 ├── fonts/              self-hosted fonts + licences
+├── media/              demo video for the Guide (demo.mp4) and its poster
 ├── logo.png            default logo (optional)
 ├── presets.json        shared LPN prefix presets (optional)
 ├── DESIGN.md           design system notes

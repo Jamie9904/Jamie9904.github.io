@@ -273,3 +273,12 @@ The weekly check of the live site, the CDN libraries and the tests is `.github/w
 - **Why written exceptions:** jsPDF 2.5.1 has 12 known advisories, all in features the app doesn't use (GIF and BMP images, annotations, form fields, `addJS`, XMP metadata, the Node.js build, `html()`, opening output in a new window). Writing down why each one doesn't apply means the check can stay strict for anything new, and the reasons can be rechecked when the code changes. The check also says when an accepted entry is no longer reported, so the list doesn't go stale after an upgrade.
 - **Blocking weekly, not on every push:** `advisories.js` and `sri.js` need osv.dev and the CDNs. In `test.yml` they run with `continue-on-error`, so a new advisory or a network problem doesn't stop an unrelated fix from being checked; in `health.yml` they fail the run and send the email.
 - **Trade-off:** if an accepted advisory's reason stops being true (for example the app starts using `addJS`), the check won't notice; the `security-reviewer` agent and the note at the top of the file are the reminder.
+
+## Demo video in the Guide, loaded on demand and not cached
+
+The Guide starts with a button that shows a 38-second narrated demo video (`media/demo.mp4`, about 1.5 MB, with subtitles) instead of loading the player straight away. The service worker leaves `.mp4` and `.webm` requests to the browser.
+
+- **Why a button and `preload="none"`:** most opens of the Guide are to look something up, often on mobile data. Nothing is downloaded until someone asks for the video, so opening the Guide costs nothing extra.
+- **Why it isn't cached:** browsers fetch video with range requests, and the partial (`206`) responses can't be stored with the Cache API. Saving the whole file for offline use would need extra service worker code, and would add 1.5 MB to every install for something most people watch once.
+- **Why a file on the site:** it comes from the app's own address, so the security policy (`default-src 'self'`) needs no change and no outside video host is involved.
+- **Trade-off:** the video needs a signal every time. Offline it shows a plain "couldn’t play" message; the written Guide below it still works offline. A check keeps the file under 3 MB.

@@ -14,6 +14,9 @@
 ├── icon-192.png, icon-512.png, apple-touch-icon.png
 ├── logo.png                 default logo for the header and exports (optional)
 ├── presets.json             shared LPN prefix presets (optional)
+├── media/
+│   ├── demo.mp4             narrated demo video for the Guide (720×1280, about 38 seconds, about 1.5 MB; loaded only when tapped, not cached)
+│   └── demo-poster.jpg      still picture shown before the video plays
 ├── fonts/
 │   ├── AtkinsonHyperlegible-{Regular,Bold}.woff2
 │   ├── IBMPlexMono-{Regular,Medium,SemiBold}.woff2
@@ -57,6 +60,7 @@
 | `compare.js` | Everything manifest-related, file readers, OCR | Saved-delivery storage |
 | `panels.js` | Side-panel content (Guide, Changelog, Settings, Saved deliveries) and app-wide extras that run last | Code other scripts depend on during their own load |
 | `sw.js` | Caching only | App logic |
+| `media/` | The Guide's demo video and its poster, kept under 3 MB (a check fails above that) | Anything the app needs to work offline (video is never cached) |
 
 ## Load order and dependencies
 

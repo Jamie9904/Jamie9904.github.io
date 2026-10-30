@@ -101,6 +101,15 @@ Everything (the current log, saved deliveries, names, presets, logo and settings
 
 While checking, the app tidies the backup: anything it doesn't recognise is left out (for example an unknown pallet type becomes Mixed, and a logo that isn't a PNG or JPEG image is dropped). The same tidying happens every time the app starts, so damaged saved data can't stop it opening.
 
+## Guide and demo video
+
+The **Guide** button in the header opens the Guide in the side panel. It starts with a **▶ Watch the demo video (38 seconds)** button, above the contents bar and the guide sections.
+
+- Nothing is downloaded until the button is tapped (the video is set to `preload="none"`).
+- Tapping it hides the button and shows a video player in its place, which starts playing. The video is portrait (720×1280, about 1.5 MB), has narration and subtitles, and shows a still picture (`media/demo-poster.jpg`) before it plays. The player has the usual controls (play, pause, full screen) and plays inside the page on iPhones rather than jumping to full screen.
+- Closing the Guide pauses the video. Opening the Guide again shows the button again.
+- The video needs internet: it is not saved for offline use. If it can't play, the Guide shows "The video couldn’t play. Check you’re online, then try again."
+
 ## Settings
 
 Colours (two colours drive the whole theme, with a contrast warning), quick themes, logo, default pallet type, keep last type, warnings, sound, vibration, confirm scans, text size, date format (dd/mm/yyyy, mm/dd/yyyy, yyyy-mm-dd), include log copy in comparisons, forget remembered names, backup and restore, install pop-up.
@@ -123,6 +132,7 @@ Colours (two colours drive the whole theme, with a contrast warning), quick them
 | Restored data not showing | Tap **Reload the app** under the restore message, once the copy of your previous data has saved. |
 | "The PDF reader couldn’t load. Check you’re online, then reload the page and try again…" | The PDF reader is downloaded the first time a PDF is read, then kept for offline use. Go online, reload and try again. Very old phones (roughly older than iOS 16.4, Chrome 94 or Firefox 93) can’t read PDFs at all: type or paste the numbers in the box instead, or use a photo. When several manifest PDFs are chosen, reading stops at the first one with this message. |
 | Email PDF saved a file instead of sharing | The browser refused the share. Attach the saved file to the email that opens. |
+| "The video couldn’t play. Check you’re online, then try again." | The demo video in the Guide is never saved for offline use, so it needs a signal every time. Go online, close and reopen the Guide, and tap the button again. Everything else in the Guide works offline. |
 | Changes don't appear after an update | Tap **Refresh** on the update banner, or close and reopen the app. |
 | Spreadsheet looks cut off on a phone | Mobile viewers open sheets zoomed in; pinch out. Desktop and print are unaffected. |
 | Notes or LPNs cut off in an older export | Files made before v3.30 build 26 used fixed row heights and column widths. If the delivery is still in Saved deliveries, export it again. |
