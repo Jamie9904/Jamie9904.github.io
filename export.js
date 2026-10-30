@@ -33,8 +33,6 @@ function xlTitle(ws,off,lastCol,title,sub){
   b.value=sub;b.font={name:"Arial",size:12,color:{argb:"FF404040"}};b.alignment={vertical:"middle",horizontal:"left"};
   return off+4;
 }
-/* Which version of the app made a file: the changelog version plus the cache build number from sw.js,
-   for example "LPN Pallet Log v3.30 (build 26)". Worked out once and kept. */
 /* Which version of the app made a file: the changelog version plus the build number (the cache
    number in sw.js), for example "LPN Pallet Log v3.30 (build 26)". The build is read once when the
    page loads, through the same network-first route as the app's own files, so it matches the code
