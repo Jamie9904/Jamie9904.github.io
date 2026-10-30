@@ -12,9 +12,12 @@ Never blocks the session: any problem is reported in the status line and the hoo
 """
 import json, os, re, subprocess, sys
 
+# Never wait for a password or passphrase: the hook has no terminal to ask on.
+QUIET = dict(os.environ, GIT_TERMINAL_PROMPT="0", GIT_SSH_COMMAND="ssh -o BatchMode=yes")
+
 def git(args, cwd, timeout=30):
     try:
-        return subprocess.run(["git"] + args, cwd=cwd, capture_output=True, text=True, timeout=timeout)
+        return subprocess.run(["git"] + args, cwd=cwd, capture_output=True, text=True, timeout=timeout, env=QUIET)
     except Exception as e:
         return subprocess.CompletedProcess(args, 1, "", str(e))
 
@@ -51,13 +54,18 @@ def main():
         return 0
     notes = []
 
-    git(["config", "--replace-all", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*"], top)
-    f = git(["fetch", "--prune", "-q", "origin"], top, timeout=45)
-    if f.returncode != 0:
-        notes.append("couldn't fetch from GitHub, so origin/* may be out of date")
+    if git(["remote", "get-url", "origin"], top).returncode == 0:
+        git(["config", "--replace-all", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*"], top)
+        f = git(["fetch", "--prune", "-q", "origin"], top, timeout=45)
+        if f.returncode != 0:
+            notes.append("couldn't fetch from GitHub, so origin/* may be out of date")
+    else:
+        notes.append("no GitHub remote")
 
     branch = git(["rev-parse", "--abbrev-ref", "HEAD"], top).stdout.strip()
-    if branch and branch != "HEAD":
+    if branch == "HEAD":
+        notes.append("detached HEAD (not on a branch)")
+    elif branch:
         has_up = git(["rev-parse", "--abbrev-ref", branch + "@{u}"], top).returncode == 0
         if not has_up and git(["rev-parse", "--verify", "-q", "refs/remotes/origin/" + branch], top).returncode == 0:
             git(["branch", "-u", "origin/" + branch], top)
@@ -79,7 +87,7 @@ def main():
         here = None
     live = cache_of(git(["show", "origin/main:sw.js"], top).stdout)
     if here and live:
-        notes.append("build here %d, live build %d" % (here, live) + (" (bump needed before committing app changes)" if branch != "main" and here <= live and branch != "docs" else ""))
+        notes.append("build here %d, live build %d" % (here, live) + (" (bump needed before committing app changes)" if branch not in ("main", "docs", "HEAD") and here <= live else ""))
 
     app = ["index.html", "styles.css", "core.js", "scan.js", "export.js", "compare.js", "panels.js", "sw.js", "tests/run.js"]
     behind = git(["rev-list", "--count", "origin/docs..origin/main", "--"] + app, top).stdout.strip()

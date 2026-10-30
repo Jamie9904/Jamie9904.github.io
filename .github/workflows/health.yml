@@ -6,9 +6,12 @@ on:
   schedule:
     - cron: "36 7 * * 1"
   workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   health:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
         with:
@@ -34,6 +37,6 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - run: npm install
+      - run: npm install --ignore-scripts
       - run: npx playwright install --with-deps chromium
       - run: npm test
