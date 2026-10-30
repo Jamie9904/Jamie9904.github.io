@@ -1,0 +1,17 @@
+{
+  "_about": "Security advisories for the app's libraries that were checked and don't affect how the app uses them. tests/advisories.js lists these as notes instead of failing. Each entry says why. Remove an entry once the library is upgraded past it (the weekly check says when an entry is no longer needed). The app uses jsPDF only for text, autoTable tables, setProperties, addImage with a JPEG data URL it draws itself on a canvas, and output('arraybuffer'), in the browser.",
+  "jspdf": {
+    "GHSA-67pg-wm7f-q7fj": "GIF dimensions: the app never gives jsPDF a GIF. The logo is redrawn on a canvas and passed as JPEG.",
+    "GHSA-7x6v-j9x4-qf24": "FreeText annotation colour: the app creates no annotations.",
+    "GHSA-8mvj-3j78-4qmw": "Crafted image data in addImage: the only image is the app's own canvas JPEG.",
+    "GHSA-95fx-jjr5-f39c": "BMP decoder: the app never gives jsPDF a BMP.",
+    "GHSA-9vjf-qc39-jprp": "addJS: the app doesn't use addJS.",
+    "GHSA-cjw8-79x6-5cj4": "addJS plugin: the app doesn't use addJS.",
+    "GHSA-f8cm-6447-x5h2": "Node.js builds only (loadFile path traversal). The app uses the browser build.",
+    "GHSA-p5xg-68wr-hm3m": "AcroForm radio buttons: the app creates no form fields.",
+    "GHSA-pqxr-3g65-p328": "AcroForm choice fields: the app creates no form fields.",
+    "GHSA-vm32-vv63-w422": "XMP metadata (addMetadata): not used. Document properties are set with setProperties.",
+    "GHSA-w532-jxjh-hjhj": "ReDoS on data URLs given to addImage or html: the only data URL is the app's own canvas JPEG, and html() isn't used.",
+    "GHSA-wfv2-pwc8-crg5": "HTML injection when output opens a new window: the app only uses output('arraybuffer')."
+  }
+}
