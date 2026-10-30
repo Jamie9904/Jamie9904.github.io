@@ -371,8 +371,17 @@ async function page(browser, width, opts = {}) {
     await p.waitForTimeout(200);
     s = await p.evaluate(() => ({ ask: !document.getElementById("bkAsk").hidden, msg: document.getElementById("bkMsg").textContent, log: localStorage.getItem("lpnlog") }));
     check("restoring a backup asks first and changes nothing yet", s.ask && /log of 1 pallet and 1 saved delivery/.test(s.msg) && /KEEP000000001/.test(s.log || ""), s);
-    await p.evaluate(() => { location.reload = () => {}; document.getElementById("bkGo").click(); });
+    await p.evaluate(() => { document.getElementById("bkGo").click(); });
     await p.waitForTimeout(300);
+    check("after restoring, the app waits for the user to reload", await p.evaluate(() => !document.getElementById("bkDone").hidden && /Make sure the copy/.test(document.getElementById("bkMsg").textContent)));
+    s = await p.evaluate(async () => {
+      const before = localStorage.getItem("lpnlog"); window.saveOnly = async () => { throw new Error("blocked"); };
+      const f = new File([JSON.stringify({ app: "lpn-pallet-log", data: { lpnlog: JSON.stringify({ rows: [{ lpn: "OTHER0000001", type: "BB" }] }) } })], "b2.json");
+      const dt = new DataTransfer(); dt.items.add(f); const i = document.getElementById("bkFile"); i.files = dt.files; await i.onchange({ target: i });
+      await document.getElementById("bkGo").onclick();
+      return { same: localStorage.getItem("lpnlog") === before, msg: document.getElementById("bkMsg").textContent };
+    });
+    check("a restore stops if the copy of the current data can't be saved", s.same && /wasn’t replaced/.test(s.msg), s);
     s = await p.evaluate(() => ({ bk: window.__bk, log: JSON.parse(localStorage.getItem("lpnlog")), hist: JSON.parse(localStorage.getItem("lpnhist")), logo: localStorage.getItem("lpnlogo"), names: localStorage.getItem("lpnnames") }));
     check("a copy of the current data downloads before restoring", s.bk === 1, s.bk);
     check("a restored backup is tidied: plain text, known pallet types, no outside logo", s.log.rows[0].lpn === "NEW000000001" && s.log.recv === "" && s.hist.length === 1 && s.hist[0].rows[0].type === "Mixed" && s.hist[0].rows[0].fsdu === true && s.logo === null && s.names === '["Jamie"]', s);
@@ -401,7 +410,7 @@ async function page(browser, width, opts = {}) {
     check("hidden PDF data is only ever read as plain text", JSON.stringify(s.imp) === '["","","",1]' && JSON.stringify(s.lp) === '["RUN000000001"]' && s.objects === 0, s);
     s = await p.evaluate(async () => { let html = ""; window.saveOnly = async b => { html = b; }; rows = [{ lpn: "A1", type: "BB", fsdu: false }];
       document.getElementById("notes").value = '=HYPERLINK("https://evil.example","Open")'; await fallbackXls("2026-10-26"); return html; });
-    check("the basic .xls export keeps every cell as text", /td\{mso-number-format:"\\@"\}/.test(s), s.slice(0, 300));
+    check("the basic .xls export keeps typed text as text, counts as numbers", /td\.t\{mso-number-format:"\\@"\}/.test(s) && /<td class="t">=HYPERLINK/.test(s) && !/<td class="t">\d+<\/td>/.test(s) && /<td>1<\/td>/.test(s), s.slice(s.indexOf("<table"), s.indexOf("<table") + 600));
     check("no script errors", p.errors.length === 0, p.errors);
     await p.ctx.close();
   }

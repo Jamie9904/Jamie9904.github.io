@@ -19,7 +19,8 @@ self.addEventListener("fetch",e=>{
     // Library files never change at a given address, so use the saved copy first.
     e.respondWith(caches.open(LIBS).then(async c=>{
       const hit=await c.match(req);
-      if(hit)return hit;
+      // An unchecked (opaque) copy can't answer a checked request, so fetch a fresh one instead.
+      if(hit&&!(hit.type==="opaque"&&req.mode!=="no-cors"))return hit;
       try{
         const res=await fetch(req);
         // Only complete downloads are saved. The photo reader's worker files can only be fetched unchecked (opaque);

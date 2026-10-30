@@ -124,7 +124,8 @@ async function dropOcrCache(){try{for(const n of await caches.keys()){if(!/^lpn-
 async function ocrLpns(f){
   try{await loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",()=>window.Tesseract)}catch(e){await dropOcrCache();throw new Error(OCR_MSG)}
   const cv=await prep(f);
-  let w;try{w=await Tesseract.createWorker("eng")}catch(e){await dropOcrCache();throw new Error(OCR_MSG)}
+  // 90 seconds: the first use downloads the language data, which can be slow on a weak signal.
+  let w;try{w=await Promise.race([Tesseract.createWorker("eng"),new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),90000))])}catch(e){await dropOcrCache();throw new Error(OCR_MSG)}
   try{
     await w.setParameters({tessedit_char_whitelist:"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ",preserve_interword_spaces:"1"});
     const r=(await w.recognize(cv)).data;

@@ -12,16 +12,18 @@ let cfg={defType:"BB",check:true,sound:true,size:"1",keepType:true,vibrate:true,
 /* Saved data can come back from a backup file, so everything read from storage is checked and tidied before use.
    A damaged or crafted backup then can't stop the app starting or put anything odd into an export. */
 const isTxt=v=>typeof v==="string"||typeof v==="number";
-function cleanCfg(c){const out={};if(c&&typeof c==="object"&&!Array.isArray(c))Object.keys(cfg).forEach(k=>{if(typeof c[k]===typeof cfg[k])out[k]=c[k]});return out}
+const CFG_OK={size:["1","1.12","1.25"],dateFmt:["uk","us","iso"],defType:TYPES};
+function cleanCfg(c){const out={};if(c&&typeof c==="object"&&!Array.isArray(c))Object.keys(cfg).forEach(k=>{if(typeof c[k]===typeof cfg[k]&&(!CFG_OK[k]||CFG_OK[k].indexOf(c[k])>=0))out[k]=c[k]});return out}
+const isoTime=v=>typeof v==="string"&&/^\d{4}-\d{2}-\d{2}T[\d:.]+Z?$/.test(v)&&!isNaN(new Date(v));
 function cleanRows(a){return (Array.isArray(a)?a:[]).filter(r=>r&&typeof r==="object"&&isTxt(r.lpn)&&String(r.lpn).trim()).map(r=>({lpn:String(r.lpn).trim().slice(0,100),type:TYPES.indexOf(r.type)>=0?r.type:"Mixed",fsdu:!!r.fsdu}))}
 function cleanDel(o){
   o=o&&typeof o==="object"?o:{};const out={};
   DEL_F.forEach(k=>{out[k]=isTxt(o[k])?String(o[k]).slice(0,2000):""});
   if(!/^\d{4}-\d{2}-\d{2}$/.test(out.date))out.date="";
-  const e=o.exp;out.exp=e&&typeof e==="object"&&typeof e.at==="string"&&typeof e.sig==="string"?{at:e.at,sig:e.sig}:null;
+  const e=o.exp;out.exp=e&&typeof e==="object"&&isoTime(e.at)&&typeof e.sig==="string"?{at:e.at,sig:e.sig}:null;
   return out;
 }
-function cleanHist(a){return (Array.isArray(a)?a:[]).filter(h=>h&&typeof h==="object"&&!Array.isArray(h)).map((h,i)=>Object.assign(cleanDel(h),{id:isTxt(h.id)?String(h.id):"r"+Date.now()+i,saved:typeof h.saved==="string"?h.saved:"",rows:cleanRows(h.rows)}))}
+function cleanHist(a){return (Array.isArray(a)?a:[]).filter(h=>h&&typeof h==="object"&&!Array.isArray(h)).map((h,i)=>Object.assign(cleanDel(h),{id:isTxt(h.id)?String(h.id):"r"+Date.now()+i,saved:isoTime(h.saved)?h.saved:"",rows:cleanRows(h.rows)}))}
 function cleanNames(a){return (Array.isArray(a)?a:[]).filter(v=>typeof v==="string"&&v.trim()).map(v=>v.trim().slice(0,60)).slice(0,6)}
 const okLogo=v=>typeof v==="string"&&/^data:image\/(png|jpeg);base64,[A-Za-z0-9+\/=]+$/.test(v);
 try{const c=JSON.parse(localStorage.getItem("lpncfg")||"null");cfg=Object.assign(cfg,cleanCfg(c))}catch(e){}

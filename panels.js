@@ -153,7 +153,8 @@ HELP.settings=`<h3>Colours</h3>
 <p>Your log, saved deliveries and settings live in this browser only. Download a backup to keep a copy or move to another device, then restore it there.</p>
 <div class="row"><button id="bkDl">Download backup</button><button id="bkUp">Restore backup</button><input type="file" id="bkFile" accept=".json,application/json" hidden></div>
 <div class="msg" id="bkMsg" role="status" aria-live="polite"></div>
-<div class="row" id="bkAsk" hidden><button id="bkGo">Replace my data with this backup</button><button id="bkNo">Cancel</button></div>`;
+<div class="row" id="bkAsk" hidden><button id="bkGo">Replace my data with this backup</button><button id="bkNo">Cancel</button></div>
+<div class="row" id="bkDone" hidden><button id="bkReload">Reload the app</button></div>`;
 /* ---- saved deliveries ---- */
 let hist=[];try{hist=cleanHist(JSON.parse(localStorage.getItem("lpnhist")||"[]"))}catch(e){hist=[]}
 const saveHist=()=>{try{localStorage.setItem("lpnhist",JSON.stringify(hist))}catch(e){}};
@@ -263,7 +264,8 @@ async function backupNow(msgId){
     await saveOnly(new TextEncoder().encode(json).buffer,"lpn-backup-"+localToday()+".json","application/json");
     $(msgId).textContent="Backup downloaded.";
     if($("bkNote"))showBackupNote();
-  }catch(e){$(msgId).textContent="Couldn’t create the backup: "+((e&&e.message)||"error")}
+    return true;
+  }catch(e){$(msgId).textContent="Couldn’t create the backup: "+((e&&e.message)||"error");return false}
 }
 /* Checks every value in a backup and returns tidied copies, or throws a plain message. Nothing is changed here. */
 function checkBackup(d){
@@ -279,7 +281,7 @@ function checkBackup(d){
     else if(k==="lpnpresets"){const p=parse(v),o={};if(p&&typeof p==="object"&&!Array.isArray(p))Object.keys(p).forEach(n=>{if(isTxt(p[n])||Array.isArray(p[n])){const l=normList(p[n]);if(l)o[String(n).slice(0,60)]=l}});out[k]=JSON.stringify(o)}
     else if(k==="lpnlogo"){if(okLogo(v))out[k]=v}
     else if(k==="lpntheme"){const t=parse(v);if(t&&typeof t==="object"&&hexOk(t.bg)&&hexOk(t.ac))out[k]=JSON.stringify({bg:t.bg,ac:t.ac})}
-    else out[k]=v.slice(0,20000);
+    else out[k]=v;
   });
   return {data:out,pallets:pallets,saved:saved};
 }
@@ -373,7 +375,7 @@ function initSettings(){
   $("bkNo").onclick=()=>{pendingBk=null;$("bkAsk").hidden=true;$("bkMsg").textContent="Nothing was changed."};
   $("bkGo").onclick=async()=>{
     if(!pendingBk)return;const data=pendingBk;pendingBk=null;$("bkAsk").hidden=true;
-    await backupNow("bkMsg");
+    if(!await backupNow("bkMsg")){$("bkMsg").textContent+=" Your data wasn’t replaced, because the copy of it couldn’t be saved first.";return}
     const before={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^lpn/.test(k))before[k]=localStorage.getItem(k)}
     try{
       Object.keys(before).forEach(k=>localStorage.removeItem(k));
@@ -383,9 +385,11 @@ function initSettings(){
       try{Object.keys(data).forEach(k=>localStorage.removeItem(k));Object.keys(before).forEach(k=>localStorage.setItem(k,before[k]))}catch(x){}
       $("bkMsg").textContent="Couldn’t restore that backup because this browser ran out of storage space, so nothing was changed.";return;
     }
-    $("bkMsg").textContent="Backup restored. Reloading…";
-    setTimeout(()=>location.reload(),700);
+    // No automatic reload: on phones the copy of the old data may still be waiting to be saved (iPhone asks first).
+    $("bkMsg").textContent="Backup restored. Make sure the copy of your previous data has saved, then reload the app to see the restored data.";
+    $("bkDone").hidden=false;
   };
+  $("bkReload").onclick=()=>location.reload();
   $("setForget").onclick=()=>{names=[];saveNames();drawNames();$("setForget").textContent="Names forgotten"};
   $("setDef").value=cfg.defType;$("setDef").onchange=()=>{cfg.defType=$("setDef").value;saveCfg();$("type").value=cfg.defType;syncType()};
   $("setVib").checked=cfg.vibrate;$("setVib").onchange=()=>{cfg.vibrate=$("setVib").checked;saveCfg();if(cfg.vibrate)sfx("ok")};

@@ -81,18 +81,18 @@ async function fallbackXls(d){
   const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
   const side=[["Pallet Type","Count","h"],["Brown Box",c.BB],["FMCG",c.FMCG],["FPP",c.FPP],["Mixed",c.Mixed],["Total",rows.length,"b"],["FSDU (not in total)",rows.filter(r=>r.fsdu).length],null,["Delivery Details","","h2"],["Date",ukDate(d),"l"],["Received by",who,"l"]].concat(extras().map(e=>[e[0],e[1],"l"]));
   const n=Math.max(rows.length,side.length-1);
-  let h='<html><head><meta charset="utf-8"><style>td,th{font-family:Arial;font-size:14pt;border:1px solid #000;padding:4px;text-align:left}th{font-size:16pt;background:#e6e9ed}td.c{text-align:center}td.m{font-family:\'Courier New\'}td{mso-number-format:"\\@"}</style></head><body><h2 style="font-family:Arial">Goods-in pallet log</h2><table>';
+  let h='<html><head><meta charset="utf-8"><style>td,th{font-family:Arial;font-size:14pt;border:1px solid #000;padding:4px;text-align:left}th{font-size:16pt;background:#e6e9ed}td.c{text-align:center}td.m{font-family:\'Courier New\'}td.t{mso-number-format:"\\@"}</style></head><body><h2 style="font-family:Arial">Goods-in pallet log</h2><table>';
   for(let i=-1;i<n;i++){
     const head=i<0,t=head?"th":"td";
     const l=head?["#","LPN","Pallet Type","FSDU"]:rows[i]?[i+1,rows[i].lpn,rows[i].type,rows[i].fsdu?"Yes":"No"]:null;
     const r=side[i+1]||null;
     h+="<tr>";
-    h+=l?l.map((v,k)=>"<"+t+(head?"":k===1?' class="m" style="mso-number-format:\'\\@\'"':k===0||k>=2?' class="c"':"")+">"+esc(v)+"</"+t+">").join(""):"<td></td><td></td><td></td><td></td>";
+    h+=l?l.map((v,k)=>"<"+t+(head?"":k===1?' class="m" style="mso-number-format:\'\\@\'"':k>=2?' class="c t"':k===0?' class="c"':"")+">"+esc(v)+"</"+t+">").join(""):"<td></td><td></td><td></td><td></td>";
     h+='<td style="border:none"></td>';
     if(r){
       const tt=(r[2]==="h"||r[2]==="b")?"th":"td";
       if(r[2]==="h2")h+="<th colspan=2>"+esc(r[0])+"</th>";
-      else if(r[2]==="l")h+="<th>"+esc(r[0])+"</th><td>"+esc(r[1])+"</td>";
+      else if(r[2]==="l")h+="<th>"+esc(r[0])+"</th><td class=\"t\">"+esc(r[1])+"</td>";
       else h+="<"+tt+">"+esc(r[0])+"</"+tt+"><"+tt+">"+esc(r[1])+"</"+tt+">";
     }else h+="<td></td><td></td>";
     h+="</tr>";
