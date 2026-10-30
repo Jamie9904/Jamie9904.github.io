@@ -30,6 +30,11 @@
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/docs_reminder.py",
             "timeout": 60
+          },
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/outputs_reminder.py",
+            "timeout": 60
           }
         ]
       }

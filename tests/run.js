@@ -54,7 +54,8 @@ const EXCEL_STUB = () => {
    always does). Pages opened with {real:true} get them in place of the CDN copies, from either CDN. */
 const LIBS = { "exceljs.min.js": "exceljs/dist/exceljs.min.js", "jspdf.umd.min.js": "jspdf/dist/jspdf.umd.min.js",
   "jspdf.plugin.autotable.min.js": "jspdf-autotable/dist/jspdf.plugin.autotable.min.js",
-  "pdf.min.mjs": "pdfjs-dist/legacy/build/pdf.min.mjs", "pdf.worker.min.mjs": "pdfjs-dist/legacy/build/pdf.worker.min.mjs" };
+  "pdf.min.mjs": "pdfjs-dist/legacy/build/pdf.min.mjs", "pdf.worker.min.mjs": "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
+  "pdf-lib.min.js": "pdf-lib/dist/pdf-lib.min.js" };
 const libFile = n => Object.prototype.hasOwnProperty.call(LIBS, n) ? path.join(ROOT, "node_modules", LIBS[n]) : null;
 const REAL_LIBS = Object.keys(LIBS).every(n => fs.existsSync(libFile(n)));
 
@@ -68,7 +69,8 @@ async function page(browser, width, opts = {}) {
     const u = new URL(r.request().url());
     if (u.hostname === "127.0.0.1") return r.continue();
     const f = opts.real && libFile(u.pathname.split("/").pop());
-    return f && fs.existsSync(f) ? r.fulfill({ path: f, contentType: "text/javascript" }) : r.abort();
+    // CORS header as the real CDNs send it: the app loads libraries with crossorigin and an integrity hash.
+    return f && fs.existsSync(f) ? r.fulfill({ path: f, contentType: "text/javascript", headers: { "Access-Control-Allow-Origin": "*" } }) : r.abort();
   };
   if (opts.real) await ctx.route("**/*", router); else await p.route("**/*", router);
   await p.addInitScript(() => { try { localStorage.setItem("lpninstallshown", "1"); } catch (e) {} });
@@ -341,13 +343,94 @@ async function page(browser, width, opts = {}) {
   check("no script errors", p.errors.length === 0, p.errors);
   await p.ctx.close();
 
+  console.log("Saved data and backups from outside");
+  {
+    // A crafted or damaged backup already in storage: the app must still start and every panel must work.
+    const seen = [];
+    p = await page(browser, 375, { init: () => {
+      localStorage.setItem("lpnhist", "[null]"); localStorage.setItem("lpnlog", '{"rows":"x","recv":{"formula":"1+1"}}');
+      localStorage.setItem("lpnnames", "[5,{}]"); localStorage.setItem("lpncfg", '"x"'); localStorage.setItem("lpnpresets", "[1]");
+      localStorage.setItem("lpnlogo", "https://tracker.example/pixel.png");
+    } });
+    p.on("request", r => seen.push(r.url()));
+    await p.goto(URL0); await p.waitForTimeout(300);
+    s = await p.evaluate(() => { document.getElementById("btnSet").click(); const set = !document.getElementById("bkUp") ? "no settings" : "ok";
+      closeHelp(); return { set, rows: rows.length, recv: document.getElementById("recv").value, body: !!document.querySelector("#body tr") }; });
+    check("a damaged backup in storage doesn't stop the app starting", p.errors.length === 0 && s.set === "ok" && s.rows === 0 && s.body, { errors: p.errors, s });
+    check("an object in saved data is never shown as a value", s.recv === "", s.recv);
+    check("a logo setting pointing at another website is ignored", !seen.some(u => /tracker\.example/.test(u)), seen.filter(u => !/127\.0\.0\.1/.test(u)));
+    await p.ctx.close();
+
+    // Restoring: the backup is checked first, nothing changes until the user agrees, and what's written is tidied.
+    p = await page(browser, 375, { init: () => localStorage.setItem("lpnlog", JSON.stringify({ rows: [{ lpn: "KEEP000000001", type: "BB", fsdu: false }], date: "2026-10-26" })) });
+    await p.goto(URL0); await p.waitForTimeout(300);
+    await p.evaluate(() => { window.saveOnly = async () => { window.__bk = (window.__bk || 0) + 1; }; document.getElementById("btnSet").click(); });
+    const bk = { app: "lpn-pallet-log", version: 1, data: { lpnhist: "[null,{\"date\":\"2026-10-27\",\"rows\":[{\"lpn\":\"HIST00000001\",\"type\":\"<b>\",\"fsdu\":1}]}]",
+      lpnlog: JSON.stringify({ rows: [{ lpn: "NEW000000001", type: "FPP" }], recv: { hyperlink: "https://evil.example", text: "x" } }), lpnlogo: "https://tracker.example/x.png", lpnnames: "[\"Jamie\",7]" } };
+    await p.setInputFiles("#bkFile", { name: "b.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(bk)) });
+    await p.waitForTimeout(200);
+    s = await p.evaluate(() => ({ ask: !document.getElementById("bkAsk").hidden, msg: document.getElementById("bkMsg").textContent, log: localStorage.getItem("lpnlog") }));
+    check("restoring a backup asks first and changes nothing yet", s.ask && /log of 1 pallet and 1 saved delivery/.test(s.msg) && /KEEP000000001/.test(s.log || ""), s);
+    await p.evaluate(() => { document.getElementById("bkGo").click(); });
+    await p.waitForTimeout(300);
+    check("after restoring, the app waits for the user to reload", await p.evaluate(() => !document.getElementById("bkDone").hidden && /Make sure the copy/.test(document.getElementById("bkMsg").textContent)));
+    s = await p.evaluate(async () => {
+      const before = localStorage.getItem("lpnlog"); window.saveOnly = async () => { throw new Error("blocked"); };
+      const f = new File([JSON.stringify({ app: "lpn-pallet-log", data: { lpnlog: JSON.stringify({ rows: [{ lpn: "OTHER0000001", type: "BB" }] }) } })], "b2.json");
+      const dt = new DataTransfer(); dt.items.add(f); const i = document.getElementById("bkFile"); i.files = dt.files; await i.onchange({ target: i });
+      await document.getElementById("bkGo").onclick();
+      return { same: localStorage.getItem("lpnlog") === before, msg: document.getElementById("bkMsg").textContent };
+    });
+    check("a restore stops if the copy of the current data can't be saved", s.same && /wasn’t replaced/.test(s.msg), s);
+    s = await p.evaluate(() => ({ bk: window.__bk, log: JSON.parse(localStorage.getItem("lpnlog")), hist: JSON.parse(localStorage.getItem("lpnhist")), logo: localStorage.getItem("lpnlogo"), names: localStorage.getItem("lpnnames") }));
+    check("a copy of the current data downloads before restoring", s.bk === 1, s.bk);
+    check("a restored backup is tidied: plain text, known pallet types, no outside logo", s.log.rows[0].lpn === "NEW000000001" && s.log.recv === "" && s.hist.length === 1 && s.hist[0].rows[0].type === "Mixed" && s.hist[0].rows[0].fsdu === true && s.logo === null && s.names === '["Jamie"]', s);
+    s = await p.evaluate(async () => { const f = new File(["{\"app\":\"lpn-pallet-log\",\"data\":{\"lpnhist\":\"[not json\"}}"], "bad.json");
+      const dt = new DataTransfer(); dt.items.add(f); const i = document.getElementById("bkFile"); i.files = dt.files; await i.onchange({ target: i });
+      return { msg: document.getElementById("bkMsg").textContent, ask: !document.getElementById("bkAsk").hidden }; });
+    check("a damaged backup file is refused without changing anything", /damaged, so nothing was changed/.test(s.msg) && !s.ask, s);
+    check("no script errors", p.errors.length === 0, p.errors);
+    await p.ctx.close();
+
+    // Hidden data in a log PDF is read as plain text, so it can't become a formula or link in an export.
+    p = await page(browser, 1300);
+    await p.goto(URL0); await p.waitForTimeout(300);
+    s = await p.evaluate(async () => {
+      const kw = "LPNLOG2:" + encodeURIComponent(JSON.stringify({ d: { formula: "HYPERLINK(\"https://evil.example\",\"x\")" }, r: { hyperlink: "https://evil.example", text: "Jamie" }, n: ["a"], rows: [["RUN000000001", { formula: "1" }, 0], [{ x: 1 }, "BB", 0]] }));
+      const doc = { numPages: 1, getMetadata: async () => ({ info: { Keywords: kw } }), getPage: async () => ({ getTextContent: async () => ({ items: [] }) }) };
+      const keep = [window.pdfjsLib, window.loadPdfJs];
+      window.pdfjsLib = { getDocument: () => ({ promise: Promise.resolve(doc) }) }; window.loadPdfJs = async () => {};
+      try {
+        const imp = await parseExported(new File(["%PDF"], "log.pdf"));
+        const lp = await readLogPdf(new File(["%PDF"], "log.pdf"), () => {});
+        const cells = logSheets[0].grid.flat();
+        return { imp: [imp.date, imp.recv, imp.notes, imp.rows.length], lp, objects: cells.filter(c => c !== null && typeof c === "object").length };
+      } finally { window.pdfjsLib = keep[0]; window.loadPdfJs = keep[1]; }
+    });
+    check("hidden PDF data is only ever read as plain text", JSON.stringify(s.imp) === '["","","",1]' && JSON.stringify(s.lp) === '["RUN000000001"]' && s.objects === 0, s);
+    s = await p.evaluate(async () => { let html = ""; window.saveOnly = async b => { html = b; }; rows = [{ lpn: "A1", type: "BB", fsdu: false }];
+      document.getElementById("notes").value = '=HYPERLINK("https://evil.example","Open")'; await fallbackXls("2026-10-26"); return html; });
+    check("the basic .xls export keeps typed text as text, counts as numbers", /td\.t\{mso-number-format:"\\@"\}/.test(s) && /<td class="t">=HYPERLINK/.test(s) && !/<td class="t">\d+<\/td>/.test(s) && /<td>1<\/td>/.test(s), s.slice(s.indexOf("<table"), s.indexOf("<table") + 600));
+    check("no script errors", p.errors.length === 0, p.errors);
+    await p.ctx.close();
+  }
+  {
+    // Every classic library load has an integrity hash, and every hash is used.
+    const code = ["core.js", "export.js", "compare.js", "scan.js"].map(f => fs.readFileSync(path.join(ROOT, f), "utf8")).join("\n");
+    const urls = [...new Set([...code.matchAll(/loadScript\("([^"]+)"/g)].map(m => m[1]).concat([...code.matchAll(/const u="(https:[^"]+)"/g)].map(m => m[1])))];
+    const sri = [...code.matchAll(/^  "(https:[^"]+)":"(sha384-[A-Za-z0-9+\/=]+)"/gm)].map(m => m[1]);
+    const missing = urls.filter(u => !sri.includes(u)), unused = sri.filter(u => !urls.includes(u));
+    check("every library file the app loads is checked against its fingerprint", urls.length >= 10 && !missing.length && !unused.length, { missing, unused });
+  }
+
   console.log("Real export libraries" + (REAL_LIBS ? "" : " (skipped here: npm install hasn't fetched ExcelJS, jsPDF and pdf.js; GitHub always runs these)"));
   {
     // The checks must test the same library versions the app loads from the CDN.
     const dev = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8")).devDependencies || {};
-    const code = ["export.js", "compare.js"].map(f => fs.readFileSync(path.join(ROOT, f), "utf8")).join("\n");
+    const code = ["export.js", "compare.js", "scan.js"].map(f => fs.readFileSync(path.join(ROOT, f), "utf8")).join("\n");
     const want = { exceljs: /exceljs\/(\d[\d.]*)\/|exceljs@(\d[\d.]*)/g, jspdf: /jspdf\/(\d[\d.]*)\/jspdf\.umd|jspdf@(\d[\d.]*)\//g,
-      "jspdf-autotable": /jspdf-autotable[\/@](\d[\d.]*)\//g, "pdfjs-dist": /pdf\.js\/(\d[\d.]*)\/|pdfjs-dist@(\d[\d.]*)\//g };
+      "jspdf-autotable": /jspdf-autotable[\/@](\d[\d.]*)\//g, "pdfjs-dist": /pdf\.js\/(\d[\d.]*)\/|pdfjs-dist@(\d[\d.]*)\//g,
+      "pdf-lib": /pdf-lib[\/@](\d[\d.]*)\//g, "tesseract.js": /tesseract\.js@(\d[\d.]*)\//g, "@zxing/library": /@zxing\/library@(\d[\d.]*)\//g };
     const off = Object.keys(want).map(k => { const v = [...code.matchAll(want[k])].map(m => m[1] || m[2]); return { k, app: [...new Set(v)], test: dev[k] }; })
       .filter(x => x.app.length !== 1 || x.app[0] !== x.test);
     check("the checks use the same library versions as the app", off.length === 0, off);
@@ -413,6 +496,24 @@ async function page(browser, width, opts = {}) {
         made: grid.some(r => r.filter(Boolean).length === 1 && /^Made with LPN Pallet Log v/.test(String(r.find(Boolean)))) };
     });
     check("real ExcelJS: the manifest check spreadsheet is made", !s.err, s);
+    {
+      const r = await p.evaluate(async () => {
+        await loadPdfLib(); const L = window.PDFLib;
+        const src = await L.PDFDocument.create(); const pg = src.addPage([300, 300]);
+        pg.drawText("VLT003977037", { x: 20, y: 250, size: 12 });
+        pg.node.set(L.PDFName.of("AA"), src.context.obj({ O: { S: "JavaScript", JS: L.PDFString.of("app.alert(1)") } }));
+        pg.node.set(L.PDFName.of("Annots"), src.context.obj([{ Type: "Annot", Subtype: "Link", Rect: [0, 0, 100, 100], A: { S: "URI", URI: L.PDFString.of("https://evil.example") } }]));
+        src.setKeywords(["LPNLOG2:" + encodeURIComponent(JSON.stringify({ d: "2026-10-26", r: "T", rows: [["VLT003977037", "BB", 0]] }))]);
+        const bytes = await src.save();
+        const list = await readLogPdf(new File([bytes], "log.pdf"), () => {});
+        document.getElementById("cmpLogNums").value = list.join("\n"); document.getElementById("cmpNums").value = "VLT003977037";
+        const C = cmpData();
+        const out = await buildCmpPdf(C.res, C.cnt, C.man.length, "2026-10-26", { list: C.logList, pdf: logPdfSrc, sheets: null });
+        const d = await L.PDFDocument.load(out);
+        return { pages: d.getPageCount(), withActions: d.getPages().filter(x => x.node.get(L.PDFName.of("AA")) || x.node.get(L.PDFName.of("Annots"))).length };
+      });
+      check("real pdf-lib: a merged log PDF keeps its pages but loses links and page-open scripts", r.pages >= 2 && r.withActions === 0, r);
+    }
     if (!s.err) {
       check("real ExcelJS: manifest check lists every LPN and nothing else", ["VLT003977037", "RUN0001830763", "RBY006291167"].every(n => s.lp.includes(n)) && !s.lp.some(n => /Made with/.test(n)), s);
       check("real ExcelJS: manifest check LPN column fits a 13-character LPN", s.lpnW >= 27, s.lpnW);

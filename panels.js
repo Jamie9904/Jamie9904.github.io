@@ -44,7 +44,7 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <p><b>Email PDF</b> opens your phone’s share sheet with a PDF attached, as phones can’t share Excel files that way. If it says the file is ready, tap <b>Tap to share</b>. If sharing isn’t possible, the file is saved for you to attach yourself.</p>
 <h3>7. Saved deliveries and backups</h3>
 <p>After an export the log shows when it was exported and offers to start a new delivery. <b>Start new delivery</b> saves the log and clears the page (with Undo); if the delivery hasn’t been exported since its last change it asks you to export first, and pressing it again goes ahead anyway. <b>Saved deliveries</b> lists this week and last week (weeks start on Sunday): open one, export or email it directly, delete it, or import an exported spreadsheet or app-made PDF.</p>
-<p>Everything is stored on this device only. The Saved deliveries list shows when you last backed up; use <b>Back up now</b> there, or Settings, to download a backup, and <b>Restore backup</b> in Settings to bring it back.</p>
+<p>Everything is stored on this device only. The Saved deliveries list shows when you last backed up; use <b>Back up now</b> there, or Settings, to download a backup, and <b>Restore backup</b> in Settings to bring it back. Before restoring, the app shows what the backup holds and downloads a copy of your current data, so nothing is lost by mistake.</p>
 <h3>8. Install it on your phone</h3>
 <ul>
 <li><b>Android (Chrome):</b> open the app’s web address, tap the ⋮ menu, then <b>Install app</b> or <b>Add to Home screen</b>.</li>
@@ -58,7 +58,7 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <li>LPNs are a letter prefix followed by digits, for example RUN000000000.</li>
 <li>Always check numbers read from photos before relying on them.</li>
 </ul>`,log:`<h3>v3.30 <span class="ver">Current</span></h3>
-<ul><li>Exports: long delivery notes and longer LPNs no longer get cut off in the spreadsheets, and every export notes the app version it was made with (at the bottom of the sheet and in the page footer).</li><li>Importing an exported log and loading one in the Manifest check now read spreadsheets the same way, so the version line at the bottom is always skipped.</li><li>Safer PDFs: a PDF opened in the app (a supplier manifest or an exported log) can no longer run hidden code, and the PDF reader is updated to the latest version.</li><li>Easier to use: the pallet table scrolls with the page on phones, progress only turns red when something is wrong, one count line when the manifest sets the expected number, the Manifest check starts with its steps (prefix presets tucked away), the logo moved to Settings, the entry bar steps aside in the Manifest check, and bigger tick boxes and header buttons.</li><li>Undo last pallet button on the phone entry bar, “Use n as expected” from the manifest count, an “Exported at” note with a warning before starting a new delivery that hasn’t been exported, and a “Start a new delivery?” prompt after exporting.</li><li>Trailer number, Seal in and Seal out in Delivery, shown on exports and saved deliveries.</li><li>Live manifest tracking: add the manifest numbers first and the Pallet log counts them off as you scan, shows which are still missing and warns about pallets not on the manifest.</li><li>Phone layout: a pallet counter on the entry bar, an “Added” confirmation after each pallet, Delivery folds into one line once you start logging, neater top buttons and a clearer ✕ on each row.</li><li>Smaller tweaks: a reminder when the log is dated before today, tap-to-fill “Received by” names, a check when the total differs from the expected pallets, an FSDU filter, Excel and Email PDF buttons on saved deliveries, a last-backed-up note, and an offline notice.</li><li>Exports: a title band, numbered rows, clearer grid lines, page numbers, gridlines hidden on screen, roomier headers, the logo kept in proportion and much smaller PDFs. The manifest check has the same Export menu as the log.</li><li>Date format setting (dd/mm/yyyy by default), used in exports, lists and the date box.</li><li>Fonts are now part of the app, updates show up straight away, and the tablet layout and field alignment are fixed.</li></ul>
+<ul><li>Exports: long delivery notes and longer LPNs no longer get cut off in the spreadsheets, and every export notes the app version it was made with (at the bottom of the sheet and in the page footer).</li><li>Importing an exported log and loading one in the Manifest check now read spreadsheets the same way, so the version line at the bottom is always skipped.</li><li>Safer PDFs: a PDF opened in the app (a supplier manifest or an exported log) can no longer run hidden code, and the PDF reader is updated to the latest version.</li><li>Safer backups and files: a damaged backup can no longer stop the app opening, restoring asks first and saves a copy of your current data, and files from outside can’t add links, formulas or scripts to your exports.</li><li>Easier to use: the pallet table scrolls with the page on phones, progress only turns red when something is wrong, one count line when the manifest sets the expected number, the Manifest check starts with its steps (prefix presets tucked away), the logo moved to Settings, the entry bar steps aside in the Manifest check, and bigger tick boxes and header buttons.</li><li>Undo last pallet button on the phone entry bar, “Use n as expected” from the manifest count, an “Exported at” note with a warning before starting a new delivery that hasn’t been exported, and a “Start a new delivery?” prompt after exporting.</li><li>Trailer number, Seal in and Seal out in Delivery, shown on exports and saved deliveries.</li><li>Live manifest tracking: add the manifest numbers first and the Pallet log counts them off as you scan, shows which are still missing and warns about pallets not on the manifest.</li><li>Phone layout: a pallet counter on the entry bar, an “Added” confirmation after each pallet, Delivery folds into one line once you start logging, neater top buttons and a clearer ✕ on each row.</li><li>Smaller tweaks: a reminder when the log is dated before today, tap-to-fill “Received by” names, a check when the total differs from the expected pallets, an FSDU filter, Excel and Email PDF buttons on saved deliveries, a last-backed-up note, and an offline notice.</li><li>Exports: a title band, numbered rows, clearer grid lines, page numbers, gridlines hidden on screen, roomier headers, the logo kept in proportion and much smaller PDFs. The manifest check has the same Export menu as the log.</li><li>Date format setting (dd/mm/yyyy by default), used in exports, lists and the date box.</li><li>Fonts are now part of the app, updates show up straight away, and the tablet layout and field alignment are fixed.</li></ul>
 <h3>v3.20</h3>
 <ul><li>Start new delivery, Saved deliveries (this week and last week) and importing an exported log.</li><li>Warnings for duplicate or unusual LPNs, Undo for removed pallets and Clear all, and tap an LPN to edit it.</li><li>Pallet type buttons, expected pallets, delivery notes, search and filter, and an Export menu with Print.</li><li>Manifest check: use the current log or a saved delivery, a Check results panel, and Fix or remove for misread numbers.</li><li>Settings: default and keep-last type, warnings, sound, vibration, confirm each scan, text size, colour contrast warning, backup and restore, and the install pop-up.</li><li>Works offline after the first use, shows an “update available” banner, a two-column layout on wide screens, line icons, and accessibility fixes.</li></ul>
 <h3>v3.0</h3>
@@ -152,9 +152,11 @@ HELP.settings=`<h3>Colours</h3>
 <h3>Backup</h3>
 <p>Your log, saved deliveries and settings live in this browser only. Download a backup to keep a copy or move to another device, then restore it there.</p>
 <div class="row"><button id="bkDl">Download backup</button><button id="bkUp">Restore backup</button><input type="file" id="bkFile" accept=".json,application/json" hidden></div>
-<div class="msg" id="bkMsg" role="status" aria-live="polite"></div>`;
+<div class="msg" id="bkMsg" role="status" aria-live="polite"></div>
+<div class="row" id="bkAsk" style="margin-top:10px" hidden><button id="bkGo">Replace my data with this backup</button><button id="bkNo">Cancel</button></div>
+<div class="row" id="bkDone" style="margin-top:10px" hidden><button id="bkReload">Reload the app</button></div>`;
 /* ---- saved deliveries ---- */
-let hist=[];try{hist=JSON.parse(localStorage.getItem("lpnhist")||"[]")||[]}catch(e){hist=[]}
+let hist=[];try{hist=cleanHist(JSON.parse(localStorage.getItem("lpnhist")||"[]"))}catch(e){hist=[]}
 const saveHist=()=>{try{localStorage.setItem("lpnhist",JSON.stringify(hist))}catch(e){}};
 /* Weeks run Sunday to Saturday. History keeps this week and last week only. */
 function keepFrom(){const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-d.getDay()-7);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
@@ -196,7 +198,10 @@ async function parseExported(f){
     const meta=await pdf.getMetadata();const kw=(meta&&meta.info&&meta.info.Keywords)||"";
     if(kw.indexOf("LPNLOG2:")!==0)throw new Error("That PDF wasn’t made by this app’s Email PDF button, so the pallet types can’t be read from it.");
     const o=JSON.parse(decodeURIComponent(kw.slice(8)));
-    return {date:o.d||"",recv:o.r||"",notes:o.n||"",expect:o.e||"",trailer:o.t||"",sealIn:o.si||"",sealOut:o.so||"",rows:(o.rows||[]).map(r=>({lpn:String(r[0]),type:normT(r[1]),fsdu:!!r[2]})),unk:unk};
+    // The hidden data could have been edited, so every value is read as plain text (never an object a spreadsheet would treat as a formula or link).
+    const tx=v=>isTxt(v)?String(v).slice(0,2000):"";
+    return {date:/^\d{4}-\d{2}-\d{2}$/.test(tx(o.d))?tx(o.d):"",recv:tx(o.r),notes:tx(o.n),expect:tx(o.e),trailer:tx(o.t),sealIn:tx(o.si),sealOut:tx(o.so),
+      rows:(Array.isArray(o.rows)?o.rows:[]).filter(r=>Array.isArray(r)&&isTxt(r[0])&&String(r[0]).trim()).map(r=>({lpn:String(r[0]).trim().slice(0,100),type:normT(r[1]),fsdu:!!r[2]})),unk:unk};
   }
   let g;
   if(name.endsWith(".xlsx")){
@@ -259,7 +264,26 @@ async function backupNow(msgId){
     await saveOnly(new TextEncoder().encode(json).buffer,"lpn-backup-"+localToday()+".json","application/json");
     $(msgId).textContent="Backup downloaded.";
     if($("bkNote"))showBackupNote();
-  }catch(e){$(msgId).textContent="Couldn’t create the backup: "+((e&&e.message)||"error")}
+    return true;
+  }catch(e){$(msgId).textContent="Couldn’t create the backup: "+((e&&e.message)||"error");return false}
+}
+/* Checks every value in a backup and returns tidied copies, or throws a plain message. Nothing is changed here. */
+function checkBackup(d){
+  const out={};let pallets=0,saved=0;
+  const bad=()=>{throw new Error("That backup file is damaged, so nothing was changed.")};
+  const parse=v=>{try{return JSON.parse(v)}catch(e){bad()}};
+  Object.keys(d).forEach(k=>{
+    const v=d[k];if(!/^lpn[a-z0-9]*$/.test(k)||typeof v!=="string")return;
+    if(k==="lpnlog"){const o=parse(v);if(!o||typeof o!=="object")bad();const r=cleanRows(o.rows);pallets=r.length;out[k]=JSON.stringify(Object.assign(cleanDel(o),{rows:r}))}
+    else if(k==="lpnhist"){const h=cleanHist(parse(v));saved=h.length;out[k]=JSON.stringify(h)}
+    else if(k==="lpnnames")out[k]=JSON.stringify(cleanNames(parse(v)));
+    else if(k==="lpncfg")out[k]=JSON.stringify(cleanCfg(parse(v)));
+    else if(k==="lpnpresets"){const p=parse(v),o={};if(p&&typeof p==="object"&&!Array.isArray(p))Object.keys(p).forEach(n=>{if(isTxt(p[n])||Array.isArray(p[n])){const l=normList(p[n]);if(l)o[String(n).slice(0,60)]=l}});out[k]=JSON.stringify(o)}
+    else if(k==="lpnlogo"){if(okLogo(v))out[k]=v}
+    else if(k==="lpntheme"){const t=parse(v);if(t&&typeof t==="object"&&hexOk(t.bg)&&hexOk(t.ac))out[k]=JSON.stringify({bg:t.bg,ac:t.ac})}
+    else out[k]=v;
+  });
+  return {data:out,pallets:pallets,saved:saved};
 }
 function showBackupNote(){
   const el=$("bkNote");if(!el)return;
@@ -336,18 +360,36 @@ function initSettings(){
   applyTheme();
   $("bkDl").onclick=()=>backupNow("bkMsg");
   $("bkUp").onclick=()=>{$("bkFile").value="";$("bkFile").click()};
+  let pendingBk=null;
   $("bkFile").onchange=async e=>{
     const f=e.target.files&&e.target.files[0];if(!f)return;
+    pendingBk=null;$("bkAsk").hidden=true;
     try{
-      const o=JSON.parse(await f.text());
+      let o;try{o=JSON.parse(await f.text())}catch(x){o=null}
       if(!o||o.app!=="lpn-pallet-log"||!o.data||typeof o.data!=="object")throw new Error("That isn’t a backup from this app.");
-      const old=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^lpn/.test(k))old.push(k)}
-      old.forEach(k=>localStorage.removeItem(k));
-      Object.keys(o.data).forEach(k=>{if(/^lpn/.test(k)&&typeof o.data[k]==="string")localStorage.setItem(k,o.data[k])});
-      $("bkMsg").textContent="Backup restored. Reloading…";
-      setTimeout(()=>location.reload(),700);
+      const b=checkBackup(o.data);pendingBk=b.data;
+      $("bkMsg").textContent="This backup has a log of "+b.pallets+" pallet"+(b.pallets===1?"":"s")+" and "+b.saved+" saved deliver"+(b.saved===1?"y":"ies")+". Restoring it replaces everything in this browser. A copy of your current data downloads first.";
+      $("bkAsk").hidden=false;
     }catch(err){$("bkMsg").textContent=(err&&err.message)||"Couldn’t read that backup."}
   };
+  $("bkNo").onclick=()=>{pendingBk=null;$("bkAsk").hidden=true;$("bkMsg").textContent="Nothing was changed."};
+  $("bkGo").onclick=async()=>{
+    if(!pendingBk)return;const data=pendingBk;pendingBk=null;$("bkAsk").hidden=true;
+    if(!await backupNow("bkMsg")){$("bkMsg").textContent+=" Your data wasn’t replaced, because the copy of it couldn’t be saved first.";return}
+    const before={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^lpn/.test(k))before[k]=localStorage.getItem(k)}
+    try{
+      Object.keys(before).forEach(k=>localStorage.removeItem(k));
+      Object.keys(data).forEach(k=>localStorage.setItem(k,data[k]));
+    }catch(err){
+      // Not enough room (or storage blocked): put everything back as it was.
+      try{Object.keys(data).forEach(k=>localStorage.removeItem(k));Object.keys(before).forEach(k=>localStorage.setItem(k,before[k]))}catch(x){}
+      $("bkMsg").textContent="Couldn’t restore that backup because this browser ran out of storage space, so nothing was changed.";return;
+    }
+    // No automatic reload: on phones the copy of the old data may still be waiting to be saved (iPhone asks first).
+    $("bkMsg").textContent="Backup restored. Make sure the copy of your previous data has saved, then reload the app to see the restored data.";
+    $("bkDone").hidden=false;
+  };
+  $("bkReload").onclick=()=>location.reload();
   $("setForget").onclick=()=>{names=[];saveNames();drawNames();$("setForget").textContent="Names forgotten"};
   $("setDef").value=cfg.defType;$("setDef").onchange=()=>{cfg.defType=$("setDef").value;saveCfg();$("type").value=cfg.defType;syncType()};
   $("setVib").checked=cfg.vibrate;$("setVib").onchange=()=>{cfg.vibrate=$("setVib").checked;saveCfg();if(cfg.vibrate)sfx("ok")};
@@ -440,7 +482,7 @@ $("dateKeep").onclick=()=>{dateSkip=$("date").value+"|"+localToday();$("dateBar"
 $("date").addEventListener("change",()=>{dateSkip="";checkDate(true)});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkDate()});
 checkDate();
-let names=[];try{names=JSON.parse(localStorage.getItem("lpnnames")||"[]")||[]}catch(e){names=[]}
+let names=[];try{names=cleanNames(JSON.parse(localStorage.getItem("lpnnames")||"[]"))}catch(e){names=[]}
 const saveNames=()=>{try{localStorage.setItem("lpnnames",JSON.stringify(names))}catch(e){}};
 function drawNames(){
   const box=$("recvChips"),cur=($("recv").value||"").trim().toLowerCase();

@@ -1,6 +1,7 @@
 name: Weekly health check
 # Every Monday morning: checks the live site is up and running the latest version,
-# that every library the app loads from a CDN still downloads, and runs the automatic checks.
+# that every library the app loads from a CDN still downloads, that none of them has a new security advisory,
+# and runs the automatic checks.
 # GitHub emails a failure notice if any step fails; a passing run sends nothing.
 on:
   schedule:
@@ -36,6 +37,10 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+      - name: Security advisories for the app's libraries
+        run: node tests/advisories.js
+      - name: Library files still match their fingerprints
+        run: node tests/sri.js
       - run: npm install --ignore-scripts
       - run: npx playwright install --with-deps chromium
       - run: npm test

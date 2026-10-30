@@ -116,10 +116,16 @@ function cropScaled(cv,bb){
   ctx.imageSmoothingQuality="high";ctx.drawImage(cv,x,y,w,h,m,m,Math.round(w*sc),Math.round(h*sc));
   return c;
 }
+/* The photo reader's own files (worker, engine, language data) load in a way that can't be checked, so a failed
+   download could be kept in the offline store. If the reader won't start, those saved copies are cleared so the
+   next try downloads them again. */
+const OCR_MSG="The photo reader couldn’t load. Check you’re online and try again, or type the numbers in the box instead.";
+async function dropOcrCache(){try{for(const n of await caches.keys()){if(!/^lpn-libs/.test(n))continue;const c=await caches.open(n);for(const r of await c.keys())if(/tesseract|tessdata/.test(r.url))await c.delete(r)}}catch(e){}}
 async function ocrLpns(f){
-  await loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",()=>window.Tesseract);
+  try{await loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",()=>window.Tesseract)}catch(e){await dropOcrCache();throw new Error(OCR_MSG)}
   const cv=await prep(f);
-  const w=await Tesseract.createWorker("eng");
+  // 90 seconds: the first use downloads the language data, which can be slow on a weak signal.
+  let w;try{w=await Promise.race([Tesseract.createWorker("eng"),new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),90000))])}catch(e){await dropOcrCache();throw new Error(OCR_MSG)}
   try{
     await w.setParameters({tessedit_char_whitelist:"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ",preserve_interword_spaces:"1"});
     const r=(await w.recognize(cv)).data;
@@ -236,8 +242,10 @@ async function readLogPdf(f,say){
     if(kw.indexOf("LPNLOG2:")===0){
       try{
         const o=JSON.parse(decodeURIComponent(kw.slice(8)));
-        const rw=(o.rows||[]).map(r=>({lpn:String(r[0]),type:String(r[1]),fsdu:!!r[2]}));
-        if(rw.length){logSheets=[{name:"Log copy",grid:logGridFrom(rw,o.d,o.r)}];return rw.map(r=>r.lpn)}
+        // Read as plain text only: edited hidden data must not become a spreadsheet formula or link.
+        const tx=v=>isTxt(v)?String(v).slice(0,2000):"";
+        const rw=(Array.isArray(o.rows)?o.rows:[]).filter(r=>Array.isArray(r)&&isTxt(r[0])&&String(r[0]).trim()).map(r=>({lpn:String(r[0]).trim().slice(0,100),type:tx(r[1]),fsdu:!!r[2]}));
+        if(rw.length){logSheets=[{name:"Log copy",grid:logGridFrom(rw,tx(o.d),tx(o.r))}];return rw.map(r=>r.lpn)}
       }catch(e){}
     }
     if(kw.indexOf("LPNLOG|")===0){const l=kw.slice(7).split("|").map(s=>s.trim()).filter(Boolean);if(l.length)return l}
@@ -427,7 +435,7 @@ $("cmpGo").onclick=async()=>{
         lw.columns=wd.map(w=>({width:w}));
         g.forEach((r,i)=>r.forEach((v,c)=>{
           if(v===""||v==null)return;
-          const cell=lw.getRow(i+1).getCell(c+1);cell.value=v;
+          const cell=lw.getRow(i+1).getCell(c+1);cell.value=typeof v==="number"?v:String(v);
           cell.font={name:"Arial",size:14,bold:i===0,color:bc};cell.border=border;
           if(i===0)cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:HD}};
         }));
@@ -486,7 +494,7 @@ async function loadPresetFile(){
   }catch(e){pfxMsg("Couldn’t load "+PRESET_URL+", so the built-in preset is being used.")}
   fillPresets();
 }
-try{localPresets=JSON.parse(localStorage.getItem("lpnpresets")||"{}")||{}}catch(e){localPresets={}}
+try{const p=JSON.parse(localStorage.getItem("lpnpresets")||"{}");localPresets={};if(p&&typeof p==="object"&&!Array.isArray(p))Object.keys(p).forEach(n=>{const l=normList(p[n]==null?"":p[n]);if(l)localPresets[n]=l})}catch(e){localPresets={}}
 try{
   if(localStorage.getItem("lpncmppfxv")!=="3"){
     const old=normList(localStorage.getItem("lpncmppfx")||"");
