@@ -279,6 +279,29 @@ async function page(browser, width, opts = {}) {
   check("PDF records the version in its data and footer", /^LPN Pallet Log v\d+\.\d+/.test(s.app || "") && s.rows === 1 && /^LPN Pallet Log v/.test(s.footer || ""), s);
   s = await p.evaluate(async () => { const csv = "#,LPN,Pallet Type,FSDU\n1,A1,BB,No\n2,A2,FMCG,Yes\nMade with LPN Pallet Log v3.30 (build 26),Made with LPN Pallet Log v3.30 (build 26),,"; const r = await parseExported(new File([csv], "x.csv")); return r.rows.length; });
   check("importing stops at the version line", s === 2, s);
+  // A stand-in ExcelJS sheet that behaves like the real one for merged cells: every cell in a merged block
+  // reports the block's text, and only the top-left cell is its own master. Here the version line comes
+  // straight after the pallets (no blank row), as it would if someone tidied the sheet before sending it.
+  s = await p.evaluate(async () => {
+    const made = "Made with LPN Pallet Log v3.30 (build 26) on 30/10/2026 at 14:43.";
+    const cells = [["Goods-in pallet log", "Goods-in pallet log", "Goods-in pallet log", "", "", "", ""], ["#", "LPN", "Pallet Type", "FSDU", "", "Pallet Type", "Count"],
+      [1, "VLT004037790", "BB", "Yes", "", "Notes", "Seal checked"], [2, "RUN0001830763", "FPP", "No", "", "Received by", "Jamie"], Array(7).fill(made)];
+    const merges = [{ r: 0, c1: 1, c2: 3 }, { r: 4, c1: 1, c2: 7 }];
+    const ws = { name: "Pallet Log", eachRow(o, fn) { cells.forEach((r, i) => fn({ values: [undefined, ...r], eachCell(o2, f2) {
+      for (let c = 1; c <= r.length; c++) { const m = merges.find(x => x.r === i && c >= x.c1 && c <= x.c2); const cell = { isMerged: !!m }; if (m) cell.master = c === m.c1 ? cell : {}; f2(cell, c); } } }, i + 1)); } };
+    const keep = [window.ExcelJS, window.loadExcel];
+    window.ExcelJS = { Workbook: class { constructor() { this.worksheets = [ws]; this.xlsx = { load: async () => {} }; } } };
+    window.loadExcel = async () => {};
+    try {
+      const grid = sheetGrid(ws);
+      const imp = await parseExported(new File(["x"], "log.xlsx"));
+      const cmp = await readLog(new File(["x"], "log.xlsx"));
+      return { versionRow: grid[4].filter(Boolean).length, title: grid[0].filter(Boolean).length, imp: imp.rows.map(r => r.lpn), notes: imp.notes, recv: imp.recv, cmp };
+    } finally { window.ExcelJS = keep[0]; window.loadExcel = keep[1]; }
+  });
+  check("a merged line in a spreadsheet is read once, not in every column", s.versionRow === 1 && s.title === 1, s);
+  check("importing a spreadsheet stops at the version line", JSON.stringify(s.imp) === '["VLT004037790","RUN0001830763"]' && s.notes === "Seal checked" && s.recv === "Jamie", s);
+  check("the Manifest check reads the same pallets from that spreadsheet", JSON.stringify(s.cmp) === JSON.stringify(s.imp), s);
   check("no script errors", p.errors.length === 0, p.errors);
   await p.ctx.close();
 
