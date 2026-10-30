@@ -8,8 +8,8 @@ function xlBox(c1,c2,r1,r2,col,row){
 /* Excel and Google Sheets don't grow a row whose height we set, so estimate how many
    lines wrapped text needs. Widths are Excel column units; 14pt Arial fits about 0.72
    characters per unit after the cell's padding. */
-function xlLines(text,width){
-  const per=Math.max(4,Math.floor((width-2)*0.72));let lines=0;
+function xlLines(text,width,perUnit){
+  const per=Math.max(4,Math.floor((width-2)*(perUnit||0.72)));let lines=0;
   String(text==null?"":text).split(/\n/).forEach(par=>{
     let len=0;lines++;
     par.split(/\s+/).filter(Boolean).forEach(w=>{
@@ -21,7 +21,9 @@ function xlLines(text,width){
   return Math.max(1,lines);
 }
 /* Width for an LPN column in 14pt Courier New: about 1.65 units a character, plus padding and indent. */
-function xlLpnWidth(list,base){let m=0;list.forEach(s=>{m=Math.max(m,String(s||"").length)});return Math.max(base,Math.ceil(m*1.65)+5)}
+function xlLpnWidth(list,base){let m=0;list.forEach(s=>{m=Math.max(m,String(s||"").length)});return Math.min(40,Math.max(base,Math.ceil(m*1.65)+5))}
+/* Lines an LPN needs in a Courier New column (about 0.6 characters a unit). */
+const xlLpnLines=(v,w)=>xlLines(String(v||"").replace(/\s+/g,""),w,0.6);
 function xlTitle(ws,off,lastCol,title,sub){
   const t=ws.getRow(off+1),s=ws.getRow(off+2);
   t.height=38;s.height=22;ws.getRow(off+3).height=10;
@@ -317,7 +319,7 @@ $("dl").onclick=async()=>{
       {v:["Delivery Details",""],h:1,merge:1},
       {v:["Date",ukDate(d)],l:1},
       {v:["Received by",who],l:1}
-    ].concat(extras().map(e=>({v:[e[0],e[1]],l:1,note:e[0]==="Notes"?1:0})));
+    ].concat(extras().map(e=>({v:[e[0],e[1]],l:1})));
     const n=Math.max(rows.length,side.length-1);
     let off=0;
     try{off=await xlLogo(wb,ws,489)}catch(e){off=0}
@@ -345,7 +347,7 @@ $("dl").onclick=async()=>{
         put(7,right.v[1],{bold:right.h||right.b,big:right.h,center:typeof right.v[1]==="number",fill:(right.h||right.b)?XL_HEAD:null,box:bx(7)});
         if(right.merge)ws.mergeCells(r.number,6,r.number,7);
       }
-      r.height=(head||(right&&right.h))?32:(right?Math.max(24,xlLines(right.v[1],20)*18+6):24);
+      r.height=(head||(right&&right.h))?32:Math.max(24,right?xlLines(right.v[1],20)*18+6:0,rows[i]?xlLpnLines(rows[i].lpn,lpnW)*18+6:0);
     }
     xlPrint(ws,H);
     const buf=await wb.xlsx.writeBuffer();

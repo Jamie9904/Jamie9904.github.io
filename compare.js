@@ -342,7 +342,8 @@ $("cmpGo").onclick=async()=>{
     let tab="Manifest Check",tn=2;
     while(wb.getWorksheet(tab))tab="Manifest Check "+(tn++);
     const ws=wb.addWorksheet(tab);
-    ws.columns=[{width:7},{width:xlLpnWidth(res.map(x=>x.n),21)},{width:18},{width:12},{width:19},{width:3},{width:25},{width:18}];
+    const lpnW=xlLpnWidth(res.map(x=>x.n),21);
+    ws.columns=[{width:7},{width:lpnW},{width:18},{width:12},{width:19},{width:3},{width:25},{width:18}];
     const bc={argb:"FF000000"},med={style:"medium",color:bc};
     const border={top:med,left:med,bottom:med,right:med};
     let off=0;
@@ -381,7 +382,7 @@ $("cmpGo").onclick=async()=>{
         put(8,right.v[1],{bold:hd,fill:hd?HD:null,center:typeof right.v[1]==="number",box:bx(8)});
         if(right.merge)ws.mergeCells(r.number,7,r.number,8);
       }
-      r.height=(head||(right&&right.h))?32:24;
+      r.height=(head||(right&&right.h))?32:Math.max(24,x?xlLpnLines(x.n,lpnW)*18+6:0);
     }
     xlPrint(ws,H);
     if(merge&&!logSrc){

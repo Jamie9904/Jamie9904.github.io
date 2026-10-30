@@ -235,6 +235,15 @@ async function page(browser, width, opts = {}) {
     const ws = window.__wb && window.__wb.sheets.find(w => /Manifest/.test(w.name)); return ws ? ws.columns[1].width : null;
   });
   check("manifest check LPN column fits a 13-character LPN", s >= 27, s);
+  s = await p.evaluate(async () => {
+    const junk = "HTTPSEXAMPLECOMTHISISNOTANLPNBUTAVERYLONGSCANNEDVALUE1234567890ABCDEFGHIJ";
+    window.__wb = null; document.getElementById("cmpLogNums").value = "VLT003977037\n" + junk; document.getElementById("cmpNums").value = "VLT003977037";
+    await document.getElementById("cmpGo").onclick();
+    const ws = window.__wb.sheets.find(w => /Manifest/.test(w.name));
+    const k = Object.keys(ws.rows).find(k => ws.rows[k]._c[2] && ws.rows[k]._c[2].value === junk);
+    return { w: ws.columns[1].width, h: k ? ws.rows[k].height : null };
+  });
+  check("a junk scan can't stretch the LPN column, it wraps onto a taller row", s.w <= 40 && s.h > 24, s);
   s = await p.evaluate(() => ({ note: document.getElementById("expNote").textContent, next: !document.getElementById("nextBar").hidden }));
   check("export is noted and a new delivery is offered", /Exported at \d\d:\d\d/.test(s.note) && s.next, s);
   await p.click("#nextNew");
