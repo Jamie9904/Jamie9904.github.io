@@ -156,7 +156,30 @@ Hiding toggles `body.cmpfocus`, which slides the bar down with `transform: trans
 
 pdf.js has no entry: it is loaded with `import()` (see Opening PDFs), not through a script tag. The files Tesseract fetches for itself (its worker, engine and language data, from jsDelivr and `tessdata.projectnaptha.com`) aren't checked either; the comment in `compare.js` says they load in a way that can't be checked.
 
-**Photo reader failures.** `ocrLpns()` turns any failure to load Tesseract, or to start its worker within 90 seconds (`Tesseract.createWorker("eng")` raced against a timer; the first use downloads the language data), into `OCR_MSG`: "The photo reader couldn’t load. Check you’re online and try again, or type the numbers in the box instead." Before throwing it runs `dropOcrCache()`, which deletes every saved file in the `lpn-libs*` caches whose address contains `tesseract` or `tessdata`, so the next try downloads them again.
+**Photo reader failures.** `ocrLpns()` turns any failure to load Tesseract, or to start its worker within 90 seconds (`Tesseract.createWorker("eng")` raced against a timer; the first use downloads the language data), into `OCR_MSG`: "The photo reader couldn’t load. Check you’re online and try again, or type the numbers in the box instead. (Reading photos needs iOS 16 or newer on an iPhone.)" Before throwing it runs `dropOcrCache()`, which deletes every saved file in the `lpn-libs*` caches whose address contains `tesseract` or `tessdata`, so the next try downloads them again.
+
+## Security policy
+
+`index.html` sets a Content Security Policy with a `<meta http-equiv="Content-Security-Policy">` tag in `<head>`, before the five app scripts. The exact text:
+
+```
+default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com 'wasm-unsafe-eval'; worker-src 'self' blob:; child-src 'self' blob:; connect-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://tessdata.projectnaptha.com; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-src blob:; object-src blob:; base-uri 'none'; form-action 'none'
+```
+
+What each part is for in this app:
+
+| Directive | Used by |
+|---|---|
+| `script-src` | The app's own scripts; `loadScript()` and `loadZX()` from cdnjs and jsDelivr; pdf.js `import()` from jsDelivr or unpkg; `'wasm-unsafe-eval'` for Tesseract's WebAssembly engine (no general eval) |
+| `worker-src`, `child-src` | The pdf.js and Tesseract background workers (`child-src` for older Safari) |
+| `connect-src` | `fetch` of app files and `sw.js` (`appBuildP`), library downloads made by the service worker, Tesseract's engine and its language data from `tessdata.projectnaptha.com` |
+| `img-src` | The logo (stored as a `data:` image), canvases turned into images |
+| `font-src` | The self-hosted fonts in `fonts/` |
+| `style-src 'unsafe-inline'` | `style` attributes and `style.cssText` set from code |
+| `frame-src`, `object-src` | `printBuf()` loads the PDF into a hidden `<iframe>` from a `blob:` address |
+| `base-uri`, `form-action` | Set to `'none'`: nothing can change the base address or submit a form |
+
+Older Safari doesn't understand `'wasm-unsafe-eval'`, so reading photos needs iOS 16 or newer on an iPhone. A new library host, or a library that fetches from a new place, must be added to the policy, or it is blocked. See [decisions](decisions.md#content-security-policy-in-the-page-build-31).
 
 ## Offline and updates
 

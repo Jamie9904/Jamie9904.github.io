@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Any static web host served over **HTTPS**. Camera scanning, installing as an app, the service worker and the share sheet all require a secure origin. GitHub Pages provides this.
-- A modern browser. Chrome on Android and Safari on iPhone are the targets; live scanning uses `BarcodeDetector` where available and ZXing elsewhere. Reading PDFs needs roughly iOS/Safari 16.4+, Chrome 94+ or Firefox 93+ (pdf.js 6); older browsers can still type the numbers instead.
+- A modern browser. Chrome on Android and Safari on iPhone are the targets; live scanning uses `BarcodeDetector` where available and ZXing elsewhere. Reading PDFs needs roughly iOS/Safari 16.4+, Chrome 94+ or Firefox 93+ (pdf.js 6), and reading photos needs iOS 16+ on an iPhone (the security policy allows the photo reader's WebAssembly engine with `'wasm-unsafe-eval'`, which older Safari doesn't understand); older browsers can still type the numbers instead.
 - Internet access the first time each export, PDF, photo-reading or barcode-fallback feature is used, so its library can be fetched from cdnjs, jsDelivr or unpkg and cached. After the update to build 30 this is needed once more, as the old library store is cleared.
 - For the automatic checks only: Node.js 18+ (CI uses 22). `npm install` fetches Playwright plus ExcelJS, jsPDF, jspdf-autotable, pdf.js, pdf-lib, Tesseract.js and ZXing at the versions the app loads; without network access to npm the real-library checks are skipped (see [testing.md](testing.md)). `tests/advisories.js` and `tests/sri.js` need internet (osv.dev and the CDNs).
 

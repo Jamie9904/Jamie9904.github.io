@@ -97,12 +97,23 @@ The service worker saves a library only if the download succeeded (`res.ok`), ne
 - **Trade-off:** after this update every feature needs internet once more to download its library again.
 - **Old font hosts removed:** `fonts.googleapis.com` and `fonts.gstatic.com` were dropped from the `CDN` list, as the fonts are part of the app.
 
-## No Content Security Policy yet
+## Content Security Policy in the page (build 31)
 
-A Content Security Policy (a rule list in the page saying which sites may provide scripts and other files) was considered and deliberately not added in this release.
+`index.html` has a Content Security Policy (a rule list saying where the page may load scripts and other files from, and which sites it may talk to) as a `<meta http-equiv="Content-Security-Policy">` tag, placed before any script. GitHub Pages can't send custom headers, so a meta tag is the only way to set one.
 
-- **Why not yet:** the photo reader (Tesseract) starts a worker and fetches its engine and language data from several places, and a policy that is slightly too strict would break photo reading without any error users would understand. Photo reading has no automatic checks yet, and older phones handle these policies differently, so it needs automated coverage of photo reading and a test on an older phone first.
-- **Meanwhile:** fingerprints on the library files, plain-text reading of outside files and tidying of saved data cover the main risks.
+- **Why:** a second line of defence. If a file from outside or a changed library tried to load a script from another site, send data somewhere else or run text as code, the browser blocks it. Fingerprints (SRI) only cover the libraries loaded by a script tag; the policy also limits what pdf.js and the photo reader (which aren't fingerprinted) can load and contact.
+- **What it allows, and why:**
+  - `script-src 'self'` plus `https://cdnjs.cloudflare.com`, `https://cdn.jsdelivr.net`, `https://unpkg.com`: the app's own files and the three library CDNs. No `'unsafe-eval'` and no `'unsafe-inline'` for scripts, so text can't be run as code and the page has no inline scripts.
+  - `'wasm-unsafe-eval'`: lets the photo reader (Tesseract) start its WebAssembly engine. It allows WebAssembly only, not general eval.
+  - `worker-src 'self' blob:` and `child-src 'self' blob:`: the background workers of pdf.js and the photo reader, which can be started from `blob:` addresses. `child-src` is there as the fallback older Safari uses for workers.
+  - `connect-src 'self'`, jsDelivr, unpkg and `https://tessdata.projectnaptha.com`: the hosts the app and its libraries fetch from (including the photo reader's language data).
+  - `img-src 'self' data: blob:` and `font-src 'self' data:`: the logo and pictures made in the app; the fonts are self-hosted.
+  - `style-src 'self' 'unsafe-inline'`: the app sets `style` attributes and `style.cssText` from code (for example the hidden print frame in `printBuf()`).
+  - `frame-src blob:` and `object-src blob:`: printing loads the PDF into a hidden `<iframe>` from a `blob:` address.
+  - `base-uri 'none'` and `form-action 'none'`: nothing can change where relative addresses point or send a form anywhere.
+- **Trade-off:** reading photos now needs iOS 16 or newer on an iPhone, because older Safari doesn't understand `'wasm-unsafe-eval'` and blocks the photo reader's engine. The app's message and the Guide say so. Barcode scanning, typing numbers and reading PDFs (iOS 16.4+ since build 29) are unaffected.
+- **Other trade-offs:** adding a new library host, or a library that fetches from a new place, means updating the policy too, or the feature fails as if the library couldn't load. `'unsafe-inline'` for styles stays, because the app relies on inline style attributes.
+- **How it is kept working:** `tests/run.js` checks the policy is in place before any script with no general eval, that everyday screens run with nothing blocked, and (on GitHub, with the real libraries and the real photo reader) that Excel, PDF export, PDF reading, pdf-lib, photo reading, printing and ZXing all work with nothing blocked in the page or its workers. This automated coverage of photo reading was what held the policy back before.
 
 ## Exports designed to be read back
 
