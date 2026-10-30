@@ -119,7 +119,7 @@ function cropScaled(cv,bb){
 /* The photo reader's own files (worker, engine, language data) load in a way that can't be checked, so a failed
    download could be kept in the offline store. If the reader won't start, those saved copies are cleared so the
    next try downloads them again. */
-const OCR_MSG="The photo reader couldn’t load. Check you’re online and try again, or type the numbers in the box instead.";
+const OCR_MSG="The photo reader couldn’t load. Check you’re online and try again, or type the numbers in the box instead. (Reading photos needs iOS 16 or newer on an iPhone.)";
 async function dropOcrCache(){try{for(const n of await caches.keys()){if(!/^lpn-libs/.test(n))continue;const c=await caches.open(n);for(const r of await c.keys())if(/tesseract|tessdata/.test(r.url))await c.delete(r)}}catch(e){}}
 async function ocrLpns(f){
   try{await loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",()=>window.Tesseract)}catch(e){await dropOcrCache();throw new Error(OCR_MSG)}

@@ -55,24 +55,31 @@ const EXCEL_STUB = () => {
 const LIBS = { "exceljs.min.js": "exceljs/dist/exceljs.min.js", "jspdf.umd.min.js": "jspdf/dist/jspdf.umd.min.js",
   "jspdf.plugin.autotable.min.js": "jspdf-autotable/dist/jspdf.plugin.autotable.min.js",
   "pdf.min.mjs": "pdfjs-dist/legacy/build/pdf.min.mjs", "pdf.worker.min.mjs": "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
-  "pdf-lib.min.js": "pdf-lib/dist/pdf-lib.min.js" };
+  "pdf-lib.min.js": "pdf-lib/dist/pdf-lib.min.js", "tesseract.min.js": "tesseract.js/dist/tesseract.min.js",
+  "index.min.js": "@zxing/library/umd/index.min.js" };
 const libFile = n => Object.prototype.hasOwnProperty.call(LIBS, n) ? path.join(ROOT, "node_modules", LIBS[n]) : null;
 const REAL_LIBS = Object.keys(LIBS).every(n => fs.existsSync(libFile(n)));
 
 async function page(browser, width, opts = {}) {
-  // With the real libraries the service worker is turned off, so every library request reaches the router.
-  const ctx = await browser.newContext({ viewport: { width, height: 900 }, serviceWorkers: opts.real || opts.noSW ? "block" : "allow" });
+  // With the real libraries the service worker is normally turned off, so every library request reaches the router.
+  // {sw:true} keeps it on and routes at the context level, which also catches the service worker's own requests.
+  const ctx = await browser.newContext({ viewport: { width, height: 900 }, serviceWorkers: (opts.real && !opts.sw) || opts.noSW ? "block" : "allow" });
   const p = await ctx.newPage();
   const errors = [];
   p.on("pageerror", e => errors.push(e.message));
-  const router = r => {
+  const router = async r => {
     const u = new URL(r.request().url());
-    if (u.hostname === "127.0.0.1") return r.continue();
+    if (opts.handle && await opts.handle(r, u)) return;
+    if (u.hostname === "127.0.0.1") {
+      return r.continue();
+    }
     const f = opts.real && libFile(u.pathname.split("/").pop());
+    // {net:true}: the photo reader's own worker, engine and language data come from the real internet (GitHub only).
+    if (opts.net && !f && /tesseract|tessdata/.test(u.href)) return r.continue();
     // CORS header as the real CDNs send it: the app loads libraries with crossorigin and an integrity hash.
     return f && fs.existsSync(f) ? r.fulfill({ path: f, contentType: "text/javascript", headers: { "Access-Control-Allow-Origin": "*" } }) : r.abort();
   };
-  if (opts.real) await ctx.route("**/*", router); else await p.route("**/*", router);
+  if (opts.real || opts.sw) await ctx.route("**/*", router); else await p.route("**/*", router);
   await p.addInitScript(() => { try { localStorage.setItem("lpninstallshown", "1"); } catch (e) {} });
   if (opts.excel) await p.addInitScript(EXCEL_STUB);
   if (opts.init) await p.addInitScript(opts.init);
@@ -520,6 +527,158 @@ async function page(browser, width, opts = {}) {
       check("real ExcelJS: manifest check has the version line", s.made, s);
     }
     check("no script errors", p.errors.length === 0, p.errors);
+    await p.ctx.close();
+  }
+
+  console.log("Security policy");
+  {
+    const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+    const m = html.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)">/);
+    const pol = m ? m[1] : "";
+    const ok = /child-src 'self' blob:/.test(pol) && /script-src 'self' https:\/\/cdnjs\.cloudflare\.com https:\/\/cdn\.jsdelivr\.net https:\/\/unpkg\.com 'wasm-unsafe-eval';/.test(pol) && !/unsafe-eval'|'unsafe-inline'[^;]*;\s*worker/.test(pol.replace("'wasm-unsafe-eval'", "")) && /base-uri 'none'/.test(pol) && /object-src blob:/.test(pol) && html.indexOf(m && m[0]) < html.indexOf("<script");
+    check("the security policy is in place before any script, with no general eval allowed", !!m && ok, pol);
+    // Everyday screens under the policy (libraries are stand-ins here): nothing may be blocked.
+    p = await page(browser, 375, { init: () => { window.__csp = []; document.addEventListener("securitypolicyviolation", e => window.__csp.push(e.violatedDirective + " " + (e.blockedURI || "inline"))); } });
+    await p.goto(URL0); await p.waitForTimeout(300);
+    s = await p.evaluate(async () => {
+      for (const id of ["btnSet", "btnGuide"]) { const b = document.getElementById(id); if (b) { b.click(); await new Promise(r => setTimeout(r, 100)); closeHelp(); } }
+      rows = [{ lpn: "RUN0001830763", type: "FPP", fsdu: false }]; save(); render();
+      return window.__csp;
+    });
+    check("everyday screens run under the security policy with nothing blocked", s.length === 0 && p.errors.length === 0, { blocked: s, errors: p.errors });
+    await p.ctx.close();
+  }
+
+  console.log("Offline store and failure paths");
+  {
+    // The service worker is on and every outside request goes through the test's router, including its own.
+    const fakeLib = "https://cdn.jsdelivr.net/npm/fake-lib@1.0.0/fake.min.js", fakeOcr = "https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/fake-worker.min.js";
+    let broken = 0;
+    p = await page(browser, 375, { sw: true, real: REAL_LIBS, handle: async (r, u) => {
+      if (u.href === fakeLib + "?broken") { broken++; await r.fulfill({ status: 503, body: "busy", headers: { "Access-Control-Allow-Origin": "*" } }); return true; }
+      if (u.href === fakeLib || u.href === fakeOcr) { await r.fulfill({ status: 200, contentType: "text/javascript", body: "window.__fake=1", headers: { "Access-Control-Allow-Origin": "*" } }); return true; }
+      return false;
+    } });
+    await p.goto(URL0); await p.evaluate(() => navigator.serviceWorker.ready); await p.reload(); await p.waitForTimeout(500);
+    s = await p.evaluate(async ({ fakeLib, fakeOcr }) => {
+      const out = { controlled: !!navigator.serviceWorker.controller };
+      await fetch(fakeLib + "?broken", { mode: "cors" }).catch(() => {});
+      await fetch(fakeLib, { mode: "no-cors" });   // unchecked (opaque) download of an ordinary library
+      await fetch(fakeOcr, { mode: "no-cors" });   // unchecked download of a photo-reader file: allowed
+      // The service worker saves in the background, so wait until the allowed copy has landed (or 3 seconds).
+      const c = await caches.open("lpn-libs-v2"); let keys = [];
+      for (let i = 0; i < 30; i++) { keys = (await c.keys()).map(r => r.url); if (keys.includes(fakeOcr)) break; await new Promise(r => setTimeout(r, 100)); }
+      out.keptBroken = keys.includes(fakeLib + "?broken"); out.keptOpaque = keys.includes(fakeLib); out.keptOcr = keys.includes(fakeOcr);
+      // A checked request must not be answered by the unchecked copy: it fetches a fresh one instead.
+      const r = await fetch(fakeOcr, { mode: "cors" }); out.checkedAnswer = r.type;
+      out.v1 = (await caches.keys()).includes("lpn-libs-v1");
+      return out;
+    }, { fakeLib, fakeOcr });
+    check("the app is controlled by its service worker", s.controlled, s);
+    check("a failed library download is never kept for offline use", !s.keptBroken && broken === 1, s);
+    check("an unchecked download is only kept for the photo reader", !s.keptOpaque && s.keptOcr, s);
+    check("an unchecked saved copy never answers a checked request", s.checkedAnswer === "cors", s);
+    if (REAL_LIBS) {
+      // Use Excel and PDF once online, then go offline and use them again from the saved copies.
+      await p.evaluate(async () => { rows = [{ lpn: "RUN0001830763", type: "FPP", fsdu: false }]; save(); render();
+        window.saveOnly = async () => {}; await document.getElementById("dl").onclick(); await loadJsPdf(); await loadPdfJs(); });
+      await p.ctx.setOffline(true); await p.reload(); await p.waitForTimeout(800);
+      s = await p.evaluate(async () => {
+        const out = {}; const saved = []; window.saveOnly = async (b, n) => { saved.push(n); };
+        await document.getElementById("dl").onclick(); out.xlsx = saved.filter(n => /\.xlsx$/.test(n)).length;
+        const buf = await buildLogPdf("2026-10-26"); const imp = await parseExported(new File([buf], "log.pdf"));
+        out.pdfRows = imp.rows.map(r => r.lpn); out.rows = rows.length; return out;
+      });
+      check("offline after one online use: Excel export and PDF reading still work", s.xlsx === 1 && JSON.stringify(s.pdfRows) === '["RUN0001830763"]' && s.rows === 1, s);
+    }
+    check("no script errors", p.errors.length === 0, p.errors);
+    await p.ctx.close();
+
+    // Restore when storage runs out part-way: everything is put back as it was.
+    p = await page(browser, 375, { init: () => localStorage.setItem("lpnlog", JSON.stringify({ rows: [{ lpn: "KEEP000000001", type: "BB" }], date: "2026-10-26" })) });
+    await p.goto(URL0); await p.waitForTimeout(300);
+    s = await p.evaluate(async () => {
+      window.saveOnly = async () => {}; document.getElementById("btnSet").click();
+      const before = localStorage.getItem("lpnlog");
+      const f = new File([JSON.stringify({ app: "lpn-pallet-log", data: { lpnlog: JSON.stringify({ rows: [{ lpn: "NEW000000001", type: "BB" }] }), lpnhist: "[]" } })], "b.json");
+      const dt = new DataTransfer(); dt.items.add(f); const i = document.getElementById("bkFile"); i.files = dt.files; await i.onchange({ target: i });
+      const set = Storage.prototype.setItem; let n = 0;
+      Storage.prototype.setItem = function (k, v) { if (k === "lpnhist" && n++ === 0) throw new DOMException("full", "QuotaExceededError"); return set.call(this, k, v); };
+      try { await document.getElementById("bkGo").onclick(); } finally { Storage.prototype.setItem = set; }
+      return { same: localStorage.getItem("lpnlog") === before, msg: document.getElementById("bkMsg").textContent };
+    });
+    check("a restore that runs out of storage puts everything back", s.same && /ran out of storage space, so nothing was changed/.test(s.msg), s);
+    check("no script errors", p.errors.length === 0, p.errors);
+    await p.ctx.close();
+
+    // Photo reader that fails or never starts: plain message, and only its own saved files are cleared.
+    p = await page(browser, 375);
+    await p.clock.install();
+    await p.goto(URL0); await p.clock.runFor(500);
+    const prepPhoto = async mode => p.evaluate(async mode => {
+      const c = await caches.open("lpn-libs-v2");
+      await c.put("https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/tesseract-core.wasm.js", new Response("x"));
+      await c.put("https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js", new Response("y"));
+      window.__started = false;
+      window.Tesseract = { createWorker: () => { window.__started = true; return mode === "fail" ? Promise.reject(new Error("worker")) : new Promise(() => {}); } };
+      const cv = document.createElement("canvas"); cv.width = 200; cv.height = 60; const blob = await new Promise(r => cv.toBlob(r, "image/png"));
+      window.__ocr = ocrLpns(new File([blob], "p.png", { type: "image/png" })).then(() => "ok", e => e.message);
+    }, mode);
+    // The message is only given after the clean-up has finished, so read it first, then the saved files.
+    // wait: how long to wait for the result (real time flows alongside the fake clock); the early probe uses a short wait.
+    const ocrState = (wait = 5000) => p.evaluate(async wait => { const msg = await Promise.race([window.__ocr, new Promise(r => setTimeout(() => r("still waiting"), wait))]);
+      const c = await caches.open("lpn-libs-v2"); const k = (await c.keys()).map(r => r.url);
+      return { msg, tess: k.some(u => /tesseract/.test(u)), other: k.some(u => /jspdf/.test(u)) }; }, wait);
+    await prepPhoto("fail"); await p.waitForFunction(() => window.__started); await p.clock.runFor(1000);
+    s = await ocrState();
+    check("a photo reader that fails to start: plain message, its saved files cleared, others kept", /photo reader couldn’t load/.test(s.msg) && !s.tess && s.other, s);
+    await prepPhoto("hang"); await p.waitForFunction(() => window.__started); await p.clock.runFor(60000);
+    const early = await ocrState(50); await p.clock.runFor(31000);
+    s = await ocrState();
+    check("a photo reader that never starts gives up after 90 seconds", early.msg === "still waiting" && /photo reader couldn’t load/.test(s.msg) && !s.tess && s.other, { early, s });
+    await p.ctx.close();
+  }
+
+  if (REAL_LIBS) {
+    console.log("Real photo reading and the security policy (GitHub only)");
+    // The photo reader's worker, engine and English language data come from the real internet here.
+    p = await page(browser, 1300, { real: true, net: true });
+    await p.goto(URL0); await p.waitForTimeout(300);
+    s = await p.evaluate(async () => {
+      const cv = document.createElement("canvas"); cv.width = 900; cv.height = 160; const g = cv.getContext("2d");
+      g.fillStyle = "#fff"; g.fillRect(0, 0, 900, 160); g.fillStyle = "#000"; g.font = "bold 64px monospace"; g.fillText("VLT003977037", 40, 105);
+      const blob = await new Promise(r => cv.toBlob(r, "image/png"));
+      // One retry: the language data comes from the internet, and a network blip isn't a fault in the app.
+      for (let i = 0; i < 2; i++) { try { return { found: await ocrLpns(new File([blob], "p.png", { type: "image/png" })), tries: i + 1 }; } catch (e) { if (i) return { err: e.message }; } }
+    });
+    check("real photo reading finds an LPN in a picture", Array.isArray(s.found) && s.found.includes("VLT003977037"), s);
+    await p.ctx.close();
+
+    // The app's Content-Security-Policy (index.html): every flow must work under it with nothing blocked.
+    const cspConsole = [];
+    p = await page(browser, 1300, { real: true, net: true, init: () => { window.__csp = []; document.addEventListener("securitypolicyviolation", e => window.__csp.push(e.violatedDirective + " " + (e.blockedURI || "inline"))); } });
+    // Blocks inside the background workers (pdf.js, photo reader) don't reach the page's event, but do reach the console.
+    const onMsg = m => { if (/Content.Security.Policy/i.test(m.text())) cspConsole.push(m.text().slice(0, 200)); };
+    p.on("console", onMsg); p.on("worker", w => w.on("console", onMsg));
+    await p.goto(URL0); await p.waitForTimeout(300);
+    s = await p.evaluate(async () => {
+      const flows = {};
+      const run = async (name, fn) => { try { await fn(); flows[name] = "ok"; } catch (e) { flows[name] = "failed: " + e.message; } };
+      rows = [{ lpn: "RUN0001830763", type: "FPP", fsdu: false }]; save(); render(); window.saveOnly = async () => {};
+      await run("excel", () => document.getElementById("dl").onclick());
+      let pdf; await run("pdf export", async () => { pdf = await buildLogPdf("2026-10-26"); });
+      await run("pdf reading", async () => { if ((await parseExported(new File([pdf], "l.pdf"))).rows.length !== 1) throw new Error("no rows"); });
+      await run("pdf merge", async () => { await loadPdfLib(); });
+      await run("photo reading", async () => { const cv = document.createElement("canvas"); cv.width = 600; cv.height = 120; const g = cv.getContext("2d");
+        g.fillStyle = "#fff"; g.fillRect(0, 0, 600, 120); g.fillStyle = "#000"; g.font = "bold 48px monospace"; g.fillText("VLT003977037", 20, 80);
+        const b = await new Promise(r => cv.toBlob(r, "image/png")); await ocrLpns(new File([b], "p.png", { type: "image/png" })); });
+      await run("printing", async () => { await printBuf(pdf.slice(0), "l.pdf", { textContent: "" }); });
+      await run("barcode scanner library", async () => { await loadZX(); new ZXing.BrowserMultiFormatReader(); });
+      await new Promise(r => setTimeout(r, 300));
+      return { flows, blocked: [...new Set(window.__csp)] };
+    });
+    s.workerBlocks = cspConsole;
+    check("every flow works under the security policy and nothing is blocked (page and workers)", Object.values(s.flows).every(v => v === "ok") && !s.blocked.length && !cspConsole.length, s);
     await p.ctx.close();
   }
 
