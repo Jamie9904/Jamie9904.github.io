@@ -27,6 +27,17 @@ function lpnsFromGrid(g){
   return out;
 }
 function cellText(v){return v==null?"":v instanceof Date?v.toISOString().slice(0,10):typeof v==="object"?(v.richText?v.richText.map(x=>x.text).join(""):(v.text||v.result||"")):v}
+/* One sheet as a grid of text. A merged block is read once, from its top-left cell, so a line that spans
+   the table (like "Made with ...") doesn't repeat in every column. Used by both spreadsheet importers. */
+function sheetGrid(ws){
+  const grid=[];
+  ws.eachRow({includeEmpty:true},row=>{
+    const vals=(row.values||[]).slice(1).map(cellText);
+    row.eachCell({includeEmpty:true},(cell,col)=>{if(cell.isMerged&&cell.master&&cell.master!==cell)vals[col-1]=""});
+    grid.push(vals);
+  });
+  return grid;
+}
 function trimGrid(g){
   const rows=g.map(r=>r.map(c=>c==null?"":c));
   const empty=r=>r.every(c=>String(c).trim()==="");
@@ -53,7 +64,7 @@ async function readLog(f){
     await loadExcel();
     const ab=await f.arrayBuffer();const wb=new ExcelJS.Workbook();await wb.xlsx.load(ab);
     if(!wb.worksheets.length)throw new Error("That file has no sheets.");
-    const sheets=wb.worksheets.map(ws=>{const grid=[];ws.eachRow({includeEmpty:true},row=>{const vals=(row.values||[]).slice(1).map(cellText);row.eachCell({includeEmpty:true},(cell,col)=>{if(cell.isMerged&&cell.master&&cell.master!==cell)vals[col-1]=""});grid.push(vals)});return {name:ws.name,grid}});
+    const sheets=wb.worksheets.map(ws=>({name:ws.name,grid:sheetGrid(ws)}));
     const lp=lpnsFromGrid(sheets[0].grid);
     logSrc={buf:ab.slice(0),name:f.name};logSheets=sheets;return lp;
   }
