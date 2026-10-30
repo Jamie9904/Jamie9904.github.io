@@ -178,6 +178,9 @@ async function loadPdfJs(){
   try{await loadScript("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",t);set("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/")}
   catch(e){await loadScript("https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js",t);set("https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/")}
 }
+/* Opens a PDF with pdf.js. Supplier PDFs come from outside, so pdf.js must never turn anything in the file
+   into running code (CVE-2024-4367): isEvalSupported:false stops that. Every PDF the app opens goes through here. */
+function openPdf(bytes){return pdfjsLib.getDocument({data:bytes,isEvalSupported:false}).promise}
 function lpnsFromText(text){
   const pf=getPfx().sort((a,b)=>b.length-a.length);
   const re=new RegExp("\\b("+(pf.length?pf.join("|"):"[A-Z]{1,3}")+")[ \\t]?([0-9]{8,12})\\b","gi");
@@ -187,7 +190,7 @@ function lpnsFromText(text){
 }
 async function readPdf(f,say){
   await loadPdfJs();
-  const pdf=await pdfjsLib.getDocument({data:new Uint8Array(await f.arrayBuffer())}).promise;
+  const pdf=await openPdf(new Uint8Array(await f.arrayBuffer()));
   let text="";
   for(let p=1;p<=pdf.numPages;p++){
     const tc=await (await pdf.getPage(p)).getTextContent();
@@ -210,7 +213,7 @@ async function readLogPdf(f,say){
   await loadPdfJs();
   const ab=await f.arrayBuffer();
   logPdfSrc={buf:ab.slice(0),name:f.name};
-  const pdf=await pdfjsLib.getDocument({data:new Uint8Array(ab.slice(0))}).promise;
+  const pdf=await openPdf(new Uint8Array(ab.slice(0)));
   try{
     const meta=await pdf.getMetadata();
     const kw=(meta&&meta.info&&meta.info.Keywords)||"";
