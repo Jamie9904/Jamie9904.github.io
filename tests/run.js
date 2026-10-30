@@ -346,7 +346,7 @@ async function page(browser, width, opts = {}) {
       check("real ExcelJS: importing the log gives back the same pallets", JSON.stringify(s.rows) === JSON.stringify(LOG) && s.unk === 0, s.rows);
       check("real ExcelJS: importing the log gives back the delivery details", JSON.stringify(s.details) === JSON.stringify(["2026-10-26", "Tester", "3", "TR4471", "S1001", "S2002", NOTE]), s.details);
       check("real ExcelJS: the Manifest check reads the same LPNs from the log", JSON.stringify(s.cmp) === JSON.stringify(LOG.map(r => r.lpn)), s.cmp);
-      check("real ExcelJS: LPN column fits a 13-character LPN", s.lpnW >= 27, s.lpnW);
+      check("real ExcelJS: LPN column fits a 13-character LPN", s.lpnW >= 99, s.lpnW);
       check("real ExcelJS: the version line is one line under the table", s.madeCells === 1 && /^Made with LPN Pallet Log v\d+\.\d+ \(build \d+\) on /.test(s.made || ""), s.made);
       check("real ExcelJS: the page footer names the version", /LPN Pallet Log v\d+\.\d+ \(build \d+\)/.test(s.footer || "") && /Page &P of &N/.test(s.footer || ""), s.footer);
       check("real ExcelJS: the notes row is tall enough for a long note", s.notesH >= 100, s.notesH);
@@ -396,6 +396,11 @@ async function page(browser, width, opts = {}) {
 
   await browser.close(); srv.close();
   console.log("\n" + passed + " passed, " + failed + " failed");
+  // On GitHub the real libraries must be there; a summary note shows whether they ran.
+  if (process.env.GITHUB_ACTIONS) {
+    if (!REAL_LIBS) { failed++; console.log("::error title=Real export libraries missing::npm install didn't fetch ExcelJS, jsPDF and pdf.js, so the real export checks were skipped."); }
+    console.log("::notice title=Checks::" + passed + " passed, " + failed + " failed" + (REAL_LIBS ? ", including the real export library checks" : ", real export library checks skipped"));
+  }
   process.exit(failed ? 1 : 0);
 })().catch(e => {
   console.error(e);
