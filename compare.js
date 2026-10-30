@@ -342,7 +342,7 @@ $("cmpGo").onclick=async()=>{
     let tab="Manifest Check",tn=2;
     while(wb.getWorksheet(tab))tab="Manifest Check "+(tn++);
     const ws=wb.addWorksheet(tab);
-    ws.columns=[{width:7},{width:21},{width:18},{width:12},{width:19},{width:3},{width:25},{width:18}];
+    ws.columns=[{width:7},{width:xlLpnWidth(res.map(x=>x.n),21)},{width:18},{width:12},{width:19},{width:3},{width:25},{width:18}];
     const bc={argb:"FF000000"},med={style:"medium",color:bc};
     const border={top:med,left:med,bottom:med,right:med};
     let off=0;

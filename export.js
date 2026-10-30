@@ -5,6 +5,23 @@ const xlFill=a=>({type:"pattern",pattern:"solid",fgColor:{argb:a}});
 function xlBox(c1,c2,r1,r2,col,row){
   return {top:(row===r1||row===r1+1)?XL_MED:XL_THIN,bottom:(row===r2||row===r1)?XL_MED:XL_THIN,left:col===c1?XL_MED:XL_THIN,right:col===c2?XL_MED:XL_THIN};
 }
+/* Excel and Google Sheets don't grow a row whose height we set, so estimate how many
+   lines wrapped text needs. Widths are Excel column units; 14pt Arial fits about 0.72
+   characters per unit after the cell's padding. */
+function xlLines(text,width){
+  const per=Math.max(4,Math.floor((width-2)*0.72));let lines=0;
+  String(text==null?"":text).split(/\n/).forEach(par=>{
+    let len=0;lines++;
+    par.split(/\s+/).filter(Boolean).forEach(w=>{
+      if(len&&len+1+w.length>per){lines++;len=0}
+      if(w.length>per){lines+=Math.ceil(w.length/per)-1;len=w.length%per||per}
+      else len+=(len?1:0)+w.length;
+    });
+  });
+  return Math.max(1,lines);
+}
+/* Width for an LPN column in 14pt Courier New: about 1.65 units a character, plus padding and indent. */
+function xlLpnWidth(list,base){let m=0;list.forEach(s=>{m=Math.max(m,String(s||"").length)});return Math.max(base,Math.ceil(m*1.65)+5)}
 function xlTitle(ws,off,lastCol,title,sub){
   const t=ws.getRow(off+1),s=ws.getRow(off+2);
   t.height=38;s.height=22;ws.getRow(off+3).height=10;
@@ -287,7 +304,8 @@ $("dl").onclick=async()=>{
     }
     const wb=new ExcelJS.Workbook();
     const ws=wb.addWorksheet("LPN Log");
-    ws.columns=[{width:7},{width:26},{width:22},{width:12},{width:3},{width:26},{width:20}];
+    const lpnW=xlLpnWidth(rows.map(r=>r.lpn),26);
+    ws.columns=[{width:7},{width:lpnW},{width:22},{width:12},{width:3},{width:26},{width:20}];
     const who=($("recv").value||"").trim();
     const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
     const side=[
@@ -327,7 +345,7 @@ $("dl").onclick=async()=>{
         put(7,right.v[1],{bold:right.h||right.b,big:right.h,center:typeof right.v[1]==="number",fill:(right.h||right.b)?XL_HEAD:null,box:bx(7)});
         if(right.merge)ws.mergeCells(r.number,6,r.number,7);
       }
-      r.height=(head||(right&&right.h))?32:(right&&right.note?Math.max(24,Math.ceil(String(right.v[1]).length/16)*20):24);
+      r.height=(head||(right&&right.h))?32:(right?Math.max(24,xlLines(right.v[1],20)*18+6):24);
     }
     xlPrint(ws,H);
     const buf=await wb.xlsx.writeBuffer();
