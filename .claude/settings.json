@@ -4,7 +4,10 @@
       {
         "matcher": "Edit|Write",
         "hooks": [
-          { "type": "command", "command": "sh \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/syntax-check.sh" }
+          {
+            "type": "command",
+            "command": "sh \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/syntax-check.sh"
+          }
         ]
       }
     ],
@@ -12,14 +15,33 @@
       {
         "matcher": "Bash",
         "hooks": [
-          { "type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/lpn_git_guard.py", "timeout": 300 }
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/lpn_git_guard.py",
+            "timeout": 300
+          }
         ]
       }
     ],
     "Stop": [
       {
         "hooks": [
-          { "type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/docs_reminder.py", "timeout": 60 }
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/docs_reminder.py",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session_start.py",
+            "timeout": 90
+          }
         ]
       }
     ]
