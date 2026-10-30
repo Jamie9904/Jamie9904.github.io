@@ -549,6 +549,26 @@ async function page(browser, width, opts = {}) {
     await p.ctx.close();
   }
 
+  console.log("Demo video");
+  {
+    const mp4 = path.join(ROOT, "media", "demo.mp4"), poster = path.join(ROOT, "media", "demo-poster.jpg");
+    check("the demo video and its poster are in the site, small enough for phones", fs.existsSync(mp4) && fs.existsSync(poster) && fs.statSync(mp4).size < 3e6, fs.existsSync(mp4) && fs.statSync(mp4).size);
+    p = await page(browser, 375);
+    await p.goto(URL0); await p.waitForTimeout(300);
+    await p.click("#btnGuide"); await p.waitForTimeout(200);
+    s = await p.evaluate(() => { const body = document.getElementById("panelBody"), b = document.getElementById("demoPlay"), v = document.getElementById("demoVid");
+      const r = b.getBoundingClientRect();
+      return { first: body.firstElementChild && body.firstElementChild.contains(b), hidden: v.hidden, preload: v.preload, fits: r.left >= 0 && r.right <= innerWidth && r.height >= 44 }; });
+    check("the Guide starts with a button to play the demo video, and nothing loads until it's tapped", s.first && s.hidden && s.preload === "none" && s.fits, s);
+    await p.click("#demoPlay"); await p.waitForTimeout(300);
+    s = await p.evaluate(() => { const v = document.getElementById("demoVid"); return { shown: !v.hidden, src: v.querySelector("source").getAttribute("src"), btn: document.getElementById("demoPlay").hidden, w: v.getBoundingClientRect().width }; });
+    check("tapping it shows the video player in the Guide", s.shown && s.src === "media/demo.mp4" && s.btn && s.w > 200 && s.w <= 375, s);
+    s = await p.evaluate(() => { closeHelp(); return document.getElementById("demoVid").paused; });
+    check("closing the Guide stops the video", s === true, s);
+    check("no script errors", p.errors.length === 0, p.errors);
+    await p.ctx.close();
+  }
+
   console.log("Offline store and failure paths");
   {
     // The service worker is on and every outside request goes through the test's router, including its own.

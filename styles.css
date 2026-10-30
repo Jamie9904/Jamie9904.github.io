@@ -337,3 +337,9 @@ details.opts[open]>summary::after{transform:rotate(-135deg)}
 details.opts>summary{white-space:nowrap;overflow:hidden}
 details.opts>summary .note{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #cmpToggle,#manShow{min-height:44px}
+
+/* Demo video at the top of the Guide */
+.demo{margin:0 0 18px}
+.demobtn{width:100%;min-height:52px;font-weight:700}
+.demo video{display:block;width:100%;max-width:360px;margin:0 auto;border-radius:16px;background:#000;aspect-ratio:9/16}
+.demonote{margin:10px 0 0;color:var(--dg)}

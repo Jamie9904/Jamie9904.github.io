@@ -1,4 +1,4 @@
-const CACHE="lpn-log-v31";
+const CACHE="lpn-log-v32";
 // v2: only complete, checkable downloads are kept (v1 could keep a failed one), so v1 is cleared once.
 const LIBS="lpn-libs-v2";
 const SHELL=["./","index.html","sw.js","styles.css","core.js","scan.js","export.js","compare.js","panels.js","manifest.webmanifest","icon-192.png","icon-512.png","apple-touch-icon.png","fonts/AtkinsonHyperlegible-Regular.woff2","fonts/AtkinsonHyperlegible-Bold.woff2","fonts/IBMPlexMono-Regular.woff2","fonts/IBMPlexMono-Medium.woff2","fonts/IBMPlexMono-SemiBold.woff2"];
@@ -31,6 +31,8 @@ self.addEventListener("fetch",e=>{
     }));
     return;
   }
+  // Videos stream in pieces (partial responses), which can't be saved for offline use: leave them to the browser.
+  if(/\.(mp4|webm)$/i.test(u.pathname))return;
   // Network first for the app itself, so updates show up when online; falls back to the saved copy when offline.
   e.respondWith(
     fetch(req,{cache:"no-cache"}).then(res=>{
