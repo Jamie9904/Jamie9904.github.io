@@ -51,12 +51,25 @@ def main():
     is_commit = re.search(GIT + r"commit\b", cmd)
     is_push = re.search(GIT + r"push\b", cmd)
     is_merge = re.search(GIT + r"merge\b[^;&|\n]*\bdocs\b", cmd)
-    if not (is_commit or is_push or is_merge):
+    # New branches: "checkout -b/-B", "switch -c/-C", or "branch <name>" (not listing, deleting or setting upstream).
+    is_newbranch = re.search(GIT + r"(?:checkout\s+-[bB]\b|switch\s+(?:-[cC]\b|--create\b)|branch\s+(?!-)[\w./-]+)", cmd)
+    if not (is_commit or is_push or is_merge or is_newbranch):
         return 0
     top = repo_for(cmd, cwd)
     if not top:
         return 0
     branch = run(["git", "rev-parse", "--abbrev-ref", "HEAD"], top).stdout.strip()
+
+    # One working branch: every change is committed on "updates" (the docs on "docs"), and main only ever moves
+    # by fast-forwarding to updates when the user says push it.
+    has_updates = run(["git", "rev-parse", "--verify", "-q", "refs/remotes/origin/updates"], top).returncode == 0
+    if is_newbranch and has_updates:
+        print("Branch guard: changes go on the one working branch, updates (git checkout updates), not a new branch.", file=sys.stderr)
+        return 2
+    if is_commit and branch == "main" and has_updates:
+        print("Branch guard: don't commit on main. Commit on updates, then when the user says push it, fast-forward main to updates "
+              "(git checkout main && git merge --ff-only updates && git push origin main).", file=sys.stderr)
+        return 2
 
     if is_merge and branch == "main":
         print("Docs guard: the docs branch must never be merged into main. The documentation stays on its own branch.", file=sys.stderr)

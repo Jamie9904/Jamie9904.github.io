@@ -6,7 +6,7 @@ Compares each site file in origin/main (everything except .claude/, docs/ and .m
 outputs folder by git blob hash, and checks the zip isn't older than the folder. Never blocks twice for the same
 main commit, and does nothing when there is no outputs folder (for example on the user's own computer).
 """
-import json, os, subprocess, sys, zipfile
+import json, os, re, subprocess, sys, zipfile
 
 OUT = "/mnt/user-data/outputs"
 SITE = os.path.join(OUT, "lpn-site")
@@ -32,7 +32,7 @@ def find_repo(data):
     return None
 
 def site_file(p):
-    return not (p.startswith(".claude/") or p.startswith("docs/") or p == ".mcp.json")
+    return not (p.startswith(".claude/") or p.startswith("docs/") or p.startswith("tools/") or p == ".mcp.json")
 
 def main():
     try:
@@ -63,6 +63,21 @@ def main():
     hashes = git(["hash-object", "--stdin-paths"], top, "\n".join(os.path.join(SITE, p) for p in present) + "\n").stdout.split()
     have = dict(zip(present, hashes))
     stale = sorted(p for p in want if have.get(p) != want[p])
+    # The outputs folder's storage rewrites media files' metadata after they're saved, so for pictures and
+    # video compare what they show (decoded frames), not the raw bytes.
+    def same_media(p):
+        try:
+            sums = []
+            for src in (os.path.join(top, p), os.path.join(SITE, p)):
+                r = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", src, "-map", "0:v:0", "-f", "md5", "-"], capture_output=True, text=True, timeout=60)
+                if r.returncode != 0 or not r.stdout.strip():
+                    return False
+                sums.append(r.stdout.strip())
+            return sums[0] == sums[1] and git(["cat-file", "-e", "refs/remotes/origin/main:" + p], top).returncode == 0 and \
+                git(["diff", "--quiet", "refs/remotes/origin/main", "--", p], top).returncode == 0
+        except Exception:
+            return False
+    stale = [p for p in stale if not (p in have and re.search(r"\.(mp4|webm|jpe?g|png)$", p, re.I) and same_media(p))]
 
     zip_note = ""
     try:
