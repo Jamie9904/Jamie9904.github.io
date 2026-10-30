@@ -3,8 +3,8 @@
 ## Prerequisites
 
 - Any static web host served over **HTTPS**. Camera scanning, installing as an app, the service worker and the share sheet all require a secure origin. GitHub Pages provides this.
-- A modern browser. Chrome on Android and Safari on iPhone are the targets; live scanning uses `BarcodeDetector` where available and ZXing elsewhere.
-- Internet access the first time each export or OCR feature is used, so its library can be fetched from cdnjs or jsDelivr and cached.
+- A modern browser. Chrome on Android and Safari on iPhone are the targets; live scanning uses `BarcodeDetector` where available and ZXing elsewhere. Reading PDFs needs roughly iOS/Safari 16.4+, Chrome 94+ or Firefox 93+ (pdf.js 6); older browsers can still type the numbers instead.
+- Internet access the first time each export or OCR feature is used, so its library can be fetched from cdnjs, jsDelivr or unpkg and cached.
 - For the automatic checks only: Node.js 18+ (CI uses 22). `npm install` fetches Playwright plus ExcelJS, jsPDF, jspdf-autotable and pdf.js at the versions the app loads; without network access to npm the real-library checks are skipped (see [testing.md](testing.md)).
 
 There is nothing to compile and no environment variables or database.

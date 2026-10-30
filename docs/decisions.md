@@ -17,7 +17,7 @@ Five classic scripts share globals instead of modules or a bundler.
 
 ## Heavy libraries from CDNs, loaded on demand
 
-ExcelJS, jsPDF, pdf-lib, pdf.js, ZXing and Tesseract are loaded by `loadScript()` only when a feature first needs them, from cdnjs with jsDelivr as fallback, with pinned versions.
+ExcelJS, jsPDF, pdf-lib, ZXing and Tesseract are loaded by `loadScript()` only when a feature first needs them, from cdnjs with jsDelivr as fallback, with pinned versions. pdf.js is also loaded only when first needed, with a pinned version, but by `import()` from jsDelivr with unpkg as fallback (see [pdf.js 6](#pdfjs-6-the-legacy-build-loaded-as-a-module)).
 
 - **Why:** first load stays small and fast on a phone; pinned versioned URLs never change, so the service worker can cache them forever (cache-first in `lpn-libs-v1`).
 - **Trade-off:** each feature needs one online use before it works offline. If the Excel library cannot load at all, `fallbackXls()` saves a basic HTML-based `.xls` instead of failing.
@@ -29,14 +29,18 @@ App files are fetched network-first with `cache:"no-cache"`, and the install ste
 - **Why:** an earlier cache-friendly setup let GitHub Pages' 10-minute HTTP cache serve stale files after an update. Revalidating every request makes updates appear immediately when online while still falling back to the cache offline.
 - **Discarded:** cache-first for app files (fast, but updates lag until the cache is bumped and the user reloads twice).
 
-## PDFs opened with code running turned off
+## pdf.js 6, the legacy build, loaded as a module
 
-Every PDF is opened with pdf.js through one function, `openPdf()` in `compare.js`, which passes `isEvalSupported:false` to `getDocument()`.
+The app reads PDFs with pdf.js 6.4.299, the "legacy" build. Every PDF is opened through one function, `openPdf()` in `compare.js`, which is plain `getDocument({data:bytes})`.
 
-- **Why:** the app opens PDFs it did not make: supplier manifests in the Manifest check, and exported logs that may have been passed around before being loaded back. pdf.js 3.11.174, the version the app loads, has a flaw (CVE-2024-4367, advisory GHSA-wgrm-67xf-hhpq) where a specially made font in a PDF can make pdf.js run code in the page. The advisory's workaround for versions before the fix is `isEvalSupported:false`, which makes pdf.js draw fonts without generating code. It covers both reading the text and drawing pages for the OCR fallback, because both use the same opened document.
-- **One function for every reader:** `readPdf()`, `readLogPdf()` and `parseExported()` all call `openPdf()`, so a new PDF reader can't forget the flag by calling `getDocument()` directly. `tests/run.js` checks both: a stand-in pdf.js records that all three readers pass `isEvalSupported:false`, and a scan of the app scripts fails if `getDocument(` appears anywhere other than inside `openPdf()`.
-- **pdf-lib not affected:** pdf-lib (merging the uploaded log PDF into the manifest check PDF) only copies objects from one PDF into another and never runs anything from the file, so it does not need the same treatment.
-- **Planned:** the full fix is pdf.js 4.2.67 or later. That version is published as an ES module, so moving to it needs the legacy build and a change to how `loadPdfJs()` loads the library (and the version in `package.json`, which must match the CDN URLs). That is planned as a separate change; until then the flag is the protection.
+- **Why upgrade:** the app opens PDFs it did not make: supplier manifests in the Manifest check, and exported logs that may have been passed around before being loaded back. The previous version, 3.11.174, had a flaw (CVE-2024-4367, advisory GHSA-wgrm-67xf-hhpq) where a specially made font in a PDF could make pdf.js run code in the page. Build 28 worked round it with `isEvalSupported:false`; build 29 replaces that with the real fix by moving to a version past the known flaws: CVE-2024-4367 (fixed in 4.2.67) and CVE-2026-16633 / GHSA-hq66-cqwq-w95j (affected 5.6.83 up to 6.2.108).
+- **No options needed:** pdf.js 6 no longer has `isEvalSupported` or `enableScripting`. It no longer compiles anything from a file, and a PDF's own scripts only run in the pdf.js viewer, which the app doesn't use. So the protection is the version, and a check in `tests/run.js` reads the pdf.js version from the URLs in `compare.js` and fails if it is in either known bad range.
+- **Legacy build:** it is made for older browsers and phones. Even so it needs roughly iOS/Safari 16.4+, Chrome 94+ or Firefox 93+. On older phones PDF reading fails with a plain message (`PDF_LOAD_MSG`) that says to type the numbers in the box instead; the rest of the app is unaffected.
+- **Loaded with `import()`:** pdf.js 4 and later are published only as ES modules, so `loadScript()` (a script tag) can't load them. `loadPdfJs()` uses a dynamic `import()` with a 15-second limit per host and sets `window.pdfjsLib` itself, so the rest of the code is unchanged.
+- **jsDelivr then unpkg:** cdnjs only hosts the modern build, so the hosts differ from the other libraries. The worker (`pdf.worker.min.mjs`) comes from the same host as the library; pdf.js wraps a worker from another site itself, so no copy on the app's own site is needed. `unpkg.com` was already in the service worker's `CDN` list, so both files are cached in `lpn-libs-v1` on first use.
+- **One function for every reader:** `readPdf()`, `readLogPdf()` and `parseExported()` all call `openPdf()`, and a scan in `tests/run.js` fails if `getDocument(` appears anywhere else, so a new PDF reader can't bypass it.
+- **pdf-lib not affected:** pdf-lib (merging the uploaded log PDF into the manifest check PDF) only copies objects from one PDF into another and never runs anything from the file.
+- **Trade-off:** the version check only knows the bad ranges written into it. A new pdf.js advisory means adding its range to the check and, if the pinned version is affected, moving it (in `compare.js` and `package.json` together).
 
 ## Exports designed to be read back
 
@@ -161,7 +165,7 @@ Atkinson Hyperlegible (chosen for legibility) and IBM Plex Mono (LPNs and number
 
 ## Library versions pinned to the CDN copies
 
-`package.json` lists `exceljs` 4.4.0, `jspdf` 2.5.1, `jspdf-autotable` 3.8.2 and `pdfjs-dist` 3.11.174 as exact versions (no `^`), the same versions the app loads from cdnjs and jsDelivr in `export.js` and `compare.js`.
+`package.json` lists `exceljs` 4.4.0, `jspdf` 2.5.1, `jspdf-autotable` 3.8.2 and `pdfjs-dist` 6.4.299 as exact versions (no `^`), the same versions the app loads from cdnjs, jsDelivr and unpkg in `export.js` and `compare.js`.
 
 - **Why:** a check against a different version than users get proves nothing about the live app. A check that runs everywhere compares the two and fails if they differ, so the CDN URLs and `package.json` have to be changed together.
 - **Workflows install with `--ignore-scripts`:** the packages are only files the checks serve to the browser, so none of their install scripts needs to run. The workflows also get read-only repository access and a 10-minute limit, as they only need to read the code and should not run on if something hangs.
@@ -182,5 +186,5 @@ The hooks, agents and working notes for Claude Code are committed in `.claude/` 
 
 The weekly check of the live site, the CDN libraries and the tests is `.github/workflows/health.yml`, not a Claude scheduled task.
 
-- **Why:** GitHub's runners can reach the live site and cdnjs and jsDelivr, which the Claude cloud sandbox cannot, so only a runner can actually test that the libraries still download and that the live site serves the current `sw.js`. GitHub also emails on a failed run without any extra setup, and a passing run stays quiet.
+- **Why:** GitHub's runners can reach the live site and cdnjs, jsDelivr and unpkg, which the Claude cloud sandbox cannot, so only a runner can actually test that the libraries still download and that the live site serves the current `sw.js`. GitHub also emails on a failed run without any extra setup, and a passing run stays quiet.
 - **Trade-off:** it only reports. A broken CDN URL or an unpublished update still needs someone to act on the email.

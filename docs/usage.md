@@ -43,7 +43,7 @@ The section opens (tap **Manifest check**) on **Manifest date**, then the two st
 
 On phones, while the Manifest check is open and its top is in the upper part of the screen (above 45% of the screen height), the pallet entry bar slides down out of view so it does not cover the section. It slides back when you scroll up towards the log, and it never slides away while you are typing or scanning into it.
 
-- **Manifest sources:** photos (OCR), PDFs (text read exactly, scanned pages by OCR, several at once), or typed/pasted numbers.
+- **Manifest sources:** photos (OCR), PDFs (text read exactly, scanned pages by OCR, several at once), or typed/pasted numbers. The PDF reader is downloaded the first time a PDF is read, so that needs internet once; after that PDFs can be read offline.
 - **Log sources:** Use current log, a saved delivery, an exported `.xlsx`/`.csv`/`.xls`, an app-made PDF (read exactly), another PDF, or a photo of a printed log.
 - **Use n as expected:** while a manifest is loaded and Expected pallets is empty, the progress line offers to copy the manifest count into Expected pallets.
 - **Prefix presets** (tap the heading to open) limit which numbers OCR picks up. Leave the list empty for any 1–3 letter prefix. Presets come from `presets.json` and from presets saved on the device.
@@ -96,6 +96,7 @@ Colours (two colours drive the whole theme, with a contrast warning), quick them
 |---|---|
 | Live scan doesn't start | The site must be on HTTPS and camera permission allowed. Use Scan by photo instead. |
 | Export says the builder couldn't load | The device is offline and the library hasn't been cached yet. A basic `.xls` is saved; export once while online to cache it. |
+| "The PDF reader couldn’t load. Check you’re online, then reload the page and try again…" | The PDF reader is downloaded the first time a PDF is read, then kept for offline use. Go online, reload and try again. Very old phones (roughly older than iOS 16.4, Chrome 94 or Firefox 93) can’t read PDFs at all: type or paste the numbers in the box instead, or use a photo. When several manifest PDFs are chosen, reading stops at the first one with this message. |
 | Email PDF saved a file instead of sharing | The browser refused the share. Attach the saved file to the email that opens. |
 | Changes don't appear after an update | Tap **Refresh** on the update banner, or close and reopen the app. |
 | Spreadsheet looks cut off on a phone | Mobile viewers open sheets zoomed in; pinch out. Desktop and print are unaffected. |

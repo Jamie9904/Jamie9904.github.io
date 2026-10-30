@@ -43,7 +43,7 @@ Then: fill in the delivery details → type `RUN000000001` into the LPN box → 
 | App | Plain HTML, CSS and JavaScript (no framework, no build step) |
 | Offline / install | Service worker (`sw.js`), Web App Manifest |
 | Spreadsheets | ExcelJS 4.4.0 |
-| PDFs | jsPDF 2.5.1 + jspdf-autotable 3.8.2, pdf-lib 1.17.1 (merging), pdf.js 3.11.174 (reading) |
+| PDFs | jsPDF 2.5.1 + jspdf-autotable 3.8.2, pdf-lib 1.17.1 (merging), pdf.js 6.4.299, legacy build (reading) |
 | Barcodes | Native `BarcodeDetector`, falling back to ZXing 0.21.3 |
 | OCR | Tesseract.js 5.1.1 |
 | Storage | `localStorage` (keys prefixed `lpn`) |
@@ -51,7 +51,7 @@ Then: fill in the delivery details → type `RUN000000001` into the LPN box → 
 | Hosting | GitHub Pages |
 | Checks | Node.js + Playwright, with the real ExcelJS, jsPDF and pdf.js at the app's versions; run by GitHub Actions on every push and in a weekly health check |
 
-Libraries load from cdnjs with jsDelivr as fallback, only when a feature first needs them.
+Libraries load only when a feature first needs them: from cdnjs with jsDelivr as fallback, except pdf.js, which loads as a module from jsDelivr with unpkg as fallback.
 
 ## Quick installation
 
