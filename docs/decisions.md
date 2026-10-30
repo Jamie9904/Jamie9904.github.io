@@ -257,6 +257,25 @@ The hooks, agents and working notes for Claude Code are committed in `.claude/` 
 - **Download copy reminder:** `outputs_reminder.py` reminds once per `main` commit when the user's download copy (`/mnt/user-data/outputs/lpn-site` and `lpn-site.zip`) no longer matches `main`, because that copy is what gets uploaded by hand and it was easy to forget after a release.
 - **Security reviewer agent:** a read-only `security-reviewer` agent with a checklist for files and text from outside and for the libraries, used when import code, library loading, `package.json` versions or `index.html` change.
 - **Cache bump compared with the live site:** the commit check accepts a `CACHE` number higher than the one in `origin/main:sw.js`, as well as a `CACHE` line changed in the commit itself. A branch that has already bumped the cache once therefore doesn't need a new bump for each later commit before it is published.
+- **Media compared by what it shows:** the outputs storage rewrites the metadata of pictures and video after they are saved, so comparing raw bytes reported the download copy as out of date every time. `outputs_reminder.py` compares their decoded frames with `ffmpeg` instead. If `ffmpeg` is missing or fails, the file counts as different, so the reminder errs towards syncing.
+
+## One working branch, updates
+
+Every change is committed and pushed on one branch, `updates`, and `main` only moves by fast-forwarding to `updates` when the user says to publish. The git guard blocks commits on `main` and creating new branches whenever `origin/updates` exists.
+
+- **Why:** one branch per change left a trail of merged branches that this session can't delete on GitHub, and they had to be listed for the user to remove by hand. With one branch there is nothing to clean up, and pushing `updates` still runs every check on GitHub without touching the live site.
+- **Why fast-forward only:** `git merge --ff-only` keeps `main` exactly equal to what was checked on `updates`, with no merge commits, and fails loudly if the two have diverged.
+- **Why only when `origin/updates` exists:** in a clone or fork without that branch the guard behaves as before, so it doesn't block normal work there.
+- **Trade-off:** changes can't be kept apart on separate branches; unfinished work on `updates` has to be finished or reverted before the next release. The session-start line says when `updates` is behind `main`, for example after a fix made on GitHub.
+
+## Demo video recorder kept in the repository
+
+The tool that makes `media/demo.mp4` lives in `tools/demo-video/` on `main`, and records the real app from the repository rather than a separate mock-up.
+
+- **Why in the repository:** the video has to be remade whenever the screens it shows change. With the recorder next to the app, one command (`sh tools/demo-video/make.sh`) re-records it from the current files, and the session-start line can say when `index.html`, `styles.css` or the scripts changed after the video was last committed.
+- **Why an offline voice:** the Kokoro "Heart" voice (Apache 2.0) runs locally through sherpa-onnx, so re-recording needs no account or paid speech service and gives the same voice every time. The engine and model (about 350 MB) are downloaded from GitHub once into `~/.cache/lpn-voice` rather than committed.
+- **Why music is optional:** the music and sound effects are not in the repository. `render.py` adds them only when `SFX_DIR` points at them, and otherwise renders the voice only.
+- **Trade-off:** `tools/` is on `main`, so GitHub Pages publishes it, though the app never loads it. It is kept out of the site zip and the download copy.
 
 ## Weekly health check as a GitHub workflow
 

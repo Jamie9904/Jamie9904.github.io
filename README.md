@@ -85,6 +85,7 @@ A single page (`index.html`) loads five classic scripts in a fixed order that sh
 ├── presets.json        shared LPN prefix presets (optional)
 ├── DESIGN.md           design system notes
 ├── tests/              run.js (automatic checks), advisories.js + advisories-accepted.json (security advisories), sri.js (library fingerprints)
+├── tools/demo-video/   recorder that re-makes the Guide demo video from the current app (sh tools/demo-video/make.sh)
 ├── package.json        test dependencies only (Playwright and the export libraries)
 ├── .github/workflows/  test.yml (checks on every push), health.yml (weekly health check)
 ├── .mcp.json           Context7 library documentation for Claude Code

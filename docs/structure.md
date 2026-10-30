@@ -33,6 +33,15 @@
 │   ├── advisories.js        asks osv.dev about security advisories for the pinned libraries
 │   ├── advisories-accepted.json  advisories checked and found not to affect the app, with reasons
 │   └── sri.js               checks the library fingerprints in core.js against the CDNs
+├── tools/demo-video/        recorder for the Guide demo video (development only, see below)
+│   ├── make.sh              one command: voice, recording, render, web copy, poster and check frames
+│   ├── lines.json           the spoken line for each scene
+│   ├── voice.py             speaks the lines offline (Kokoro "Heart" voice through sherpa-onnx, downloaded once into ~/.cache/lpn-voice)
+│   ├── stage.html           the 1080×1920 stage: headline, phone frame with the live app, subtitles, cards
+│   ├── record.mjs           serves the repository locally, drives the app scene by scene (SCENES) with Playwright and records frames
+│   ├── render.py            joins the frames with the narration; adds music and sound effects only when SFX_DIR is set
+│   ├── README.md            how to re-record
+│   └── .gitignore           keeps the working folder out/ out of git
 ├── .github/workflows/
 │   ├── test.yml             runs the checks on every push and pull request (advisories and fingerprints without blocking)
 │   └── health.yml           weekly health check of the live site, CDN libraries, advisories, fingerprints and checks
@@ -40,9 +49,9 @@
     ├── CLAUDE.md            working notes: branches, release steps, user decisions
     ├── settings.json        registers the hooks below
     ├── hooks/
-    │   ├── session_start.py fetches every branch, sets the upstream and NODE_PATH, prints a status line
+    │   ├── session_start.py fetches every branch, sets the upstream and NODE_PATH, prints a status line (including the updates branch and an out-of-date demo video)
     │   ├── syntax-check.sh  `node --check` after a `.js` file is edited
-    │   ├── lpn_git_guard.py commit and push guard (cache bump, docs on main, tests before push)
+    │   ├── lpn_git_guard.py commit and push guard (cache bump, docs on main, no commits on main or new branches, tests before push)
     │   ├── docs_reminder.py reminds when the docs branch is behind main
     │   └── outputs_reminder.py reminds when the download copy (outputs folder and zip) doesn't match main
     └── agents/              export-reviewer, phone-layout-checker, docs-updater, release-reviewer, security-reviewer
@@ -72,8 +81,9 @@
 
 ## Files the app does not use
 
-`tests/`, `package.json`, `.gitignore`, `.github/`, `.claude/`, `.mcp.json`, `docs/`, `DESIGN.md` and `README.md` are for development only. None of them is loaded by the app or cached by `sw.js`.
+`tests/`, `tools/`, `package.json`, `.gitignore`, `.github/`, `.claude/`, `.mcp.json`, `docs/`, `DESIGN.md` and `README.md` are for development only. None of them is loaded by the app or cached by `sw.js`.
 
-- `tests/`, `package.json`, `DESIGN.md` and `README.md` are on `main`, so GitHub Pages publishes them alongside the app.
+- `tests/`, `tools/`, `package.json`, `DESIGN.md` and `README.md` are on `main`, so GitHub Pages publishes them alongside the app. `tools/` is kept out of the site zip and the download copy (`outputs_reminder.py` doesn't count it as a site file).
+- `tools/demo-video/` only reads the app files; its output goes to `media/demo.mp4` and `media/demo-poster.jpg`, which the app does use.
 - `.github/`, `.claude/` and `.mcp.json` are on `main` but not published: Jekyll, which GitHub Pages uses to build the site, leaves out files and folders whose names start with a dot.
 - `docs/`, and the version of `README.md` that goes with it, live only on the `docs` branch (`main` has its own `README.md`). Pages publishes from `main`, so they are not on the site. The git guard in `.claude/hooks/lpn_git_guard.py` blocks committing `docs/` files on `main` and merging or pushing `docs` into `main`.
