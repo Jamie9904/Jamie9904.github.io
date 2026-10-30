@@ -44,9 +44,10 @@ def main():
     # Only real git subcommands count, so "git stash push", "echo push" or a script that mentions
     # commit or push in its text don't trigger the checks. git can be written as a path (/usr/bin/git),
     # inside quotes (sh -c "git push"), and with options before the command (-C dir, -c key=value,
-    # --no-pager, --git-dir=...).
-    GIT = (r"(?:^|[;&|(`]\s*|[\s\"'/])git"
-           r"(?:\s+(?:-[Cc]\s+(?:\"[^\"]+\"|'[^']+'|\S+)|--[\w-]+(?:=\S+)?))*\s+")
+    # --no-pager, --git-dir=...). A quote only counts straight after "-c", so searching for the text
+    # "git push" (grep "git push" .) doesn't set the checks off.
+    GIT = (r"(?:^|[;&|(`]\s*|\s|-c\s+[\"']|/)git"
+           r"(?:\s+(?:-[Cc]\s+(?:\"[^\"]+\"|'[^']+'|\S+)|--(?:git-dir|work-tree|namespace)\s+\S+|--[\w-]+(?:=\S+)?))*\s+")
     is_commit = re.search(GIT + r"commit\b", cmd)
     is_push = re.search(GIT + r"push\b", cmd)
     is_merge = re.search(GIT + r"merge\b[^;&|\n]*\bdocs\b", cmd)
