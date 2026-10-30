@@ -55,7 +55,8 @@ const EXCEL_STUB = () => {
 const LIBS = { "exceljs.min.js": "exceljs/dist/exceljs.min.js", "jspdf.umd.min.js": "jspdf/dist/jspdf.umd.min.js",
   "jspdf.plugin.autotable.min.js": "jspdf-autotable/dist/jspdf.plugin.autotable.min.js",
   "pdf.min.mjs": "pdfjs-dist/legacy/build/pdf.min.mjs", "pdf.worker.min.mjs": "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
-  "pdf-lib.min.js": "pdf-lib/dist/pdf-lib.min.js", "tesseract.min.js": "tesseract.js/dist/tesseract.min.js" };
+  "pdf-lib.min.js": "pdf-lib/dist/pdf-lib.min.js", "tesseract.min.js": "tesseract.js/dist/tesseract.min.js",
+  "index.min.js": "@zxing/library/umd/index.min.js" };
 const libFile = n => Object.prototype.hasOwnProperty.call(LIBS, n) ? path.join(ROOT, "node_modules", LIBS[n]) : null;
 const REAL_LIBS = Object.keys(LIBS).every(n => fs.existsSync(libFile(n)));
 
@@ -70,11 +71,6 @@ async function page(browser, width, opts = {}) {
     const u = new URL(r.request().url());
     if (opts.handle && await opts.handle(r, u)) return;
     if (u.hostname === "127.0.0.1") {
-      // {csp:"..."}: serve index.html with that Content-Security-Policy, to rehearse it before it's adopted.
-      if (opts.csp && /\/(index\.html)?$/.test(u.pathname)) {
-        const res = await r.fetch(); const body = (await res.text()).replace('<meta charset="utf-8">', '<meta charset="utf-8">\n<meta http-equiv="Content-Security-Policy" content="' + opts.csp + '">');
-        return r.fulfill({ response: res, body });
-      }
       return r.continue();
     }
     const f = opts.real && libFile(u.pathname.split("/").pop());
@@ -539,7 +535,7 @@ async function page(browser, width, opts = {}) {
     const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
     const m = html.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)">/);
     const pol = m ? m[1] : "";
-    const ok = /script-src 'self' https:\/\/cdnjs\.cloudflare\.com https:\/\/cdn\.jsdelivr\.net https:\/\/unpkg\.com 'wasm-unsafe-eval';/.test(pol) && !/unsafe-eval'|'unsafe-inline'[^;]*;\s*worker/.test(pol.replace("'wasm-unsafe-eval'", "")) && /base-uri 'none'/.test(pol) && /object-src blob:/.test(pol) && html.indexOf(m && m[0]) < html.indexOf("<script");
+    const ok = /child-src 'self' blob:/.test(pol) && /script-src 'self' https:\/\/cdnjs\.cloudflare\.com https:\/\/cdn\.jsdelivr\.net https:\/\/unpkg\.com 'wasm-unsafe-eval';/.test(pol) && !/unsafe-eval'|'unsafe-inline'[^;]*;\s*worker/.test(pol.replace("'wasm-unsafe-eval'", "")) && /base-uri 'none'/.test(pol) && /object-src blob:/.test(pol) && html.indexOf(m && m[0]) < html.indexOf("<script");
     check("the security policy is in place before any script, with no general eval allowed", !!m && ok, pol);
     // Everyday screens under the policy (libraries are stand-ins here): nothing may be blocked.
     p = await page(browser, 375, { init: () => { window.__csp = []; document.addEventListener("securitypolicyviolation", e => window.__csp.push(e.violatedDirective + " " + (e.blockedURI || "inline"))); } });
@@ -563,7 +559,7 @@ async function page(browser, width, opts = {}) {
       if (u.href === fakeLib || u.href === fakeOcr) { await r.fulfill({ status: 200, contentType: "text/javascript", body: "window.__fake=1", headers: { "Access-Control-Allow-Origin": "*" } }); return true; }
       return false;
     } });
-    await p.goto(URL0); await p.waitForTimeout(1500); await p.reload(); await p.waitForTimeout(800);
+    await p.goto(URL0); await p.evaluate(() => navigator.serviceWorker.ready); await p.reload(); await p.waitForTimeout(500);
     s = await p.evaluate(async ({ fakeLib, fakeOcr }) => {
       const out = { controlled: !!navigator.serviceWorker.controller };
       await fetch(fakeLib + "?broken", { mode: "cors" }).catch(() => {});
@@ -623,19 +619,21 @@ async function page(browser, width, opts = {}) {
       const c = await caches.open("lpn-libs-v2");
       await c.put("https://cdn.jsdelivr.net/npm/tesseract.js-core@5.1.1/tesseract-core.wasm.js", new Response("x"));
       await c.put("https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js", new Response("y"));
-      window.Tesseract = { createWorker: () => mode === "fail" ? Promise.reject(new Error("worker")) : new Promise(() => {}) };
+      window.__started = false;
+      window.Tesseract = { createWorker: () => { window.__started = true; return mode === "fail" ? Promise.reject(new Error("worker")) : new Promise(() => {}); } };
       const cv = document.createElement("canvas"); cv.width = 200; cv.height = 60; const blob = await new Promise(r => cv.toBlob(r, "image/png"));
       window.__ocr = ocrLpns(new File([blob], "p.png", { type: "image/png" })).then(() => "ok", e => e.message);
     }, mode);
     // The message is only given after the clean-up has finished, so read it first, then the saved files.
-    const ocrState = () => p.evaluate(async () => { const msg = await Promise.race([window.__ocr, new Promise(r => setTimeout(() => r("still waiting"), 50))]);
+    // wait: how long to wait for the result (real time flows alongside the fake clock); the early probe uses a short wait.
+    const ocrState = (wait = 5000) => p.evaluate(async wait => { const msg = await Promise.race([window.__ocr, new Promise(r => setTimeout(() => r("still waiting"), wait))]);
       const c = await caches.open("lpn-libs-v2"); const k = (await c.keys()).map(r => r.url);
-      return { msg, tess: k.some(u => /tesseract/.test(u)), other: k.some(u => /jspdf/.test(u)) }; });
-    await prepPhoto("fail"); await p.clock.runFor(1000);
+      return { msg, tess: k.some(u => /tesseract/.test(u)), other: k.some(u => /jspdf/.test(u)) }; }, wait);
+    await prepPhoto("fail"); await p.waitForFunction(() => window.__started); await p.clock.runFor(1000);
     s = await ocrState();
     check("a photo reader that fails to start: plain message, its saved files cleared, others kept", /photo reader couldn’t load/.test(s.msg) && !s.tess && s.other, s);
-    await prepPhoto("hang"); await p.clock.runFor(60000);
-    const early = await ocrState(); await p.clock.runFor(31000);
+    await prepPhoto("hang"); await p.waitForFunction(() => window.__started); await p.clock.runFor(60000);
+    const early = await ocrState(50); await p.clock.runFor(31000);
     s = await ocrState();
     check("a photo reader that never starts gives up after 90 seconds", early.msg === "still waiting" && /photo reader couldn’t load/.test(s.msg) && !s.tess && s.other, { early, s });
     await p.ctx.close();
@@ -650,13 +648,18 @@ async function page(browser, width, opts = {}) {
       const cv = document.createElement("canvas"); cv.width = 900; cv.height = 160; const g = cv.getContext("2d");
       g.fillStyle = "#fff"; g.fillRect(0, 0, 900, 160); g.fillStyle = "#000"; g.font = "bold 64px monospace"; g.fillText("VLT003977037", 40, 105);
       const blob = await new Promise(r => cv.toBlob(r, "image/png"));
-      try { return { found: await ocrLpns(new File([blob], "p.png", { type: "image/png" })) }; } catch (e) { return { err: e.message }; }
+      // One retry: the language data comes from the internet, and a network blip isn't a fault in the app.
+      for (let i = 0; i < 2; i++) { try { return { found: await ocrLpns(new File([blob], "p.png", { type: "image/png" })), tries: i + 1 }; } catch (e) { if (i) return { err: e.message }; } }
     });
     check("real photo reading finds an LPN in a picture", Array.isArray(s.found) && s.found.includes("VLT003977037"), s);
     await p.ctx.close();
 
     // The app's Content-Security-Policy (index.html): every flow must work under it with nothing blocked.
+    const cspConsole = [];
     p = await page(browser, 1300, { real: true, net: true, init: () => { window.__csp = []; document.addEventListener("securitypolicyviolation", e => window.__csp.push(e.violatedDirective + " " + (e.blockedURI || "inline"))); } });
+    // Blocks inside the background workers (pdf.js, photo reader) don't reach the page's event, but do reach the console.
+    const onMsg = m => { if (/Content.Security.Policy/i.test(m.text())) cspConsole.push(m.text().slice(0, 200)); };
+    p.on("console", onMsg); p.on("worker", w => w.on("console", onMsg));
     await p.goto(URL0); await p.waitForTimeout(300);
     s = await p.evaluate(async () => {
       const flows = {};
@@ -670,10 +673,12 @@ async function page(browser, width, opts = {}) {
         g.fillStyle = "#fff"; g.fillRect(0, 0, 600, 120); g.fillStyle = "#000"; g.font = "bold 48px monospace"; g.fillText("VLT003977037", 20, 80);
         const b = await new Promise(r => cv.toBlob(r, "image/png")); await ocrLpns(new File([b], "p.png", { type: "image/png" })); });
       await run("printing", async () => { await printBuf(pdf.slice(0), "l.pdf", { textContent: "" }); });
+      await run("barcode scanner library", async () => { await loadZX(); new ZXing.BrowserMultiFormatReader(); });
       await new Promise(r => setTimeout(r, 300));
       return { flows, blocked: [...new Set(window.__csp)] };
     });
-    check("every flow works under the security policy and nothing is blocked", Object.values(s.flows).every(v => v === "ok") && !s.blocked.length, s);
+    s.workerBlocks = cspConsole;
+    check("every flow works under the security policy and nothing is blocked (page and workers)", Object.values(s.flows).every(v => v === "ok") && !s.blocked.length && !cspConsole.length, s);
     await p.ctx.close();
   }
 

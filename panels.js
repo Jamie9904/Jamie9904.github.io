@@ -30,7 +30,7 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <h3>5. Check against the manifest</h3>
 <p>Tap the <b>Manifest check</b> heading to open it.</p>
 <ul>
-<li><b>Add the manifest:</b> photos or PDFs of the manifest (several at once is fine), or type or paste the numbers. PDFs with selectable text are read exactly; photos and scans are read with text recognition, so check the numbers.</li>
+<li><b>Add the manifest:</b> photos or PDFs of the manifest (several at once is fine), or type or paste the numbers. PDFs with selectable text are read exactly; photos and scans are read with text recognition, so check the numbers. Reading photos needs iOS 16 or newer on an iPhone; older phones can still scan barcodes, read PDFs and type numbers.</li>
 <li><b>Live tracking:</b> while manifest numbers are there, the Pallet log shows how many are found and which are still missing as you scan, and warns about pallets not on the manifest. Tap <b>Show missing</b> for the list, and <b>Use n as expected</b> to copy the manifest count into Expected pallets.</li>
 <li><b>On a phone</b>, the pallet entry bar slides out of the way while you work in the Manifest check, and comes back when you scroll up to the log.</li>
 <li><b>The log:</b> tap <b>Use current log</b>, pick a saved delivery, or upload an exported spreadsheet, a PDF or a photo of a printed log.</li>
