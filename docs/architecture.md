@@ -19,7 +19,7 @@ A client-only progressive web app. There is no backend: the browser renders the 
 |---|---|---|
 | `core.js` | Global state (`rows`, `cfg`), delivery fields, persistence, table rendering, LPN validation, add flow, undo, sound/vibration, date helpers, script loader | `load`, `save`, `render`, `summary`, `lpnIssues`, `tryAdd`, `addValue`, `getDel`/`setDel`, `ukDate`/`isoDate`, `loadScript` |
 | `scan.js` | Live camera scanning and photo decoding; screen wake lock while scanning; input event wiring | `startScan`, `stopScan`, `decodePhoto`, `onCode` |
-| `export.js` | Spreadsheet styling helpers, Excel log, PDF log and manifest PDF, print, file delivery (download / share sheet / mailto fallback), logo handling, expected-count check | `xlBox`, `xlTitle`, `xlPrint`, `buildLogPdf`, `buildCmpPdf`, `deliver`, `emailVia`, `expectCheck`, `exportLogo` |
+| `export.js` | Spreadsheet styling helpers, Excel log, PDF log and manifest PDF, print, file delivery (download / share sheet / mailto fallback), logo handling, expected-count check | `xlBox`, `xlTitle`, `xlLines`, `xlLpnWidth`, `xlLpnLines`, `xlMadeWith`, `xlPrint`, `appVersion`, `buildLogPdf`, `buildCmpPdf`, `deliver`, `emailVia`, `expectCheck`, `exportLogo` |
 | `compare.js` | Manifest check: reading logs and manifests (xlsx, csv, PDF, photos), OCR, prefix presets, comparison, results panel, manifest Excel, live tracking in the log | `readLog`, `readPdf`, `ocrLpns`, `extractLpns`, `cmpData`, `renderCmp`, `manState`, `manLive` |
 | `panels.js` | Guide/changelog content, side panel, theming, Settings (including the Logo buttons), saved deliveries (history), import of exported logs, backups, install pop-up, date reminder, remembered names, offline notice, service worker registration, prefix preset summary, entry bar stepping aside on phones | `applyTheme`, `initSettings`, `newDelivery`, `openHist`, `parseExported`, `backupNow`, `checkDate`, `pfxSummary` |
 | `sw.js` | Offline shell and library cache | install / activate / fetch handlers |
@@ -29,6 +29,7 @@ Scripts are loaded in that order at the end of `index.html`. Later files call fu
 ## Data model
 
 - **Current log** (`lpnlog`): `{rows:[{lpn,type,fsdu}], date, recv, notes, expect, trailer, sealIn, sealOut, exp}`. Written by `save()` after every change. `exp` is `{at, sig}`: when the log was last exported and a hash of its rows (`logSig()`) at that moment, so a later change can be detected.
+- **App-made PDFs** carry `LPNLOG2:` + URL-encoded JSON in the keywords: `{app, d, r, n, e, t, si, so, rows:[[lpn, type, fsdu 1/0]]}`. `app` is the version text from `appVersion()`; importing ignores it.
 - **Saved deliveries** (`lpnhist`): array of the same shape plus `id` and `saved` timestamp. `pruneHist()` keeps only entries dated from the start of last week (weeks start on Sunday); `pushHist()` also caps the list at 50.
 - **Manifest numbers** (`lpncmpman`): the raw text of the manifest box, so live tracking survives a reload.
 - **Settings and preferences**: `lpncfg`, `lpntheme`, `lpnlogo`, `lpnnames`, `lpnpresets`, `lpncmppfx`, `lpncmpdate`, `lpnmergelog`, `lpnbackup`, `lpninstallshown`.
@@ -47,10 +48,30 @@ Dates are stored as ISO `yyyy-mm-dd` and only formatted for display (`ukDate()` 
 `#undoLast` pops the newest row and offers Undo through `showUndo()`. Its visibility is set in `summary()`; CSS shows it on phones only.
 
 **Excel export**
-`$("dl").onclick` → `expectCheck()` (first attempt blocked if the expected count differs) → `loadScript()` ExcelJS → build sheet: logo rows, `xlTitle()` band, numbered table and side tables with `xlBox()` borders → `xlPrint()` (A4, fit to width, repeated header row, footer) → `deliver()` → `markExported()` (skipped when exporting a saved delivery). `deliver()` returns `false` when the user cancels the share sheet, so a cancelled email is not counted as an export. If ExcelJS cannot load, `fallbackXls()` writes an HTML-based `.xls`.
+`$("dl").onclick` → `expectCheck()` (first attempt blocked if the expected count differs) → `loadScript()` ExcelJS → `appVersion()` → build sheet: logo rows, `xlTitle()` band, numbered table and side tables with `xlBox()` borders → `xlMadeWith()` version line → `xlPrint()` (A4, fit to width, repeated header row, footer) → `deliver()` → `markExported()` (skipped when exporting a saved delivery). `deliver()` returns `false` when the user cancels the share sheet, so a cancelled email is not counted as an export. If ExcelJS cannot load, `fallbackXls()` writes an HTML-based `.xls`.
 
 **Email PDF**
 `emailVia()` sets email mode and runs the Excel handler; `deliver()` swaps the spreadsheet for the PDF built by `pdfJob` and calls `navigator.share({files})`. If sharing is refused because the user gesture expired, a "Tap to share" button is offered; otherwise the file is saved and a `mailto:` opened.
+
+**Column widths and row heights in spreadsheets**
+Excel and Google Sheets don't grow a row whose height has been set, so `export.js` works out the sizes itself:
+
+- `xlLpnWidth(list, base)` sets the LPN column to the longest LPN × 1.65 + 5 units (14pt Courier New), never below `base` (26 on the log, 21 on the manifest check sheet) and never above 40.
+- `xlLines(text, width, perUnit)` estimates how many lines wrapped text needs: it wraps on spaces at about 0.72 characters per column unit (14pt Arial, after padding), splits words that are longer than a line, and counts line breaks in the text.
+- `xlLpnLines(value, width)` does the same for an LPN at 0.6 characters per unit, with spaces removed.
+- On the log, each table row is `max(24, Delivery Details value lines in the 20-wide column × 18 + 6, LPN lines × 18 + 6)` points; heading rows stay at 32. Every Delivery Details row is sized this way, not only Notes. On the manifest check sheet, each row is `max(24, LPN lines × 18 + 6)`.
+- The logo width passed to `xlLogo()` follows the table: `(7 + LPN width + 22 + 12) × 7.3` pixels on the log and `(7 + LPN width + 18 + 12 + 19) × 7.1` on the manifest check sheet.
+
+**App version on exports**
+`appBuildP` runs once when `export.js` loads. It fetches `sw.js` (`cache:"no-cache"`, through the service worker like the other app files, given up after 4 seconds) and takes the number from `lpn-log-vN`. If that fails it uses the lowest `lpn-log-vN` cache name in Cache Storage, otherwise an empty string. Reading it at page load means the build matches the code the page is running, even if an update arrives later.
+
+`appVersion()` takes the version from the first `<h3>vX.Y` in `HELP.log` and waits at most 1.5 seconds for `appBuildP`, then returns for example "LPN Pallet Log v3.30 (build 26)", or "LPN Pallet Log v3.30" with no build. The result is kept in `appVer` only once a build is known; `appVerTry` holds the latest attempt. The Excel log, the manifest check sheet, `fallbackXls()`, `buildLogPdf()` and `buildCmpPdf()` all call it before building. The text is then used by:
+
+- `xlMadeWith(ws, row, lastCol)`: row `H + n + 2` (one empty row below the tables), merged across all columns, Arial 10pt italic grey (`FF595959`), height 18, "Made with … on <date> at hh:mm.";
+- `xlPrint()`: the left part of the page footer, with `&` written as `&&` so Excel doesn't treat it as a code;
+- `pdfFooter()`: the left part of every PDF page footer;
+- `buildLogPdf()`: an `app` field in the `LPNLOG2:` JSON in the PDF keywords;
+- `fallbackXls()`: a "Made with … at hh:mm." paragraph under the table.
 
 **Starting a new delivery**
 `newDelivery()` compares `exported.sig` with `logSig()`. If the log was never exported or has changed since, the first call only shows a reminder (remembered in `newAck`); a second call, or starting from the post-export prompt, saves to history, clears the delivery fields and manifest numbers and resets `exported`.
@@ -64,7 +85,7 @@ The prefix preset controls (`#cmpPreset`, `#cmpPfx`, preset save/delete/download
 `export.js` owns the logo (`loadLogo()`, `showLogo()`, `lpnlogo` in `localStorage`). The original controls (`#logoBtn`, `#logoRm`, `#logoFile`) are still in `index.html` inside the Delivery card, but in a `div.row.dc-logo` with the `hidden` attribute, so they are never shown. The visible buttons are `#setLogo` and `#setLogoRm` in the Settings panel (`HELP.settings`, Logo section). `initSettings()` forwards their clicks to `#logoBtn` / `#logoRm` and calls `showLogo()`, which copies the label and visibility of the hidden buttons onto the Settings ones whenever they exist.
 
 **Reading back exports**
-`parseExported()` (import) and `readLog()` (manifest check) find the cell `LPN` in any sheet and read rows below it, and read labelled cells (Date, Received by, Trailer number…) from the side table. App-made PDFs embed the whole log as JSON in the PDF keywords (`LPNLOG2:` prefix), so they import exactly without OCR.
+`parseExported()` (import) and `readLog()` (manifest check) find the cell `LPN` in any sheet and read rows below it, and read labelled cells (Date, Received by, Trailer number…) from the side table. Both stop reading LPNs at the first empty cell or at a cell starting "Made with ", so the version line is never read as a pallet. When `readLog()` reads an `.xlsx`, it blanks every merged cell except the first one of the merge, so a merged value (such as the version line or the "Delivery Details" heading) appears once in the grid instead of in every column it spans; that grid is also what goes into the log copy tab. App-made PDFs embed the whole log as JSON in the PDF keywords (`LPNLOG2:` prefix), so they import exactly without OCR.
 
 ## Phone layout notes
 
@@ -85,7 +106,7 @@ Hiding toggles `body.cmpfocus`, which slides the bar down with `transform: trans
 
 ## Offline and updates
 
-`sw.js` pre-caches the app shell (with `cache:"reload"` to bypass the HTTP cache) and serves app files network-first with `cache:"no-cache"`, so a published change appears on the next load and the cached copy is only used offline. CDN libraries are cache-first in a separate `lpn-libs-v1` cache because their versioned URLs never change. Bumping `CACHE` in `sw.js` installs a new worker; `panels.js` shows the "new version available" banner on `controllerchange`.
+`sw.js` pre-caches the app shell (with `cache:"reload"` to bypass the HTTP cache) and serves app files network-first with `cache:"no-cache"`, so a published change appears on the next load and the cached copy is only used offline. `sw.js` is in its own `SHELL` list, so the page can still read the build number from it when offline. CDN libraries are cache-first in a separate `lpn-libs-v1` cache because their versioned URLs never change. Bumping `CACHE` in `sw.js` installs a new worker; `panels.js` shows the "new version available" banner on `controllerchange`.
 
 ## Theming
 

@@ -33,7 +33,7 @@ Open `http://localhost:8000/`. `localhost` counts as a secure origin, so the ser
    const CACHE="lpn-log-v23";   // → "lpn-log-v24"
    ```
 
-   This installs a new service worker, which removes the old cache and triggers the "A new version is available" banner. If you add a new app file, also add it to the `SHELL` list in `sw.js`.
+   This installs a new service worker, which removes the old cache and triggers the "A new version is available" banner. The number is also the build number printed on every export. If you add a new app file, also add it to the `SHELL` list in `sw.js`.
 2. Commit the changed files together with `sw.js`.
 3. Push. Pages publishes in about a minute; the **Checks** workflow runs the automatic tests at the same time.
 
@@ -42,7 +42,8 @@ Open `http://localhost:8000/`. `localhost` counts as a secure origin, so the ser
 `.claude/settings.json` registers hooks that run when Claude Code edits files or runs git commands in this repository:
 
 - **Syntax check:** after a `.js` file is edited or written, `node --check` runs on it and a syntax error is reported straight away.
-- **Cache bump:** a `git commit` is blocked if any app file (`index.html`, `styles.css`, the five scripts, `manifest.webmanifest`, the icons or `fonts/`) changed but the `CACHE` line in `sw.js` did not.
+- **Cache bump:** a `git commit` is blocked if any app file (`index.html`, `styles.css`, the five scripts, `manifest.webmanifest`, the icons or `fonts/`) changed and the `CACHE` number in `sw.js` is neither changed in this commit nor higher than the one on the live site (`origin/main`). So once a branch has bumped it, later commits before publishing don't need another bump.
+- **Only real git commands count:** the guard reacts to `git commit`, `git push` and `git merge … docs` (also with `git -C <path>`), not to other commands that happen to contain those words, such as `git stash push` or an `echo`.
 - **Docs stay off `main`:** a `git commit` on `main` is blocked if it would include files in `docs/`, and merging `docs` into `main` or pushing `docs` to `main` is blocked. The documentation is updated on the `docs` branch instead.
 - **Checks before push:** a `git push` runs `node tests/run.js` (the `npm test` checks) first and is blocked if any fail (see [testing.md](testing.md)). Pushes of only the `docs` branch skip this.
 - **Docs reminder:** at the end of a Claude Code turn, if `origin/main` has app changes that `origin/docs` does not, Claude is reminded once per `main` commit to update the docs branch.
@@ -63,7 +64,7 @@ Users tap **Refresh** on the banner. The log is kept, because it is stored on th
 ## Verify it works
 
 1. The page loads and the footer shows the version (for example `LPN Pallet Log v3.30`).
-2. Add a pallet, then **Export → Download (Excel)** produces `LPN-log-<date>.xlsx`.
+2. Add a pallet, then **Export → Download (Excel)** produces `LPN-log-<date>.xlsx`. The line under its tables and its page footer should name the version and the build you just published, for example "LPN Pallet Log v3.30 (build 26)".
 3. In DevTools → Application, a service worker is active and caches named `lpn-log-v…` and `lpn-libs-v1` exist.
 4. On a phone, the browser offers to install the app.
 5. Optionally run the automatic checks: see [testing.md](testing.md).

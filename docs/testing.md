@@ -14,7 +14,7 @@ On GitHub, `.github/workflows/test.yml` runs the same command on every push and 
 
 ### Before a push (Claude Code hook)
 
-When Claude Code pushes from this repository, the `PreToolUse` hook `.claude/hooks/lpn_git_guard.py` runs `node tests/run.js` first (with `NODE_PATH` pointed at the global npm modules) and stops the push if any check fails, showing the failing lines. A push of only the `docs` branch skips the checks, because it does not change the site. If the checks take longer than 280 seconds, the push is stopped too. This only applies to pushes made through Claude Code; a plain `git push` from a terminal is not checked locally, but `test.yml` still runs on GitHub.
+When Claude Code runs a real `git push` (not, for example, `git stash push`) from this repository, the `PreToolUse` hook `.claude/hooks/lpn_git_guard.py` runs `node tests/run.js` first (with `NODE_PATH` pointed at the global npm modules) and stops the push if any check fails, showing the failing lines. A push of only the `docs` branch skips the checks, because it does not change the site. If the checks take longer than 280 seconds, the push is stopped too. This only applies to pushes made through Claude Code; a plain `git push` from a terminal is not checked locally, but `test.yml` still runs on GitHub.
 
 ## Weekly health check
 
@@ -28,7 +28,7 @@ If any step fails, GitHub sends its standard failed-workflow email (for schedule
 
 ## What is covered
 
-End-to-end checks in headless Chromium against the real page (63 checks at the time of writing):
+End-to-end checks in headless Chromium against the real page (75 checks at the time of writing):
 
 | Group | Checks |
 |---|---|
@@ -39,13 +39,16 @@ End-to-end checks in headless Chromium against the real page (63 checks at the t
 | Quick actions | Undo-last button and its Undo, "Use n as expected", entry bar fits at 375px and at 360px with a long counter |
 | Saved deliveries | Start new delivery warns when not exported, then saves and clears (including manifest), Undo restores, backup note |
 | Settings and dates | Date format setting, importing an exported CSV (date, trailer, seals, FSDU), Guide contents bar |
-| Excel export | Expected-count check blocks the first try; "Exported at" note and new-delivery prompt; title band and logo placement; header, row borders, Courier New LPNs, footer, fit-to-width and repeated header; trailer in Delivery Details |
+| Excel export | Expected-count check blocks the first try; "Exported at" note and new-delivery prompt; title band and logo placement; header, row borders, Courier New LPNs, footer, fit-to-width and repeated header; trailer in Delivery Details; footer names the version and build; "Made with LPN Pallet Log vX.Y (build N) on dd/mm/yyyy at hh:mm." line under the tables; LPN column at least 27 wide for a 13-character LPN; a long Notes value gets a row tall enough for its wrapped lines (about 13 characters a line, 17pt a line). Manifest check sheet: LPN column fits a 13-character LPN, has the version line, and a 73-character junk scan keeps the column at 40 or less and gets a row taller than 24 |
+| Export version note | With every request for `sw.js` held for 15 seconds, an Excel export still finishes in under 3 seconds; the basic `.xls` fallback has the "Made with … at hh:mm." line; the log PDF (with a stand-in jsPDF) has the version in its `LPNLOG2:` data (`app`) and its footer, with the rows intact; importing a CSV stops at the version line; no script errors |
 | Offline | Service worker caches the app; reload works offline |
 
 ## Strategy
 
 - **External requests are blocked.** Every request not to the local server is aborted, so runs are offline and repeatable.
 - **ExcelJS is replaced by a recording stand-in** that keeps every cell value, font, border, merge, image and print setting, so the sheet layout can be asserted without the real library.
+- **jsPDF is replaced for one check** by a stand-in that accepts any call and records the footer text and the PDF keywords, so `buildLogPdf()` can be checked for the version note.
+- **A slow network is simulated** by wrapping `fetch` before the page loads so every request for `sw.js` waits 15 seconds; this checks that exports don't wait for the build number.
 - Tests drive the app through its own globals (`newDelivery()`, `openHelp()`, `parseExported()`…) where clicking would only add flakiness, and through real typing and clicks for the add flow.
 
 ## Not covered

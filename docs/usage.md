@@ -55,11 +55,25 @@ On phones, while the Manifest check is open and its top is in the upper part of 
 
 | Output | File | Notes |
 |---|---|---|
-| Download (Excel) | `LPN-log-<yyyy-mm-dd>.xlsx` | Title band, numbered list, totals by type, Delivery Details; A4 portrait, page numbers |
+| Download (Excel) | `LPN-log-<yyyy-mm-dd>.xlsx` | Title band, numbered list, totals by type, Delivery Details, version line; A4 portrait, page numbers |
 | Email PDF | `LPN-log-<yyyy-mm-dd>.pdf` | Opens the share sheet; if blocked, saves the file and opens a new email |
 | Print | PDF in the print dialog | Saves the PDF if printing isn't available |
 
 If an expected count is set and differs from the total, the first export attempt shows a reminder instead; choosing it again proceeds.
+
+**Long LPNs and notes in the spreadsheets.** On the pallet log and the manifest check sheet, the LPN column widens to fit the longest LPN in the file (it never gets narrower than the usual width, and stops at 40 characters wide). A value too long even for that, such as a web address scanned by mistake, wraps onto a taller row instead of stretching the column. Rows in the Delivery Details table grow tall enough to show long notes in full. The logo above the table is sized to the width of the table.
+
+**Which version made the file.** Every export says which version of the app made it, for example "LPN Pallet Log v3.30 (build 26)". The version is the newest entry in the Changelog; the build is the cache number in `sw.js` (`lpn-log-v26` is build 26).
+
+| Export | Where the version appears |
+|---|---|
+| Excel log and manifest check sheet | A small grey line under the tables: "Made with LPN Pallet Log v3.30 (build 26) on dd/mm/yyyy at hh:mm." (the date follows the Date format setting), and the left side of the printed page footer |
+| PDF (Email PDF, Print, saved deliveries) | The left side of the page footer |
+| Basic `.xls` (when the spreadsheet builder can't load) | A "Made with … on … at hh:mm." line under the table |
+
+If the build number can't be found within 1.5 seconds (for example on a very weak signal), the export goes ahead without it and shows only "LPN Pallet Log v3.30".
+
+Importing an exported log (Saved deliveries or the Manifest check) stops reading LPNs at the "Made with" line, so it is never taken for a pallet.
 
 After a log export (Excel, Email PDF or Print) the log shows "Exported at hh:mm". If pallets are changed afterwards it reads "Changed since it was exported at hh:mm" in amber, and Start new delivery will ask for a fresh export first. Exports made from Saved deliveries don't change this note.
 
@@ -85,6 +99,9 @@ Colours (two colours drive the whole theme, with a contrast warning), quick them
 | Email PDF saved a file instead of sharing | The browser refused the share. Attach the saved file to the email that opens. |
 | Changes don't appear after an update | Tap **Refresh** on the update banner, or close and reopen the app. |
 | Spreadsheet looks cut off on a phone | Mobile viewers open sheets zoomed in; pinch out. Desktop and print are unaffected. |
+| Notes or LPNs cut off in an older export | Files made before v3.30 build 26 used fixed row heights and column widths. If the delivery is still in Saved deliveries, export it again. |
+| Export shows no build number | The app couldn't read `sw.js` in time (weak signal and nothing cached yet). The file is fine; the version line just shows "LPN Pallet Log v3.30" without "(build n)". |
+| Which version made this file? | Look at the "Made with …" line under the table or the left side of the page footer. |
 | Data missing on another phone | Data is per device. Use Back up now, then Restore backup on the other device. |
 | Can't find the logo button | It is in **Settings → Logo**, not in Delivery. |
 | Entry bar disappeared on a phone | The Manifest check is open and scrolled into view. Scroll up towards the log and the bar comes back. |
