@@ -534,6 +534,25 @@ async function page(browser, width, opts = {}) {
     await p.ctx.close();
   }
 
+  console.log("Security policy");
+  {
+    const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+    const m = html.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)">/);
+    const pol = m ? m[1] : "";
+    const ok = /script-src 'self' https:\/\/cdnjs\.cloudflare\.com https:\/\/cdn\.jsdelivr\.net https:\/\/unpkg\.com 'wasm-unsafe-eval';/.test(pol) && !/unsafe-eval'|'unsafe-inline'[^;]*;\s*worker/.test(pol.replace("'wasm-unsafe-eval'", "")) && /base-uri 'none'/.test(pol) && /object-src blob:/.test(pol) && html.indexOf(m && m[0]) < html.indexOf("<script");
+    check("the security policy is in place before any script, with no general eval allowed", !!m && ok, pol);
+    // Everyday screens under the policy (libraries are stand-ins here): nothing may be blocked.
+    p = await page(browser, 375, { init: () => { window.__csp = []; document.addEventListener("securitypolicyviolation", e => window.__csp.push(e.violatedDirective + " " + (e.blockedURI || "inline"))); } });
+    await p.goto(URL0); await p.waitForTimeout(300);
+    s = await p.evaluate(async () => {
+      for (const id of ["btnSet", "btnGuide"]) { const b = document.getElementById(id); if (b) { b.click(); await new Promise(r => setTimeout(r, 100)); closeHelp(); } }
+      rows = [{ lpn: "RUN0001830763", type: "FPP", fsdu: false }]; save(); render();
+      return window.__csp;
+    });
+    check("everyday screens run under the security policy with nothing blocked", s.length === 0 && p.errors.length === 0, { blocked: s, errors: p.errors });
+    await p.ctx.close();
+  }
+
   console.log("Offline store and failure paths");
   {
     // The service worker is on and every outside request goes through the test's router, including its own.
@@ -623,7 +642,7 @@ async function page(browser, width, opts = {}) {
   }
 
   if (REAL_LIBS) {
-    console.log("Real photo reading and the planned security policy (GitHub only)");
+    console.log("Real photo reading and the security policy (GitHub only)");
     // The photo reader's worker, engine and English language data come from the real internet here.
     p = await page(browser, 1300, { real: true, net: true });
     await p.goto(URL0); await p.waitForTimeout(300);
@@ -636,10 +655,8 @@ async function page(browser, width, opts = {}) {
     check("real photo reading finds an LPN in a picture", Array.isArray(s.found) && s.found.includes("VLT003977037"), s);
     await p.ctx.close();
 
-    // Rehearse the Content-Security-Policy proposed in the security review, without adopting it: every flow runs
-    // under it and each rule the browser would block is reported. Reported, not failed, until the policy is adopted.
-    const CSP = "default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://tessdata.projectnaptha.com; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-src blob:; object-src blob:; base-uri 'none'; form-action 'none'";
-    p = await page(browser, 1300, { real: true, net: true, csp: CSP, init: () => { window.__csp = []; document.addEventListener("securitypolicyviolation", e => window.__csp.push(e.violatedDirective + " " + (e.blockedURI || "inline"))); } });
+    // The app's Content-Security-Policy (index.html): every flow must work under it with nothing blocked.
+    p = await page(browser, 1300, { real: true, net: true, init: () => { window.__csp = []; document.addEventListener("securitypolicyviolation", e => window.__csp.push(e.violatedDirective + " " + (e.blockedURI || "inline"))); } });
     await p.goto(URL0); await p.waitForTimeout(300);
     s = await p.evaluate(async () => {
       const flows = {};
@@ -652,12 +669,11 @@ async function page(browser, width, opts = {}) {
       await run("photo reading", async () => { const cv = document.createElement("canvas"); cv.width = 600; cv.height = 120; const g = cv.getContext("2d");
         g.fillStyle = "#fff"; g.fillRect(0, 0, 600, 120); g.fillStyle = "#000"; g.font = "bold 48px monospace"; g.fillText("VLT003977037", 20, 80);
         const b = await new Promise(r => cv.toBlob(r, "image/png")); await ocrLpns(new File([b], "p.png", { type: "image/png" })); });
+      await run("printing", async () => { await printBuf(pdf.slice(0), "l.pdf", { textContent: "" }); });
       await new Promise(r => setTimeout(r, 300));
       return { flows, blocked: [...new Set(window.__csp)] };
     });
-    const ok = Object.values(s.flows).every(v => v === "ok") && !s.blocked.length;
-    console.log("  note CSP rehearsal: " + (ok ? "every flow works and nothing is blocked" : JSON.stringify(s)));
-    if (process.env.GITHUB_ACTIONS) console.log("::notice title=CSP rehearsal::" + (ok ? "Every flow works under the proposed policy and nothing is blocked." : JSON.stringify(s).slice(0, 900)));
+    check("every flow works under the security policy and nothing is blocked", Object.values(s.flows).every(v => v === "ok") && !s.blocked.length, s);
     await p.ctx.close();
   }
 
