@@ -49,7 +49,7 @@ Then: fill in the delivery details → type `RUN000000001` into the LPN box → 
 | Storage | `localStorage` (keys prefixed `lpn`) |
 | Fonts | Atkinson Hyperlegible, IBM Plex Mono (self-hosted, SIL OFL) |
 | Hosting | GitHub Pages |
-| Checks | Node.js + Playwright, run by GitHub Actions on every push and in a weekly health check |
+| Checks | Node.js + Playwright, with the real ExcelJS, jsPDF and pdf.js at the app's versions; run by GitHub Actions on every push and in a weekly health check |
 
 Libraries load from cdnjs with jsDelivr as fallback, only when a feature first needs them.
 
@@ -83,8 +83,9 @@ A single page (`index.html`) loads five classic scripts in a fixed order that sh
 ├── presets.json        shared LPN prefix presets (optional)
 ├── DESIGN.md           design system notes
 ├── tests/run.js        automatic checks
-├── package.json        test dependencies only
+├── package.json        test dependencies only (Playwright and the export libraries)
 ├── .github/workflows/  test.yml (checks on every push), health.yml (weekly health check)
+├── .mcp.json           Context7 library documentation for Claude Code
 └── .claude/            Claude Code hooks, agents and working notes
 ```
 

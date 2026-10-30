@@ -5,7 +5,7 @@
 - Any static web host served over **HTTPS**. Camera scanning, installing as an app, the service worker and the share sheet all require a secure origin. GitHub Pages provides this.
 - A modern browser. Chrome on Android and Safari on iPhone are the targets; live scanning uses `BarcodeDetector` where available and ZXing elsewhere.
 - Internet access the first time each export or OCR feature is used, so its library can be fetched from cdnjs or jsDelivr and cached.
-- For the automatic checks only: Node.js 18+ (CI uses 22).
+- For the automatic checks only: Node.js 18+ (CI uses 22). `npm install` fetches Playwright plus ExcelJS, jsPDF, jspdf-autotable and pdf.js at the versions the app loads; without network access to npm the real-library checks are skipped (see [testing.md](testing.md)).
 
 There is nothing to compile and no environment variables or database.
 
@@ -37,20 +37,25 @@ Open `http://localhost:8000/`. `localhost` counts as a secure origin, so the ser
 2. Commit the changed files together with `sw.js`.
 3. Push. Pages publishes in about a minute; the **Checks** workflow runs the automatic tests at the same time.
 
+Users tap **Refresh** on the banner. The log is kept, because it is stored on the device.
+
 ### Guards when working with Claude Code
 
-`.claude/settings.json` registers hooks that run when Claude Code edits files or runs git commands in this repository:
+`.claude/settings.json` registers hooks that run when a Claude Code session starts, edits files or runs git commands in this repository:
 
+- **Session start:** `.claude/hooks/session_start.py` (`SessionStart`, 90-second limit) finds the repository, either the project folder itself or one folder below it (cloud sessions start in `/home/claude`). If there is an `origin` remote, it sets `remote.origin.fetch` to `+refs/heads/*:refs/remotes/origin/*` so every GitHub branch is tracked, and runs `git fetch --prune` without ever asking for a password. If the current branch has no upstream but GitHub has a branch of the same name, it sets that as the upstream. It adds the global npm folder to `NODE_PATH` for the session (through `CLAUDE_ENV_FILE`) so `npm test` finds a globally installed Playwright. Then it prints one status line: commits ahead and behind GitHub, uncommitted files, the build number here and on the live site (`origin/main:sw.js`, with a reminder to bump on a feature branch that isn't ahead of it), and how many app commits the `docs` branch is behind `main`. It never blocks the session; problems such as a failed fetch only appear in the status line.
 - **Syntax check:** after a `.js` file is edited or written, `node --check` runs on it and a syntax error is reported straight away.
 - **Cache bump:** a `git commit` is blocked if any app file (`index.html`, `styles.css`, the five scripts, `manifest.webmanifest`, the icons or `fonts/`) changed and the `CACHE` number in `sw.js` is neither changed in this commit nor higher than the one on the live site (`origin/main`). So once a branch has bumped it, later commits before publishing don't need another bump.
 - **Only real git commands count:** the guard reacts to `git commit`, `git push` and `git merge … docs` (also with `git -C <path>`), not to other commands that happen to contain those words, such as `git stash push` or an `echo`.
 - **Docs stay off `main`:** a `git commit` on `main` is blocked if it would include files in `docs/`, and merging `docs` into `main` or pushing `docs` to `main` is blocked. The documentation is updated on the `docs` branch instead.
 - **Checks before push:** a `git push` runs `node tests/run.js` (the `npm test` checks) first and is blocked if any fail (see [testing.md](testing.md)). Pushes of only the `docs` branch skip this.
-- **Docs reminder:** at the end of a Claude Code turn, if `origin/main` has app changes that `origin/docs` does not, Claude is reminded once per `main` commit to update the docs branch.
+- **Docs reminder:** at the end of a Claude Code turn, if `origin/main` has app changes that `origin/docs` does not, Claude is reminded once per `main` commit to update the docs branch. Like the session-start hook, it also finds the repository one folder below the project folder.
 
 These hooks only run inside Claude Code. Commits and pushes made by hand or through the GitHub website are not checked by them, so the cache bump is still your responsibility there.
 
-Users tap **Refresh** on the banner. The log is kept, because it is stored on the device.
+### Library documentation for Claude Code (Context7)
+
+`.mcp.json` at the root of `main` registers the Context7 MCP server (`"type": "http"`, `https://mcp.context7.com/mcp`) so Claude Code can look up current ExcelJS, jsPDF and pdf.js documentation during export work. No key is needed (a key only raises the rate limit). It only works where `mcp.context7.com` can be reached: on your own computer, or in a Claude cloud session once that host is allowed in the claude.ai network settings. The app doesn't use it; GitHub Pages doesn't publish it (Jekyll leaves out dotfiles), and it is kept out of the site zip like `.claude/`.
 
 ## Optional files
 

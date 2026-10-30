@@ -22,7 +22,8 @@
 ├── DESIGN.md                colours, type, spacing, components, export look
 ├── README.md
 ├── _config.yml              GitHub Pages (Jekyll) site settings
-├── package.json             test dependency (Playwright) and `npm test`
+├── package.json             test dependencies (Playwright; ExcelJS, jsPDF, jspdf-autotable, pdf.js at the app's CDN versions) and `npm test`
+├── .mcp.json                Context7 documentation server for Claude Code (development only)
 ├── .gitignore               keeps `__pycache__/`, `*.pyc` and `node_modules/` out of git
 ├── tests/
 │   └── run.js               automatic checks
@@ -33,6 +34,7 @@
     ├── CLAUDE.md            working notes: branches, release steps, user decisions
     ├── settings.json        registers the hooks below
     ├── hooks/
+    │   ├── session_start.py fetches every branch, sets the upstream and NODE_PATH, prints a status line
     │   ├── syntax-check.sh  `node --check` after a `.js` file is edited
     │   ├── lpn_git_guard.py commit and push guard (cache bump, docs on main, tests before push)
     │   └── docs_reminder.py reminds when the docs branch is behind main
@@ -62,8 +64,8 @@
 
 ## Files the app does not use
 
-`tests/`, `package.json`, `.gitignore`, `.github/`, `.claude/`, `docs/`, `DESIGN.md` and `README.md` are for development only. None of them is loaded by the app or cached by `sw.js`.
+`tests/`, `package.json`, `.gitignore`, `.github/`, `.claude/`, `.mcp.json`, `docs/`, `DESIGN.md` and `README.md` are for development only. None of them is loaded by the app or cached by `sw.js`.
 
 - `tests/`, `package.json`, `DESIGN.md` and `README.md` are on `main`, so GitHub Pages publishes them alongside the app.
-- `.github/` and `.claude/` are on `main` but not published: Jekyll, which GitHub Pages uses to build the site, leaves out files and folders whose names start with a dot.
+- `.github/`, `.claude/` and `.mcp.json` are on `main` but not published: Jekyll, which GitHub Pages uses to build the site, leaves out files and folders whose names start with a dot.
 - `docs/`, and the version of `README.md` that goes with it, live only on the `docs` branch (`main` has its own `README.md`). Pages publishes from `main`, so they are not on the site. The git guard in `.claude/hooks/lpn_git_guard.py` blocks committing `docs/` files on `main` and merging or pushing `docs` into `main`.

@@ -140,7 +140,22 @@ Atkinson Hyperlegible (chosen for legibility) and IBM Plex Mono (LPNs and number
 `tests/run.js` blocks all external requests and replaces ExcelJS with a recording stand-in.
 
 - **Why:** runs offline, quickly and deterministically in CI, and can assert on cell values, borders and print settings.
-- **Trade-off:** the real Excel/PDF libraries, the camera and phone file viewers are not covered; those are checked manually.
+- **Trade-off:** a stand-in only shows what the app asked for, not what the real library makes of it. The real ExcelJS, jsPDF and pdf.js are now also checked (next section); pdf-lib, the camera and phone file viewers are still checked manually.
+
+## Real export libraries in the checks, run on GitHub
+
+`tests/run.js` also makes a real log `.xlsx`, log PDF and manifest check `.xlsx` with the real ExcelJS, jsPDF, jspdf-autotable and pdf.js, and reads each back through the app's own readers (`parseExported()`, `readLog()`, `readLogPdf()`). The libraries come from `node_modules` and are served in place of the CDN URLs; all other outside requests stay blocked.
+
+- **Why:** the stand-ins can't catch problems that only show with the real library, such as a merged cell read in every column, a long LPN wrapped onto two lines in the PDF, or a file that the app writes but can't import again. Reading the files back with the same functions users rely on checks the whole round trip.
+- **Why only where npm works:** the Claude cloud sandbox can't download npm packages or reach the CDNs, so there the group is skipped with a note and the rest of the checks still run. GitHub's runners can always install them, so on GitHub a missing library is an error rather than a skip, and the run ends with a **Checks** notice saying whether the real checks were included. To get the real result from a cloud session, push the branch (branch pushes are fine) and read that notice through the GitHub annotations API.
+- **Trade-off:** the checks read the files back; they don't judge how a printed page looks.
+
+## Library versions pinned to the CDN copies
+
+`package.json` lists `exceljs` 4.4.0, `jspdf` 2.5.1, `jspdf-autotable` 3.8.2 and `pdfjs-dist` 3.11.174 as exact versions (no `^`), the same versions the app loads from cdnjs and jsDelivr in `export.js` and `compare.js`.
+
+- **Why:** a check against a different version than users get proves nothing about the live app. A check that runs everywhere compares the two and fails if they differ, so the CDN URLs and `package.json` have to be changed together.
+- **Workflows install with `--ignore-scripts`:** the packages are only files the checks serve to the browser, so none of their install scripts needs to run. The workflows also get read-only repository access and a 10-minute limit, as they only need to read the code and should not run on if something hangs.
 
 ## Claude automations kept in the repository
 
@@ -151,6 +166,7 @@ The hooks, agents and working notes for Claude Code are committed in `.claude/` 
 - **Limit:** they only run inside Claude Code. Manual commits and edits on the GitHub website are still covered only by the `test.yml` checks after the push.
 - **Only real git commands:** the git guard matches `git` followed by `commit`, `push` or `merge … docs`, with only git's own options allowed in between: `-C <dir>`, `-c <key=value>`, `--git-dir`, `--work-tree` or `--namespace` (with `=` or a space before the value), and other `--options` such as `--no-pager`. Earlier it matched any command containing "git" and "commit" or "push", so `git stash push`, an `echo`, or a script that only mentioned those words set off the checks.
 - **Other ways of writing git are caught too:** `git` counts at the start of the command, after `;`, `&`, `|`, `(`, a backtick or a space, after a `/` (so `/usr/bin/git push` counts), and after `-c` followed by a quote (so `sh -c "git push"` and `bash -c 'git commit …'` count). A quote counts only straight after `-c`, so searching for the text, as in `grep "git push" .`, does not set off the checks.
+- **Session-start status line:** `session_start.py` tracks every GitHub branch and fetches at the start of each session, because the git guard compares `CACHE` with `origin/main` and a clone that only tracks some branches reports branches already on GitHub as "unpushed". It never asks for a password and never blocks the session, since it has no terminal and a session that can't start is worse than a stale status line.
 - **Cache bump compared with the live site:** the commit check accepts a `CACHE` number higher than the one in `origin/main:sw.js`, as well as a `CACHE` line changed in the commit itself. A branch that has already bumped the cache once therefore doesn't need a new bump for each later commit before it is published.
 
 ## Weekly health check as a GitHub workflow
