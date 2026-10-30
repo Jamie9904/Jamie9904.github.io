@@ -4,8 +4,8 @@
 
 - Any static web host served over **HTTPS**. Camera scanning, installing as an app, the service worker and the share sheet all require a secure origin. GitHub Pages provides this.
 - A modern browser. Chrome on Android and Safari on iPhone are the targets; live scanning uses `BarcodeDetector` where available and ZXing elsewhere. Reading PDFs needs roughly iOS/Safari 16.4+, Chrome 94+ or Firefox 93+ (pdf.js 6); older browsers can still type the numbers instead.
-- Internet access the first time each export or OCR feature is used, so its library can be fetched from cdnjs, jsDelivr or unpkg and cached.
-- For the automatic checks only: Node.js 18+ (CI uses 22). `npm install` fetches Playwright plus ExcelJS, jsPDF, jspdf-autotable and pdf.js at the versions the app loads; without network access to npm the real-library checks are skipped (see [testing.md](testing.md)).
+- Internet access the first time each export, PDF, photo-reading or barcode-fallback feature is used, so its library can be fetched from cdnjs, jsDelivr or unpkg and cached. After the update to build 30 this is needed once more, as the old library store is cleared.
+- For the automatic checks only: Node.js 18+ (CI uses 22). `npm install` fetches Playwright plus ExcelJS, jsPDF, jspdf-autotable, pdf.js, pdf-lib, Tesseract.js and ZXing at the versions the app loads; without network access to npm the real-library checks are skipped (see [testing.md](testing.md)). `tests/advisories.js` and `tests/sri.js` need internet (osv.dev and the CDNs).
 
 There is nothing to compile and no environment variables or database.
 
@@ -39,6 +39,10 @@ Open `http://localhost:8000/`. `localhost` counts as a secure origin, so the ser
 
 Users tap **Refresh** on the banner. The log is kept, because it is stored on the device.
 
+### Changing a library version
+
+The version of each CDN library is written in three places that must agree: the CDN addresses in `export.js`, `compare.js` or `scan.js`, the exact version in `package.json` `devDependencies`, and (for every library loaded by a script tag) the `sha384` hash in the `SRI` map in `core.js`, for both the cdnjs and jsDelivr address. The checks fail if the first two differ or if an address has no hash, and the browser refuses a file whose hash doesn't match. Run `node tests/sri.js` (needs internet) to confirm the hashes, and `node tests/advisories.js` to check the new version for advisories; remove any entries in `tests/advisories-accepted.json` that no longer apply. In Claude Code, the `lpn-library-upgrade` skill (saved to the user's Claude account, not in the repository) is the step-by-step version.
+
 ### Guards when working with Claude Code
 
 `.claude/settings.json` registers hooks that run when a Claude Code session starts, edits files or runs git commands in this repository:
@@ -50,6 +54,11 @@ Users tap **Refresh** on the banner. The log is kept, because it is stored on th
 - **Docs stay off `main`:** a `git commit` on `main` is blocked if it would include files in `docs/`, and merging `docs` into `main` or pushing `docs` to `main` is blocked. The documentation is updated on the `docs` branch instead.
 - **Checks before push:** a `git push` runs `node tests/run.js` (the `npm test` checks) first and is blocked if any fail (see [testing.md](testing.md)). Pushes of only the `docs` branch skip this.
 - **Docs reminder:** at the end of a Claude Code turn, if `origin/main` has app changes that `origin/docs` does not, Claude is reminded once per `main` commit to update the docs branch. Like the session-start hook, it also finds the repository one folder below the project folder.
+- **Download copy reminder:** `.claude/hooks/outputs_reminder.py` (also a `Stop` hook, 60-second limit) compares each site file in `origin/main` (everything except `.claude/`, `docs/` and `.mcp.json`) with the copy in `/mnt/user-data/outputs/lpn-site` by git blob hash, and checks `lpn-site.zip` isn't older than that folder. If they don't match it reminds Claude, once per `main` commit, to sync them. It does nothing where there is no outputs folder, such as on your own computer.
+
+### Agents for Claude Code
+
+`.claude/agents/` holds helpers that Claude Code can hand work to (`docs-updater` is the only one given edit tools): `export-reviewer` (export changes), `phone-layout-checker` (layout on phone widths), `release-reviewer` (the diff before a release), `docs-updater` (this documentation on the `docs` branch) and `security-reviewer`. `security-reviewer` checks files and text from outside (supplier PDFs, spreadsheets, backups, photos, presets) and the CDN libraries, and is used when import code, library loading, `package.json` versions or `index.html` change, and before a library upgrade.
 
 These hooks only run inside Claude Code. Commits and pushes made by hand or through the GitHub website are not checked by them, so the cache bump is still your responsibility there.
 
@@ -70,6 +79,6 @@ These hooks only run inside Claude Code. Commits and pushes made by hand or thro
 
 1. The page loads and the footer shows the version (for example `LPN Pallet Log v3.30`).
 2. Add a pallet, then **Export → Download (Excel)** produces `LPN-log-<date>.xlsx`. The line under its tables and its page footer should name the version and the build you just published, for example "LPN Pallet Log v3.30 (build 26)".
-3. In DevTools → Application, a service worker is active and caches named `lpn-log-v…` and `lpn-libs-v1` exist.
+3. In DevTools → Application, a service worker is active and caches named `lpn-log-v…` and (once a library has been used) `lpn-libs-v2` exist. `lpn-libs-v1` should no longer be there.
 4. On a phone, the browser offers to install the app.
 5. Optionally run the automatic checks: see [testing.md](testing.md).

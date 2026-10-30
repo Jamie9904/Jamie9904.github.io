@@ -22,6 +22,7 @@ It also checks a delivery against the supplier's manifest. Manifest numbers can 
 - Installable on Android and iPhone as a home-screen app, and works offline after the first visit.
 - Built for a phone in one hand on a loading bay: big touch targets, a pallet table that scrolls with the page, a docked entry bar with a counter and undo-last button (it slides aside while the Manifest check is in use), sound and vibration feedback.
 - Guards against common slips: duplicate and malformed LPN warnings, an expected-count check, and a reminder before starting a new delivery that hasn't been exported.
+- Careful with files from outside: backups are checked and shown before restoring (with a copy of the current data downloaded first), saved data is tidied when read, files loaded back in only give plain text to exports, and every library file loaded by a script tag is checked against its fingerprint.
 
 ## Quick start
 
@@ -49,9 +50,9 @@ Then: fill in the delivery details → type `RUN000000001` into the LPN box → 
 | Storage | `localStorage` (keys prefixed `lpn`) |
 | Fonts | Atkinson Hyperlegible, IBM Plex Mono (self-hosted, SIL OFL) |
 | Hosting | GitHub Pages |
-| Checks | Node.js + Playwright, with the real ExcelJS, jsPDF and pdf.js at the app's versions; run by GitHub Actions on every push and in a weekly health check |
+| Checks | Node.js + Playwright, with the real ExcelJS, jsPDF, pdf.js and pdf-lib at the app's versions; run by GitHub Actions on every push and in a weekly health check, which also checks the libraries for security advisories (osv.dev) and their fingerprints |
 
-Libraries load only when a feature first needs them: from cdnjs with jsDelivr as fallback, except pdf.js, which loads as a module from jsDelivr with unpkg as fallback.
+Libraries load only when a feature first needs them: from cdnjs with jsDelivr as fallback, except pdf.js, which loads as a module from jsDelivr with unpkg as fallback. Script-tag libraries carry an integrity hash (`SRI` in `core.js`), so the browser refuses a changed file.
 
 ## Quick installation
 
@@ -63,7 +64,7 @@ Details, including how to publish updates: [docs/installation.md](docs/installat
 
 ## Architecture (summary)
 
-A single page (`index.html`) loads five classic scripts in a fixed order that share globals: `core.js` (state, log, rendering), `scan.js` (barcodes), `export.js` (Excel/PDF/print), `compare.js` (manifest check, OCR, live tracking) and `panels.js` (guide, settings, saved deliveries, install, update banner). State lives in memory and is mirrored to `localStorage` on every change. A network-first service worker keeps the app usable offline and caches CDN libraries on first use. See [docs/architecture.md](docs/architecture.md).
+A single page (`index.html`) loads five classic scripts in a fixed order that share globals: `core.js` (state, log, rendering), `scan.js` (barcodes), `export.js` (Excel/PDF/print), `compare.js` (manifest check, OCR, live tracking) and `panels.js` (guide, settings, saved deliveries, install, update banner). State lives in memory and is mirrored to `localStorage` on every change. A network-first service worker keeps the app usable offline and caches CDN libraries on first use (only complete downloads, in `lpn-libs-v2`). See [docs/architecture.md](docs/architecture.md).
 
 ## Project structure
 
@@ -82,7 +83,7 @@ A single page (`index.html`) loads five classic scripts in a fixed order that sh
 ├── logo.png            default logo (optional)
 ├── presets.json        shared LPN prefix presets (optional)
 ├── DESIGN.md           design system notes
-├── tests/run.js        automatic checks
+├── tests/              run.js (automatic checks), advisories.js + advisories-accepted.json (security advisories), sri.js (library fingerprints)
 ├── package.json        test dependencies only (Playwright and the export libraries)
 ├── .github/workflows/  test.yml (checks on every push), health.yml (weekly health check)
 ├── .mcp.json           Context7 library documentation for Claude Code

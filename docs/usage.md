@@ -4,7 +4,7 @@ The in-app **Guide** covers the same ground for staff. This page is the referenc
 
 ## Main flow
 
-1. **Delivery:** set the date and who received it. Optional: expected pallets, trailer number, seal in, seal out, notes. Previously used names appear as one-tap buttons.
+1. **Delivery:** set the date and who received it. Optional: expected pallets, trailer number, seal in, seal out, notes (up to 2000 characters). Previously used names appear as one-tap buttons.
 2. **Manifest (optional):** open **Manifest check** and add the manifest by photo, PDF or typing, before scanning.
 3. **Log pallets:** choose the type (BB, FMCG, FPP, Mixed), tick FSDU if needed, scan or type the LPN, press Add or Enter.
 4. **Export:** **Export → Download (Excel)**, **Email PDF** or **Print**. The log then shows "Exported at hh:mm" and offers **Start a new delivery?**
@@ -49,7 +49,8 @@ On phones, while the Manifest check is open and its top is in the upper part of 
 - **Prefix presets** (tap the heading to open) limit which numbers OCR picks up. Leave the list empty for any 1–3 letter prefix. Presets come from `presets.json` and from presets saved on the device.
 - A note under the manifest numbers box reminds you that numbers read from photos can be misread, so check them first. (This replaced the earlier "still being tested" warning at the top of the section.)
 - **Check results** lists Missing (on the manifest, not logged: report), Log only (logged, not on the manifest: book in) and Matched. **Fix** corrects a misread number, ✕ removes it.
-- **Export** gives the comparison as Excel (`Manifest-check-<date>.xlsx`), Email PDF or Print. With "Include a copy of the log" on, an uploaded `.xlsx` log gets the comparison as a new tab, and PDFs get the log appended.
+- **Export** gives the comparison as Excel (`Manifest-check-<date>.xlsx`), Email PDF or Print. With "Include a copy of the log" on, an uploaded `.xlsx` log gets the comparison as a new tab, and PDFs get the log appended. When a log PDF is appended, any links and page-open actions in it are removed; the printed pages are unchanged. Values from an uploaded log are only ever written as plain text or numbers, so a file from outside can't add formulas or links to the export.
+- **Photo reader:** reading photos downloads the photo reader and its language data the first time, which can take a while on a weak signal. If it hasn't started after 90 seconds, or can't be downloaded, it stops with "The photo reader couldn’t load…" and the next try downloads it again.
 
 ## Exports
 
@@ -84,11 +85,27 @@ After a log export (Excel, Email PDF or Print) the log shows "Exported at hh:mm"
 - **Import an exported log** rebuilds a delivery from an exported spreadsheet or app-made PDF. If it is older than last week, it is offered for loading straight into the log instead.
 - The panel shows when this device was last backed up, with **Back up now**.
 
+## Backup and restore
+
+Everything (the current log, saved deliveries, names, presets, logo and settings) is stored in this browser only.
+
+**Back up:** **Settings → Backup → Download backup**, or **Back up now** in Saved deliveries. This saves `lpn-backup-<yyyy-mm-dd>.json`.
+
+**Restore** (for example on a new phone):
+
+1. **Settings → Backup → Restore backup**, then choose the `.json` file.
+2. The app checks the file and says what it holds, for example "This backup has a log of 12 pallets and 4 saved deliveries." Nothing has changed yet. A file that isn't a backup from this app, or is damaged, is refused here.
+3. Tap **Replace my data with this backup**, or **Cancel** to leave everything as it is.
+4. A copy of your current data downloads first (`lpn-backup-<date>.json`). On iPhone, confirm the download if asked. If the copy can't be saved, the restore stops and nothing is replaced.
+5. The message says "Backup restored. Make sure the copy of your previous data has saved, then reload the app…". Check the copy has saved, then tap **Reload the app**. The app doesn't reload by itself.
+
+While checking, the app tidies the backup: anything it doesn't recognise is left out (for example an unknown pallet type becomes Mixed, and a logo that isn't a PNG or JPEG image is dropped). The same tidying happens every time the app starts, so damaged saved data can't stop it opening.
+
 ## Settings
 
 Colours (two colours drive the whole theme, with a contrast warning), quick themes, logo, default pallet type, keep last type, warnings, sound, vibration, confirm scans, text size, date format (dd/mm/yyyy, mm/dd/yyyy, yyyy-mm-dd), include log copy in comparisons, forget remembered names, backup and restore, install pop-up.
 
-**Logo** (under the colours): **Add logo** / **Change logo** picks an image that is kept on this device and used in the header and on exports. `logo.png` next to the app is the default; when a custom logo is set, **Reset to default logo** (or **Remove logo** if there is no default) appears. The logo controls are no longer in the Delivery card.
+**Logo** (under the colours): **Add logo** / **Change logo** picks an image that is kept on this device and used in the header and on exports. A saved logo is only used if it is a PNG or JPEG image stored in the app. `logo.png` next to the app is the default; when a custom logo is set, **Reset to default logo** (or **Remove logo** if there is no default) appears. The logo controls are no longer in the Delivery card.
 
 ## Common problems
 
@@ -96,6 +113,13 @@ Colours (two colours drive the whole theme, with a contrast warning), quick them
 |---|---|
 | Live scan doesn't start | The site must be on HTTPS and camera permission allowed. Use Scan by photo instead. |
 | Export says the builder couldn't load | The device is offline and the library hasn't been cached yet. A basic `.xls` is saved; export once while online to cache it. |
+| A feature that worked offline needs internet after an update | The update to build 30 clears the old library store (`lpn-libs-v1`) once, so Excel, PDF, the Manifest check readers, the photo reader and the barcode fallback each need one online use again before they work offline. |
+| "The photo reader couldn’t load. Check you’re online and try again, or type the numbers in the box instead." | The photo reader is downloaded the first time it is used and has 90 seconds to start. Go online (a stronger signal helps) and try again; the app clears any half-downloaded copy so the next try starts fresh. Or type or paste the numbers in the box. |
+| "That backup file is damaged, so nothing was changed." | Part of the backup can't be read, so the restore was refused before anything changed. Try another backup (the app saves one each time you back up or restore), or download a new backup from the device the data is on. |
+| "That isn’t a backup from this app." | The file chosen isn't an LPN Pallet Log backup (`lpn-backup-<date>.json`). |
+| "Your data wasn’t replaced, because the copy of it couldn’t be saved first." | The safety copy of your current data couldn't be downloaded. Allow downloads (on iPhone, confirm the download) and try the restore again. |
+| "Couldn’t restore that backup because this browser ran out of storage space, so nothing was changed." | The backup is too big for the space this browser allows. Free some space (for example delete old saved deliveries) or restore on another browser. |
+| Restored data not showing | Tap **Reload the app** under the restore message, once the copy of your previous data has saved. |
 | "The PDF reader couldn’t load. Check you’re online, then reload the page and try again…" | The PDF reader is downloaded the first time a PDF is read, then kept for offline use. Go online, reload and try again. Very old phones (roughly older than iOS 16.4, Chrome 94 or Firefox 93) can’t read PDFs at all: type or paste the numbers in the box instead, or use a photo. When several manifest PDFs are chosen, reading stops at the first one with this message. |
 | Email PDF saved a file instead of sharing | The browser refused the share. Attach the saved file to the email that opens. |
 | Changes don't appear after an update | Tap **Refresh** on the update banner, or close and reopen the app. |

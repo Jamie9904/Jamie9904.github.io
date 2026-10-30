@@ -6,6 +6,7 @@ Everything runs in the browser and is stored in `localStorage`.
 
 - **Why:** the app needs to be free to host (GitHub Pages), work with no signal on a loading bay, and need no accounts or IT involvement.
 - **Trade-off:** data is per device and per browser. There is no sharing between devices and clearing site data loses it. This is mitigated by backup/restore (all `lpn*` keys to a JSON file), a "last backed up" note in Saved deliveries, and by exports being the real record.
+- **Consequence:** because a backup file can be edited or damaged before it is restored, saved data can't be trusted just because the app wrote it (see [Saved data is tidied when read](#saved-data-is-tidied-when-read)).
 - **Trade-off:** history is deliberately short (this week and last week, max 50 entries) to stay well inside `localStorage` limits.
 
 ## Plain scripts, no framework or build step
@@ -19,8 +20,9 @@ Five classic scripts share globals instead of modules or a bundler.
 
 ExcelJS, jsPDF, pdf-lib, ZXing and Tesseract are loaded by `loadScript()` only when a feature first needs them, from cdnjs with jsDelivr as fallback, with pinned versions. pdf.js is also loaded only when first needed, with a pinned version, but by `import()` from jsDelivr with unpkg as fallback (see [pdf.js 6](#pdfjs-6-the-legacy-build-loaded-as-a-module)).
 
-- **Why:** first load stays small and fast on a phone; pinned versioned URLs never change, so the service worker can cache them forever (cache-first in `lpn-libs-v1`).
+- **Why:** first load stays small and fast on a phone; pinned versioned URLs never change, so the service worker can cache them forever (cache-first in `lpn-libs-v2`).
 - **Trade-off:** each feature needs one online use before it works offline. If the Excel library cannot load at all, `fallbackXls()` saves a basic HTML-based `.xls` instead of failing.
+- **Trade-off:** the app depends on the CDNs serving the same file. The fingerprints below make sure a changed file is refused rather than run.
 
 ## Network-first service worker
 
@@ -37,10 +39,70 @@ The app reads PDFs with pdf.js 6.4.299, the "legacy" build. Every PDF is opened 
 - **No options needed:** pdf.js 6 no longer has `isEvalSupported` or `enableScripting`. It no longer compiles anything from a file, and a PDF's own scripts only run in the pdf.js viewer, which the app doesn't use. So the protection is the version, and a check in `tests/run.js` reads the pdf.js version from the URLs in `compare.js` and fails if it is in either known bad range.
 - **Legacy build:** it is made for older browsers and phones. Even so it needs roughly iOS/Safari 16.4+, Chrome 94+ or Firefox 93+. On older phones PDF reading fails with a plain message (`PDF_LOAD_MSG`) that says to type the numbers in the box instead; the rest of the app is unaffected.
 - **Loaded with `import()`:** pdf.js 4 and later are published only as ES modules, so `loadScript()` (a script tag) can't load them. `loadPdfJs()` uses a dynamic `import()` with a 15-second limit per host and sets `window.pdfjsLib` itself, so the rest of the code is unchanged.
-- **jsDelivr then unpkg:** cdnjs only hosts the modern build, so the hosts differ from the other libraries. The worker (`pdf.worker.min.mjs`) comes from the same host as the library; pdf.js wraps a worker from another site itself, so no copy on the app's own site is needed. `unpkg.com` was already in the service worker's `CDN` list, so both files are cached in `lpn-libs-v1` on first use.
+- **jsDelivr then unpkg:** cdnjs only hosts the modern build, so the hosts differ from the other libraries. The worker (`pdf.worker.min.mjs`) comes from the same host as the library; pdf.js wraps a worker from another site itself, so no copy on the app's own site is needed. `unpkg.com` was already in the service worker's `CDN` list, so both files are cached in the library store (now `lpn-libs-v2`) on first use.
 - **One function for every reader:** `readPdf()`, `readLogPdf()` and `parseExported()` all call `openPdf()`, and a scan in `tests/run.js` fails if `getDocument(` appears anywhere else, so a new PDF reader can't bypass it.
 - **pdf-lib not affected:** pdf-lib (merging the uploaded log PDF into the manifest check PDF) only copies objects from one PDF into another and never runs anything from the file.
 - **Trade-off:** the version check only knows the bad ranges written into it. A new pdf.js advisory means adding its range to the check and, if the pinned version is affected, moving it (in `compare.js` and `package.json` together).
+
+## Saved data is tidied when read
+
+Everything read from `localStorage` goes through `cleanRows()`, `cleanDel()`, `cleanHist()`, `cleanNames()`, `cleanCfg()` and `okLogo()` in `core.js` (and `normList()` for presets), at start-up and when a backup is checked.
+
+- **Why:** saved data can come back from a backup file that someone has edited or that got damaged. Before, a `null` in the saved deliveries or an object where text was expected could stop the app opening, and an object in a delivery field could reach ExcelJS, which writes `{formula}` or `{hyperlink}` objects as formulas and links.
+- **Tidy, don't refuse:** at start-up a value that doesn't fit is dropped or replaced with a safe default (an unknown pallet type becomes `Mixed`, a bad date becomes empty), so the app always opens with whatever can be used. Only the restore step refuses a file outright, and only when part of it isn't readable JSON.
+- **Settings only from known values:** `cleanCfg()` keeps only keys the app has, with the right type, and the text size, date format and default type only from their allowed lists, so a backup can't set something the Settings panel couldn't.
+- **Limits:** text fields 2000 characters (the notes box has the same `maxlength`), LPNs 100, names 60 and at most 6. These are far above normal use and stop a crafted file filling storage or an export.
+- **Logo only as an image in the file:** `okLogo()` accepts only a PNG or JPEG data URL. Otherwise a saved logo could be a web address, and showing it would contact another site every time the app opened.
+
+## Restore asks first, keeps a copy and never reloads by itself
+
+Restoring a backup checks the whole file, says what it holds, and only changes anything after **Replace my data with this backup**. It downloads a backup of the current data first, rolls back if writing fails, and then shows a **Reload the app** button.
+
+- **Why ask first:** restore replaces everything in the browser. Before, choosing the wrong file wiped the current log and saved deliveries straight away with no way back.
+- **Why a copy first, and stop if it fails:** the copy is the only way back from a wrong restore, so if `backupNow()` can't save it, nothing is replaced.
+- **Why roll back:** `localStorage` can run out of space part-way through writing. The old values are kept in memory and put back, so the browser never ends up with half of each.
+- **Why no automatic reload:** on phones the download of the copy may still be waiting (iPhone asks before saving a file). Reloading straight away, as the app used to after 0.7 seconds, could lose that copy. The user reloads once it has saved.
+- **Trade-off:** one more tap, and the restored data isn't visible until the reload.
+
+## Files from outside only give plain text
+
+The `LPNLOG2:` data in a log PDF is read as plain values only (`isTxt()`), the Manifest check log copy tab writes each cell as a number or a string, and the basic `.xls` marks typed text cells as text (`mso-number-format:"\@"`).
+
+- **Why:** a PDF's keywords or a spreadsheet can be edited by anyone before it is loaded back. ExcelJS turns an object value into a formula or link, and Excel treats a text cell starting with `=` as a formula in an HTML-based `.xls`. Exports are printed and emailed on, so they must only carry what was typed or scanned.
+- **Counts stay numbers:** in the `.xls`, only the typed values are marked as text; the side-table counts are left as numbers so they still add up in Excel.
+
+## Merged log PDFs lose links and page-open actions
+
+When the Manifest check adds an uploaded log PDF to its own PDF, `buildCmpPdf()` deletes `/AA` and `/Annots` from each copied page.
+
+- **Why:** a log PDF from outside could carry a page-open action (which can be a script) or a link, and the merged file is the one that gets emailed and printed. Only what is printed on the page is needed.
+- **Trade-off:** any genuine links or comments in the uploaded PDF are lost in the merged copy.
+
+## Library fingerprints (SRI)
+
+Every library loaded by a script tag has a `sha384` integrity hash in the `SRI` map in `core.js`, and is loaded with `crossorigin="anonymous"`.
+
+- **Why:** the app runs code from cdnjs and jsDelivr. If a file there were changed or tampered with, the browser now refuses it instead of running it with access to the user's data.
+- **Checked both ways:** a check in `tests/run.js` fails if a library address in the code has no hash or a hash has no address, and `tests/sri.js` downloads every file and compares the hash each week, so a CDN change shows up as an email before users notice a feature failing.
+- **Not covered:** pdf.js is loaded with `import()`, which has no integrity option in this code, and Tesseract fetches its worker, engine and language data itself. Those files are not fingerprinted.
+- **Trade-off:** upgrading a library now also means updating its hashes in `SRI` (both CDN addresses), or the browser will refuse the new file. The `lpn-library-upgrade` skill is the procedure for upgrades.
+
+## Offline library store keeps only complete downloads (`lpn-libs-v2`)
+
+The service worker saves a library only if the download succeeded (`res.ok`), never answers a checked request with an unchecked (opaque) copy, and the store was renamed from `lpn-libs-v1` to `lpn-libs-v2`.
+
+- **Why:** a failed or unchecked download kept in the old store would have been served for ever, since library addresses never change. An opaque copy also can't satisfy an integrity check, so it would make the library fail to load even when online.
+- **Exception for the photo reader:** Tesseract's own files can only be fetched unchecked, so those opaque copies are still saved. If the reader fails to start (including a 90-second limit on starting), `dropOcrCache()` deletes them so the next try downloads them again.
+- **Why rename:** the `activate` step deletes any cache that isn't `CACHE` or `LIBS`, so the new name clears the old store once without extra code.
+- **Trade-off:** after this update every feature needs internet once more to download its library again.
+- **Old font hosts removed:** `fonts.googleapis.com` and `fonts.gstatic.com` were dropped from the `CDN` list, as the fonts are part of the app.
+
+## No Content Security Policy yet
+
+A Content Security Policy (a rule list in the page saying which sites may provide scripts and other files) was considered and deliberately not added in this release.
+
+- **Why not yet:** the photo reader (Tesseract) starts a worker and fetches its engine and language data from several places, and a policy that is slightly too strict would break photo reading without any error users would understand. Photo reading has no automatic checks yet, and older phones handle these policies differently, so it needs automated coverage of photo reading and a test on an older phone first.
+- **Meanwhile:** fingerprints on the library files, plain-text reading of outside files and tidying of saved data cover the main risks.
 
 ## Exports designed to be read back
 
@@ -153,7 +215,7 @@ Atkinson Hyperlegible (chosen for legibility) and IBM Plex Mono (LPNs and number
 `tests/run.js` blocks all external requests and replaces ExcelJS with a recording stand-in.
 
 - **Why:** runs offline, quickly and deterministically in CI, and can assert on cell values, borders and print settings.
-- **Trade-off:** a stand-in only shows what the app asked for, not what the real library makes of it. The real ExcelJS, jsPDF and pdf.js are now also checked (next section); pdf-lib, the camera and phone file viewers are still checked manually.
+- **Trade-off:** a stand-in only shows what the app asked for, not what the real library makes of it. The real ExcelJS, jsPDF, pdf.js and pdf-lib are now also checked (next section); the camera, the photo reader and phone file viewers are still checked manually.
 
 ## Real export libraries in the checks, run on GitHub
 
@@ -165,9 +227,10 @@ Atkinson Hyperlegible (chosen for legibility) and IBM Plex Mono (LPNs and number
 
 ## Library versions pinned to the CDN copies
 
-`package.json` lists `exceljs` 4.4.0, `jspdf` 2.5.1, `jspdf-autotable` 3.8.2 and `pdfjs-dist` 6.4.299 as exact versions (no `^`), the same versions the app loads from cdnjs, jsDelivr and unpkg in `export.js` and `compare.js`.
+`package.json` lists `exceljs` 4.4.0, `jspdf` 2.5.1, `jspdf-autotable` 3.8.2, `pdfjs-dist` 6.4.299, `pdf-lib` 1.17.1, `tesseract.js` 5.1.1 and `@zxing/library` 0.21.3 as exact versions (no `^`), the same versions the app loads from cdnjs, jsDelivr and unpkg in `export.js`, `compare.js` and `scan.js`.
 
 - **Why:** a check against a different version than users get proves nothing about the live app. A check that runs everywhere compares the two and fails if they differ, so the CDN URLs and `package.json` have to be changed together.
+- **Why tesseract.js and ZXing too:** the checks don't run them, but they read outside files (photos and barcodes), so they are pinned for the version check and the security advisory check.
 - **Workflows install with `--ignore-scripts`:** the packages are only files the checks serve to the browser, so none of their install scripts needs to run. The workflows also get read-only repository access and a 10-minute limit, as they only need to read the code and should not run on if something hangs.
 
 ## Claude automations kept in the repository
@@ -180,6 +243,8 @@ The hooks, agents and working notes for Claude Code are committed in `.claude/` 
 - **Only real git commands:** the git guard matches `git` followed by `commit`, `push` or `merge … docs`, with only git's own options allowed in between: `-C <dir>`, `-c <key=value>`, `--git-dir`, `--work-tree` or `--namespace` (with `=` or a space before the value), and other `--options` such as `--no-pager`. Earlier it matched any command containing "git" and "commit" or "push", so `git stash push`, an `echo`, or a script that only mentioned those words set off the checks.
 - **Other ways of writing git are caught too:** `git` counts at the start of the command, after `;`, `&`, `|`, `(`, a backtick or a space, after a `/` (so `/usr/bin/git push` counts), and after `-c` followed by a quote (so `sh -c "git push"` and `bash -c 'git commit …'` count). A quote counts only straight after `-c`, so searching for the text, as in `grep "git push" .`, does not set off the checks.
 - **Session-start status line:** `session_start.py` tracks every GitHub branch and fetches at the start of each session, because the git guard compares `CACHE` with `origin/main` and a clone that only tracks some branches reports branches already on GitHub as "unpushed". It never asks for a password and never blocks the session, since it has no terminal and a session that can't start is worse than a stale status line.
+- **Download copy reminder:** `outputs_reminder.py` reminds once per `main` commit when the user's download copy (`/mnt/user-data/outputs/lpn-site` and `lpn-site.zip`) no longer matches `main`, because that copy is what gets uploaded by hand and it was easy to forget after a release.
+- **Security reviewer agent:** a read-only `security-reviewer` agent with a checklist for files and text from outside and for the libraries, used when import code, library loading, `package.json` versions or `index.html` change.
 - **Cache bump compared with the live site:** the commit check accepts a `CACHE` number higher than the one in `origin/main:sw.js`, as well as a `CACHE` line changed in the commit itself. A branch that has already bumped the cache once therefore doesn't need a new bump for each later commit before it is published.
 
 ## Weekly health check as a GitHub workflow
@@ -188,3 +253,12 @@ The weekly check of the live site, the CDN libraries and the tests is `.github/w
 
 - **Why:** GitHub's runners can reach the live site and cdnjs, jsDelivr and unpkg, which the Claude cloud sandbox cannot, so only a runner can actually test that the libraries still download and that the live site serves the current `sw.js`. GitHub also emails on a failed run without any extra setup, and a passing run stays quiet.
 - **Trade-off:** it only reports. A broken CDN URL or an unpublished update still needs someone to act on the email.
+
+## Security advisories checked automatically, with written exceptions
+
+`tests/advisories.js` asks osv.dev (which includes GitHub's advisories) about the seven pinned library versions. A new high or critical advisory fails the weekly health check; others are warnings. Advisories that were looked at and don't affect the app are listed in `tests/advisories-accepted.json`, each with the reason.
+
+- **Why:** the app runs these libraries on files from outside (manifests, log PDFs, spreadsheets, photos, barcodes), and versions are pinned, so a new advisory for a pinned version would otherwise only be found by someone looking.
+- **Why written exceptions:** jsPDF 2.5.1 has 12 known advisories, all in features the app doesn't use (GIF and BMP images, annotations, form fields, `addJS`, XMP metadata, the Node.js build, `html()`, opening output in a new window). Writing down why each one doesn't apply means the check can stay strict for anything new, and the reasons can be rechecked when the code changes. The check also says when an accepted entry is no longer reported, so the list doesn't go stale after an upgrade.
+- **Blocking weekly, not on every push:** `advisories.js` and `sri.js` need osv.dev and the CDNs. In `test.yml` they run with `continue-on-error`, so a new advisory or a network problem doesn't stop an unrelated fix from being checked; in `health.yml` they fail the run and send the email.
+- **Trade-off:** if an accepted advisory's reason stops being true (for example the app starts using `addJS`), the check won't notice; the `security-reviewer` agent and the note at the top of the file are the reminder.

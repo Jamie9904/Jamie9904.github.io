@@ -4,7 +4,7 @@
 .
 ├── index.html               page markup: header, Delivery, Add a pallet, Pallet log, Manifest check, panels, banners
 ├── styles.css               all CSS: theme tokens, components, phone/tablet/desktop layouts, print rules
-├── core.js                  state, persistence, table, validation, add flow, undo, helpers
+├── core.js                  state, persistence, tidying of saved data, table, validation, add flow, undo, library loader and fingerprints (SRI), helpers
 ├── scan.js                  live and photo barcode scanning, wake lock, input wiring
 ├── export.js                Excel/PDF builders, print, delivery (download/share/mailto), logo
 ├── compare.js               manifest check, file readers, OCR, presets, live tracking
@@ -22,14 +22,17 @@
 ├── DESIGN.md                colours, type, spacing, components, export look
 ├── README.md
 ├── _config.yml              GitHub Pages (Jekyll) site settings
-├── package.json             test dependencies (Playwright; ExcelJS, jsPDF, jspdf-autotable, pdf.js at the app's CDN versions) and `npm test`
+├── package.json             test dependencies (Playwright; ExcelJS, jsPDF, jspdf-autotable, pdf.js, pdf-lib, Tesseract.js, ZXing at the app's CDN versions) and `npm test`
 ├── .mcp.json                Context7 documentation server for Claude Code (development only)
 ├── .gitignore               keeps `__pycache__/`, `*.pyc` and `node_modules/` out of git
 ├── tests/
-│   └── run.js               automatic checks
+│   ├── run.js               automatic checks (`npm test`)
+│   ├── advisories.js        asks osv.dev about security advisories for the pinned libraries
+│   ├── advisories-accepted.json  advisories checked and found not to affect the app, with reasons
+│   └── sri.js               checks the library fingerprints in core.js against the CDNs
 ├── .github/workflows/
-│   ├── test.yml             runs the checks on every push and pull request
-│   └── health.yml           weekly health check of the live site, CDN libraries and checks
+│   ├── test.yml             runs the checks on every push and pull request (advisories and fingerprints without blocking)
+│   └── health.yml           weekly health check of the live site, CDN libraries, advisories, fingerprints and checks
 └── .claude/                 Claude Code automations (development only)
     ├── CLAUDE.md            working notes: branches, release steps, user decisions
     ├── settings.json        registers the hooks below
@@ -37,8 +40,9 @@
     │   ├── session_start.py fetches every branch, sets the upstream and NODE_PATH, prints a status line
     │   ├── syntax-check.sh  `node --check` after a `.js` file is edited
     │   ├── lpn_git_guard.py commit and push guard (cache bump, docs on main, tests before push)
-    │   └── docs_reminder.py reminds when the docs branch is behind main
-    └── agents/              export-reviewer, phone-layout-checker, docs-updater, release-reviewer
+    │   ├── docs_reminder.py reminds when the docs branch is behind main
+    │   └── outputs_reminder.py reminds when the download copy (outputs folder and zip) doesn't match main
+    └── agents/              export-reviewer, phone-layout-checker, docs-updater, release-reviewer, security-reviewer
 ```
 
 ## What goes where
@@ -47,7 +51,7 @@
 |---|---|---|
 | `index.html` | Static markup and element ids | Inline logic (all behaviour is in the scripts) |
 | `styles.css` | All styling; colours via the CSS variables set by `applyTheme()` | Hard-coded colours for themed surfaces |
-| `core.js` | Anything other scripts need at load time: state, `save`/`render`, helpers | Library loading for exports or OCR |
+| `core.js` | Anything other scripts need at load time: state, `save`/`render`, the `clean*` helpers for saved data, the `SRI` map, helpers | Library loading for exports or OCR |
 | `scan.js` | Camera and barcode code | Log or export logic beyond calling `tryAdd()` |
 | `export.js` | File generation and delivery | Reading files back (that is `compare.js` / `panels.js`) |
 | `compare.js` | Everything manifest-related, file readers, OCR | Saved-delivery storage |
