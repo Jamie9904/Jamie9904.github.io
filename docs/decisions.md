@@ -60,6 +60,14 @@ Every export carries "LPN Pallet Log vX.Y (build N)": a line under the tables, t
 - **Never holds up an export:** exports wait at most 1.5 seconds for the build number; without it the file just says "LPN Pallet Log vX.Y".
 - **Constraint:** the line under the tables starts with "Made with ", and the import code stops at a cell starting with that, so the wording must keep that start.
 
+## One spreadsheet reader for both importers
+
+Importing an exported log (Saved deliveries) and loading a log in the Manifest check both turn an `.xlsx` sheet into a grid with the same `sheetGrid()` in `compare.js`.
+
+- **Why:** before, the Manifest check blanked the repeated cells of merged blocks but the import did not, so the two could read the same file differently. With one reader, a fix to how sheets are read applies to both.
+- **Merged blocks read once:** ExcelJS gives every cell of a merged block the block's value. `sheetGrid()` keeps it only in the top-left cell, so a line that spans the table (the "Made with …" line, the title band) appears once rather than in every column.
+- **Trade-off:** `sheetGrid()` lives in `compare.js` but `panels.js` uses it too, so `compare.js` must load before an import runs (both are loaded by `index.html` at start-up).
+
 ## Logo converted for exports
 
 The logo is redrawn on a white canvas as a JPEG (max 600px) and fitted inside the space without stretching (`exportLogo()`, `fitLogo()`).
@@ -141,7 +149,8 @@ The hooks, agents and working notes for Claude Code are committed in `.claude/` 
 - **Why:** the rules they enforce belong to the project, not to a machine: bump `CACHE` in `sw.js` with every app change, keep `docs/` off `main`, and only push when the checks pass. Kept in the repository, they apply in every fresh checkout and cloud session, change through normal commits, and can be read by anyone.
 - **Cost:** none for the site. Jekyll leaves dot-folders out of the published site, so `.claude/` is not served and is not in the service worker cache.
 - **Limit:** they only run inside Claude Code. Manual commits and edits on the GitHub website are still covered only by the `test.yml` checks after the push.
-- **Only real git commands:** the git guard matches `git` (optionally with `-C <path>`) followed directly by `commit`, `push` or `merge … docs`. Earlier it matched any command containing "git" and "commit" or "push", so `git stash push`, an `echo`, or a script that only mentioned those words set off the checks.
+- **Only real git commands:** the git guard matches `git` followed by `commit`, `push` or `merge … docs`, with only git's own options allowed in between: `-C <dir>`, `-c <key=value>`, `--git-dir`, `--work-tree` or `--namespace` (with `=` or a space before the value), and other `--options` such as `--no-pager`. Earlier it matched any command containing "git" and "commit" or "push", so `git stash push`, an `echo`, or a script that only mentioned those words set off the checks.
+- **Other ways of writing git are caught too:** `git` counts at the start of the command, after `;`, `&`, `|`, `(`, a backtick or a space, after a `/` (so `/usr/bin/git push` counts), and after `-c` followed by a quote (so `sh -c "git push"` and `bash -c 'git commit …'` count). A quote counts only straight after `-c`, so searching for the text, as in `grep "git push" .`, does not set off the checks.
 - **Cache bump compared with the live site:** the commit check accepts a `CACHE` number higher than the one in `origin/main:sw.js`, as well as a `CACHE` line changed in the commit itself. A branch that has already bumped the cache once therefore doesn't need a new bump for each later commit before it is published.
 
 ## Weekly health check as a GitHub workflow

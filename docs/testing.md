@@ -28,7 +28,7 @@ If any step fails, GitHub sends its standard failed-workflow email (for schedule
 
 ## What is covered
 
-End-to-end checks in headless Chromium against the real page (75 checks at the time of writing):
+End-to-end checks in headless Chromium against the real page (78 checks at the time of writing):
 
 | Group | Checks |
 |---|---|
@@ -41,6 +41,7 @@ End-to-end checks in headless Chromium against the real page (75 checks at the t
 | Settings and dates | Date format setting, importing an exported CSV (date, trailer, seals, FSDU), Guide contents bar |
 | Excel export | Expected-count check blocks the first try; "Exported at" note and new-delivery prompt; title band and logo placement; header, row borders, Courier New LPNs, footer, fit-to-width and repeated header; trailer in Delivery Details; footer names the version and build; "Made with LPN Pallet Log vX.Y (build N) on dd/mm/yyyy at hh:mm." line under the tables; LPN column at least 27 wide for a 13-character LPN; a long Notes value gets a row tall enough for its wrapped lines (about 13 characters a line, 17pt a line). Manifest check sheet: LPN column fits a 13-character LPN, has the version line, and a 73-character junk scan keeps the column at 40 or less and gets a row taller than 24 |
 | Export version note | With every request for `sw.js` held for 15 seconds, an Excel export still finishes in under 3 seconds; the basic `.xls` fallback has the "Made with … at hh:mm." line; the log PDF (with a stand-in jsPDF) has the version in its `LPNLOG2:` data (`app`) and its footer, with the rows intact; importing a CSV stops at the version line; no script errors |
+| Spreadsheet import | With a stand-in worksheet whose version line sits straight under the pallets (no blank row above it): `sheetGrid()` reads a merged line once, not in every column; importing an exported log (`parseExported()`) stops at the version line and still reads Notes and Received by; the Manifest check (`readLog()`) reads the same pallets from that file |
 | Offline | Service worker caches the app; reload works offline |
 
 ## Strategy
@@ -48,6 +49,7 @@ End-to-end checks in headless Chromium against the real page (75 checks at the t
 - **External requests are blocked.** Every request not to the local server is aborted, so runs are offline and repeatable.
 - **ExcelJS is replaced by a recording stand-in** that keeps every cell value, font, border, merge, image and print setting, so the sheet layout can be asserted without the real library.
 - **jsPDF is replaced for one check** by a stand-in that accepts any call and records the footer text and the PDF keywords, so `buildLogPdf()` can be checked for the version note.
+- **A worksheet is faked for the spreadsheet import checks.** A small stand-in sheet behaves like ExcelJS for merged cells: every cell in a merged block reports the block's text, and only the top-left cell is its own `master`. `window.ExcelJS` and `window.loadExcel` are swapped for stand-ins that hand back this sheet, then put back afterwards.
 - **A slow network is simulated** by wrapping `fetch` before the page loads so every request for `sw.js` waits 15 seconds; this checks that exports don't wait for the build number.
 - Tests drive the app through its own globals (`newDelivery()`, `openHelp()`, `parseExported()`…) where clicking would only add flakiness, and through real typing and clicks for the add flow.
 
