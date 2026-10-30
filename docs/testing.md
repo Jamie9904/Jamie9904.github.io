@@ -16,12 +16,12 @@ On GitHub, `.github/workflows/test.yml` (workflow name **Checks**) runs the same
 
 ### Real export libraries
 
-When all six library files are in `node_modules` (`exceljs.min.js`, `jspdf.umd.min.js`, `jspdf.plugin.autotable.min.js`, `pdf-lib.min.js`, and pdf.js's `pdf.min.mjs` and `pdf.worker.min.mjs`, taken from `pdfjs-dist/legacy/build/`), the "Real export libraries" group runs. Otherwise it prints "skipped here" and carries on; this happens where npm cannot download packages, such as the Claude cloud sandbox. Locally without the libraries the run has 113 checks; with them (always the case on GitHub) it has 137.
+When all six library files are in `node_modules` (`exceljs.min.js`, `jspdf.umd.min.js`, `jspdf.plugin.autotable.min.js`, `pdf-lib.min.js`, and pdf.js's `pdf.min.mjs` and `pdf.worker.min.mjs`, taken from `pdfjs-dist/legacy/build/`), the "Real export libraries" group runs. Otherwise it prints "skipped here" and carries on; this happens where npm cannot download packages, such as the Claude cloud sandbox. Locally without the libraries the run has 114 checks; with them (always the case on GitHub) it has 138.
 
 On GitHub (`GITHUB_ACTIONS` set) two extra lines are printed at the end:
 
 - if the libraries are missing, an `::error` annotation "Real export libraries missing" is added and the run counts as failed, so the real checks can't be skipped there unnoticed;
-- always, a `::notice` annotation titled **Checks** with the totals, for example "137 passed, 0 failed, including the real export library checks" (or "real export library checks skipped").
+- always, a `::notice` annotation titled **Checks** with the totals, for example "138 passed, 0 failed, including the real export library checks" (or "real export library checks skipped").
 
 Because run logs can't be downloaded from a Claude cloud session, the notice is the way to read the result there: find the job id of the run, then
 
@@ -56,15 +56,25 @@ It also adds a notice when an accepted entry is no longer reported for that vers
 
 Both run in `health.yml` (a failure fails the weekly run) and in `test.yml` with `continue-on-error: true` (shown on the run but never blocking a push).
 
+## Demo video screen fingerprint
+
+`tools/demo-video/screens.json` records what the key screens looked like when the Guide demo video was last recorded. `tools/demo-video/screens.js` makes it: it seeds `localStorage` with the same made-up delivery the video uses (eight pallets, date 30/10/2026, trailer TR4471, received by Jamie, 12 expected), opens the app at 390×844 and records, for each part, its position, size, text (first 80 characters) and background and text colours:
+
+- log view: `header h1`, `#btnGuide`, `#delSum` (folded), `#sum`, `#tyb`, `#lpn` and `#expBtn`;
+- manifest check: `#cmpSum` and `#cmpRes`, after checking a nine-number manifest against the log (their vertical position is left out, because it depends on scrolling).
+
+`make.sh` rewrites `screens.json` after each re-recording (`node screens.js --write`, which serves the repository locally with Playwright and blocks all outside requests). In `npm test`, the "Demo video" group checks that the file exists, takes the same fingerprint of the current app and lists the differences: a part that is gone or new, changed text, changed colours, or a move or resize of more than 6px. The result is printed as a `note` line ("still matches", or the first six differences with a reminder to re-record with `sh tools/demo-video/make.sh`). On GitHub a difference also adds a **Demo video may be out of date** warning annotation. A difference never fails the run.
+
 ## Weekly health check
 
 `.github/workflows/health.yml` runs every Monday at 07:36 UTC (`cron: "36 7 * * 1"`) and can be started by hand from **Actions → Weekly health check → Run workflow**. It checks out `main` and runs these steps:
 
 1. **Live site is up and on the latest version.** Fetches `https://jamie9904.github.io/` (with a cache-busting `?health=` query), checks the page title is `LPN Pallet Log`, then fetches the live `sw.js` and compares its `lpn-log-vN` cache name with the one in `sw.js` on `main`. A mismatch means the last update has not been published.
 2. **CDN libraries still download.** Collects every `cdnjs.cloudflare.com`, `cdn.jsdelivr.net` and `unpkg.com` URL written in the root `*.js` files and downloads each one. The pdf.js worker addresses are written out in full in `PDFJS_SRC`, so they are checked like any other URL. Any failed download is reported as an error annotation naming the URL.
-3. **Security advisories for the app's libraries.** `node tests/advisories.js` (see above).
-4. **Library files still match their fingerprints.** `node tests/sri.js` (see above).
-5. **Automatic checks.** `npm install --ignore-scripts`, Playwright Chromium, then `npm test`, the same as `test.yml` (so the real export library checks run here too).
+3. **Guide demo video is on the live site and plays.** Downloads `https://jamie9904.github.io/media/demo.mp4` and `media/demo-poster.jpg` (each with `curl --retry 2`; a failed download is an error). Installs `ffmpeg` if `ffprobe` is missing, reads the duration and the first video and audio stream codecs with `ffprobe`, and decodes the whole file with `ffmpeg -f null` (a damaged file fails). The step fails unless the video is longer than 20 seconds, the video is `h264` and the audio is `aac`; when it passes it adds a **Demo video** notice with the duration and codecs.
+4. **Security advisories for the app's libraries.** `node tests/advisories.js` (see above).
+5. **Library files still match their fingerprints.** `node tests/sri.js` (see above).
+6. **Automatic checks.** `npm install --ignore-scripts`, Playwright Chromium, then `npm test`, the same as `test.yml` (so the real export library checks run here too).
 
 Like `test.yml`, it has read-only repository access and a 10-minute limit.
 
@@ -72,7 +82,7 @@ If any step fails, GitHub sends its standard failed-workflow email (for schedule
 
 ## What is covered
 
-End-to-end checks in headless Chromium against the real page (113 checks at the time of writing, 137 with the real libraries on GitHub):
+End-to-end checks in headless Chromium against the real page (114 checks at the time of writing, 138 with the real libraries on GitHub):
 
 | Group | Checks |
 |---|---|
@@ -86,7 +96,7 @@ End-to-end checks in headless Chromium against the real page (113 checks at the 
 | Excel export | Expected-count check blocks the first try; "Exported at" note and new-delivery prompt; title band and logo placement; header, row borders, Courier New LPNs, footer, fit-to-width and repeated header; trailer in Delivery Details; footer names the version and build; "Made with LPN Pallet Log vX.Y (build N) on dd/mm/yyyy at hh:mm." line under the tables; LPN column at least 27 wide for a 13-character LPN; a long Notes value gets a row tall enough for its wrapped lines (about 13 characters a line, 17pt a line). Manifest check sheet: LPN column fits a 13-character LPN, has the version line, and a 73-character junk scan keeps the column at 40 or less and gets a row taller than 24 |
 | Export version note | With every request for `sw.js` held for 15 seconds, an Excel export still finishes in under 3 seconds; the basic `.xls` fallback has the "Made with … at hh:mm." line; the log PDF (with a stand-in jsPDF) has the version in its `LPNLOG2:` data (`app`) and its footer, with the rows intact; importing a CSV stops at the version line; no script errors |
 | Spreadsheet import | With a stand-in worksheet whose version line sits straight under the pallets (no blank row above it): `sheetGrid()` reads a merged line once, not in every column; importing an exported log (`parseExported()`) stops at the version line and still reads Notes and Received by; the Manifest check (`readLog()`) reads the same pallets from that file |
-| Demo video | `media/demo.mp4` and `media/demo-poster.jpg` exist and the video is under 3 MB; at 375px, opening the Guide (`#btnGuide`) puts `#demoPlay` in the first element of `#panelBody`, with `#demoVid` hidden and `preload` set to `none`, and the button fits the screen width and is at least 44px tall; tapping it shows the player with `media/demo.mp4` as its source, hides the button, and the player is wider than 200px and no wider than 375px; the video's `volume` is `0.5` (starts at half volume); `closeHelp()` leaves the video paused; no script errors |
+| Demo video | `media/demo.mp4` and `media/demo-poster.jpg` exist and the video is under 3 MB; at 375px, opening the Guide (`#btnGuide`) puts `#demoPlay` in the first element of `#panelBody`, with `#demoVid` hidden and `preload` set to `none`, and the button fits the screen width and is at least 44px tall; tapping it shows the player with `media/demo.mp4` as its source, hides the button, and the player is wider than 200px and no wider than 375px; the video's `volume` is `0.5` (starts at half volume); `closeHelp()` leaves the video paused; no script errors; `tools/demo-video/screens.json` exists and has more than three log-view entries (see [Demo video screen fingerprint](#demo-video-screen-fingerprint)) |
 | PDF safety (runs everywhere) | A scan of `compare.js` finds exactly one pdf.js version in its `pdfjs-dist@x.y.z/` URLs, and that version is outside the known ranges where a crafted PDF could run code (before 4.2.67, and 5.6.83 up to 6.2.108); with every outside request blocked and the service worker off (`page(…, { noSW: true })`), importing a PDF with `parseExported()` fails with the plain message starting "The PDF reader couldn’t load. Check you’re online"; a scan of `core.js`, `scan.js`, `export.js`, `compare.js` and `panels.js` finds `getDocument(` exactly once, in `compare.js` as `getDocument({data:bytes})`, so every PDF goes through `openPdf()` |
 | Saved data and backups from outside | **Damaged data in storage:** with `lpnhist` `[null]`, `lpnlog` holding `"rows":"x"` and a `{"formula":…}` object as Received by, `lpnnames` `[5,{}]`, `lpncfg` `"x"`, `lpnpresets` `[1]` and `lpnlogo` set to a web address, the app starts with no script errors, Settings opens, the log is empty, Received by is empty (an object is never shown as a value), and no request is made to the logo's address. **Restore:** choosing a backup shows "log of 1 pallet and 1 saved delivery" and the Replace/Cancel row while the current log is unchanged; after **Replace** the Reload button and "Make sure the copy…" message show; a restore stops with "wasn’t replaced" and leaves the log as it was when the safety copy can't be saved; exactly one safety copy is downloaded; the restored data is tidied (an object in Received by becomes empty, an unknown pallet type becomes `Mixed`, `fsdu:1` becomes `true`, the outside logo is dropped, a number in the names list is dropped); a backup with unreadable JSON in `lpnhist` is refused with "damaged, so nothing was changed" and no Replace button. **Outside files:** `LPNLOG2:` data with objects for the date, receiver and pallet type, and a row whose LPN is an object, gives plain values from `parseExported()` (empty date, receiver and notes, one row) and `readLogPdf()` (`RUN000000001` only), and no object in the log copy grid; the basic `.xls` (`fallbackXls()`) has the `td.t` text format, writes a notes value starting `=HYPERLINK` in a `class="t"` cell and keeps the counts as plain numbers. Then no script errors |
 | Library fingerprints (runs everywhere) | Every address passed to `loadScript("…")` in `core.js`, `export.js`, `compare.js` and `scan.js`, plus the ZXing address in `scan.js`, has an entry in the `SRI` map, every `SRI` entry is used, and there are at least 10 |
@@ -124,7 +134,8 @@ End-to-end checks in headless Chromium against the real page (113 checks at the 
 - That `lpn-libs-v1` is deleted when the new service worker activates (the offline store checks only look at what `lpn-libs-v2` keeps).
 - That the browser really refuses a file with a wrong fingerprint: the checks only show every address has a hash, and `tests/sri.js` that the hashes match the CDNs.
 - A real harmful PDF: the PDF safety checks only show that the pinned pdf.js version is outside the known bad ranges, not how pdf.js behaves with a crafted file.
-- The demo video actually playing: the checks only show the player and its source, they don't decode or play `demo.mp4`, and don't test the "couldn’t play" message.
+- The demo video actually playing in a browser: `npm test` only shows the player and its source. The weekly health check decodes the live `demo.mp4` with `ffmpeg`, but nothing tests playback in a phone browser or the "couldn’t play" message.
+- Whether the demo video's content matches the app: the screen fingerprint only compares seven parts of the log view and the two manifest check results at 390px, and only warns. Changes elsewhere (Settings, export, the side panel) or in the scenes `record.mjs` plays are not compared.
 - pdf.js on older phones: the checks use Chromium only, so the browser versions the legacy build needs (roughly iOS/Safari 16.4+, Chrome 94+, Firefox 93+) are not tested.
 - How phone apps open the files, the share sheet and printing.
 - Files that libraries fetch for themselves at run time (for example Tesseract's worker and language data) are not in the health check's CDN list, because only URLs written in the scripts are checked.

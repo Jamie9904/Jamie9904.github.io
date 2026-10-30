@@ -272,10 +272,20 @@ Every change is committed and pushed on one branch, `updates`, and `main` only m
 
 The tool that makes `media/demo.mp4` lives in `tools/demo-video/` on `main`, and records the real app from the repository rather than a separate mock-up.
 
-- **Why in the repository:** the video has to be remade whenever the screens it shows change. With the recorder next to the app, one command (`sh tools/demo-video/make.sh`) re-records it from the current files, and the session-start line can say when `index.html`, `styles.css` or the scripts changed after the video was last committed.
+- **Why in the repository:** the video has to be remade whenever the screens it shows change. With the recorder next to the app, one command (`sh tools/demo-video/make.sh`) re-records it from the current files and saves a fingerprint of the key screens (`screens.json`) that `npm test` compares the app with.
 - **Why an offline voice:** the Kokoro "Heart" voice (Apache 2.0) runs locally through sherpa-onnx, so re-recording needs no account or paid speech service and gives the same voice every time. The engine and model (about 350 MB) are downloaded from GitHub once into `~/.cache/lpn-voice` rather than committed.
 - **Why music is optional:** the music and sound effects are not in the repository. `render.py` adds them only when `SFX_DIR` points at them, and otherwise renders the voice only.
 - **Trade-off:** `tools/` is on `main`, so GitHub Pages publishes it, though the app never loads it. It is kept out of the site zip and the download copy.
+
+## Demo video staleness: screen fingerprint that warns, not fails
+
+Whether the demo video is out of date is judged by comparing the app's key screens with `tools/demo-video/screens.json`, not by counting commits. The session-start line only counts commits to `index.html` and `styles.css`.
+
+- **Why a fingerprint:** counting every change to the page, styles and five scripts flagged the video after changes that don't show on screen. Comparing position, size, text and colours of the parts the video shows points at real visible changes, with a 6px tolerance for small shifts.
+- **Why only a warning:** re-recording needs the voice engine, `ffmpeg` and a person to look at the result, and a visible change may be in a part the video doesn't dwell on. A failing check would block unrelated releases; a "Demo video may be out of date" annotation leaves the decision to re-record to a person.
+- **Why the session start keeps a hint:** it costs nothing and needs no browser, so it only counts page and style commits and points at `npm test` for the real answer.
+- **Weekly playback check:** `health.yml` downloads the live `demo.mp4` and poster and decodes the video with `ffmpeg`, because `npm test` only checks the player and file size, not that the published file plays.
+- **Trade-off:** only nine parts at one phone width are compared, so changes in other screens or in the scenes the recorder plays are not caught. `screens.json` has to be committed with each new video.
 
 ## Weekly health check as a GitHub workflow
 
