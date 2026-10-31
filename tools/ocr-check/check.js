@@ -58,9 +58,9 @@ async function readCli(page, file, prefix) {
 	}
 	const text = rows.map(r => r[11]).join(" ");
 	return page.evaluate(([items, text, orig, prefix]) => {
-		extractLpns(text, true).forEach(x => { if (!orig.includes(x)) items.push({ raw: x, first: x, again: null }); });
+		extractLpns(text, true).forEach(x => { if (!orig.includes(x)) items.push({ raw: x, first: x, again: null, whole: true }); });
 		document.getElementById("cmpPfx").value = prefix; const out = photoLpns(items);
-		return { found: [...out], skipped: out.skipped, ignored: tidyReads(items).ignored };
+		return { found: [...out], skipped: out.skipped, ignored: tidyReads(items).ignored, odd: out.odd };
 	}, [items, text, [...orig], prefix]);
 }
 
@@ -105,8 +105,12 @@ if (require.main === module) (async () => {
 		const secs = ((Date.now() - t0) / 1000).toFixed(1) + " s";
 		if (r.err) { console.log("  " + ph.name + ": couldn't be read (" + r.err + ")"); bad++; continue; }
 		if (!ph.want) { console.log("  " + ph.name + " (" + secs + "): " + r.found.join(" ") + (r.skipped && r.skipped.length ? " | left out for prefix: " + r.skipped.join(" ") : "")); continue; }
-		const s = score(ph.want, r.found); right += s.right.length; total += ph.want.length; if (s.missing.length || s.extra.length) bad++;
-		console.log("  " + ph.name + " (" + secs + "): " + s.right.length + " of " + ph.want.length + " right" + (s.missing.length ? " · missing " + s.missing.join(" ") : "") + (s.extra.length ? " · extra " + s.extra.join(" ") : "") + (r.ignored && r.ignored.length ? " · ignored " + r.ignored.join(" ") : ""));
+		// With a prefix list, only the expected LPNs with a listed prefix should be found; the rest should be reported.
+		const pf = prefix ? prefix.toUpperCase().split(/[^A-Z]+/).filter(Boolean) : [];
+		const want = pf.length ? ph.want.filter(x => pf.some(p => x.startsWith(p))) : ph.want;
+		const notReported = pf.length ? ph.want.filter(x => !want.includes(x) && !(r.skipped || []).includes(x)) : [];
+		const s = score(want, r.found); if (notReported.length) s.missing.push(...notReported.map(x => x + " (not reported as left out)")); right += s.right.length; total += want.length; if (s.missing.length || s.extra.length) bad++;
+		console.log("  " + ph.name + " (" + secs + "): " + s.right.length + " of " + want.length + " right" + (s.missing.length ? " · missing " + s.missing.join(" ") : "") + (s.extra.length ? " · extra " + s.extra.join(" ") : "") + (r.ignored && r.ignored.length ? " · ignored " + r.ignored.join(" ") : "") + (pf.length && r.skipped && r.skipped.length ? " · reported as left out: " + r.skipped.length : ""));
 	}
 	if (total) console.log("Total: " + right + " of " + total + " right" + (bad ? ", " + bad + " photo(s) with problems" : ", nothing extra"));
 	await app.close();

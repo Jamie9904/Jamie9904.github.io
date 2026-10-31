@@ -659,9 +659,17 @@ async function page(browser, width, opts = {}) {
       const listed = photoLpns([["VLT004040265", null], ["VLT004040273", null], ["VLT004040355", "VL1004040355"], ["QUB001899186", null]].map(([a, b]) => ({ raw: a, first: a, again: b })));
       const speck = tidyReads(["VLT004040265", "VLT004040273", "VLT004040278", "DFA51400180", "QUB001899185", "QUB001899186", "QUB00189918", "RBY006292169"].map(a => ({ raw: a, first: a, again: null })));
       const speckAlone = tidyReads([{ raw: "DFA51400180", first: "DFA51400180", again: null }]);
-      return { R2: R2.join(), speck: speck.join(), ignored: speck.ignored.join(), speckAlone: speckAlone.join(), V, R, lone, keep10, lot, listed: listed.join(), skipped: listed.skipped.join() };
+      // GitHub's real reader on vlt.jpg gave CO1080002090, RR1004040021 and L1121100001 from specks.
+      document.getElementById("cmpPfx").value = "";
+      const junk = photoLpns(["VLT004040265", "VLT004040273", "VLT004040278", "CO1080002090", "RR1004040021", "L1121100001"].map(a => ({ raw: a, first: a, again: null })));
+      const note = readNote("Photo 1", junk, { added: 3, dup: 0 });
+      // A real 2-letter LPN among 3-letter ones is not added either, but the note names it.
+      const jd = photoLpns(["VLT004040265", "VLT004040273", "JD1234567890"].map(a => ({ raw: a, first: a, again: null })));
+      return { junk: junk.join(), junkOdd: junk.odd.join(), note, jd: jd.join(), jdOdd: jd.odd.join(), jdNote: readNote("Photo 1", jd, { added: 2, dup: 0 }), R2: R2.join(), speck: speck.join(), ignored: speck.ignored.join(), speckAlone: speckAlone.join(), V, R, lone, keep10, lot, listed: listed.join(), skipped: listed.skipped.join() };
     });
     check("a prefix letter read as a digit is put back to match the rest of the page (VL1… → VLT…)", s.V.join() === "VLT004040265,VLT004040273,VLT004040278,VLT004040355,VLT004040416,VLT004040418", s.V);
+    check("codes made from specks with a different prefix length are not added, and the note lists them (GitHub's reading of vlt.jpg)", s.junk === "VLT004040265,VLT004040273,VLT004040278" && s.junkOdd === "CO1080002090,RR1004040021,L1121100001" && /3 other readings \(CO1080002090, RR1004040021, L1121100001\) didn’t look like the other LPNs/.test(s.note) && /type it in the box/.test(s.note), s);
+    check("a real-looking 9-10 digit number with another prefix length is never dropped silently", s.jd === "VLT004040265,VLT004040273" && s.jdOdd === "JD1234567890" && /JD1234567890/.test(s.jdNote), s);
     check("a tie between 9 and 10 digits goes to the plainly printed reading (GitHub's reading of run.jpg)", s.R2 === "RUN001832813,RUN001832816,RUN001832832", s.R2);
     check("an O read as an extra 0 after the prefix is dropped to match the rest of the page", s.R.join() === "RUN001832813,RUN001832816,RUN001832832", s.R);
     check("a made-up code from speckles (DFA51400180 on a page of VLT numbers) is left out; a lone other LPN and a short reading of a page prefix are kept", s.speck === "VLT004040265,VLT004040273,VLT004040278,QUB001899185,QUB001899186,QUB00189918,RBY006292169" && s.ignored === "DFA51400180" && s.speckAlone === "DFA51400180", s);

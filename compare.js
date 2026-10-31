@@ -158,7 +158,7 @@ function tidyReads(items){
     // A first read taken straight from clean text (no letters turned into digits) counts double, so a tie between
     // two shapes goes to what was printed plainly.
     const add=(y,w)=>{const s=split(y);if(s){const k=s.p+"#"+s.d.length;shapes[k]=Math.max(shapes[k]||0,w)}};
-    [it.first,it.again].filter(Boolean).forEach(x=>{add(x,x===it.first&&raw===it.first?2:1);add(dropO(x,raw),1)});
+    [it.first,it.again].filter(Boolean).forEach(x=>{add(x,x===it.first&&raw===it.first&&!it.whole?2:1);add(dropO(x,raw),1)});
     Object.keys(shapes).forEach(k=>{const t=tally[k]||(tally[k]={w:0,n:0});t.w+=shapes[k];t.n++});
   });
   // For each prefix, the shape most numbers have (seen in at least two numbers) is the page's pattern.
@@ -203,8 +203,10 @@ function tidyReads(items){
 function photoLpns(items){
   const pf=getPfx(),out=[],skipped=[],t=tidyReads(items);
   if(t.ignored&&t.ignored.length)diag("ocr","Ignored as not looking like this page's LPNs: "+t.ignored.join(" "));
+  // Left out, but with 9 or 10 digits they could be real, so the note lists them for the user to check.
+  const odd=(t.ignored||[]).filter(x=>/^[A-Z]{1,3}[0-9]{9,10}$/.test(x));
   t.forEach(x=>{if(!pf.length||okPfx(x))out.push(x);else if(/^[A-Z]{1,3}[0-9]{9,10}$/.test(x))skipped.push(x)});
-  out.skipped=[...new Set(skipped)];
+  out.skipped=[...new Set(skipped)];out.odd=odd;
   return out;
 }
 async function ocrLpns(f){
@@ -229,7 +231,7 @@ async function ocrLpns(f){
       try{const a=extractLpns((await w.recognize(cropScaled(cv,wd.bbox))).data.text.replace(/\s+/g,""),true);if(a.length===1)again=a[0]}catch(e){}
       items.push({raw:wd.text,first:found[0],again:again});
     }
-    extractLpns(r.text,true).forEach(x=>{if(!orig.has(x))items.push({raw:x,first:x,again:null})});
+    extractLpns(r.text,true).forEach(x=>{if(!orig.has(x))items.push({raw:x,first:x,again:null,whole:true})});
     const out=photoLpns(items);
     window.__ocrItems=items; // kept for the photo reading check (tools/ocr-check)
     diag("ocr","Photo text read: "+(r.words||[]).length+" words, "+out.length+" LPNs found"+(out.skipped.length?", skipped for prefix: "+out.skipped.slice(0,10).join(" "):"")+". Text start: "+String(r.text||"").replace(/\s+/g," ").slice(0,150));
@@ -259,6 +261,8 @@ function readNote(tag,a,r,pdf){
   if(!a.length&&!sk.length)t+=pdf?" No LPNs could be read from this PDF.":" No LPNs could be read: try a closer, sharper photo in good light.";
   if(sk.length){const px=[...new Set(sk.map(x=>x.match(/^[A-Z]+/)[0]))];
     t+=" "+sk.length+" other number"+(sk.length===1?"":"s")+" ("+sk.slice(0,4).join(", ")+(sk.length>4?"…":"")+") start with "+px.join(", ")+", which "+(px.length===1?"isn’t":"aren’t")+" in the prefix list. If "+(sk.length===1?"it is an LPN":"they are LPNs")+", add "+px.join(", ")+" under Prefix presets (or clear the prefixes) and read the "+(pdf?"PDF":"photo")+" again."}
+  const od=(a&&a.odd)||[];
+  if(od.length)t+=" "+od.length+" other reading"+(od.length===1?"":"s")+" ("+od.slice(0,4).join(", ")+(od.length>4?"…":"")+") didn’t look like the other LPNs on this page, so "+(od.length===1?"it was":"they were")+" left out. If one is a real LPN, type it in the box.";
   return t;
 }
 $("cmpLogBtn").onclick=()=>{$("cmpLogFile").value="";$("cmpLogFile").click()};
@@ -387,7 +391,7 @@ $("cmpPhotoFile").onchange=async e=>{
     const tag="Photo "+(i+1),f=files[i];
     cmpMsg("Reading photo "+(i+1)+" of "+files.length+"…");
     diag("manifest","photo "+(i+1)+" of "+files.length+": "+(f.type||"?")+", "+Math.round((f.size||0)/1024)+" KB");
-    try{const a=await readPhoto(f),r=addNums(a);notes.push(readNote(tag,a,r));diag("manifest",tag+": found "+a.length+", added "+r.added+", already listed "+r.dup+(a.skipped&&a.skipped.length?", skipped "+a.skipped.join(" "):""))}
+    try{const a=await readPhoto(f),r=addNums(a);notes.push(readNote(tag,a,r));diag("manifest",tag+": found "+a.length+", added "+r.added+", already listed "+r.dup+(a.skipped&&a.skipped.length?", skipped "+a.skipped.join(" "):"")+(a.odd&&a.odd.length?", left out as unlike the page "+a.odd.join(" "):""))}
     catch(err){const m=(err&&err.message)||"error";notes.push(tag+": couldn’t be read ("+m+").");diag("manifest",tag+" failed: "+m)}
   }
   cmpMsg(notes.join(" ")+" Check the numbers below are correct, then compare."+oddNote("cmpNums"));
