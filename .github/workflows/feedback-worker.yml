@@ -43,7 +43,11 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          out=$(npx --yes wrangler@3.114.0 deploy 2>&1) || { echo "$out"; echo "::error title=Feedback Worker::deploy failed"; exit 1; }
+          out=$(npx --yes wrangler@3.114.0 deploy 2>&1) || {
+            echo "$out"
+            # Show Cloudflare's own reason in the notice, so it can be fixed without opening the log.
+            why=$(echo "$out" | sed 's/\x1b\[[0-9;]*m//g' | grep -A3 'ERROR' | grep -v '^\s*$' | tr '\n' ' ' | cut -c1-500)
+            echo "::error title=Feedback Worker deploy failed::$why"; exit 1; }
           echo "$out"
           url=$(echo "$out" | grep -oE 'https://[a-z0-9.-]+\.workers\.dev' | head -1)
           echo "::notice title=Feedback Worker address::$url"
