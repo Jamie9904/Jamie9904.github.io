@@ -66,15 +66,21 @@ def main():
     # The outputs folder's storage rewrites media files' metadata after they're saved, so for pictures and
     # video compare what they show (decoded frames), not the raw bytes.
     def same_media(p):
+        # Decodes main's own copy (not the working tree, which may hold a newer one that isn't live yet).
+        import tempfile
         try:
-            sums = []
-            for src in (os.path.join(top, p), os.path.join(SITE, p)):
-                r = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", src, "-map", "0:v:0", "-f", "md5", "-"], capture_output=True, text=True, timeout=60)
-                if r.returncode != 0 or not r.stdout.strip():
-                    return False
-                sums.append(r.stdout.strip())
-            return sums[0] == sums[1] and git(["cat-file", "-e", "refs/remotes/origin/main:" + p], top).returncode == 0 and \
-                git(["diff", "--quiet", "refs/remotes/origin/main", "--", p], top).returncode == 0
+            blob = subprocess.run(["git", "show", "refs/remotes/origin/main:" + p], cwd=top, capture_output=True, timeout=60)
+            if blob.returncode != 0:
+                return False
+            with tempfile.NamedTemporaryFile(suffix=os.path.splitext(p)[1]) as tf:
+                tf.write(blob.stdout); tf.flush()
+                sums = []
+                for src in (tf.name, os.path.join(SITE, p)):
+                    r = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", src, "-map", "0:v:0", "-f", "md5", "-"], capture_output=True, text=True, timeout=60)
+                    if r.returncode != 0 or not r.stdout.strip():
+                        return False
+                    sums.append(r.stdout.strip())
+            return sums[0] == sums[1]
         except Exception:
             return False
     stale = [p for p in stale if not (p in have and re.search(r"\.(mp4|webm|jpe?g|png)$", p, re.I) and same_media(p))]

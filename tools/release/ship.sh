@@ -67,7 +67,11 @@ say "Live site checked:"; notices "$hid"
 OUT=/mnt/user-data/outputs
 if [ -d "$OUT" ]; then
   S=$OUT/lpn-site; mkdir -p "$S"
-  git ls-files | grep -Ev '^(\.claude/|docs/|tools/|\.mcp\.json$)' | while read -r f; do mkdir -p "$S/$(dirname "$f")"; cp -f "$f" "$S/$f"; done
+  list=$(mktemp); git ls-files | grep -Ev '^(\.claude/|docs/|tools/|\.mcp\.json$)' > "$list"
+  while read -r f; do mkdir -p "$S/$(dirname "$f")"; cp -f "$f" "$S/$f"; done < "$list"
+  # Files the app no longer has are removed from the copy too.
+  (cd "$S" && find . -type f | sed 's|^\./||') | while read -r f; do grep -qxF "$f" "$list" || { rm -f "$S/$f"; say "removed $f from the download copy"; }; done
+  rm -f "$list"
   (cd "$OUT" && zip -qrFS lpn-site.zip lpn-site)
   say "Download copy and lpn-site.zip updated"
 fi
