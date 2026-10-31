@@ -26,7 +26,31 @@ const server = createServer((req, res) => {
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const base = `http://127.0.0.1:${server.address().port}`;
 const browser = await chromium.launch({ headless: true, args: ["--hide-scrollbars"] });
-const ctx = await browser.newContext({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: 1, serviceWorkers: "block" });
+const ctx = await browser.newContext({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: 1, serviceWorkers: "block", locale: "en-GB", timezoneId: "Europe/London" });
+// No camera here: Live scan gets a drawn barcode label as its camera, and a stand-in barcode reader that reports
+// whatever code window.__showCode puts on the label. Everything after that (adding the pallet with the selected
+// type, the "Added" message) is the app's own code.
+await ctx.addInitScript(() => {
+	if (!location.pathname.endsWith("/index.html")) return;
+	window.__showCode = null;
+	const cv = document.createElement("canvas"); cv.width = 640; cv.height = 480; const g = cv.getContext("2d");
+	let seed = 3; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+	const bars = Array.from({ length: 60 }, () => 2 + Math.floor(rnd() * 7));
+	const draw = () => {
+		g.fillStyle = "#5b6470"; g.fillRect(0, 0, 640, 480);
+		g.fillStyle = "#fff"; g.fillRect(90, 110, 460, 260);
+		const code = window.__showCode || "";
+		if (code) {
+			g.fillStyle = "#111"; let x = 120; bars.forEach((w, i) => { if (i % 2 === 0) g.fillRect(x, 140, w, 140); x += w; });
+			g.font = "bold 34px monospace"; g.textAlign = "center"; g.fillText(code, 320, 330);
+		} else { g.fillStyle = "#9aa3ad"; g.font = "28px sans-serif"; g.textAlign = "center"; g.fillText("…", 320, 250); }
+		requestAnimationFrame(draw);
+	};
+	draw();
+	const stream = cv.captureStream(30);
+	navigator.mediaDevices.getUserMedia = async () => stream;
+	window.BarcodeDetector = class { async detect() { return window.__showCode ? [{ rawValue: window.__showCode }] : []; } };
+});
 const page = await ctx.newPage();
 await page.route("**/*", (r) => (new URL(r.request().url()).hostname === "127.0.0.1" ? r.continue() : r.abort()));
 page.setDefaultTimeout(9000);
@@ -82,14 +106,22 @@ const SCENES = [
 		await stage("head", "Meet", "LPN Pallet Log");
 		await at(250); await stage("phone", true);
 	} },
-	{ id: "scan", hold: 6.6, run: async (at) => {
-		await stage("head", "Log pallets", "Scan or type.<br>Tap the type.");
-		const lpn = app.locator("#lpn");
-		await at(700); await tap(app.locator('#tyb button[data-t="FMCG"]'));
-		await at(1500); await tap(lpn);
-		await lpn.pressSequentially("VLT004037901", { delay: 55 }); await lpn.press("Enter");
-		await at(3900); await tap(lpn);
-		await lpn.pressSequentially("RUN0001830770", { delay: 55 }); await lpn.press("Enter");
+	{ id: "scan", hold: 8.4, run: async (at) => {
+		await stage("head", "Log pallets", "Pick the type,<br>then scan.");
+		const show = (c) => appFrame().evaluate((c) => { window.__showCode = c; }, c);
+		await at(500); await tap(app.locator('#tyb button[data-t="FMCG"]'));
+		await at(1400); await tap(app.locator("#scanBtn"));
+		await at(2100); await tap(app.locator("#scan"));
+		await app.locator("#scanbox").waitFor({ state: "visible" });
+		// Bring the whole camera box into view, with the "Added" line and Stop scanning under it.
+		await appFrame().evaluate(() => { const r = document.getElementById("stopscan").getBoundingClientRect(); window.scrollBy({ top: Math.max(0, r.bottom + 12 - innerHeight), behavior: "smooth" }); });
+		await at(3000); await show("VLT004037901");
+		await at(3700); await show(null);
+		await at(4500); await tap(app.locator('#tyb button[data-t="BB"]'));
+		await at(5400); await show("RUN0001830770");
+		await at(6100); await show(null);
+		await at(7600); await tap(app.locator("#stopscan"));
+		await sleep(300); await appFrame().evaluate(() => { if (document.getElementById("btnrow").classList.contains("open")) document.getElementById("scanBtn").click(); });
 	} },
 	{ id: "totals", hold: 4.7, run: async (at) => {
 		await stage("head", "Live totals", "You know what’s left.");
