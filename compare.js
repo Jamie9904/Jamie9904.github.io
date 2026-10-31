@@ -145,6 +145,8 @@ async function dropOcrCache(){try{for(const n of await caches.keys()){if(!/^lpn-
    close-up re-read), a letter read as a look-alike digit is put back (VL1004040355 → VLT004040355), and an O read
    as an extra 0 after the prefix is dropped (RUNO01… read as RUN0001…). Readings with nothing to compare against
    are kept as read. */
+/* LPN prefixes known to be real even though they differ from most: IM is used for a full pallet pick. */
+const KNOWN_PFX=["IM"];
 const LOOK={"0":"ODQU","1":"ILTJ","2":"Z","5":"S","6":"G","8":"B"};
 function tidyReads(items){
   const split=x=>{const m=/^([A-Z]+)([0-9]+)$/.exec(x||"");return m?{p:m[1],d:m[2]}:null};
@@ -154,12 +156,15 @@ function tidyReads(items){
   const dropO=(x,raw)=>{const s=split(x),m=/^([A-Z]{1,3})[ODQ]/.exec(raw);if(!s||!m||s.p!==m[1]||!/^0/.test(s.d)||s.d.length<10)return null;return s.p+s.d.slice(1)};
   items.forEach(it=>{
     const key=it.again||it.first;if(once.has(key))return;once.add(key);
-    const raw=String(it.raw||"").replace(/\s+/g,"").toUpperCase(),shapes=new Set();
-    [it.first,it.again].filter(Boolean).forEach(x=>[x,dropO(x,raw)].forEach(y=>{const s=split(y);if(s)shapes.add(s.p+"#"+s.d.length)}));
-    shapes.forEach(k=>{tally[k]=(tally[k]||0)+1});
+    const raw=String(it.raw||"").replace(/\s+/g,"").toUpperCase(),shapes={};
+    // A first read taken straight from clean text (no letters turned into digits) counts double, so a tie between
+    // two shapes goes to what was printed plainly.
+    const add=(y,w)=>{const s=split(y);if(s){const k=s.p+"#"+s.d.length;shapes[k]=Math.max(shapes[k]||0,w)}};
+    [it.first,it.again].filter(Boolean).forEach(x=>{add(x,x===it.first&&raw===it.first&&!it.whole?2:1);add(dropO(x,raw),1)});
+    Object.keys(shapes).forEach(k=>{const t=tally[k]||(tally[k]={w:0,n:0});t.w+=shapes[k];t.n++});
   });
-  // For each prefix, the shape most numbers have (seen at least twice) is the page's pattern.
-  const all=Object.keys(tally).filter(k=>tally[k]>=2).map(k=>({p:k.split("#")[0],n:+k.split("#")[1],c:tally[k]}));
+  // For each prefix, the shape most numbers have (seen in at least two numbers) is the page's pattern.
+  const all=Object.keys(tally).filter(k=>tally[k].n>=2).map(k=>({p:k.split("#")[0],n:+k.split("#")[1],c:tally[k].w}));
   const pats=all.filter(q=>!all.some(o=>o.p===q.p&&o.c>q.c)).sort((a,b)=>b.c-a.c);
   const fits=x=>{const s=split(x);return !!s&&pats.some(q=>q.p===s.p&&q.n===s.d.length)};
   const mend=x=>{
@@ -191,7 +196,9 @@ function tidyReads(items){
   // Speckles on the paper can read as a made-up code (DFA 51400180 on a page of VLT numbers). When the page has
   // a clear pattern, a reading with a prefix seen nowhere else on it and not 9 or 10 digits is left out.
   const out=[];out.ignored=[];
-  res.forEach(x=>{const s=split(x);if(pats.length&&s&&!pats.some(q=>q.p===s.p)&&(s.d.length<9||s.d.length>10))out.ignored.push(x);else out.push(x)});
+  // Also left out: a prefix of a different length from every prefix on the page (CO…, RR…, L… among VLT numbers).
+  // Known prefixes are always kept, however the rest of the page looks (IM: full pallet picks, two letters).
+  res.forEach(x=>{const s=split(x);if(pats.length&&s&&KNOWN_PFX.indexOf(s.p)<0&&!pats.some(q=>q.p===s.p)&&(s.d.length<9||s.d.length>10||!pats.some(q=>q.p.length===s.p.length)))out.ignored.push(x);else out.push(x)});
   return out;
 }
 /* Tidies one photo's readings, then keeps those with a prefix in the list; the rest that look like LPNs are
@@ -199,8 +206,10 @@ function tidyReads(items){
 function photoLpns(items){
   const pf=getPfx(),out=[],skipped=[],t=tidyReads(items);
   if(t.ignored&&t.ignored.length)diag("ocr","Ignored as not looking like this page's LPNs: "+t.ignored.join(" "));
+  // Left out, but with 9 or 10 digits they could be real, so the note lists them for the user to check.
+  const odd=(t.ignored||[]).filter(x=>/^[A-Z]{1,3}[0-9]{9,10}$/.test(x));
   t.forEach(x=>{if(!pf.length||okPfx(x))out.push(x);else if(/^[A-Z]{1,3}[0-9]{9,10}$/.test(x))skipped.push(x)});
-  out.skipped=[...new Set(skipped)];
+  out.skipped=[...new Set(skipped)];out.odd=odd;
   return out;
 }
 async function ocrLpns(f){
@@ -225,8 +234,9 @@ async function ocrLpns(f){
       try{const a=extractLpns((await w.recognize(cropScaled(cv,wd.bbox))).data.text.replace(/\s+/g,""),true);if(a.length===1)again=a[0]}catch(e){}
       items.push({raw:wd.text,first:found[0],again:again});
     }
-    extractLpns(r.text,true).forEach(x=>{if(!orig.has(x))items.push({raw:x,first:x,again:null})});
+    extractLpns(r.text,true).forEach(x=>{if(!orig.has(x))items.push({raw:x,first:x,again:null,whole:true})});
     const out=photoLpns(items);
+    window.__ocrItems=items; // kept for the photo reading check (tools/ocr-check)
     diag("ocr","Photo text read: "+(r.words||[]).length+" words, "+out.length+" LPNs found"+(out.skipped.length?", skipped for prefix: "+out.skipped.slice(0,10).join(" "):"")+". Text start: "+String(r.text||"").replace(/\s+/g," ").slice(0,150));
     return out;
   }finally{await w.terminate()}
@@ -254,6 +264,8 @@ function readNote(tag,a,r,pdf){
   if(!a.length&&!sk.length)t+=pdf?" No LPNs could be read from this PDF.":" No LPNs could be read: try a closer, sharper photo in good light.";
   if(sk.length){const px=[...new Set(sk.map(x=>x.match(/^[A-Z]+/)[0]))];
     t+=" "+sk.length+" other number"+(sk.length===1?"":"s")+" ("+sk.slice(0,4).join(", ")+(sk.length>4?"…":"")+") start with "+px.join(", ")+", which "+(px.length===1?"isn’t":"aren’t")+" in the prefix list. If "+(sk.length===1?"it is an LPN":"they are LPNs")+", add "+px.join(", ")+" under Prefix presets (or clear the prefixes) and read the "+(pdf?"PDF":"photo")+" again."}
+  const od=(a&&a.odd)||[];
+  if(od.length)t+=" "+od.length+" other reading"+(od.length===1?"":"s")+" ("+od.slice(0,4).join(", ")+(od.length>4?"…":"")+") didn’t look like the other LPNs on this page, so "+(od.length===1?"it was":"they were")+" left out. If one is a real LPN, type it in the box.";
   return t;
 }
 $("cmpLogBtn").onclick=()=>{$("cmpLogFile").value="";$("cmpLogFile").click()};
@@ -382,7 +394,7 @@ $("cmpPhotoFile").onchange=async e=>{
     const tag="Photo "+(i+1),f=files[i];
     cmpMsg("Reading photo "+(i+1)+" of "+files.length+"…");
     diag("manifest","photo "+(i+1)+" of "+files.length+": "+(f.type||"?")+", "+Math.round((f.size||0)/1024)+" KB");
-    try{const a=await readPhoto(f),r=addNums(a);notes.push(readNote(tag,a,r));diag("manifest",tag+": found "+a.length+", added "+r.added+", already listed "+r.dup+(a.skipped&&a.skipped.length?", skipped "+a.skipped.join(" "):""))}
+    try{const a=await readPhoto(f),r=addNums(a);notes.push(readNote(tag,a,r));diag("manifest",tag+": found "+a.length+", added "+r.added+", already listed "+r.dup+(a.skipped&&a.skipped.length?", skipped "+a.skipped.join(" "):"")+(a.odd&&a.odd.length?", left out as unlike the page "+a.odd.join(" "):""))}
     catch(err){const m=(err&&err.message)||"error";notes.push(tag+": couldn’t be read ("+m+").");diag("manifest",tag+" failed: "+m)}
   }
   cmpMsg(notes.join(" ")+" Check the numbers below are correct, then compare."+oddNote("cmpNums"));

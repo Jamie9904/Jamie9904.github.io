@@ -648,6 +648,8 @@ async function page(browser, width, opts = {}) {
     s = await q.evaluate(() => {
       const V = tidyReads([["VLT004040265", "VLT004040265"], ["VLT004040273", "VLT004040273"], ["VLT004040278", "VLT004040278"], ["VLT004040355", "VL1004040355"], ["VLT004040416", "VLT004040416"], ["VLT004040418", "VLT004040418"]].map(([a, b], i) => ({ raw: a, first: a, again: b })));
       const R = tidyReads([{ raw: "RUNOO1832813", first: "RUN001832813", again: null }, { raw: "RUNO001832816", first: "RUN0001832816", again: "RUN0001832816" }, { raw: "RUNO01832832", first: "RUN001832832", again: "RUN0001832832" }]);
+      // As GitHub's real photo reader saw run.jpg: an O between RUN and the 0s on two of three numbers.
+      const R2 = tidyReads([{ raw: "RUNO001832813", first: "RUN0001832813", again: "RUN001832813" }, { raw: "RUN001832816", first: "RUN001832816", again: "RUN0001832816" }, { raw: "RUNO001832832", first: "RUN0001832832", again: "RUN0001832832" }]);
       const lone = tidyReads([{ raw: "RUN0001830763", first: "RUN0001830763", again: null }]);
       const keep10 = tidyReads([{ raw: "RUN0001830763", first: "RUN0001830763", again: null }, { raw: "RUN001832813", first: "RUN001832813", again: null }, { raw: "RUN001832832", first: "RUN001832832", again: null }]);
       // A prefix with an O in it and a real extra-0 number must be left alone.
@@ -657,9 +659,20 @@ async function page(browser, width, opts = {}) {
       const listed = photoLpns([["VLT004040265", null], ["VLT004040273", null], ["VLT004040355", "VL1004040355"], ["QUB001899186", null]].map(([a, b]) => ({ raw: a, first: a, again: b })));
       const speck = tidyReads(["VLT004040265", "VLT004040273", "VLT004040278", "DFA51400180", "QUB001899185", "QUB001899186", "QUB00189918", "RBY006292169"].map(a => ({ raw: a, first: a, again: null })));
       const speckAlone = tidyReads([{ raw: "DFA51400180", first: "DFA51400180", again: null }]);
-      return { speck: speck.join(), ignored: speck.ignored.join(), speckAlone: speckAlone.join(), V, R, lone, keep10, lot, listed: listed.join(), skipped: listed.skipped.join() };
+      // GitHub's real reader on vlt.jpg gave CO1080002090, RR1004040021 and L1121100001 from specks.
+      document.getElementById("cmpPfx").value = "";
+      const junk = photoLpns(["VLT004040265", "VLT004040273", "VLT004040278", "CO1080002090", "RR1004040021", "L1121100001"].map(a => ({ raw: a, first: a, again: null })));
+      const note = readNote("Photo 1", junk, { added: 3, dup: 0 });
+      // A real 2-letter LPN among 3-letter ones is not added either, but the note names it.
+      const jd = photoLpns(["VLT004040265", "VLT004040273", "JD1234567890"].map(a => ({ raw: a, first: a, again: null })));
+      const im = photoLpns(["VLT004040265", "VLT004040273", "IM1234567890", "IM12345678"].map(a => ({ raw: a, first: a, again: null })));
+      return { im: im.join(), junk: junk.join(), junkOdd: junk.odd.join(), note, jd: jd.join(), jdOdd: jd.odd.join(), jdNote: readNote("Photo 1", jd, { added: 2, dup: 0 }), R2: R2.join(), speck: speck.join(), ignored: speck.ignored.join(), speckAlone: speckAlone.join(), V, R, lone, keep10, lot, listed: listed.join(), skipped: listed.skipped.join() };
     });
     check("a prefix letter read as a digit is put back to match the rest of the page (VL1… → VLT…)", s.V.join() === "VLT004040265,VLT004040273,VLT004040278,VLT004040355,VLT004040416,VLT004040418", s.V);
+    check("codes made from specks with a different prefix length are not added, and the note lists them (GitHub's reading of vlt.jpg)", s.junk === "VLT004040265,VLT004040273,VLT004040278" && s.junkOdd === "CO1080002090,RR1004040021,L1121100001" && /3 other readings \(CO1080002090, RR1004040021, L1121100001\) didn’t look like the other LPNs/.test(s.note) && /type it in the box/.test(s.note), s);
+    check("IM numbers (full pallet picks, two letters) are always kept among 3-letter LPNs", s.im === "VLT004040265,VLT004040273,IM1234567890,IM12345678", s.im);
+    check("a real-looking 9-10 digit number with another prefix length is never dropped silently", s.jd === "VLT004040265,VLT004040273" && s.jdOdd === "JD1234567890" && /JD1234567890/.test(s.jdNote), s);
+    check("a tie between 9 and 10 digits goes to the plainly printed reading (GitHub's reading of run.jpg)", s.R2 === "RUN001832813,RUN001832816,RUN001832832", s.R2);
     check("an O read as an extra 0 after the prefix is dropped to match the rest of the page", s.R.join() === "RUN001832813,RUN001832816,RUN001832832", s.R);
     check("a made-up code from speckles (DFA51400180 on a page of VLT numbers) is left out; a lone other LPN and a short reading of a page prefix are kept", s.speck === "VLT004040265,VLT004040273,VLT004040278,QUB001899185,QUB001899186,QUB00189918,RBY006292169" && s.ignored === "DFA51400180" && s.speckAlone === "DFA51400180", s);
     check("a real extra-0 number with an O in its prefix (LOT) is left alone", s.lot[0] === "LOT0123456789", s.lot);
@@ -787,6 +800,23 @@ async function page(browser, width, opts = {}) {
       for (let i = 0; i < 2; i++) { try { return { found: await ocrLpns(new File([blob], "p.png", { type: "image/png" })), tries: i + 1 }; } catch (e) { if (i) return { err: e.message }; } }
     });
     check("real photo reading finds an LPN in a picture", Array.isArray(s.found) && s.found.includes("VLT003977037"), s);
+    // Real manifest photos from the user (tools/ocr-check, address boxes cut off), read exactly as on a phone.
+    {
+      const oc = require(path.join(ROOT, "tools", "ocr-check", "check.js"));
+      let right = 0, total = 0; const probs = [];
+      for (const ph of oc.load(path.join(ROOT, "tools", "ocr-check"))) {
+        const r = await oc.readJs(p, ph.file, "");
+        if (r.err) { probs.push(ph.name + ": " + r.err); total += ph.want.length; continue; }
+        const sc = oc.score(ph.want, r.found); right += sc.right.length; total += ph.want.length;
+        if (sc.missing.length || sc.extra.length) {
+          probs.push(ph.name + (sc.missing.length ? " missing " + sc.missing.join(" ") : "") + (sc.extra.length ? " extra " + sc.extra.join(" ") : ""));
+          // What the reader saw for each number (raw text, first read, close-up), to work out a fix.
+          if (process.env.GITHUB_ACTIONS) console.log("::notice title=Photo reading detail " + ph.name + "::" + (r.items || []).map(i => i.raw.replace(/\s+/g, "_") + ">" + i.first + ">" + (i.again || "-")).join(" ").slice(0, 900));
+        }
+      }
+      if (process.env.GITHUB_ACTIONS) console.log("::notice title=Photo reading::" + right + " of " + total + " LPNs right on the user's manifest photos" + (probs.length ? "; " + probs.join("; ") : ", nothing extra"));
+      check("real photo reading gets every LPN on the user's manifest photos, and nothing extra", right === total && !probs.length, { right, total, probs });
+    }
     await p.ctx.close();
 
     // The app's Content-Security-Policy (index.html): every flow must work under it with nothing blocked.
