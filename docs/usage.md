@@ -128,7 +128,7 @@ The problem log (see [Problem report](#problem-report)) is never put in a backup
 
 A note on the form says reports go to Jamie's private GitHub, through a Cloudflare server, and that the problem report includes the LPNs and manifest numbers on the phone, file names, the start of text read from photos, and the browser and screen size.
 
-**Not set up yet.** Until the reporting server is online, **Send** says "Reporting isn’t set up yet. Use Download problem report below and send the file to Jamie instead." (see [installation](installation.md#feedback-worker-report-a-problem-or-idea)).
+**Not set up yet.** The reporting server is online (since build 43). If the app's reporting address is ever empty, **Send** says "Reporting isn’t set up yet. Use Download problem report below and send the file to Jamie instead." (see [installation](installation.md#feedback-worker-report-a-problem-or-idea)).
 
 **No signal.** If the phone is offline, or the server is busy, the report is kept on the phone and sent when it is back online (when the browser reports it is online, and 4 seconds after the app opens). The message says "No signal or the server is busy: saved on this phone, and it will be sent when you’re back online." Photos are not kept: the message then adds that the photo should be sent again when there is signal. At most 5 reports (about 300 KB in all) can wait; past that it says there's no room and suggests trying again with signal or using Download problem report. When Settings opens with reports waiting, it says how many. A report the server refuses (for example too long) shows the server's reason and is not kept. Waiting reports belong to the phone: they are never put in a backup or taken from one.
 

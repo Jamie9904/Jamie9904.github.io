@@ -2,7 +2,7 @@
 
 ## Overview
 
-A client-only progressive web app. There is no backend for the app itself: the browser renders the page, holds the state, builds the export files and stores everything in `localStorage`. GitHub Pages only serves static files. The one exception is **Report a problem or idea**, which posts to a small Cloudflare Worker (`tools/feedback-worker`, see [Feedback Worker](#feedback-worker-toolsfeedback-worker)); until that is online (`FEEDBACK_URL` empty) the app sends nothing.
+A client-only progressive web app. There is no backend for the app itself: the browser renders the page, holds the state, builds the export files and stores everything in `localStorage`. GitHub Pages only serves static files. The one exception is **Report a problem or idea**, which posts to a small Cloudflare Worker (`tools/feedback-worker`, see [Feedback Worker](#feedback-worker-toolsfeedback-worker)); it is online at `https://lpn-feedback.jamie9904.workers.dev` since build 43; it is the only server the app sends data to.
 
 ```
 ┌──────────────── index.html ────────────────┐
@@ -196,7 +196,7 @@ The form is in `HELP.settings` under `<h3 id="fbHead">`: radio buttons `fbKind` 
 - `fbPost(item)`: `POST` JSON to `FEEDBACK_URL`. A network failure, or an answer of 5xx or 429, throws with `retry: true`; any other failure throws with the server's `error` text (cut to 300 characters) and `retry: false`.
 - **Retry:** the photo is removed (with a note asking to send it again), the report is cut to 60,000 characters, an `id` (time and random letters, base 36) is added, and the item is appended to `fbQueue()` and saved with `fbSave()`. If `fbSave()` refuses (over 5 items or 300,000 characters) the message says there is no room. A refused report (no retry) shows the server's message and isn't kept.
 - `fbFlush()`: does nothing if `FEEDBACK_URL` is empty, a flush is already running (`fbBusy`) or the browser is offline. It sends the first queued item (without its `id`), then reads the list again from `localStorage` before removing that `id`, so an item saved by **Send** during the flush isn't lost. It stops at the first retryable failure; a refused item is logged and removed. It runs on the window `online` event and 4 seconds after `panels.js` loads.
-- `FEEDBACK_URL` is `""` in `panels.js` until the Worker is online. Setting it also needs the Worker's exact origin added to `connect-src` in the security policy (see below); neither is done yet.
+- `FEEDBACK_URL` in `panels.js` is `https://lpn-feedback.jamie9904.workers.dev/report` since build 43, when the Worker went online; its origin is allowed in `connect-src` (see Security policy). If it is ever set back to `""`, **Send** shows the "isn’t set up yet" message above and `fbFlush()` does nothing.
 
 The prefix preset controls (`#cmpPreset`, `#cmpPfx`, preset save/delete/download buttons) sit inside a closed `<details id="pfxBox">` below the two steps (`.cmpsteps`). `pfxSummary()` in `panels.js` writes the current choice into `#pfxSum` in the summary line: "(all prefixes)" when the list is empty, the preset name when the list matches a named preset, otherwise the typed list. It runs on `change`/`input` of both fields and from `syncSelect()` in `compare.js` (guarded with `typeof pfxSummary === "function"`, since `panels.js` loads later).
 
@@ -247,7 +247,9 @@ A Cloudflare Worker (`worker.mjs`, configured by `wrangler.toml`: name `lpn-feed
 - **GitHub failures:** 401, 403, 429, 5xx or no answer → 503 ("It will be tried again", so the app keeps the report); any other status → 422, which the app doesn't retry.
 - Answer: `{ok:true, issue, note}` or `{ok:false, error}`.
 
-`.github/workflows/feedback-worker.yml` (**Deploy feedback Worker**) deploys it, by hand (`workflow_dispatch`) or on a push to `main` that changes `tools/feedback-worker/**` or the workflow. Its first step checks for the three repository secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` and `FEEDBACK_GITHUB_TOKEN`: on a push with any missing it skips with a notice; run by hand it fails naming the missing ones. Then `npx wrangler@3.114.0 deploy` (the address goes in a notice), a separate step that is the only one given `FEEDBACK_GITHUB_TOKEN` and passes it on stdin to `wrangler secret put GITHUB_TOKEN`, and a check that `OPTIONS <address>/report` with the app's origin answers 204.
+`.github/workflows/feedback-worker.yml` (**Deploy feedback Worker**) deploys it, by hand (`workflow_dispatch`) or on a push to `main` that changes `tools/feedback-worker/**` or the workflow. Its first step checks for the three repository secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` and `FEEDBACK_GITHUB_TOKEN`: on a push with any missing it skips with a notice; run by hand it fails naming the missing ones. Then `npx wrangler@3.114.0 deploy` (the address goes in a notice; if the deploy fails, the lines after `ERROR` in wrangler's output, with colour codes removed and cut to 500 characters, become the error notice "Feedback Worker deploy failed", so Cloudflare's own reason shows without opening the log), a separate step that is the only one given `FEEDBACK_GITHUB_TOKEN` and passes it on stdin to `wrangler secret put GITHUB_TOKEN`, and a check that `OPTIONS <address>/report` with the app's origin answers 204. That check tries up to 24 times, 5 seconds apart (about 2 minutes), because a new workers.dev address can take a while to start answering; it then gives a notice with the `/report` address, or fails with "didn't answer after 2 minutes (HTTP …)" and a hint to run it again in a few minutes.
+
+Run by hand, the workflow has a tick box input `test_report` ("Also send a test report", off by default). When ticked, a last step posts `{kind: "idea", text: "Test report from the deploy check. Safe to close.", app: "LPN Pallet Log"}` to `/report` with the app's origin. A 200 gives a notice that a test issue was made in `lpn-feedback`; any other answer fails with the HTTP code, the Worker's answer and a reminder that the GitHub token needs Issues read and write on `lpn-feedback`.
 
 ## Library loading and fingerprints (SRI)
 
@@ -262,7 +264,7 @@ pdf.js has no entry: it is loaded with `import()` (see Opening PDFs), not throug
 `index.html` sets a Content Security Policy with a `<meta http-equiv="Content-Security-Policy">` tag in `<head>`, before the five app scripts. The exact text:
 
 ```
-default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com 'wasm-unsafe-eval'; worker-src 'self' blob:; child-src 'self' blob:; connect-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://tessdata.projectnaptha.com; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-src blob:; object-src blob:; base-uri 'none'; form-action 'none'
+default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com 'wasm-unsafe-eval'; worker-src 'self' blob:; child-src 'self' blob:; connect-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://tessdata.projectnaptha.com https://lpn-feedback.jamie9904.workers.dev; img-src 'self' data: blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-src blob:; object-src blob:; base-uri 'none'; form-action 'none'
 ```
 
 What each part is for in this app:
@@ -271,14 +273,14 @@ What each part is for in this app:
 |---|---|
 | `script-src` | The app's own scripts; `loadScript()` and `loadZX()` from cdnjs and jsDelivr; pdf.js `import()` from jsDelivr or unpkg; `'wasm-unsafe-eval'` for Tesseract's WebAssembly engine (no general eval) |
 | `worker-src`, `child-src` | The pdf.js and Tesseract background workers (`child-src` for older Safari) |
-| `connect-src` | `fetch` of app files and `sw.js` (`appBuildP`), library downloads made by the service worker, Tesseract's engine and its language data from `tessdata.projectnaptha.com` |
+| `connect-src` | `fetch` of app files and `sw.js` (`appBuildP`), library downloads made by the service worker, Tesseract's engine and its language data from `tessdata.projectnaptha.com`; `fbPost()` to the feedback Worker (`https://lpn-feedback.jamie9904.workers.dev`, that exact origin only, since build 43) |
 | `img-src` | The logo (stored as a `data:` image), canvases turned into images |
 | `font-src` | The self-hosted fonts in `fonts/` |
 | `style-src 'unsafe-inline'` | `style` attributes and `style.cssText` set from code |
 | `frame-src`, `object-src` | `printBuf()` loads the PDF into a hidden `<iframe>` from a `blob:` address |
 | `base-uri`, `form-action` | Set to `'none'`: nothing can change the base address or submit a form |
 
-The feedback Worker's address is not in `connect-src` yet, so `fbPost()` would be blocked until it is added together with `FEEDBACK_URL`.
+`connect-src` names the feedback Worker's exact origin rather than all of `*.workers.dev`, so the page can't send data to any other Worker. `tests/run.js` checks that the origin of `FEEDBACK_URL` is in `connect-src` (see testing).
 
 Older Safari doesn't understand `'wasm-unsafe-eval'`, so reading photos needs iOS 16 or newer on an iPhone. A new library host, or a library that fetches from a new place, must be added to the policy, or it is blocked. See [decisions](decisions.md#content-security-policy-in-the-page-build-31).
 

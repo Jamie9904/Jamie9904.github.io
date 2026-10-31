@@ -99,7 +99,7 @@
 - `tests/`, `tools/`, `package.json`, `DESIGN.md` and `README.md` are on `main`, so GitHub Pages publishes them alongside the app. `tools/` is kept out of the site zip and the download copy (`outputs_reminder.py` doesn't count it as a site file).
 - `tools/demo-video/` only reads the app files; its output goes to `media/demo.mp4` and `media/demo-poster.jpg`, which the app does use, and to `tools/demo-video/screens.json`, which only `tests/run.js` reads.
 - `tools/ocr-check/` only reads the app files and its own photos; `tests/run.js` loads `check.js` to read the photos on GitHub, and `health.yml` runs it with `--url=` against the live site.
-- `tools/feedback-worker/` runs on Cloudflare, not on GitHub Pages; the app only talks to it through `FEEDBACK_URL` in `panels.js` (empty until it is online). `tests/run.js` imports `worker.mjs` to check it.
+- `tools/feedback-worker/` runs on Cloudflare, not on GitHub Pages; the app only talks to it through `FEEDBACK_URL` in `panels.js` (`https://lpn-feedback.jamie9904.workers.dev/report` since build 43). `tests/run.js` imports `worker.mjs` to check it.
 - `tools/release/ship.sh` only runs git and `gh` commands and copies files to the download folder; nothing in the app or the checks uses it.
 - `.github/`, `.claude/` and `.mcp.json` are on `main` but not published: Jekyll, which GitHub Pages uses to build the site, leaves out files and folders whose names start with a dot.
 - `docs/`, and the version of `README.md` that goes with it, live only on the `docs` branch (`main` has its own `README.md`). Pages publishes from `main`, so they are not on the site. The git guard in `.claude/hooks/lpn_git_guard.py` blocks committing `docs/` files on `main` and merging or pushing `docs` into `main`.
