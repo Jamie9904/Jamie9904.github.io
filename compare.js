@@ -154,12 +154,15 @@ function tidyReads(items){
   const dropO=(x,raw)=>{const s=split(x),m=/^([A-Z]{1,3})[ODQ]/.exec(raw);if(!s||!m||s.p!==m[1]||!/^0/.test(s.d)||s.d.length<10)return null;return s.p+s.d.slice(1)};
   items.forEach(it=>{
     const key=it.again||it.first;if(once.has(key))return;once.add(key);
-    const raw=String(it.raw||"").replace(/\s+/g,"").toUpperCase(),shapes=new Set();
-    [it.first,it.again].filter(Boolean).forEach(x=>[x,dropO(x,raw)].forEach(y=>{const s=split(y);if(s)shapes.add(s.p+"#"+s.d.length)}));
-    shapes.forEach(k=>{tally[k]=(tally[k]||0)+1});
+    const raw=String(it.raw||"").replace(/\s+/g,"").toUpperCase(),shapes={};
+    // A first read taken straight from clean text (no letters turned into digits) counts double, so a tie between
+    // two shapes goes to what was printed plainly.
+    const add=(y,w)=>{const s=split(y);if(s){const k=s.p+"#"+s.d.length;shapes[k]=Math.max(shapes[k]||0,w)}};
+    [it.first,it.again].filter(Boolean).forEach(x=>{add(x,x===it.first&&raw===it.first?2:1);add(dropO(x,raw),1)});
+    Object.keys(shapes).forEach(k=>{const t=tally[k]||(tally[k]={w:0,n:0});t.w+=shapes[k];t.n++});
   });
-  // For each prefix, the shape most numbers have (seen at least twice) is the page's pattern.
-  const all=Object.keys(tally).filter(k=>tally[k]>=2).map(k=>({p:k.split("#")[0],n:+k.split("#")[1],c:tally[k]}));
+  // For each prefix, the shape most numbers have (seen in at least two numbers) is the page's pattern.
+  const all=Object.keys(tally).filter(k=>tally[k].n>=2).map(k=>({p:k.split("#")[0],n:+k.split("#")[1],c:tally[k].w}));
   const pats=all.filter(q=>!all.some(o=>o.p===q.p&&o.c>q.c)).sort((a,b)=>b.c-a.c);
   const fits=x=>{const s=split(x);return !!s&&pats.some(q=>q.p===s.p&&q.n===s.d.length)};
   const mend=x=>{

@@ -648,6 +648,8 @@ async function page(browser, width, opts = {}) {
     s = await q.evaluate(() => {
       const V = tidyReads([["VLT004040265", "VLT004040265"], ["VLT004040273", "VLT004040273"], ["VLT004040278", "VLT004040278"], ["VLT004040355", "VL1004040355"], ["VLT004040416", "VLT004040416"], ["VLT004040418", "VLT004040418"]].map(([a, b], i) => ({ raw: a, first: a, again: b })));
       const R = tidyReads([{ raw: "RUNOO1832813", first: "RUN001832813", again: null }, { raw: "RUNO001832816", first: "RUN0001832816", again: "RUN0001832816" }, { raw: "RUNO01832832", first: "RUN001832832", again: "RUN0001832832" }]);
+      // As GitHub's real photo reader saw run.jpg: an O between RUN and the 0s on two of three numbers.
+      const R2 = tidyReads([{ raw: "RUNO001832813", first: "RUN0001832813", again: "RUN001832813" }, { raw: "RUN001832816", first: "RUN001832816", again: "RUN0001832816" }, { raw: "RUNO001832832", first: "RUN0001832832", again: "RUN0001832832" }]);
       const lone = tidyReads([{ raw: "RUN0001830763", first: "RUN0001830763", again: null }]);
       const keep10 = tidyReads([{ raw: "RUN0001830763", first: "RUN0001830763", again: null }, { raw: "RUN001832813", first: "RUN001832813", again: null }, { raw: "RUN001832832", first: "RUN001832832", again: null }]);
       // A prefix with an O in it and a real extra-0 number must be left alone.
@@ -657,9 +659,10 @@ async function page(browser, width, opts = {}) {
       const listed = photoLpns([["VLT004040265", null], ["VLT004040273", null], ["VLT004040355", "VL1004040355"], ["QUB001899186", null]].map(([a, b]) => ({ raw: a, first: a, again: b })));
       const speck = tidyReads(["VLT004040265", "VLT004040273", "VLT004040278", "DFA51400180", "QUB001899185", "QUB001899186", "QUB00189918", "RBY006292169"].map(a => ({ raw: a, first: a, again: null })));
       const speckAlone = tidyReads([{ raw: "DFA51400180", first: "DFA51400180", again: null }]);
-      return { speck: speck.join(), ignored: speck.ignored.join(), speckAlone: speckAlone.join(), V, R, lone, keep10, lot, listed: listed.join(), skipped: listed.skipped.join() };
+      return { R2: R2.join(), speck: speck.join(), ignored: speck.ignored.join(), speckAlone: speckAlone.join(), V, R, lone, keep10, lot, listed: listed.join(), skipped: listed.skipped.join() };
     });
     check("a prefix letter read as a digit is put back to match the rest of the page (VL1… → VLT…)", s.V.join() === "VLT004040265,VLT004040273,VLT004040278,VLT004040355,VLT004040416,VLT004040418", s.V);
+    check("a tie between 9 and 10 digits goes to the plainly printed reading (GitHub's reading of run.jpg)", s.R2 === "RUN001832813,RUN001832816,RUN001832832", s.R2);
     check("an O read as an extra 0 after the prefix is dropped to match the rest of the page", s.R.join() === "RUN001832813,RUN001832816,RUN001832832", s.R);
     check("a made-up code from speckles (DFA51400180 on a page of VLT numbers) is left out; a lone other LPN and a short reading of a page prefix are kept", s.speck === "VLT004040265,VLT004040273,VLT004040278,QUB001899185,QUB001899186,QUB00189918,RBY006292169" && s.ignored === "DFA51400180" && s.speckAlone === "DFA51400180", s);
     check("a real extra-0 number with an O in its prefix (LOT) is left alone", s.lot[0] === "LOT0123456789", s.lot);
