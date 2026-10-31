@@ -16,7 +16,7 @@
 
 A goods-in web app for documenting pallet deliveries. Staff scan or type each pallet's LPN (licence plate number), tag its type (Brown Box, FMCG, FPP, Mixed) and whether it carries an FSDU, then export a print-ready Excel or PDF log. Every export notes which app version and build made it.
 
-It also checks a delivery against the supplier's manifest. Manifest numbers can come from photos (OCR), PDFs or typing, and while they are loaded the log counts them off live as pallets are scanned. Photos are cleaned up against the paper around each point and the numbers on each page are matched to each other to fix common misreads. Each photo or PDF read says how many LPNs it found, how many were new and which numbers the prefix list left out.
+It also checks a delivery against the supplier's manifest. Manifest numbers can come from photos (OCR), PDFs or typing, and while they are loaded the log counts them off live as pallets are scanned. Photos are cleaned up against the paper around each point and the numbers on each page are matched to each other to fix common misreads; readings that don't look like the page's LPNs are left out and, if they could be real, named so they can be typed in. Each photo or PDF read says how many LPNs it found, how many were new and which numbers the prefix list left out.
 
 - Runs entirely in the browser: no server, no accounts. Data stays on the device.
 - Installable on Android and iPhone as a home-screen app, and works offline after the first visit.
@@ -51,7 +51,7 @@ Then: fill in the delivery details → type `RUN000000001` into the LPN box → 
 | Storage | `localStorage` (keys prefixed `lpn`) |
 | Fonts | Atkinson Hyperlegible, IBM Plex Mono (self-hosted, SIL OFL) |
 | Hosting | GitHub Pages |
-| Checks | Node.js + Playwright, with the real ExcelJS, jsPDF, pdf.js, pdf-lib, Tesseract.js and ZXing at the app's versions (every flow also checked under the security policy); run by GitHub Actions on every push and in a weekly health check, which also checks the libraries for security advisories (osv.dev) and their fingerprints, and that the live demo video plays |
+| Checks | Node.js + Playwright, with the real ExcelJS, jsPDF, pdf.js, pdf-lib, Tesseract.js and ZXing at the app's versions (every flow also checked under the security policy); run by GitHub Actions on every push and in a weekly health check, which also checks the libraries for security advisories (osv.dev) and their fingerprints, and that the live demo video plays; the checks on GitHub also read four real manifest photos with the real Tesseract.js and fail on any wrong LPN |
 
 Libraries load only when a feature first needs them: from cdnjs with jsDelivr as fallback, except pdf.js, which loads as a module from jsDelivr with unpkg as fallback. Script-tag libraries carry an integrity hash (`SRI` in `core.js`), so the browser refuses a changed file. A Content Security Policy in `index.html` limits scripts to the site, cdnjs, jsDelivr and unpkg (reading photos needs iOS 16+ on an iPhone because of it).
 
@@ -87,6 +87,7 @@ A single page (`index.html`) loads five classic scripts in a fixed order that sh
 ├── DESIGN.md           design system notes
 ├── tests/              run.js (automatic checks), advisories.js + advisories-accepted.json (security advisories), sri.js (library fingerprints)
 ├── tools/demo-video/   recorder that re-makes the Guide demo video from the current app (sh tools/demo-video/make.sh)
+├── tools/ocr-check/    photo reading check on the user's real manifest photos (node tools/ocr-check/check.js)
 ├── package.json        test dependencies only (Playwright and the export libraries)
 ├── .github/workflows/  test.yml (checks on every push), health.yml (weekly health check)
 ├── .mcp.json           Context7 library documentation for Claude Code

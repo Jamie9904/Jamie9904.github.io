@@ -74,6 +74,17 @@ sh tools/demo-video/make.sh
 
 A check in `tests/run.js` fails if the video is over 3 MB. Re-record when `npm test` prints that the screens differ from the demo video (on GitHub, the "Demo video may be out of date" warning) and the change shows in the video. The weekly health check also downloads the live video and checks it plays.
 
+### Checking photo reading on real manifest photos
+
+`tools/ocr-check/` scores the app's photo reading on the user's four manifest photos (`photos/`, address boxes cut off) against `expected.json` (18 LPNs). It needs Node.js with Playwright, and either the Tesseract 5 command (`cli` engine, offline) or internet access to `cdn.jsdelivr.net` and the tessdata download (`js` engine, the app's real `ocrLpns()`):
+
+```bash
+NODE_PATH=$(npm root -g) node tools/ocr-check/check.js
+NODE_PATH=$(npm root -g) node tools/ocr-check/check.js --prefix=VLT
+```
+
+See [testing.md](testing.md#photo-reading-check-toolsocr-check) for the options. On GitHub the checks read the same photos with the real tesseract.js. Like the rest of `tools/`, it is not part of the site zip.
+
 ### Guards when working with Claude Code
 
 `.claude/settings.json` registers hooks that run when a Claude Code session starts, edits files or runs git commands in this repository:
@@ -90,13 +101,13 @@ A check in `tests/run.js` fails if the video is over 3 MB. Re-record when `npm t
 
 ### Agents for Claude Code
 
-`.claude/agents/` holds helpers that Claude Code can hand work to (`docs-updater` is the only one given edit tools): `export-reviewer` (export changes), `phone-layout-checker` (layout on phone widths), `release-reviewer` (the diff before a release), `docs-updater` (this documentation on the `docs` branch) and `security-reviewer`. `security-reviewer` checks files and text from outside (supplier PDFs, spreadsheets, backups, photos, presets) and the CDN libraries, and is used when import code, library loading, `package.json` versions or `index.html` change, and before a library upgrade.
+`.claude/agents/` holds helpers that Claude Code can hand work to (`docs-updater` is the only one given edit tools): `export-reviewer` (export changes), `phone-layout-checker` (layout on phone widths), `release-reviewer` (the diff before a release), `docs-updater` (this documentation on the `docs` branch), `security-reviewer` and `ocr-reviewer`. `security-reviewer` checks files and text from outside (supplier PDFs, spreadsheets, backups, photos, presets) and the CDN libraries, and is used when import code, library loading, `package.json` versions or `index.html` change, and before a library upgrade. `ocr-reviewer` (read-only) reviews changes to photo reading (`prep`, `cropScaled`, `ocrLpns`, `tidyReads`, `photoLpns`, `extractLpns` in `compare.js`): it runs `tools/ocr-check` (also with `--prefix=VLT`), reports the score, and checks that no repair turns a right number into a wrong one, that nothing is left out silently, phone memory and time, browser differences, the checks and the wording.
 
 These hooks only run inside Claude Code. Commits and pushes made by hand or through the GitHub website are not checked by them, so the cache bump is still your responsibility there.
 
 ### Skills for Claude Code
 
-The procedures Claude Code follows (for example `release-lpn`, `lpn-write-check`, `lpn-library-upgrade`, `lpn-demo-video`, `lpn-bug-triage`) are skills saved to the user's Claude account, not files in the repository. Three general web quality skills are saved the same way, adapted from [addyosmani/web-quality-skills](https://github.com/addyosmani/web-quality-skills) (MIT licence): `web-accessibility`, `web-performance` and `web-best-practices`.
+The procedures Claude Code follows (for example `release-lpn`, `lpn-write-check`, `lpn-library-upgrade`, `lpn-demo-video`, `lpn-photo-check`, `lpn-bug-triage`) are skills saved to the user's Claude account, not files in the repository. `lpn-photo-check` is used with `ocr-reviewer` for photo reading changes; `lpn-bug-triage` is the starting point for reported problems and works from the problem report downloaded in Settings (Claude asks for it if it hasn't been sent). Three general web quality skills are saved the same way, adapted from [addyosmani/web-quality-skills](https://github.com/addyosmani/web-quality-skills) (MIT licence): `web-accessibility`, `web-performance` and `web-best-practices`.
 
 ### Library documentation for Claude Code (Context7)
 

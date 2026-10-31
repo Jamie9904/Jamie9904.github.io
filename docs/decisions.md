@@ -189,8 +189,30 @@ When a photo has a clear page pattern, `tidyReads()` leaves out a reading whose 
 - **Cause (from a second user problem report):** on the phone, photo reading found all 18 real LPNs but also a made-up `DFA51400180`, read from specks on the paper.
 - **Why these two conditions together:** a code with a prefix seen nowhere else on the page and a length no LPN has is very unlikely to be real. A lone other prefix with 9 or 10 digits could be a real LPN, so it is kept (and named by the prefix list note if its prefix isn't listed). A short reading of a page prefix (`QUB00189918`) is kept, because it is probably a real number misread and the user should see it to fix it.
 - **Why only with a pattern:** with nothing on the page to compare against, the app can't tell what the page's LPNs look like, so nothing is left out.
-- **Why logged, not shown in the note:** the left-out readings are not added to the numbers box or named in the per-photo note; the problem log keeps a record in case a real number is ever left out.
-- **Trade-off:** a real LPN with an unusual prefix and length, alone on a page of other numbers, would be left out silently (only the problem log shows it). Users still need to check the numbers against the paper.
+- **Why logged:** the left-out readings are not added to the numbers box; the problem log keeps a record in case a real number is ever left out. Since build 37, left-out readings with 9 or 10 digits are also named in the per-photo note (see below).
+- **Trade-off:** a real LPN with an unusual prefix and a length other than 9 or 10 digits, alone on a page of other numbers, is left out with only the problem log showing it. Users still need to check the numbers against the paper.
+
+## Weighted page votes, prefix length and IM numbers (build 37)
+
+`tidyReads()` weights a clean first reading double when voting for the page's pattern, needs a shape to appear in at least two numbers, also leaves out readings whose prefix length differs from every prefix on the page, and always keeps `IM` numbers (`KNOWN_PFX`). `photoLpns()` returns left-out readings with 9 or 10 digits as `.odd` and `readNote()` names them.
+
+- **Cause:** the GitHub check that reads the user's four photos with the real tesseract.js (see below) found two problems the offline Tesseract command didn't show: on `run.jpg` two of three numbers read with an O between `RUN` and the 0s, so 9 and 10 digits tied and the wrong shape could win; on `vlt.jpg` specks gave `CO1080002090`, `RR1004040021` and `L1121100001`, which have 9 or 10 digits and so passed the build 36 rule.
+- **Why a clean first read counts double:** a first reading that is exactly the raw text had no look-alike letters turned into digits, so it is the best evidence of what was printed. A tie between shapes goes to it. Whole-page text readings (`whole: true`) only count once, because the same number can also come from a word, and counting it twice would let it outvote the others.
+- **Why a shape must appear in two numbers:** with weights, one clean reading alone would reach a weight of 2; counting numbers instead keeps the build 35 rule that a pattern needs at least two numbers behind it.
+- **Why prefix length:** on a page of 3-letter prefixes, a 1- or 2-letter "prefix" is far more likely a speck or a fragment of the text before it than a real LPN.
+- **Why `IM` is always kept:** `IM` is a real two-letter prefix used for full pallet picks and can turn up on a page of 3-letter numbers. `KNOWN_PFX` lists prefixes that are real even though they differ from the rest of the page.
+- **Why name the 9–10 digit ones in the note:** a reviewer pointed out that a real 2-letter LPN (for example `JD1234567890`) among 3-letter ones would otherwise be dropped silently. It is still not added, because specks often give 9–10 digit junk, but the note names it and says to type it in if it is real.
+- **Trade-off:** a real LPN with a prefix length unlike the rest of the page has to be typed in by hand; only `IM` is known. Other real prefixes like that would need adding to `KNOWN_PFX`.
+
+## A photo reading check on the user's real photos (`tools/ocr-check`)
+
+`tools/ocr-check/check.js` runs the app's own photo code on the user's four manifest photos (`photos/`, sent on 31 Oct 2026, address boxes cut off) and scores the result against `expected.json` (18 LPNs). `tests/run.js` uses it on GitHub with the real tesseract.js and fails on any missing or extra LPN.
+
+- **Why real photos:** the drawn test pictures are clean; the problems users meet (shade, grain, specks, ruled lines, O read for 0) only show on real photos. The repair rules are tuned on these photos, so every change is scored against them.
+- **Why two engines:** where the Claude cloud sandbox can't download tesseract.js, the `cli` engine uses the Tesseract 5 command for the reading and the app's code (`prep`, `cropScaled`, `extractLpns`, `photoLpns`) for everything else, offline. It doesn't read exactly like tesseract.js (build 37's two fixes only showed on GitHub), so GitHub reads the photos with the `js` engine, the app's real `ocrLpns()`, as on a phone.
+- **Why the address boxes were cut off:** the repository is public.
+- **Why it prints what the reader saw on failure:** run logs can't be read from a Claude cloud session, so a "Photo reading detail" notice gives each reading (raw text, first read, close-up) for working out a fix.
+- **Trade-off:** four photos from one site; other suppliers' layouts are not covered until their photos are added. The photos make the repository bigger (about 1.3 MB) and, like the rest of `tools/`, are published by GitHub Pages but kept out of the site zip.
 
 ## Per-file notes and naming numbers the prefix list left out
 
