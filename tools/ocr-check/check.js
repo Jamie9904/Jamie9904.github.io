@@ -68,7 +68,7 @@ async function readCli(page, file, prefix) {
 async function readJs(page, file, prefix) {
 	return inPage(page, file, async (f, prefix) => {
 		document.getElementById("cmpPfx").value = prefix;
-		for (let i = 0; i < 2; i++) { try { const out = await ocrLpns(f); return { found: [...out], skipped: out.skipped }; } catch (e) { if (i) return { err: e.message }; } }
+		for (let i = 0; i < 2; i++) { try { const out = await ocrLpns(f); return { found: [...out], skipped: out.skipped, items: window.__ocrItems }; } catch (e) { if (i) return { err: e.message }; } }
 	}, prefix);
 }
 

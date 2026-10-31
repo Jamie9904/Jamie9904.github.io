@@ -795,7 +795,11 @@ async function page(browser, width, opts = {}) {
         const r = await oc.readJs(p, ph.file, "");
         if (r.err) { probs.push(ph.name + ": " + r.err); total += ph.want.length; continue; }
         const sc = oc.score(ph.want, r.found); right += sc.right.length; total += ph.want.length;
-        if (sc.missing.length || sc.extra.length) probs.push(ph.name + (sc.missing.length ? " missing " + sc.missing.join(" ") : "") + (sc.extra.length ? " extra " + sc.extra.join(" ") : ""));
+        if (sc.missing.length || sc.extra.length) {
+          probs.push(ph.name + (sc.missing.length ? " missing " + sc.missing.join(" ") : "") + (sc.extra.length ? " extra " + sc.extra.join(" ") : ""));
+          // What the reader saw for each number (raw text, first read, close-up), to work out a fix.
+          if (process.env.GITHUB_ACTIONS) console.log("::notice title=Photo reading detail " + ph.name + "::" + (r.items || []).map(i => i.raw.replace(/\s+/g, "_") + ">" + i.first + ">" + (i.again || "-")).join(" ").slice(0, 900));
+        }
       }
       if (process.env.GITHUB_ACTIONS) console.log("::notice title=Photo reading::" + right + " of " + total + " LPNs right on the user's manifest photos" + (probs.length ? "; " + probs.join("; ") : ", nothing extra"));
       check("real photo reading gets every LPN on the user's manifest photos, and nothing extra", right === total && !probs.length, { right, total, probs });

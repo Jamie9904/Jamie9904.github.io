@@ -191,7 +191,8 @@ function tidyReads(items){
   // Speckles on the paper can read as a made-up code (DFA 51400180 on a page of VLT numbers). When the page has
   // a clear pattern, a reading with a prefix seen nowhere else on it and not 9 or 10 digits is left out.
   const out=[];out.ignored=[];
-  res.forEach(x=>{const s=split(x);if(pats.length&&s&&!pats.some(q=>q.p===s.p)&&(s.d.length<9||s.d.length>10))out.ignored.push(x);else out.push(x)});
+  // Also left out: a prefix of a different length from every prefix on the page (CO…, RR…, L… among VLT numbers).
+  res.forEach(x=>{const s=split(x);if(pats.length&&s&&!pats.some(q=>q.p===s.p)&&(s.d.length<9||s.d.length>10||!pats.some(q=>q.p.length===s.p.length)))out.ignored.push(x);else out.push(x)});
   return out;
 }
 /* Tidies one photo's readings, then keeps those with a prefix in the list; the rest that look like LPNs are
@@ -227,6 +228,7 @@ async function ocrLpns(f){
     }
     extractLpns(r.text,true).forEach(x=>{if(!orig.has(x))items.push({raw:x,first:x,again:null})});
     const out=photoLpns(items);
+    window.__ocrItems=items; // kept for the photo reading check (tools/ocr-check)
     diag("ocr","Photo text read: "+(r.words||[]).length+" words, "+out.length+" LPNs found"+(out.skipped.length?", skipped for prefix: "+out.skipped.slice(0,10).join(" "):"")+". Text start: "+String(r.text||"").replace(/\s+/g," ").slice(0,150));
     return out;
   }finally{await w.terminate()}
