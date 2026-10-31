@@ -93,7 +93,8 @@ function initDemo(){
 let dlgOpener=null;
 function pageInert(on){["main","header.top"].forEach(s=>{const e=document.querySelector(s);if(e)e.inert=on})}
 function dlgOpen(focusEl){if(!dlgOpener)dlgOpener=document.activeElement;pageInert(true);setTimeout(()=>{if(focusEl)focusEl.focus()},0)}
-function dlgClose(){pageInert(false);const o=dlgOpener;dlgOpener=null;if(o&&o.focus&&document.contains(o))o.focus()}
+function dlgClose(){if(!$("panel").hidden||!$("instBox").hidden)return; // the other dialog is still open
+  pageInert(false);const o=dlgOpener;dlgOpener=null;if(o&&o.focus&&document.contains(o))o.focus()}
 function openHelp(k,t){
   $("panelTitle").textContent=t;$("panelBody").innerHTML=k==="guide"?DEMO_HTML+guideToc(HELP.guide):HELP[k];
   $("panel").hidden=false;$("shade").hidden=false;$("panel").scrollTop=0;if(k==="settings")initSettings();if(k==="history")initHistory();if(k==="guide")initDemo();

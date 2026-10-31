@@ -155,7 +155,13 @@ function lpnIssues(v){
   return out;
 }
 let pendingAdd=null;
-document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("chkBar").hidden)$("chkSkip").click()});
+// Escape skips a waiting warning, but not while a panel is open or another box (like an LPN being edited) has the key.
+document.addEventListener("keydown",e=>{
+  if(e.key!=="Escape"||$("chkBar").hidden)return;
+  if(($("panel")&&!$("panel").hidden)||($("instBox")&&!$("instBox").hidden))return;
+  const t=e.target;if(t&&/^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName)&&t.id!=="lpn")return;
+  $("chkSkip").click();
+});
 function hideCheck(){pendingAdd=null;$("chkBar").hidden=true}
 function tryAdd(v,scan){
   if(pendingAdd)return false;
@@ -175,7 +181,7 @@ function add(){
   if(!v){$("msg").textContent="Enter an LPN number first.";return}
   // A warning is waiting for an answer: keep this LPN in the box rather than losing it (a handheld scanner types
   // and presses Enter without anyone looking at the screen).
-  if(pendingAdd){$("msg").textContent="Answer the check first (Skip or Add anyway), then add "+v+".";sfx("warn");return}
+  if(pendingAdd){$("msg").textContent="Answer the check first (Skip or Add anyway), then add "+v+".";sfx("warn");$("lpn").select();return}
   tryAdd(v);
   $("lpn").value="";$("lpn").focus();
 }

@@ -352,4 +352,4 @@ details.opts>summary .note{min-width:0;overflow:hidden;text-overflow:ellipsis;wh
 .demonote{margin:10px 0 0;color:var(--dg)}
 
 /* Very narrow screens or extra large text: header buttons wrap rather than pushing the page sideways. */
-@media (max-width:620px){#side{flex-wrap:wrap}#side button{min-width:0;white-space:normal;line-height:1.15}}
+@media (max-width:620px){#side{flex-wrap:wrap}#side button{flex:1 1 auto}}

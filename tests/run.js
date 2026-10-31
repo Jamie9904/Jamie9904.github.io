@@ -715,12 +715,20 @@ async function page(browser, width, opts = {}) {
       fail = true; let err = ""; try { await ocrLpns(f); } catch (e) { err = e.message; }
       fail = false; await ocrLpns(f);
       const afterFail = { made, closed };
-      ocrDone(await ocrWorker(), false); // close it now rather than waiting 45 seconds
+      // Two batches at once (manifest photos and a log photo) take turns: each page read is in mode 11, each close-up in mode 7.
+      ocrDone(await ocrWorker(), false); // close the earlier stand-in reader first
+      const modes = []; let cur = "";
+      window.Tesseract = { createWorker: async () => { made++; return { setParameters: async p => { if (p.tessedit_pageseg_mode) cur = p.tessedit_pageseg_mode; await new Promise(r => setTimeout(r, 5)); }, terminate: async () => { closed++; },
+        recognize: async () => { const m = cur; await new Promise(r => setTimeout(r, 20)); modes.push(m); return { data: { words: m === "11" ? [{ text: "VLT004040265", bbox: { x0: 0, y0: 0, x1: 50, y1: 20 } }] : [], text: m === "11" ? "VLT004040265" : "VLT004040265" } }; } }; } };
+      const both = await Promise.all([ocrLpns(f), ocrLpns(f)]);
+      window.__modes = modes.join(); window.__both = both.map(x => x.join()).join("|");
+      ocrDone(await ocrWorker(), false); // close it now rather than waiting
       window.Tesseract = real;
-      return { afterBatch, err, afterFail, closedAtEnd: closed };
+      return { afterBatch, err, afterFail, closedAtEnd: closed, modes: window.__modes, both: window.__both };
     });
     check("one photo reader is started for a batch of photos and kept open between them", s.afterBatch.made === 1 && s.afterBatch.closed === 0, s);
-    check("a photo reader that fails is closed and the next photo gets a new one", s.err === "worker crashed" && s.afterFail.made === 2 && s.afterFail.closed === 1 && s.closedAtEnd === 2, s);
+    check("a photo reader that fails is closed and the next photo gets a new one", s.err === "worker crashed" && s.afterFail.made === 2 && s.afterFail.closed === 1, s);
+    check("two photo reads started together take turns: page reads in mode 11, close-ups in mode 7", s.modes === "11,7,11,7" && s.both === "VLT004040265|VLT004040265" && s.closedAtEnd >= 2, s);
     s = await q.evaluate(() => { document.getElementById("diagClear").click(); return { left: JSON.parse(localStorage.getItem("lpndiag") || "[]").length, msg: document.getElementById("diagMsg").textContent }; });
     check("the problem log can be cleared", s.left === 0 && /cleared/i.test(s.msg), s);
     await q.ctx.close();
