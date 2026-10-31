@@ -1,7 +1,7 @@
 name: Weekly health check
 # Every Monday morning: checks the live site is up and running the latest version,
 # that every library the app loads from a CDN still downloads, that none of them has a new security advisory,
-# and runs the automatic checks.
+# runs the automatic checks, and reads the user's manifest photos with the live app (tools/ocr-check).
 # GitHub emails a failure notice if any step fails; a passing run sends nothing.
 on:
   schedule:
@@ -12,7 +12,7 @@ permissions:
 jobs:
   health:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
         with:
@@ -57,3 +57,9 @@ jobs:
       - run: npm install --ignore-scripts
       - run: npx playwright install --with-deps chromium
       - run: npm test
+      - name: The live site reads the user's manifest photos
+        run: |
+          out=$(node tools/ocr-check/check.js --url=https://jamie9904.github.io/) && ok=1 || ok=0
+          echo "$out"
+          total=$(echo "$out" | grep '^Total:' || echo "Total: no result")
+          if [ $ok = 1 ]; then echo "::notice title=Live photo reading::$total"; else echo "::error title=Live photo reading::$(echo "$out" | grep -E 'right|read' | tr '\n' ' ' | cut -c1-600)"; exit 1; fi

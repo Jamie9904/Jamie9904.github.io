@@ -6,6 +6,7 @@
 
   folder   photos plus expected.json ({"photo.jpg": ["LPN", ...]}); default: tools/ocr-check (photos/ + expected.json).
            Without expected.json it just lists what each photo gives.
+  --url    read with the app at this address instead of this folder, e.g. the live site (uses the js engine).
   --engine cli (default when the tesseract command is installed): the Tesseract 5 command for the reading, the app's
            code for everything else. Works offline.
            js: the app's real ocrLpns() with tesseract.js, exactly as on a phone. Needs cdn.jsdelivr.net and tessdata.
@@ -73,7 +74,14 @@ async function readJs(page, file, prefix) {
 }
 
 /** Opens the app from this folder in a browser page; net:true lets the photo reader's files download. */
-async function openApp(chromium, net) {
+async function openApp(chromium, net, url) {
+	if (url) { // the live site (or any copy): nothing served from here
+		const b = await chromium.launch(), ctx = await b.newContext({ serviceWorkers: "block" }), page = await ctx.newPage(), host = new URL(url).hostname;
+		await page.route("**/*", r => { const u = new URL(r.request().url()); return u.hostname === host || (net && /tesseract|tessdata/.test(u.href)) ? r.continue() : r.abort(); });
+		await page.addInitScript(() => { try { localStorage.setItem("lpninstallshown", "1"); } catch (e) {} });
+		await page.goto(url + (url.includes("?") ? "&" : "?") + "check=" + Date.now()); await page.waitForTimeout(800);
+		return { page, close: () => b.close() };
+	}
 	const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png", ".woff2": "font/woff2" };
 	const srv = http.createServer((q, r) => {
 		const p = decodeURIComponent(q.url.split("?")[0]), f = path.join(ROOT, p === "/" ? "index.html" : p);
@@ -91,14 +99,15 @@ async function openApp(chromium, net) {
 module.exports = { score, load, readJs, readCli, openApp };
 
 if (require.main === module) (async () => {
-	const args = process.argv.slice(2), opt = n => (args.find(a => a.startsWith("--" + n + "=")) || "").split("=")[1];
+	const args = process.argv.slice(2), opt = n => (args.find(a => a.startsWith("--" + n + "=")) || "").split("=").slice(1).join("=");
 	const folder = path.resolve(args.find(a => !a.startsWith("--")) || __dirname);
 	let engine = opt("engine"); if (!engine) { try { execFileSync("tesseract", ["--version"], { stdio: "ignore" }); engine = "cli"; } catch (e) { engine = "js"; } }
 	const prefix = opt("prefix") || "";
 	const { chromium } = require("playwright");
-	const app = await openApp(chromium, engine === "js");
+	const url = opt("url"); if (url) engine = "js"; // the live site's own reader
+	const app = await openApp(chromium, engine === "js", url);
 	let right = 0, total = 0, bad = 0;
-	console.log("Photo reading check (" + engine + " engine" + (prefix ? ", prefixes " + prefix : "") + ")");
+	console.log("Photo reading check (" + engine + " engine" + (url ? ", " + url : "") + (prefix ? ", prefixes " + prefix : "") + ")");
 	for (const ph of load(folder)) {
 		const t0 = Date.now();
 		const r = engine === "js" ? await readJs(app.page, ph.file, prefix) : await readCli(app.page, ph.file, prefix);
