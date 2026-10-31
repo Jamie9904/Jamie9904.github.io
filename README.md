@@ -20,7 +20,7 @@ It also checks a delivery against the supplier's manifest. Manifest numbers can 
 
 - Runs entirely in the browser: no server, no accounts. Data stays on the device.
 - Installable on Android and iPhone as a home-screen app, and works offline after the first visit.
-- Built for a phone in one hand on a loading bay: big touch targets, a pallet table that scrolls with the page, a docked entry bar with a counter and undo-last button (it slides aside while the Manifest check is in use), sound and vibration feedback.
+- Built for a phone in one hand on a loading bay: big touch targets, a pallet table that scrolls with the page, a docked entry bar with a counter and undo-last button (it slides aside while the Manifest check is in use), sound and vibration feedback. A scan made while a warning is open is kept rather than lost, edges and accent text keep readable contrast in any colour theme, and the side panels work as dialogs for keyboard and screen reader users.
 - A problem report in Settings: a plain text file with the version, device, current state and the last 300 events (manifest reads, errors) kept on the device, for users to send when something goes wrong.
 - Guards against common slips: duplicate and malformed LPN warnings, an expected-count check, and a reminder before starting a new delivery that hasn't been exported.
 - Careful with files from outside: backups are checked and shown before restoring (with a copy of the current data downloaded first), saved data is tidied when read, files loaded back in only give plain text to exports, every library file loaded by a script tag is checked against its fingerprint, and a security policy in the page only lets it run code from its own site and the three library CDNs.

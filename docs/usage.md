@@ -18,6 +18,8 @@ The in-app **Guide** covers the same ground for staff. This page is the referenc
   - not 1–3 letters followed by digits;
   - using a prefix outside the prefix list;
   - the wrong number of digits: 9 or 10 for most LPNs (usually 3 letters), but 10 or 11 for `IM` numbers (full pallet picks, 2 letters). The warning says, for example, "has 12 digits (usually 9 or 10)" or, for `IM`, "has 9 digits (IM numbers have 10 or 11)". Since build 39 an 11-digit `IM` number is not warned about.
+- While a warning is waiting for an answer, another LPN typed or scanned into the box (a hardware scanner presses Enter on its own) is not lost and not added: it stays in the box, selected, with the message "Answer the check first (Skip or Add anyway), then add <LPN>." and the warning sound. After Skip or Add anyway, press Enter (or Add) to add it; the next scan replaces it, because it is selected. Since build 41.
+- **Escape** skips a waiting warning, the same as **Skip**. It does nothing while the Guide, Changelog, Settings or Saved deliveries panel or the install box is open, or while another box (for example an LPN being edited in the table) has the keyboard; it does work in the LPN box.
 - Each add shows "Added #n: LPN · type", plus "✓ on manifest" or "⚠ NOT on manifest" while a manifest is loaded.
 - On phones the entry bar shows `n logged`, `n of expected logged`, or `n of total on manifest` (shortened to `n/total` on screens under 400px), and the Delivery card folds into one line once logging starts.
 - The ↶ button next to the entry-bar counter (phones only) removes the most recent pallet, with Undo.
@@ -25,7 +27,9 @@ The in-app **Guide** covers the same ground for staff. This page is the referenc
 - Search and the type and FSDU filters only change what is shown; totals always cover the whole log. FSDUs are counted separately and are not part of the total.
 - With Expected pallets set, the line under the totals reads "n of x expected" with "(n to go)" in the normal text colour while counting, turns green with "✓ all accounted for" when the count matches, and turns red with "(n more than expected)" only when there are more pallets than expected. When a manifest is loaded and Expected pallets equals the manifest count, this line is hidden, because the manifest progress line already shows the same count.
 - On phones (under 760px wide) the pallet table has no scroll box of its own: it scrolls with the page, and the column headings stay pinned at the top of the screen while you scroll through it. Long LPNs wrap onto a second line instead of pushing the page sideways. On wider screens the table keeps its own scroll area (up to 60% of the screen height).
-- The FSDU tick box in the entry bar and the FSDU tick boxes in the table are 32px; the Guide, Changelog and Settings buttons in the header are at least 44px tall on phones.
+- The FSDU tick boxes in the table are 32px. On phones the FSDU tick box in the entry bar is 40px and the scan option buttons (Live scan, Scan by photo) are at least 48px tall, for gloves (build 41; before, 32px and 42px). The Guide, Changelog and Settings buttons in the header are at least 44px tall on phones.
+- On screens up to 620px wide the header buttons wrap onto a second line and share the row (each sized to its text) instead of pushing the page sideways, for example with Extra large text.
+- On phones, a box or button that gets keyboard focus scrolls clear of the fixed entry bar instead of ending up behind it.
 
 ## Scanning
 
@@ -36,6 +40,8 @@ The in-app **Guide** covers the same ground for staff. This page is the referenc
 | Hardware scanner | Focus the LPN box; the scanner types and presses Enter (untested) |
 
 "Ask me to confirm each scanned barcode" in Settings shows each scan for approval first.
+
+**Live scan on phones (build 41).** The camera view is at most `clamp(110px, 24vh, 200px)` tall, so on short phones the "Added: LPN (type)" line and **Stop scanning** stay on screen while scanning (checked at 360×640, 375×667 and 390×844). A warning about a scanned LPN (Skip / Add anyway) appears above the camera view, and the line under the camera says "Check the warning above." (it said "Check the message below." before build 41). Live scan messages are announced by screen readers. The "Added" confirmation note at the bottom of the screen can't block taps on the buttons under it.
 
 ## Manifest check
 
@@ -56,7 +62,7 @@ On phones, while the Manifest check is open and its top is in the upper part of 
 - A note under the manifest numbers box reminds you that numbers read from photos can be misread, so check them first. (This replaced the earlier "still being tested" warning at the top of the section.)
 - **Check results** lists Missing (on the manifest, not logged: report), Log only (logged, not on the manifest: book in) and Matched. **Fix** corrects a misread number, ✕ removes it.
 - **Export** gives the comparison as Excel (`Manifest-check-<date>.xlsx`), Email PDF or Print. With "Include a copy of the log" on, an uploaded `.xlsx` log gets the comparison as a new tab, and PDFs get the log appended. When a log PDF is appended, any links and page-open actions in it are removed; the printed pages are unchanged. Values from an uploaded log are only ever written as plain text or numbers, so a file from outside can't add formulas or links to the export.
-- **Photo reader:** reading photos downloads the photo reader and its language data the first time, which can take a while on a weak signal. If it hasn't started after 90 seconds, or can't be downloaded, it stops with "The photo reader couldn’t load…" and the next try downloads it again. Reading photos needs iOS 16 or newer on an iPhone; older phones can still scan barcodes, read PDFs (iOS 16.4+) and type numbers.
+- **Photo reader:** reading photos downloads the photo reader and its language data the first time, which can take a while on a weak signal. If it hasn't started after 90 seconds, or can't be downloaded, it stops with "The photo reader couldn’t load…" and the next try downloads it again. Since build 41 one reader is started for a batch of photos (or scanned PDF pages) and reused, so the second and later photos start faster; it is closed 15 seconds after the last photo to free memory. If one photo takes longer than 2 minutes to read (for example the phone stopped the reader while the app was in the background), that photo fails with "The photo reader stopped. Try the photo again." and the next photo gets a fresh reader. Reading manifest photos and a log photo at the same time is fine: they take turns. Reading photos needs iOS 16 or newer on an iPhone; older phones can still scan barcodes, read PDFs (iOS 16.4+) and type numbers.
 
 ## Exports
 
@@ -134,11 +140,17 @@ The **Guide** button in the header opens the Guide in the side panel. It starts 
 - The video starts at half volume, so it isn't too loud; the player's volume control can turn it up. iPhone Safari ignores volume set by a page, so there the phone's own volume buttons set the level.
 - The scanning part shows picking the pallet type before scanning: FMCG is tapped, then **Scan** and **Live scan**; the first barcode is added as FMCG ("Added #9 … FMCG"), then BB is tapped and the next barcode is added as BB. The narration says: "Pick the pallet type first, then scan. Each pallet is logged with that type, so change it before the next one."
 - Closing the Guide pauses the video. Opening the Guide again shows the button again.
+- When the video starts, keyboard focus moves to the player, so its controls can be used straight away.
 - The video needs internet: it is not saved for offline use. If it can't play, the Guide shows "The video couldn’t play. Check you’re online, then try again."
+
+## Keyboard and screen readers
+
+- The Guide, Changelog, Settings and Saved deliveries panel and the install box act as dialogs (build 41): when one opens, focus moves into it (to **✕ Close** in the panel, to the first visible button in the install box), the page behind can't be reached with Tab or a screen reader, and when it closes focus goes back to the button that opened it. Escape closes them.
+- The page language is British English (`lang="en-GB"`), so screen readers use a UK voice.
 
 ## Settings
 
-Colours (two colours drive the whole theme, with a contrast warning), quick themes, logo, default pallet type, keep last type, warnings, sound, vibration, confirm scans, text size, date format (dd/mm/yyyy, mm/dd/yyyy, yyyy-mm-dd), include log copy in comparisons, forget remembered names, backup and restore, problem report, install pop-up.
+Colours (two colours drive the whole theme, with a contrast warning; since build 41 the edges of boxes and buttons and any accent-coloured text, such as panel headings and links, are adjusted automatically so they stay readable with any chosen colours), quick themes, logo, default pallet type, keep last type, warnings, sound, vibration, confirm scans, text size, date format (dd/mm/yyyy, mm/dd/yyyy, yyyy-mm-dd), include log copy in comparisons, forget remembered names, backup and restore, problem report, install pop-up.
 
 **Logo** (under the colours): **Add logo** / **Change logo** picks an image that is kept on this device and used in the header and on exports. A saved logo is only used if it is a PNG or JPEG image stored in the app. `logo.png` next to the app is the default; when a custom logo is set, **Reset to default logo** (or **Remove logo** if there is no default) appears. The logo controls are no longer in the Delivery card.
 
@@ -159,6 +171,8 @@ Colours (two colours drive the whole theme, with a contrast warning), quick them
 | "The PDF reader couldn’t load. Check you’re online, then reload the page and try again…" | The PDF reader is downloaded the first time a PDF is read, then kept for offline use. Go online, reload and try again. Very old phones (roughly older than iOS 16.4, Chrome 94 or Firefox 93) can’t read PDFs at all: type or paste the numbers in the box instead, or use a photo. When several manifest PDFs are chosen, reading stops at the first one with this message. |
 | Email PDF saved a file instead of sharing | The browser refused the share. Attach the saved file to the email that opens. |
 | "The video couldn’t play. Check you’re online, then try again." | The demo video in the Guide is never saved for offline use, so it needs a signal every time. Go online, close and reopen the Guide, and tap the button again. Everything else in the Guide works offline. |
+| "The photo reader stopped. Try the photo again." (in a photo's note) | Reading that photo took longer than 2 minutes, usually because the phone paused the reader while the app was in the background. Keep the app on screen and read the photo again; the next photo gets a fresh reader. |
+| "Answer the check first (Skip or Add anyway), then add …" | A warning about the previous LPN is still waiting. Tap **Skip** or **Add anyway** (or press Escape to skip), then press Enter: the LPN in the box is added. |
 | Changes don't appear after an update | Tap **Refresh** on the update banner, or close and reopen the app. |
 | Spreadsheet looks cut off on a phone | Mobile viewers open sheets zoomed in; pinch out. Desktop and print are unaffected. |
 | Notes or LPNs cut off in an older export | Files made before v3.30 build 26 used fixed row heights and column widths. If the delivery is still in Saved deliveries, export it again. |

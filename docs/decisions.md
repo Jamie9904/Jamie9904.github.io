@@ -417,3 +417,47 @@ The Guide starts with a button that shows a narrated demo video of about 40 seco
 - **Why it isn't cached:** browsers fetch video with range requests, and the partial (`206`) responses can't be stored with the Cache API. Saving the whole file for offline use would need extra service worker code, and would add 1.5 MB to every install for something most people watch once.
 - **Why a file on the site:** it comes from the app's own address, so the security policy (`default-src 'self'`) needs no change and no outside video host is involved.
 - **Trade-off:** the video needs a signal every time. Offline it shows a plain "couldn’t play" message; the written Guide below it still works offline. A check keeps the file under 3 MB.
+
+## One photo reader per batch, with reads taking turns (build 41)
+
+`ocrLpns()` keeps one tesseract.js reader for a batch of photos or scanned PDF pages (`ocrWorker()`), closes it 15 seconds after the last photo (`ocrDone()`), and queues reads on `ocrQ` so only one runs at a time. Each `recognize()` has a 120-second limit (`ocrRead()`).
+
+- **Why reuse:** starting a reader takes a second or more per photo on a phone; a batch of manifest photos paid that for every photo.
+- **Why close after 15 seconds:** the reader holds the engine and language data in memory. Build 41's first version (`1bbbce7`) waited 45 seconds; the review fixes in `bd24f4f` shortened it to 15 seconds, enough to cover the gap between photos in one batch.
+- **Why close at once on failure:** a reader that threw or hung may be broken, so the next photo starts a fresh one rather than reusing it.
+- **Why a queue:** manifest photos and a log photo can be read at the same moment. They would share one reader, and `setParameters()` (mode 11 for the page, mode 7 for close-ups) from one read would change the mode of the other in the middle of its read.
+- **Why a time limit on each read:** a phone can stop the reader while the app is in the background, and `recognize()` then never finishes, which would also block every read queued behind it. After 120 seconds the photo fails with "The photo reader stopped. Try the photo again." A failed close-up re-read is normally ignored, but a stuck one is passed up (`e.stuck`), so a hung reader doesn't cost 2 minutes per close-up.
+- **Why close a reader that starts late:** the 90-second start limit only stops waiting; without the extra `terminate()` a reader that finished starting afterwards would stay running unused.
+- **Trade-off:** a second batch waits for the first to finish, and the reader's memory stays in use for 15 seconds after the last photo.
+
+## A scan made while a warning waits is kept, not added (build 41)
+
+When the Skip / Add anyway warning is showing, `add()` leaves the new LPN in the box, selected, with "Answer the check first (Skip or Add anyway), then add <LPN>." Escape skips the warning.
+
+- **Why:** an accessibility review found that a hardware scanner types and presses Enter without anyone looking at the screen; before, the second LPN was cleared from the box and lost.
+- **Why not add it anyway:** the warning is about the previous pallet and needs an answer first; adding the next one would leave the warning open under a different pallet.
+- **Why selected:** if the person scans again instead, the new scan replaces the kept one instead of being appended to it.
+- **Why Escape is limited:** it doesn't act while a panel or the install box is open (Escape closes those), while the warning is hidden, or while another box, such as an LPN being edited in the table, has the keyboard (Escape cancels that edit).
+
+## Contrast tokens worked out from the theme (build 41)
+
+`applyTheme()` sets `--bd` (borders of boxes and buttons, at least 3:1) and `--act` (accent used as text and focus outline, at least 4.5:1, mixed towards the text colour until it is). `--line` and `--ac` are unchanged.
+
+- **Why worked out, not fixed:** the theme comes from any two colours the user picks, so a fixed value can't be right for all of them. The checks try the quick themes and pale, dark and orange accents.
+- **Why keep `--ac` and `--line`:** filled buttons, the LPN box border and pallet colours keep the exact chosen accent, and dividers stay light; only edges and accent text that need to be read change.
+- **Trade-off:** with a pale accent, headings and links are shown darker than the chosen colour.
+
+## Panels and the install box as modal dialogs (build 41)
+
+Opening the side panel or the install box moves focus in, makes `main` and the header `inert`, and gives focus back to the opener on close (`dlgOpen()`, `dlgClose()`).
+
+- **Why `inert`:** without it, Tab and screen readers could reach the page hidden under the shade. `aria-modal="true"` tells screen readers the same.
+- **Why un-inert only when neither is open:** both dialogs use the same `inert` switch, so closing one must not make the page reachable while the other is still open. (The Settings link to the install box closes the panel first, then opens the box, which inerts the page again and remembers the focused element at that moment as the one to return to.)
+
+## Accessibility review items not done yet (build 41)
+
+The audit by the `a11y-reviewer` agent that led to build 41 also suggested changes that were not made in build 41: showing the Undo bar in the phone entry bar, LPN cells that can be edited from the keyboard, Escape closing the export menus, and smaller labelling points. They are listed here so they aren't taken as done.
+
+## Demo video not re-recorded for build 41
+
+Build 41's header buttons size to their text, so the demo fingerprint check (see "Demo video staleness" above) now warns that `#btnGuide` moved and changed size slightly. The change is small and the video still shows the same flow, so it was not re-recorded; the warning stays until the next recording updates `tools/demo-video/screens.json`.
