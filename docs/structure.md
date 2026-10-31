@@ -48,9 +48,11 @@
 │   ├── check.js             runs the app's photo code on the photos and scores the LPNs (also used by tests/run.js on GitHub)
 │   ├── expected.json        the LPNs printed on each photo (18)
 │   └── photos/              the user's four manifest photos, address boxes cut off (qub, rby, run, vlt .jpg)
+├── tools/release/
+│   └── ship.sh              puts updates live and checks it: Checks, Pages, health check, download copy (development only)
 ├── .github/workflows/
 │   ├── test.yml             runs the checks on every push and pull request (advisories and fingerprints without blocking)
-│   └── health.yml           weekly health check of the live site, the live demo video, CDN libraries, advisories, fingerprints and checks
+│   └── health.yml           weekly health check of the live site, the live demo video, CDN libraries, advisories, fingerprints, checks and the live site's photo reading
 └── .claude/                 Claude Code automations (development only)
     ├── CLAUDE.md            working notes: branches, release steps, user decisions
     ├── settings.json        registers the hooks below
@@ -60,7 +62,7 @@
     │   ├── lpn_git_guard.py commit and push guard (cache bump, docs on main, no commits on main or new branches, tests before push)
     │   ├── docs_reminder.py reminds when the docs branch is behind main
     │   └── outputs_reminder.py reminds when the download copy (outputs folder and zip) doesn't match main
-    └── agents/              export-reviewer, phone-layout-checker, docs-updater, release-reviewer, security-reviewer, ocr-reviewer
+    └── agents/              export-reviewer, phone-layout-checker, docs-updater, release-reviewer, security-reviewer, ocr-reviewer, a11y-reviewer
 ```
 
 ## What goes where
@@ -91,6 +93,7 @@
 
 - `tests/`, `tools/`, `package.json`, `DESIGN.md` and `README.md` are on `main`, so GitHub Pages publishes them alongside the app. `tools/` is kept out of the site zip and the download copy (`outputs_reminder.py` doesn't count it as a site file).
 - `tools/demo-video/` only reads the app files; its output goes to `media/demo.mp4` and `media/demo-poster.jpg`, which the app does use, and to `tools/demo-video/screens.json`, which only `tests/run.js` reads.
-- `tools/ocr-check/` only reads the app files and its own photos; `tests/run.js` loads `check.js` to read the photos on GitHub.
+- `tools/ocr-check/` only reads the app files and its own photos; `tests/run.js` loads `check.js` to read the photos on GitHub, and `health.yml` runs it with `--url=` against the live site.
+- `tools/release/ship.sh` only runs git and `gh` commands and copies files to the download folder; nothing in the app or the checks uses it.
 - `.github/`, `.claude/` and `.mcp.json` are on `main` but not published: Jekyll, which GitHub Pages uses to build the site, leaves out files and folders whose names start with a dot.
 - `docs/`, and the version of `README.md` that goes with it, live only on the `docs` branch (`main` has its own `README.md`). Pages publishes from `main`, so they are not on the site. The git guard in `.claude/hooks/lpn_git_guard.py` blocks committing `docs/` files on `main` and merging or pushing `docs` into `main`.

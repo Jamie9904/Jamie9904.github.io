@@ -35,7 +35,7 @@ Open `http://localhost:8000/`. `localhost` counts as a secure origin, so the ser
 
    This installs a new service worker, which removes the old cache and triggers the "A new version is available" banner. The number is also the build number printed on every export. If you add a new app file, also add it to the `SHELL` list in `sw.js`.
 2. Commit the changed files together with `sw.js`.
-3. Push. Pages publishes in about a minute; the **Checks** workflow runs the automatic tests at the same time.
+3. Push. Pages publishes in about a minute; the **Checks** workflow runs the automatic tests at the same time. In this repository, publishing means fast-forwarding `main` to `updates`, done with `sh tools/release/ship.sh` (see [Working branches](#working-branches)).
 
 Users tap **Refresh** on the banner. The log is kept, because it is stored on the device.
 
@@ -55,9 +55,29 @@ All work happens on one branch, `updates`; the documentation has its own branch,
 
 1. Start of work: `git checkout updates`. If `main` has moved ahead, run `git merge --ff-only origin/main` first.
 2. Commit and push to `updates` as often as you like. Pushing it doesn't change the live site, and GitHub runs all the checks on it.
-3. To publish ("push it"): `git checkout main && git pull --ff-only origin main && git merge --ff-only updates && git push origin main`, then `git checkout updates`. After a release `updates` and `main` point to the same commit.
+3. To publish ("push it"), run `sh tools/release/ship.sh` from the repository (see [Publishing with the release script](#publishing-with-the-release-script)). By hand, the same publishing step is `git checkout main && git pull --ff-only origin main && git merge --ff-only updates && git push origin main`, then `git checkout updates`. After a release `updates` and `main` point to the same commit.
 
 There is no new branch per change. In Claude Code the git guard enforces this (below); by hand it is up to you.
+
+### Publishing with the release script
+
+`tools/release/ship.sh` puts `updates` live and checks it the same way every time. Run it only when the user has asked to push:
+
+```bash
+sh tools/release/ship.sh
+```
+
+It needs `git`, the GitHub CLI (`gh`, signed in with access to `Jamie9904/Jamie9904.github.io`) and network access to GitHub. In order, it:
+
+1. Fetches, then checks that you are on `updates`, nothing is uncommitted, `updates` is the same as `origin/updates`, and GitHub's **Checks** run on that commit has passed (it waits for the run if it is still going). It prints `Shipping <commit> (lpn-log-vN)`.
+2. Checks out `main`, pulls it with `--ff-only`, fast-forwards it to `updates`, pushes `main` and goes back to `updates`.
+3. Waits for the **Checks** run and the **pages build and deployment** run on `main`, and prints the Checks notices (the annotations with a title, cut at 300 characters).
+4. Starts the weekly health check (`health.yml`) on `main` straight away and waits for it: the live site serves the new build, the CDN libraries download, the live demo video plays, and the live site reads the user's manifest photos (see [testing.md](testing.md#weekly-health-check)). It prints that run's notices too.
+5. If `/mnt/user-data/outputs` exists, copies every file tracked in git except `.claude/`, `docs/`, `tools/` and `.mcp.json` to `/mnt/user-data/outputs/lpn-site` and updates `lpn-site.zip` (`zip -FS`).
+
+It stops at the first problem with a line starting `STOPPED:` (for example "not on the updates branch", "updates isn't pushed to GitHub yet", "Checks on main: failure" or "live site check failed (run N)", with the health check's notices) and goes back to `updates`. Each wait for a Checks or Pages run gives up after 15 minutes. It ends with `Done: lpn-log-vN is live. Next: docs-updater.`; the `docs` branch is not touched, so update it afterwards. Its first use, on 31 Oct 2026, passed every step.
+
+Files are only copied into the download folder, never removed from it, so a file deleted from the app stays in `lpn-site` until it is removed by hand. Like the rest of `tools/`, the script is not part of the site zip.
 
 ### Re-recording the Guide demo video
 
@@ -81,9 +101,10 @@ A check in `tests/run.js` fails if the video is over 3 MB. Re-record when `npm t
 ```bash
 NODE_PATH=$(npm root -g) node tools/ocr-check/check.js
 NODE_PATH=$(npm root -g) node tools/ocr-check/check.js --prefix=VLT
+NODE_PATH=$(npm root -g) node tools/ocr-check/check.js --url=https://jamie9904.github.io/
 ```
 
-See [testing.md](testing.md#photo-reading-check-toolsocr-check) for the options. On GitHub the checks read the same photos with the real tesseract.js. Like the rest of `tools/`, it is not part of the site zip.
+The last line reads the photos with the app at that address (here the live site) instead of the files in the folder. See [testing.md](testing.md#photo-reading-check-toolsocr-check) for the options. On GitHub the checks read the same photos with the real tesseract.js, and the weekly health check reads them with the live site. Like the rest of `tools/`, it is not part of the site zip.
 
 ### Guards when working with Claude Code
 
@@ -101,13 +122,15 @@ See [testing.md](testing.md#photo-reading-check-toolsocr-check) for the options.
 
 ### Agents for Claude Code
 
-`.claude/agents/` holds helpers that Claude Code can hand work to (`docs-updater` is the only one given edit tools): `export-reviewer` (export changes), `phone-layout-checker` (layout on phone widths), `release-reviewer` (the diff before a release), `docs-updater` (this documentation on the `docs` branch), `security-reviewer` and `ocr-reviewer`. `security-reviewer` checks files and text from outside (supplier PDFs, spreadsheets, backups, photos, presets) and the CDN libraries, and is used when import code, library loading, `package.json` versions or `index.html` change, and before a library upgrade. `ocr-reviewer` (read-only) reviews changes to photo reading (`prep`, `cropScaled`, `ocrLpns`, `tidyReads`, `photoLpns`, `extractLpns` in `compare.js`): it runs `tools/ocr-check` (also with `--prefix=VLT`), reports the score, and checks that no repair turns a right number into a wrong one, that nothing is left out silently, phone memory and time, browser differences, the checks and the wording.
+`.claude/agents/` holds helpers that Claude Code can hand work to (`docs-updater` is the only one given edit tools): `export-reviewer` (export changes), `phone-layout-checker` (layout on phone widths), `release-reviewer` (the diff before a release), `docs-updater` (this documentation on the `docs` branch), `security-reviewer`, `ocr-reviewer` and `a11y-reviewer`. `security-reviewer` checks files and text from outside (supplier PDFs, spreadsheets, backups, photos, presets) and the CDN libraries, and is used when import code, library loading, `package.json` versions or `index.html` change, and before a library upgrade. `ocr-reviewer` (read-only) reviews changes to photo reading (`prep`, `cropScaled`, `ocrLpns`, `tidyReads`, `photoLpns`, `extractLpns` in `compare.js`): it runs `tools/ocr-check` (also with `--prefix=VLT`), reports the score, and checks that no repair turns a right number into a wrong one, that nothing is left out silently, phone memory and time, browser differences, the checks and the wording.
 
 These hooks only run inside Claude Code. Commits and pushes made by hand or through the GitHub website are not checked by them, so the cache bump is still your responsibility there.
 
+`a11y-reviewer` (read-only) reviews accessibility after UI changes (new controls, messages or colours) and for an occasional full audit. It opens the app with Playwright at 360×740, 390×844 and 1300×900 in light and dark colour schemes, with the service worker blocked and realistic data, opens each panel, and measures rather than guesses (`getComputedStyle`, `getBoundingClientRect`, the accessibility snapshot). Its checklist: accessible names for every control; contrast (4.5:1 for text, 3:1 for large text, controls and focus rings, also with a user-picked theme colour); tap targets of at least 44×44 px on phones for the controls used while scanning (add pallet, type buttons, undo, remove, the FSDU tick box) and 24×24 elsewhere; keyboard and focus (visible, never hidden under the fixed phone entry bar or the header, kept in open panels, nothing reachable while `inert`); status messages announced without taking focus, and colour never the only signal; structure (one `h1`, headings in order, landmarks, `lang="en-GB"`, `aria-expanded`, table headers); 200% zoom and the Extra large text size at 360 px; reduced motion, and sound and vibration that can be turned off; and subtitles and reachable controls on the demo video. It reports findings most serious first, and ends with the three fixes that would help warehouse users most. It follows the `web-accessibility` skill when that is available.
+
 ### Skills for Claude Code
 
-The procedures Claude Code follows (for example `release-lpn`, `lpn-write-check`, `lpn-library-upgrade`, `lpn-demo-video`, `lpn-photo-check`, `lpn-bug-triage`) are skills saved to the user's Claude account, not files in the repository. `lpn-photo-check` is used with `ocr-reviewer` for photo reading changes; `lpn-bug-triage` is the starting point for reported problems and works from the problem report downloaded in Settings (Claude asks for it if it hasn't been sent). Three general web quality skills are saved the same way, adapted from [addyosmani/web-quality-skills](https://github.com/addyosmani/web-quality-skills) (MIT licence): `web-accessibility`, `web-performance` and `web-best-practices`.
+The procedures Claude Code follows (for example `release-lpn`, `lpn-write-check`, `lpn-library-upgrade`, `lpn-demo-video`, `lpn-photo-check`, `lpn-bug-triage`) are skills saved to the user's Claude account, not files in the repository. `release-lpn` publishes with `tools/release/ship.sh` (see [Publishing with the release script](#publishing-with-the-release-script)). `lpn-photo-check` is used with `ocr-reviewer` for photo reading changes; `lpn-bug-triage` is the starting point for reported problems and works from the problem report downloaded in Settings (Claude asks for it if it hasn't been sent). Three general web quality skills are saved the same way, adapted from [addyosmani/web-quality-skills](https://github.com/addyosmani/web-quality-skills) (MIT licence): `web-accessibility`, `web-performance` and `web-best-practices`.
 
 ### Library documentation for Claude Code (Context7)
 

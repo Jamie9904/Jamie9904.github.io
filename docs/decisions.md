@@ -322,6 +322,7 @@ The hooks, agents and working notes for Claude Code are committed in `.claude/` 
 - **Other ways of writing git are caught too:** `git` counts at the start of the command, after `;`, `&`, `|`, `(`, a backtick or a space, after a `/` (so `/usr/bin/git push` counts), and after `-c` followed by a quote (so `sh -c "git push"` and `bash -c 'git commit …'` count). A quote counts only straight after `-c`, so searching for the text, as in `grep "git push" .`, does not set off the checks.
 - **Session-start status line:** `session_start.py` tracks every GitHub branch and fetches at the start of each session, because the git guard compares `CACHE` with `origin/main` and a clone that only tracks some branches reports branches already on GitHub as "unpushed". It never asks for a password and never blocks the session, since it has no terminal and a session that can't start is worse than a stale status line.
 - **Download copy reminder:** `outputs_reminder.py` reminds once per `main` commit when the user's download copy (`/mnt/user-data/outputs/lpn-site` and `lpn-site.zip`) no longer matches `main`, because that copy is what gets uploaded by hand and it was easy to forget after a release.
+- **Accessibility reviewer agent:** a read-only `a11y-reviewer` agent, used after UI changes, measures accessibility in a real browser (Playwright at 360, 390 and 1300 px wide, light and dark) instead of reading the code alone, because contrast with a user-picked theme colour, tap target sizes, focus hidden under the fixed entry bar and overlaps at 200% zoom or Extra large text only show on the rendered page. Its 44 px tap target rule is for the controls used while scanning, since the app is used on phones with gloves and in poor light.
 - **Security reviewer agent:** a read-only `security-reviewer` agent with a checklist for files and text from outside and for the libraries, used when import code, library loading, `package.json` versions or `index.html` change.
 - **Cache bump compared with the live site:** the commit check accepts a `CACHE` number higher than the one in `origin/main:sw.js`, as well as a `CACHE` line changed in the commit itself. A branch that has already bumped the cache once therefore doesn't need a new bump for each later commit before it is published.
 - **Media compared by what it shows:** the outputs storage rewrites the metadata of pictures and video after they are saved, so comparing raw bytes reported the download copy as out of date every time. `outputs_reminder.py` compares their decoded frames with `ffmpeg` instead. If `ffmpeg` is missing or fails, the file counts as different, so the reminder errs towards syncing.
@@ -334,6 +335,22 @@ Every change is committed and pushed on one branch, `updates`, and `main` only m
 - **Why fast-forward only:** `git merge --ff-only` keeps `main` exactly equal to what was checked on `updates`, with no merge commits, and fails loudly if the two have diverged.
 - **Why only when `origin/updates` exists:** in a clone or fork without that branch the guard behaves as before, so it doesn't block normal work there.
 - **Trade-off:** changes can't be kept apart on separate branches; unfinished work on `updates` has to be finished or reverted before the next release. The session-start line says when `updates` is behind `main`, for example after a fix made on GitHub.
+
+## Release script instead of release steps typed each time
+
+Publishing is `sh tools/release/ship.sh`, not a list of git commands followed by checking things by hand. The `release-lpn` skill and `.claude/CLAUDE.md` point to it.
+
+- **Why:** the steps after the push (wait for Checks and Pages, check the live site, update the download copy and zip) were easy to skip or do in a different order. The script does them the same way every time and stops at the first problem, so a release is only reported as done when the live site has been checked.
+- **Why it waits for Checks on `updates` first:** `main` is only fast-forwarded to a commit that has already passed every check on GitHub, including the real-library and photo reading checks that are skipped locally.
+- **Why it starts the health check:** the weekly `health.yml` already checks the live build number, the CDN libraries, the live demo video and the live photo reading, so running it straight after a release checks the published site rather than the repository, without a second set of checks to keep up to date.
+- **Limits:** it needs `gh` signed in and network access to GitHub; it never touches the `docs` branch; it only adds and overwrites files in the download folder. The built-in browser check of the live site is still done separately when the browser is connected.
+
+## Live photo reading in the weekly health check
+
+`health.yml` reads the user's four manifest photos with the live site (`tools/ocr-check/check.js --url=https://jamie9904.github.io/`), not only with the files on `main`.
+
+- **Why:** the checks on a push read the photos with the repository's code. Reading them with the published site also catches a site that serves something different from `main`, such as an old copy, and runs every week even when nothing is pushed.
+- **Cost:** the extra reading of four photos with tesseract.js made the run longer, so the health check's limit went from 10 to 15 minutes.
 
 ## Demo video recorder kept in the repository
 
