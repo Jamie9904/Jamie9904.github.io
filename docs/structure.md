@@ -8,7 +8,7 @@
 ├── scan.js                  live and photo barcode scanning, wake lock, input wiring
 ├── export.js                Excel/PDF builders, print, delivery (download/share/mailto), logo
 ├── compare.js               manifest check, file readers, OCR, presets, live tracking
-├── panels.js                guide, changelog, settings, saved deliveries, backups, install, update banner
+├── panels.js                guide, changelog, settings, report a problem or idea (with its offline queue), saved deliveries, backups, install, update banner
 ├── sw.js                    service worker (offline shell + library cache)
 ├── manifest.webmanifest     install metadata (name, colours, icons)
 ├── icon-192.png, icon-512.png, apple-touch-icon.png
@@ -48,10 +48,15 @@
 │   ├── check.js             runs the app's photo code on the photos and scores the LPNs (also used by tests/run.js on GitHub)
 │   ├── expected.json        the LPNs printed on each photo (18)
 │   └── photos/              the user's four manifest photos, address boxes cut off (qub, rby, run, vlt .jpg)
+├── tools/feedback-worker/   Cloudflare Worker that turns Report a problem or idea into issues in a private repo (not part of the site)
+│   ├── worker.mjs           POST /report: checks, limits (Limits Durable Object), GitHub issue and photo
+│   ├── wrangler.toml        Worker name, repo, allowed origin, Durable Object binding
+│   └── README.md            one-time set-up steps
 ├── tools/release/
 │   └── ship.sh              puts updates live and checks it: Checks, Pages, health check, download copy (development only)
 ├── .github/workflows/
 │   ├── test.yml             runs the checks on every push and pull request (advisories and fingerprints without blocking)
+│   ├── feedback-worker.yml  deploys tools/feedback-worker to Cloudflare (by hand, or when it changes on main; skips until its secrets exist)
 │   └── health.yml           weekly health check of the live site, the live demo video, CDN libraries, advisories, fingerprints, checks and the live site's photo reading
 └── .claude/                 Claude Code automations (development only)
     ├── CLAUDE.md            working notes: branches, release steps, user decisions
@@ -94,6 +99,7 @@
 - `tests/`, `tools/`, `package.json`, `DESIGN.md` and `README.md` are on `main`, so GitHub Pages publishes them alongside the app. `tools/` is kept out of the site zip and the download copy (`outputs_reminder.py` doesn't count it as a site file).
 - `tools/demo-video/` only reads the app files; its output goes to `media/demo.mp4` and `media/demo-poster.jpg`, which the app does use, and to `tools/demo-video/screens.json`, which only `tests/run.js` reads.
 - `tools/ocr-check/` only reads the app files and its own photos; `tests/run.js` loads `check.js` to read the photos on GitHub, and `health.yml` runs it with `--url=` against the live site.
+- `tools/feedback-worker/` runs on Cloudflare, not on GitHub Pages; the app only talks to it through `FEEDBACK_URL` in `panels.js` (empty until it is online). `tests/run.js` imports `worker.mjs` to check it.
 - `tools/release/ship.sh` only runs git and `gh` commands and copies files to the download folder; nothing in the app or the checks uses it.
 - `.github/`, `.claude/` and `.mcp.json` are on `main` but not published: Jekyll, which GitHub Pages uses to build the site, leaves out files and folders whose names start with a dot.
 - `docs/`, and the version of `README.md` that goes with it, live only on the `docs` branch (`main` has its own `README.md`). Pages publishes from `main`, so they are not on the site. The git guard in `.claude/hooks/lpn_git_guard.py` blocks committing `docs/` files on `main` and merging or pushing `docs` into `main`.

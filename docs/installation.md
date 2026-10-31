@@ -142,6 +142,19 @@ The procedures Claude Code follows (for example `release-lpn`, `lpn-write-check`
 
 `.mcp.json` at the root of `main` registers the Context7 MCP server (`"type": "http"`, `https://mcp.context7.com/mcp`) so Claude Code can look up current ExcelJS, jsPDF and pdf.js documentation during export work. No key is needed (a key only raises the rate limit). It only works where `mcp.context7.com` can be reached: on your own computer, or in a Claude cloud session once that host is allowed in the claude.ai network settings. The app doesn't use it; GitHub Pages doesn't publish it (Jekyll leaves out dotfiles), and it is kept out of the site zip like `.claude/`.
 
+### Feedback Worker (Report a problem or idea)
+
+**Report a problem or idea** in Settings needs the Cloudflare Worker in `tools/feedback-worker/`. Until it is set up the app's form says "Reporting isn’t set up yet" and points to Download problem report; everything else works without it. The one-time set-up is in `tools/feedback-worker/README.md`:
+
+1. Create a **private** repository `lpn-feedback` on GitHub (with a README).
+2. Make a fine-grained GitHub token for that repository only, with **Issues** and **Contents** read and write.
+3. On Cloudflare (free plan), note the **Account ID** and create an API token from the **Edit Cloudflare Workers** template.
+4. In `Jamie9904.github.io` → Settings → Secrets and variables → Actions, add `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` and `FEEDBACK_GITHUB_TOKEN`.
+5. Actions → **Deploy feedback Worker** → Run workflow on `main`. The run's notice gives the Worker's address (`https://lpn-feedback.<name>.workers.dev`), and the last step checks it answers `OPTIONS /report` with 204.
+6. Set `FEEDBACK_URL` in `panels.js` to that address plus `/report`, add the exact Worker origin to `connect-src` in the security policy in `index.html`, and release as usual. Step 6 is not done yet.
+
+`.github/workflows/feedback-worker.yml` also redeploys on any push to `main` that changes `tools/feedback-worker/` or the workflow; before the secrets exist such a push just skips with a notice ("Feedback Worker not set up"), while running it by hand fails and names the missing secrets. `wrangler.toml` sets `REPO` and `ALLOWED_ORIGIN` (`https://jamie9904.github.io`); the GitHub token is only stored as the Worker secret `GITHUB_TOKEN`, never in the repository. The Worker is not part of the site zip.
+
 ## Optional files
 
 - `logo.png`: used as the default logo in the header and on exports. Users can override it per device in **Settings → Logo**.

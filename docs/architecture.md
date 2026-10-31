@@ -2,7 +2,7 @@
 
 ## Overview
 
-A client-only progressive web app. There is no backend: the browser renders the page, holds the state, builds the export files and stores everything in `localStorage`. GitHub Pages only serves static files.
+A client-only progressive web app. There is no backend for the app itself: the browser renders the page, holds the state, builds the export files and stores everything in `localStorage`. GitHub Pages only serves static files. The one exception is **Report a problem or idea**, which posts to a small Cloudflare Worker (`tools/feedback-worker`, see [Feedback Worker](#feedback-worker-toolsfeedback-worker)); until that is online (`FEEDBACK_URL` empty) the app sends nothing.
 
 ```
 ┌──────────────── index.html ────────────────┐
@@ -21,7 +21,7 @@ A client-only progressive web app. There is no backend: the browser renders the 
 | `scan.js` | Live camera scanning and photo decoding; screen wake lock while scanning; input event wiring | `startScan`, `stopScan`, `decodePhoto`, `onCode` |
 | `export.js` | Spreadsheet styling helpers, Excel log, PDF log and manifest PDF, print, file delivery (download / share sheet / mailto fallback), logo handling, expected-count check | `xlBox`, `xlTitle`, `xlLines`, `xlLpnWidth`, `xlLpnLines`, `xlMadeWith`, `xlPrint`, `appVersion`, `buildLogPdf`, `buildCmpPdf`, `deliver`, `emailVia`, `expectCheck`, `exportLogo` |
 | `compare.js` | Manifest check: reading logs and manifests (xlsx, csv, PDF, photos), OCR, prefix presets, comparison, results panel, manifest Excel, live tracking in the log | `readLog`, `sheetGrid`, `PDFJS_SRC`, `PDF_LOAD_MSG`, `loadPdfJs`, `openPdf`, `readPdf`, `readLogPdf`, `ocrLpns`, `ocrLpnsNow`, `ocrWorker`, `ocrDone`, `ocrRead`, `OCR_READ_MS`, `OCR_MSG`, `dropOcrCache`, `extractLpns`, `lpnsFromText`, `maybeLpn`, `skippedOf`, `oddNote`, `addNums`, `readNote`, `cmpData`, `renderCmp`, `manState`, `manLive` |
-| `panels.js` | Guide/changelog content, side panel, theming, Settings (including the Logo buttons), saved deliveries (history), import of exported logs, backups, install pop-up, date reminder, remembered names, offline notice, service worker registration, prefix preset summary, entry bar stepping aside on phones | `applyTheme`, `initSettings`, `newDelivery`, `openHist`, `parseExported`, `backupNow`, `checkBackup`, `downloadReport`, `checkDate`, `pfxSummary`, `openHelp`, `closeHelp`, `dlgOpen`, `dlgClose`, `pageInert`, `openInstall`, `closeInstall`, `initDemo` |
+| `panels.js` | Guide/changelog content, side panel, theming, Settings (including the Logo buttons), saved deliveries (history), import of exported logs, backups, install pop-up, date reminder, remembered names, offline notice, service worker registration, prefix preset summary, entry bar stepping aside on phones | `applyTheme`, `initSettings`, `newDelivery`, `openHist`, `parseExported`, `backupNow`, `checkBackup`, `reportText`, `downloadReport`, `initFeedback`, `fbQueue`, `fbSave`, `fbPost`, `fbFlush`, `fbShrink`, `checkDate`, `pfxSummary`, `openHelp`, `closeHelp`, `dlgOpen`, `dlgClose`, `pageInert`, `openInstall`, `closeInstall`, `initDemo` |
 | `sw.js` | Offline shell and library cache | install / activate / fetch handlers |
 
 Scripts are loaded in that order at the end of `index.html`. Later files call functions from earlier ones directly; where an earlier file needs something defined later (for example `summary()` in `core.js` calling `manLive()` from `compare.js`), it checks `typeof fn === "function"` first.
@@ -33,6 +33,7 @@ Scripts are loaded in that order at the end of `index.html`. Later files call fu
 - **Saved deliveries** (`lpnhist`): array of the same shape plus `id` and `saved` timestamp. `pruneHist()` keeps only entries dated from the start of last week (weeks start on Sunday); `pushHist()` also caps the list at 50.
 - **Manifest numbers** (`lpncmpman`): the raw text of the manifest box, so live tracking survives a reload.
 - **Settings and preferences**: `lpncfg`, `lpntheme`, `lpnlogo`, `lpnnames`, `lpnpresets`, `lpncmppfx`, `lpncmpdate`, `lpnmergelog`, `lpnbackup`, `lpninstallshown`.
+- **Unsent reports** (`lpnfeedq`): an array of report objects `{kind, text, app, report, id}` waiting to be sent by **Report a problem or idea** (no photos). `fbSave()` refuses to write a list of more than 5 items or more than 300,000 characters of JSON, and removes the key when the list is empty. Like `lpndiag` it belongs to the device: `backupNow()` and the restore's copy of current values leave it out, and `checkBackup()` ignores it.
 - **Problem log** (`lpndiag`): an array of `{t, k, m}` (ISO time, kind cut to 20 characters, message cut to 300 characters), at most 300 entries, oldest dropped first. Written only by `diag()`. It belongs to the device: `backupNow()` leaves it out, `checkBackup()` ignores it, and a restore neither removes nor replaces it.
 
 Dates are stored as ISO `yyyy-mm-dd` and only formatted for display (`ukDate()` follows the Date format setting).
@@ -73,6 +74,15 @@ While a warning waits, `pendingAdd` holds the LPN and `tryAdd()` returns `false`
 **Undo last pallet**
 `#undoLast` pops the newest row and offers Undo through `showUndo()`. Its visibility is set in `summary()`; CSS shows it on phones only.
 
+**Undo bar (`showUndo(text, fn)`, build 42)**
+Shows `#undoBar` with the text, hides `#flash` (the "Added" note), and sets `#undoBtn` to hide the bar and run `fn`. The bar hides after 20 seconds (9 before build 42); if focus is inside the bar at that moment, it checks again every 3 seconds instead. On phones (`max-width:759px`) CSS makes it `position:fixed`, centred, `bottom: calc(var(--dockh,220px) + 10px)` (just above the entry bar, `z-index:31`, at most 520px wide); with `body.cmpfocus` (entry bar stepped aside) it sits at `bottom:20px`. `flashAdded()` places `#flash` above the entry bar on phones, plus the Undo bar's height and 8px when the Undo bar is showing.
+
+**Editing an LPN in the log (build 42)**
+`render()` puts a `button.lpnedit` in each LPN cell (`td.l`), with `aria-label` "Edit LPN <lpn>", `title` "Tap to edit" and `data-i` set to the row index. CSS makes it look like plain text (no background or border, at least 40px tall, full width, wraps). A click on the cell swaps it for an input; `finish(ok, key)` saves (or cancels) and re-renders, and when it was ended by Enter or Escape (`key` true) it focuses `#body .lpnedit[data-i="<i>"]`, found by row index rather than text, so it works after the LPN changes. Ending by blur doesn't move focus.
+
+**Export menus and Escape (build 42)**
+A `keydown` listener in `compare.js` closes `#expMenu` and `#cmpExpMenu` on Escape if open, sets `aria-expanded="false"` on `#expBtn` / `#cmpExpBtn` and focuses that button.
+
 **Excel export**
 `$("dl").onclick` → `expectCheck()` (first attempt blocked if the expected count differs) → `loadScript()` ExcelJS → `appVersion()` → build sheet: logo rows, `xlTitle()` band, numbered table and side tables with `xlBox()` borders → `xlMadeWith()` version line → `xlPrint()` (A4, fit to width, repeated header row, footer) → `deliver()` → `markExported()` (skipped when exporting a saved delivery). `deliver()` returns `false` when the user cancels the share sheet, so a cancelled email is not counted as an export. If ExcelJS cannot load, `fallbackXls()` writes an HTML-based `.xls`. In that file the LPN cells have `mso-number-format:'\@'`, and the Pallet Type, FSDU and labelled Delivery Details value cells (Date, Received by, notes and other typed fields) have class `t` (`mso-number-format:"\@"`), so Excel keeps them as text and never treats a typed value starting with `=` as a formula. The count cells in the side table stay numbers.
 
@@ -111,15 +121,15 @@ Excel and Google Sheets don't grow a row whose height has been set, so `export.j
 - `fallbackXls()`: a "Made with … at hh:mm." paragraph under the table.
 
 **Backup and restore (Settings → Backup)**
-`backupNow(msgId)` writes every `lpn*` key except `lpndiag` into `lpn-backup-<date>.json` (`{app:"lpn-pallet-log", version:1, saved, data}`) through `saveOnly()` and now returns `true` or `false`, so callers know whether the file was saved.
+`backupNow(msgId)` writes every `lpn*` key except `lpndiag` and `lpnfeedq` into `lpn-backup-<date>.json` (`{app:"lpn-pallet-log", version:1, saved, data}`) through `saveOnly()` and now returns `true` or `false`, so callers know whether the file was saved.
 
 Restoring is done in steps, and nothing is changed until the last one:
 
 1. **Choose the file** (`#bkUp` → `#bkFile`). If the file isn't JSON, or `app` isn't `"lpn-pallet-log"`, or `data` isn't an object, the message is "That isn’t a backup from this app."
-2. **Check it.** `checkBackup(data)` builds a tidied copy and changes nothing. It skips keys that don't match `^lpn[a-z0-9]*$`, values that aren't strings, and `lpndiag` (the problem log never comes from a backup). `lpnlog` goes through `cleanRows()` and `cleanDel()`, `lpnhist` through `cleanHist()`, `lpnnames` through `cleanNames()`, `lpncfg` through `cleanCfg()`, `lpnpresets` through `normList()` (names cut to 60 characters), `lpnlogo` is kept only if `okLogo()` passes, and `lpntheme` only if both colours pass `hexOk()`. Other `lpn*` strings are copied as they are. If `lpnlog` or any of the JSON keys can't be read, it throws "That backup file is damaged, so nothing was changed."
+2. **Check it.** `checkBackup(data)` builds a tidied copy and changes nothing. It skips keys that don't match `^lpn[a-z0-9]*$`, values that aren't strings, and `lpndiag` and `lpnfeedq` (the problem log and unsent reports never come from a backup). `lpnlog` goes through `cleanRows()` and `cleanDel()`, `lpnhist` through `cleanHist()`, `lpnnames` through `cleanNames()`, `lpncfg` through `cleanCfg()`, `lpnpresets` through `normList()` (names cut to 60 characters), `lpnlogo` is kept only if `okLogo()` passes, and `lpntheme` only if both colours pass `hexOk()`. Other `lpn*` strings are copied as they are. If `lpnlog` or any of the JSON keys can't be read, it throws "That backup file is damaged, so nothing was changed."
 3. **Ask.** `#bkMsg` says what the backup holds ("This backup has a log of n pallets and n saved deliveries…") and the row `#bkAsk` appears with **Replace my data with this backup** (`#bkGo`) and **Cancel** (`#bkNo`, "Nothing was changed.").
 4. **Safety copy.** `#bkGo` first calls `backupNow("bkMsg")`. If that returns `false`, it stops and adds "Your data wasn’t replaced, because the copy of it couldn’t be saved first."
-5. **Replace.** It logs "Restoring a backup" with `diag("backup", …)`, keeps a copy of every current `lpn*` value except `lpndiag`, removes them and writes the checked data. If writing fails (for example the browser is out of storage space), it removes what it wrote, puts the old values back and says "Couldn’t restore that backup because this browser ran out of storage space, so nothing was changed."
+5. **Replace.** It logs "Restoring a backup" with `diag("backup", …)`, keeps a copy of every current `lpn*` value except `lpndiag` and `lpnfeedq`, removes them and writes the checked data. If writing fails (for example the browser is out of storage space), it removes what it wrote, puts the old values back and says "Couldn’t restore that backup because this browser ran out of storage space, so nothing was changed."
 6. **Reload by hand.** On success it says "Backup restored. Make sure the copy of your previous data has saved, then reload the app to see the restored data." and shows `#bkDone` with **Reload the app** (`#bkReload`, `location.reload()`). There is no automatic reload, because on phones (iPhone asks first) the safety copy may still be waiting to be saved.
 
 **Starting a new delivery**
@@ -176,7 +186,17 @@ Numbers come from `readPdf()` (text via pdf.js, scanned pages via OCR), `ocrLpns
 | `pdf` | `readPdf()` | file name, page count, characters of text, LPNs found and up to 10 skipped numbers |
 | `backup` | restore (`#bkGo`) | "Restoring a backup" |
 
-`downloadReport()` in `panels.js` (Settings, `#diagDl`) builds a plain text report: a heading, the time, `appVersion()`, `navigator.userAgent`, screen and window size and pixel ratio, installed (display-mode standalone or `navigator.standalone`), online and service worker state; then pallets in the log, `#date`, `#expect`, the prefixes from `getPfx()`, the numbers in `#cmpNums` and `#cmpLogNums`, and the text of `#cmpMsg`; then every `lpndiag` entry that is an object, as "time  kind  message". Entries that aren't objects are skipped, so a damaged log still gives a report. It is saved with `saveOnly()` as `lpn-problem-report-<localToday()>.txt` (`text/plain`) and `#diagMsg` says whether it worked. `#diagClear` removes `lpndiag`.
+`reportText()` in `panels.js` builds a plain text report (since build 42 shared by **Download problem report** and **Report a problem or idea**): a heading, the time, `appVersion()`, `navigator.userAgent`, screen and window size and pixel ratio, installed (display-mode standalone or `navigator.standalone`), online and service worker state; then pallets in the log, `#date`, `#expect`, the prefixes from `getPfx()`, the numbers in `#cmpNums` and `#cmpLogNums`, and the text of `#cmpMsg`; then every `lpndiag` entry that is an object, as "time  kind  message". Entries that aren't objects are skipped, so a damaged log still gives a report. `downloadReport()` (Settings, `#diagDl`) saves it with `saveOnly()` as `lpn-problem-report-<localToday()>.txt` (`text/plain`) and `#diagMsg` says whether it worked. `#diagClear` removes `lpndiag`. The feedback code also logs `feedback` entries: sent, saved to send later, a saved report refused and removed, and "Sent n saved report(s)".
+
+**Report a problem or idea (`panels.js`, build 42)**
+The form is in `HELP.settings` under `<h3 id="fbHead">`: radio buttons `fbKind` (`problem`, checked, or `idea`) in `fieldset.fbkind`, `#fbText` (`maxlength="4000"`), `#fbPhotoBtn` / `#fbPhotoRm` / `#fbPhotoName` with a hidden `#fbPhoto` file input (`accept="image/*"`), `#fbInc` (attach the problem report, checked), `#fbSend` and `#fbMsg` (`role="status"`). `initSettings()` calls `initFeedback()` each time Settings opens. The Guide's `#fbGuide` button (a `.linkbtn`) is handled in the `#panelBody` click listener: it calls `openHelp("settings","Settings")`, scrolls `#fbHead` into view and focuses `#fbText`.
+
+- `fbShrink(file)`: `createImageBitmap()`, scaled so the long side is at most 1600px, drawn on a canvas, `toDataURL("image/jpeg", .8)`, or `.6` if that is over 1,900,000 characters. The result is kept in `fbPhotoData`.
+- **Send:** blank text → "Write what happened first."; `FEEDBACK_URL` empty → "Reporting isn’t set up yet. Use Download problem report below and send the file to Jamie instead." Otherwise it builds `{kind, text, app: appVersion(), report: #fbInc ? reportText() : "", photo}` and calls `fbPost()`. On success the form is cleared and the message is "Sent. Thank you!".
+- `fbPost(item)`: `POST` JSON to `FEEDBACK_URL`. A network failure, or an answer of 5xx or 429, throws with `retry: true`; any other failure throws with the server's `error` text (cut to 300 characters) and `retry: false`.
+- **Retry:** the photo is removed (with a note asking to send it again), the report is cut to 60,000 characters, an `id` (time and random letters, base 36) is added, and the item is appended to `fbQueue()` and saved with `fbSave()`. If `fbSave()` refuses (over 5 items or 300,000 characters) the message says there is no room. A refused report (no retry) shows the server's message and isn't kept.
+- `fbFlush()`: does nothing if `FEEDBACK_URL` is empty, a flush is already running (`fbBusy`) or the browser is offline. It sends the first queued item (without its `id`), then reads the list again from `localStorage` before removing that `id`, so an item saved by **Send** during the flush isn't lost. It stops at the first retryable failure; a refused item is logged and removed. It runs on the window `online` event and 4 seconds after `panels.js` loads.
+- `FEEDBACK_URL` is `""` in `panels.js` until the Worker is online. Setting it also needs the Worker's exact origin added to `connect-src` in the security policy (see below); neither is done yet.
 
 The prefix preset controls (`#cmpPreset`, `#cmpPfx`, preset save/delete/download buttons) sit inside a closed `<details id="pfxBox">` below the two steps (`.cmpsteps`). `pfxSummary()` in `panels.js` writes the current choice into `#pfxSum` in the summary line: "(all prefixes)" when the list is empty, the preset name when the list matches a named preset, otherwise the typed list. It runs on `change`/`input` of both fields and from `syncSelect()` in `compare.js` (guarded with `typeof pfxSummary === "function"`, since `panels.js` loads later).
 
@@ -196,11 +216,14 @@ The phone breakpoint is `max-width:759px` in `styles.css`.
 - **Header buttons:** at `max-width:620px`, `#side` wraps (`flex-wrap:wrap`) and each button is `flex:1 1 auto`, so they size to their text and wrap instead of widening the page with Extra large text.
 - **Live scan camera:** on phones `.entry #video` has `max-height:clamp(110px,24vh,200px)`, so `#smsg` and **Stop scanning** stay on screen. `#chkBar` sits before `#scanbox` in `index.html` (above the camera); `#smsg` is `role="status"` with `aria-live="polite"`.
 - **Focus clear of the entry bar:** an IIFE in `panels.js` watches `.entry` with a `ResizeObserver` and writes its height to `--dockh` on `<html>`; on phones `html` has `scroll-padding-bottom: calc(var(--dockh,220px) + 12px)`, so a focused control scrolls above the fixed bar.
-- **"Added" note:** `.flash` has `pointer-events:none`, so the confirmation can't take taps meant for the buttons under it.
+- **"Added" note:** `.flash` has `pointer-events:none`, so the confirmation can't take taps meant for the buttons under it. It moves up above the Undo bar while that shows (see Undo bar).
+- **Undo bar:** fixed just above the entry bar using `--dockh` (see Undo bar under Main flows). Known minor issue: with the Manifest check open (`body.cmpfocus`) it is at `bottom:20px` and can cover one results row for up to 20 seconds.
 
 ## Dialogs and focus
 
 `#panel` (Guide, Changelog, Settings, Saved deliveries) and `#instBox` (install box) have `role="dialog"` and `aria-modal="true"`. `openHelp()` calls `dlgOpen($("panelClose"))` and `openInstall()` calls `dlgOpen()` with the install box's first visible button. `dlgOpen()` remembers `document.activeElement` in `dlgOpener` (only if nothing is remembered yet), makes `main` and `header.top` `inert` (`pageInert(true)`) and focuses the given element on the next tick. `closeHelp()` and `closeInstall()` call `dlgClose()` only if their dialog was open; `dlgClose()` returns early while either dialog is still open, otherwise removes `inert` and focuses the remembered opener if it is still in the page. `initDemo()` focuses the video when **Watch the demo video** is pressed. `index.html` has `lang="en-GB"`.
+
+Other labels and structure (build 42): the last pallet-table heading holds `<span class="sr">Remove</span>` (visually hidden); the Saved deliveries **Open**, **Email PDF** and **Delete** buttons get `aria-label`s with the delivery date from `ukDate()`; `renderCmp()` makes the results headings `h3` (CSS `.cmpres h3`, `.m` and `.b` colours as before); `#cmpSum span` text uses `--ink` instead of `--mu`; `.cmpres summary` is at least 44px tall (`padding:10px 0`); `#dockCnt` has no `aria-live`. Guide links (`a[data-g]`) scroll with `behavior: "auto"` when `prefers-reduced-motion: reduce` matches, otherwise `"smooth"`.
 
 **Entry bar stepping aside (`cmpfocus`)**
 An IIFE at the end of `panels.js` runs `upd()` (throttled with a 60ms `setTimeout`, which keeps working when the page is in the background, unlike `requestAnimationFrame`) on window `scroll` and `resize`, on `focusin` inside the entry bar (`.card.entry`), after a click on `#cmpToggle`, and once at load. It hides the bar when all of these are true:
@@ -211,6 +234,20 @@ An IIFE at the end of `panels.js` runs `upd()` (throttled with a 60ms `setTimeou
 4. focus is not inside the entry bar.
 
 Hiding toggles `body.cmpfocus`, which slides the bar down with `transform: translateY(105%)` (0.2s transition), and sets `entry.inert`, so its fields and buttons cannot be focused or tapped while off screen. When any condition stops holding, the class and `inert` are removed and the bar slides back.
+
+## Feedback Worker (`tools/feedback-worker`)
+
+A Cloudflare Worker (`worker.mjs`, configured by `wrangler.toml`: name `lpn-feedback`, `REPO = "Jamie9904/lpn-feedback"`, `ALLOWED_ORIGIN = "https://jamie9904.github.io"`, and the GitHub token as the secret `GITHUB_TOKEN`). The site is public and can't hold a GitHub key, so the Worker holds it. It is not part of the site and not in the site zip.
+
+- `OPTIONS` → 204 with CORS headers (`Access-Control-Allow-Origin` is always `ALLOWED_ORIGIN`). Anything but `POST /report` → 404. An `Origin` other than `ALLOWED_ORIGIN` → 403. No token or repo → 503 "Reporting isn't set up yet." A body over 2,400,000 characters → 413.
+- `check(o)` validates: `website` must be empty (a field only spam robots fill in); `kind` must be `problem` or `idea`; `text` 1 to 4000 characters after trimming; `report` cut to 60,000; `app` kept only if it matches `^LPN Pallet Log( v[\d.]+)?( \(build \d+\))?$`, so nothing else can reach the issue outside a text block; `photo` only as `data:image/jpeg;base64,…` whose data starts `/9j/` (JPEG bytes FF D8 FF), at most 1,600,000 bytes. Failures → 400 with a plain message.
+- **Limits:** one Durable Object (`Limits`, `idFromName("all")`) counts across all of Cloudflare's servers: at most `PER_HOUR` = 10 reports an hour per address (`CF-Connecting-IP`), `DAY_ISSUES` = 50 reports and `DAY_PHOTOS` = 20 photos a day in total (UTC day). Over a report limit → 429; over the photo limit the report is still made without its photo, with a note. An alarm a day after the first count clears all its storage.
+- **Issue:** `issueOf()` gives the title "Problem: " or "Idea: " plus the first line (up to 70 characters, "…" if cut), and a body naming the kind and app version, with the text and the problem report (in `<details>`) each in a `~~~~text` block made by `block()` (any run of four or more `~` in the text is changed to `∼`), so they can't add links, mentions or formatting.
+- **Order:** the issue is created first (`POST /repos/<REPO>/issues`). Then, if there is a photo, it is saved with `PUT /contents/photos/<yyyy-mm>/issue-<n>-<time>.jpg` and the issue body is updated (`PATCH`) with a link and the image. A failed photo step only adds a note; a failed issue never leaves a stray photo.
+- **GitHub failures:** 401, 403, 429, 5xx or no answer → 503 ("It will be tried again", so the app keeps the report); any other status → 422, which the app doesn't retry.
+- Answer: `{ok:true, issue, note}` or `{ok:false, error}`.
+
+`.github/workflows/feedback-worker.yml` (**Deploy feedback Worker**) deploys it, by hand (`workflow_dispatch`) or on a push to `main` that changes `tools/feedback-worker/**` or the workflow. Its first step checks for the three repository secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` and `FEEDBACK_GITHUB_TOKEN`: on a push with any missing it skips with a notice; run by hand it fails naming the missing ones. Then `npx wrangler@3.114.0 deploy` (the address goes in a notice), a separate step that is the only one given `FEEDBACK_GITHUB_TOKEN` and passes it on stdin to `wrangler secret put GITHUB_TOKEN`, and a check that `OPTIONS <address>/report` with the app's origin answers 204.
 
 ## Library loading and fingerprints (SRI)
 
@@ -240,6 +277,8 @@ What each part is for in this app:
 | `style-src 'unsafe-inline'` | `style` attributes and `style.cssText` set from code |
 | `frame-src`, `object-src` | `printBuf()` loads the PDF into a hidden `<iframe>` from a `blob:` address |
 | `base-uri`, `form-action` | Set to `'none'`: nothing can change the base address or submit a form |
+
+The feedback Worker's address is not in `connect-src` yet, so `fbPost()` would be blocked until it is added together with `FEEDBACK_URL`.
 
 Older Safari doesn't understand `'wasm-unsafe-eval'`, so reading photos needs iOS 16 or newer on an iPhone. A new library host, or a library that fetches from a new place, must be added to the policy, or it is blocked. See [decisions](decisions.md#content-security-policy-in-the-page-build-31).
 

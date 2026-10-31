@@ -18,10 +18,11 @@ A goods-in web app for documenting pallet deliveries. Staff scan or type each pa
 
 It also checks a delivery against the supplier's manifest. Manifest numbers can come from photos (OCR), PDFs or typing, and while they are loaded the log counts them off live as pallets are scanned. Photos are cleaned up against the paper around each point and the numbers on each page are matched to each other to fix common misreads; readings that don't look like the page's LPNs are left out and, if they could be real, named so they can be typed in. Each photo or PDF read says how many LPNs it found, how many were new and which numbers the prefix list left out.
 
-- Runs entirely in the browser: no server, no accounts. Data stays on the device.
+- Runs entirely in the browser: no server, no accounts. Data stays on the device, except a report the user chooses to send.
 - Installable on Android and iPhone as a home-screen app, and works offline after the first visit.
-- Built for a phone in one hand on a loading bay: big touch targets, a pallet table that scrolls with the page, a docked entry bar with a counter and undo-last button (it slides aside while the Manifest check is in use), sound and vibration feedback. A scan made while a warning is open is kept rather than lost, edges and accent text keep readable contrast in any colour theme, and the side panels work as dialogs for keyboard and screen reader users.
+- Built for a phone in one hand on a loading bay: big touch targets, a pallet table that scrolls with the page, a docked entry bar with a counter and undo-last button (it slides aside while the Manifest check is in use) and the Undo bar just above it, sound and vibration feedback. A scan made while a warning is open is kept rather than lost, edges and accent text keep readable contrast in any colour theme, the side panels work as dialogs, and LPNs in the log can be edited from the keyboard.
 - A problem report in Settings: a plain text file with the version, device, current state and the last 300 events (manifest reads, errors) kept on the device, for users to send when something goes wrong.
+- **Report a problem or idea** in Settings (and from the Guide): Problem or Idea, a description, an optional photo and the problem report, sent through a small Cloudflare Worker (`tools/feedback-worker`) that makes an issue in a private GitHub repo. Reports wait on the phone without signal. Until the Worker is set up the form says so and points to the problem report download.
 - Guards against common slips: duplicate and malformed LPN warnings, an expected-count check, and a reminder before starting a new delivery that hasn't been exported.
 - Careful with files from outside: backups are checked and shown before restoring (with a copy of the current data downloaded first), saved data is tidied when read, files loaded back in only give plain text to exports, every library file loaded by a script tag is checked against its fingerprint, and a security policy in the page only lets it run code from its own site and the three library CDNs.
 
@@ -50,7 +51,7 @@ Then: fill in the delivery details → type `RUN000000001` into the LPN box → 
 | OCR | Tesseract.js 5.1.1 |
 | Storage | `localStorage` (keys prefixed `lpn`) |
 | Fonts | Atkinson Hyperlegible, IBM Plex Mono (self-hosted, SIL OFL) |
-| Hosting | GitHub Pages |
+| Hosting | GitHub Pages; Cloudflare Workers (free plan) with a Durable Object for the feedback Worker only |
 | Checks | Node.js + Playwright, with the real ExcelJS, jsPDF, pdf.js, pdf-lib, Tesseract.js and ZXing at the app's versions (every flow also checked under the security policy); run by GitHub Actions on every push and in a weekly health check, which also checks the libraries for security advisories (osv.dev) and their fingerprints, and that the live demo video plays; the checks on GitHub also read four real manifest photos with the real Tesseract.js and fail on any wrong LPN, and the weekly health check reads them with the live site |
 
 Libraries load only when a feature first needs them: from cdnjs with jsDelivr as fallback, except pdf.js, which loads as a module from jsDelivr with unpkg as fallback. Script-tag libraries carry an integrity hash (`SRI` in `core.js`), so the browser refuses a changed file. A Content Security Policy in `index.html` limits scripts to the site, cdnjs, jsDelivr and unpkg (reading photos needs iOS 16+ on an iPhone because of it).
@@ -88,9 +89,10 @@ A single page (`index.html`) loads five classic scripts in a fixed order that sh
 ├── tests/              run.js (automatic checks), advisories.js + advisories-accepted.json (security advisories), sri.js (library fingerprints)
 ├── tools/demo-video/   recorder that re-makes the Guide demo video from the current app (sh tools/demo-video/make.sh)
 ├── tools/ocr-check/    photo reading check on the user's real manifest photos (node tools/ocr-check/check.js)
+├── tools/feedback-worker/  Cloudflare Worker for Report a problem or idea (set-up in its README.md)
 ├── tools/release/      ship.sh: puts updates live, waits for Checks, Pages and the health check, syncs the download copy
 ├── package.json        test dependencies only (Playwright and the export libraries)
-├── .github/workflows/  test.yml (checks on every push), health.yml (weekly health check)
+├── .github/workflows/  test.yml (checks on every push), health.yml (weekly health check), feedback-worker.yml (deploys the feedback Worker)
 ├── .mcp.json           Context7 library documentation for Claude Code
 └── .claude/            Claude Code hooks, agents and working notes
 ```

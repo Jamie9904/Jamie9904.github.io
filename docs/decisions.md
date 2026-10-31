@@ -251,7 +251,7 @@ The app keeps its last 300 notable events in `lpndiag` and offers them as a down
 - **Why not automatic reporting:** the app has no backend. Sending data out would need a service and would send LPNs and text from supplier documents off the device without the user choosing to.
 - **Why capped:** 300 entries of at most 300 characters keeps it small in `localStorage` (the check keeps it under 120,000 characters) so it can't crowd out the log and saved deliveries.
 - **Why not in backups:** the log describes this device. Restoring another device's log would mix up two devices' events, so backups leave it out, ignore it when restoring, and a restore keeps the current one.
-- **Trade-off:** the report contains LPNs, file names and the start of text read from photos. It is only made when the user taps the button, and **Clear** empties it.
+- **Trade-off:** the report contains LPNs, file names and the start of text read from photos. It is only made when the user taps the button, and **Clear** empties it. Since build 42 it can also be attached to a report sent from **Report a problem or idea** (see below); it is still never sent by itself.
 
 ## Email via the share sheet, PDF only
 
@@ -456,7 +456,31 @@ Opening the side panel or the install box moves focus in, makes `main` and the h
 
 ## Accessibility review items not done yet (build 41)
 
-The audit by the `a11y-reviewer` agent that led to build 41 also suggested changes that were not made in build 41: showing the Undo bar in the phone entry bar, LPN cells that can be edited from the keyboard, Escape closing the export menus, and smaller labelling points. They are listed here so they aren't taken as done.
+The audit by the `a11y-reviewer` agent that led to build 41 also suggested changes that were not made in build 41: showing the Undo bar in the phone entry bar, LPN cells that can be edited from the keyboard, Escape closing the export menus, and smaller labelling points. Build 42 made them (see below).
+
+## Rest of the accessibility audit (build 42)
+
+- **LPN cells are buttons (`button.lpnedit`), styled as text:** a plain `td` with a click handler couldn't be reached with Tab or announced as something to press. Focus goes back to the edited LPN after Enter or Escape, found by its row index (`data-i`), not its text, because the text may just have changed. Ending an edit by tapping elsewhere doesn't move focus.
+- **Undo bar fixed just above the entry bar on phones, 20 seconds, kept while focused:** before, it showed in the page itself, which on a phone could be off screen while scanning, and it went after 9 seconds. It uses `--dockh` (the entry bar's measured height), so it follows the bar's real size. The "Added" note moves above it rather than being hidden behind it.
+- **Trade-off (known minor issue):** with the Manifest check open the entry bar steps aside and the Undo bar drops to the bottom of the screen, where it can cover one results row for up to 20 seconds. This was accepted rather than adding more placement rules.
+- **Entry-bar counter not announced:** `#dockCnt` changed on every add and was read out on top of the "Added" note, so screen reader users heard the count twice.
+- **Smaller points:** a hidden "Remove" heading for the ✕ column, date-specific names for Saved deliveries buttons (several "Open" buttons were indistinguishable), results headings as `h3` so the heading levels don't skip, `--ink` text in `#cmpSum` for contrast, a 44px Matched summary, Escape for the Export menus, and no smooth scrolling for Guide links with reduced motion.
+
+## Report a problem or idea through a Worker into a private repo (build 42)
+
+Staff can send a problem or idea from Settings; a Cloudflare Worker (`tools/feedback-worker`) turns it into an issue in the private repo `Jamie9904/lpn-feedback`.
+
+- **Why a Worker:** the site is public, so it can't hold a GitHub key. The Worker holds a fine-grained token for that one repo only (Issues and Contents), stored as a Worker secret, and checks every report before using it.
+- **Why a private repo:** reports can include LPNs, manifest numbers and text read from supplier documents. The form says where reports go and what the problem report contains, and attaching it can be unticked. This changes the earlier stance in "Problem log kept on the device, sent by hand": the log still never leaves the device by itself, only when attached to a report the user sends.
+- **Why limits in a Durable Object:** the Origin check only stops other websites, not scripts calling the Worker directly. One Durable Object keeps the counts for all of Cloudflare's servers (10 an hour per address, 50 reports and 20 photos a day), which is what actually limits spam.
+- **Why text in `~~~~` blocks and only the version line as `app`:** anything typed or read from a photo could otherwise add links, `@` mentions or formatting to the issue.
+- **Why JPEG only, shrunk in the app:** a 1600px JPEG is small enough to send on a weak signal and to store; checking the data starts like a JPEG stops other files being saved in the repo.
+- **Why the issue first, then the photo:** a failed issue never leaves a stray photo in the repo; a failed photo only adds a note.
+- **Why some GitHub errors are retried and others not:** 401, 403, 429 and 5xx mean an expired or changed token or GitHub busy, which can work later, so the Worker answers 503 and the app keeps the report. Any other refusal (422) would fail every time, so the app drops it instead of retrying for ever.
+- **Why a small offline queue without photos:** `localStorage` is shared with the log and saved deliveries; capping `lpnfeedq` at 5 reports and 300 KB (report cut to 60,000 characters, no photos) means it can't crowd them out. The list is read again before each change, so a report saved while others are being sent isn't lost.
+- **Why not in backups:** like the problem log, unsent reports belong to the phone they were written on.
+- **Why the deploy skips before set-up:** pushes to `main` that touch the Worker would otherwise fail until the user has created the Cloudflare account and secrets. Running it by hand still fails and names the missing secrets. The GitHub token is only given to the one step that stores it, on stdin, so it can't appear in other steps or the command line.
+- **Not live yet:** `FEEDBACK_URL` stays empty and the form says "Reporting isn’t set up yet" (pointing to Download problem report) until the user has done the set-up; then `FEEDBACK_URL` must be set and the Worker's exact origin added to `connect-src`.
 
 ## Demo video not re-recorded for build 41
 

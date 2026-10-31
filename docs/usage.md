@@ -23,7 +23,8 @@ The in-app **Guide** covers the same ground for staff. This page is the referenc
 - Each add shows "Added #n: LPN · type", plus "✓ on manifest" or "⚠ NOT on manifest" while a manifest is loaded.
 - On phones the entry bar shows `n logged`, `n of expected logged`, or `n of total on manifest` (shortened to `n/total` on screens under 400px), and the Delivery card folds into one line once logging starts.
 - The ↶ button next to the entry-bar counter (phones only) removes the most recent pallet, with Undo.
-- Tap an LPN to edit it; change type or FSDU in the table; ✕ removes it. Undo appears after removing, editing or Clear all.
+- Tap an LPN to edit it (each LPN is a button, so it can also be reached with Tab and opened with Enter or Space); Enter saves, Escape cancels, and since build 42 both put the keyboard back on that LPN. Change type or FSDU in the table; ✕ removes it. Undo appears after removing, editing or Clear all.
+- **Undo bar:** stays 20 seconds (9 before build 42), and doesn't go away while it has the keyboard focus. On phones (under 760px) it floats just above the entry bar, so it can be seen while logging; with the entry bar stepped aside for the Manifest check it sits near the bottom of the screen. While the Undo bar shows, the "Added" note appears above it instead of underneath; a new Undo bar hides any "Added" note that is showing.
 - Search and the type and FSDU filters only change what is shown; totals always cover the whole log. FSDUs are counted separately and are not part of the total.
 - With Expected pallets set, the line under the totals reads "n of x expected" with "(n to go)" in the normal text colour while counting, turns green with "✓ all accounted for" when the count matches, and turns red with "(n more than expected)" only when there are more pallets than expected. When a manifest is loaded and Expected pallets equals the manifest count, this line is hidden, because the manifest progress line already shows the same count.
 - On phones (under 760px wide) the pallet table has no scroll box of its own: it scrolls with the page, and the column headings stay pinned at the top of the screen while you scroll through it. Long LPNs wrap onto a second line instead of pushing the page sideways. On wider screens the table keeps its own scroll area (up to 60% of the screen height).
@@ -115,11 +116,27 @@ While checking, the app tidies the backup: anything it doesn't recognise is left
 
 The problem log (see [Problem report](#problem-report)) is never put in a backup, is ignored if a backup file contains one, and is left as it was when a backup is restored.
 
+## Report a problem or idea
+
+**Settings → Report a problem or idea** (also opened from the Guide's **Report a problem or idea** link in section 9, which opens Settings at the form with the cursor in the text box):
+
+1. Choose **Problem** or **Idea**.
+2. Type what happened or what would help (up to 4000 characters).
+3. Optional: **Add a photo**. It is made smaller before sending (at most 1600px along the long side, as a JPEG) and the note shows its size, for example "Photo added (240 KB)". **Change photo** and **Remove photo** appear once one is added.
+4. **Attach the problem report (recent actions on this phone, with the LPNs involved)** is ticked by default; untick it to send only the text and photo.
+5. Tap **Send**. "Sent. Thank you!" means it has arrived.
+
+A note on the form says reports go to Jamie's private GitHub, through a Cloudflare server, and that the problem report includes the LPNs and manifest numbers on the phone, file names, the start of text read from photos, and the browser and screen size.
+
+**Not set up yet.** Until the reporting server is online, **Send** says "Reporting isn’t set up yet. Use Download problem report below and send the file to Jamie instead." (see [installation](installation.md#feedback-worker-report-a-problem-or-idea)).
+
+**No signal.** If the phone is offline, or the server is busy, the report is kept on the phone and sent when it is back online (when the browser reports it is online, and 4 seconds after the app opens). The message says "No signal or the server is busy: saved on this phone, and it will be sent when you’re back online." Photos are not kept: the message then adds that the photo should be sent again when there is signal. At most 5 reports (about 300 KB in all) can wait; past that it says there's no room and suggests trying again with signal or using Download problem report. When Settings opens with reports waiting, it says how many. A report the server refuses (for example too long) shows the server's reason and is not kept. Waiting reports belong to the phone: they are never put in a backup or taken from one.
+
 ## Problem report
 
 **Settings → Problem report** has **Download problem report** and **Clear**.
 
-The app keeps a short log of what it has done on this device: the last 300 events, each cut to 300 characters. It records manifest photo, manifest PDF and log photo reads (file type and size, how many LPNs were found, added and already listed, numbers left out by the prefix list, readings left out as not looking like the page's LPNs, failures), what the photo reader and PDF reader got from each file (word or page count, LPNs found and the first 150 characters of the text read from a photo), backup restores, and script errors (including failed promises). Nothing is sent anywhere by the app.
+The app keeps a short log of what it has done on this device: the last 300 events, each cut to 300 characters. It records manifest photo, manifest PDF and log photo reads (file type and size, how many LPNs were found, added and already listed, numbers left out by the prefix list, readings left out as not looking like the page's LPNs, failures), what the photo reader and PDF reader got from each file (word or page count, LPNs found and the first 150 characters of the text read from a photo), backup restores, and script errors (including failed promises). It is only sent if you attach it to a report from **Report a problem or idea**; nothing is sent by itself.
 
 **Download problem report** saves a plain text file, `lpn-problem-report-<yyyy-mm-dd>.txt`, with:
 
@@ -129,7 +146,7 @@ The app keeps a short log of what it has done on this device: the last 300 event
 
 The message then says "Problem report downloaded. Send it along with what happened." **Clear** empties the problem log ("Problem log cleared.").
 
-Section 9 of the Guide tells staff: if something isn't working, open Settings straight away, tap **Download problem report** and send that file with a description of what happened. The report contains LPNs, file names and text read from photos, so treat it like a delivery record.
+Section 9 of the Guide says: "Something not working, or an idea?" with a **Report a problem or idea** link (since build 42; before, it told staff to download the problem report and send it). The report contains LPNs, file names and text read from photos, so treat it like a delivery record.
 
 ## Guide and demo video
 
@@ -147,10 +164,19 @@ The **Guide** button in the header opens the Guide in the side panel. It starts 
 
 - The Guide, Changelog, Settings and Saved deliveries panel and the install box act as dialogs (build 41): when one opens, focus moves into it (to **✕ Close** in the panel, to the first visible button in the install box), the page behind can't be reached with Tab or a screen reader, and when it closes focus goes back to the button that opened it. Escape closes them.
 - The page language is British English (`lang="en-GB"`), so screen readers use a UK voice.
+- Since build 42:
+  - each LPN in the log is a button named "Edit LPN <number>" (see [Logging behaviour](#logging-behaviour));
+  - Escape closes an open Export menu (the log's or the Manifest check's) and puts focus back on its **Export** button;
+  - the remove (✕) column in the pallet table has the heading "Remove" for screen readers (not shown on screen);
+  - the buttons in Saved deliveries say which delivery they act on, for example "Open the delivery of <date>", "Email PDF of <date>" and "Delete the delivery of <date>" (Excel already did);
+  - the Missing, Log only and Matched headings in the Manifest check results are level-3 headings (were level 4), and the counts above them (`On manifest`, `Matched`…) use the normal text colour for contrast;
+  - the Matched summary that opens the matched list is at least 44px tall, with its arrow;
+  - the entry-bar counter is no longer read out each time it changes (the "Added" note already says it);
+  - links inside the Guide jump straight to their section, without scrolling smoothly, when the phone or computer is set to reduce motion.
 
 ## Settings
 
-Colours (two colours drive the whole theme, with a contrast warning; since build 41 the edges of boxes and buttons and any accent-coloured text, such as panel headings and links, are adjusted automatically so they stay readable with any chosen colours), quick themes, logo, default pallet type, keep last type, warnings, sound, vibration, confirm scans, text size, date format (dd/mm/yyyy, mm/dd/yyyy, yyyy-mm-dd), include log copy in comparisons, forget remembered names, backup and restore, problem report, install pop-up.
+Colours (two colours drive the whole theme, with a contrast warning; since build 41 the edges of boxes and buttons and any accent-coloured text, such as panel headings and links, are adjusted automatically so they stay readable with any chosen colours), quick themes, logo, default pallet type, keep last type, warnings, sound, vibration, confirm scans, text size, date format (dd/mm/yyyy, mm/dd/yyyy, yyyy-mm-dd), include log copy in comparisons, forget remembered names, backup and restore, report a problem or idea, problem report, install pop-up.
 
 **Logo** (under the colours): **Add logo** / **Change logo** picks an image that is kept on this device and used in the header and on exports. A saved logo is only used if it is a PNG or JPEG image stored in the app. `logo.png` next to the app is the default; when a custom logo is set, **Reset to default logo** (or **Remove logo** if there is no default) appears. The logo controls are no longer in the Delivery card.
 
@@ -190,4 +216,9 @@ Colours (two colours drive the whole theme, with a contrast warning; since build
 | An `IM` number gets "has n digits" or is listed as an unusual number of digits | `IM` numbers (full pallet picks) have 10 or 11 digits. Since build 39 those are accepted; one with 9 or 12 digits is still warned about, so check it against the paper. |
 | A real LPN named as "didn’t look like the other LPNs on this page" | Its prefix has a different number of letters from the rest of the photo (for example two letters among `VLT` numbers). Type it in the box. `IM` numbers are always kept. |
 | Manifest photos stop adding LPNs | Read the note for each photo. "1 new, 3 already in the list" means the numbers were already there. "…start with QUB, which isn’t in the prefix list" means the prefix list left them out: add that prefix under **Prefix presets** (or clear the prefixes) and read the photo again. "No LPNs could be read" means try a closer, sharper photo in good light. |
-| Anything else that goes wrong | Download the problem report straight away (**Settings → Problem report → Download problem report**) and send it with a description of what happened. |
+| "Reporting isn’t set up yet…" | The reporting server isn't online yet. Use **Download problem report** and send the file to Jamie with a description. |
+| "No signal, and there’s no room to keep more reports on this phone…" | Five reports (or about 300 KB) are already waiting to be sent. Try again with signal, or use **Download problem report**. |
+| The photo was not in a report sent later | Photos aren't kept while a report waits for signal. Send the photo again in a new report once online. |
+| "That photo couldn’t be read." | The browser couldn't open the image to make it smaller. Try another photo or a screenshot. |
+| The Undo bar covers a row in the Manifest check results on a phone | Known minor issue: with the Manifest check open, the Undo bar sits near the bottom of the screen for up to 20 seconds and can cover one results row. Wait for it to go, or scroll. |
+| Anything else that goes wrong | Use **Settings → Report a problem or idea** (with the problem report attached), or download the problem report straight away (**Settings → Problem report → Download problem report**) and send it with a description of what happened. |
