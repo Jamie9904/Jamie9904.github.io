@@ -85,7 +85,7 @@ button.d:hover{background:color-mix(in srgb,var(--dg) 12%,var(--paper));border-c
 .cmpres .ri .l{flex:1;min-width:0;overflow-wrap:anywhere;font:600 .98rem "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace}
 .cmpres .ri input{flex:1;min-width:0;min-height:38px;font:600 .98rem "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;padding:4px 8px}
 .cmpres .ri button{min-height:38px;padding:4px 12px}
-.cmpres summary{cursor:pointer;font-weight:700;margin:14px 0 6px;min-height:44px;display:flex;align-items:center}
+.cmpres summary{cursor:pointer;font-weight:700;margin:14px 0 6px;min-height:44px;padding:10px 0;box-sizing:border-box}
 .wrap{overflow-x:auto;border-top:2px solid var(--ac);border-bottom:1px solid var(--line);max-height:60vh;overflow-y:auto;margin:0 -18px}
 table{width:100%;border-collapse:separate;border-spacing:0}
 th,td{text-align:left;padding:9px 12px;border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent);white-space:nowrap}
