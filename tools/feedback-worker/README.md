@@ -4,8 +4,8 @@ Turns **Report a problem or idea** from the app (Settings, and a link in the Gui
 `Jamie9904/lpn-feedback`. The app can't hold a GitHub key because the site is public, so this small Cloudflare
 Worker holds it and checks every report first. Not part of the site zip.
 
-- `worker.mjs`: the Worker (POST `/report`). Only the app's address may send; at most 20 reports an hour from one
-  address; text shown in the issue as plain text (no links, mentions or formatting); photos saved in the repo under
+- `worker.mjs`: the Worker (POST `/report`). Only the app's address may send; at most 10 reports an hour from one
+  address and 50 reports (20 with photos) a day in total; text shown in the issue as plain text (no links, mentions or formatting); photos saved in the repo under
   `photos/` and shown in the issue.
 - `wrangler.toml`: name, repo and the app's address.
 - `.github/workflows/feedback-worker.yml`: puts it online (by hand from the Actions tab, and when this folder

@@ -350,7 +350,7 @@ async function downloadReport(){
 /* ---- Report a problem or idea ----
    Sent to the feedback Worker (tools/feedback-worker), which makes an issue in a private GitHub repo. Reports that
    can't be sent (no signal, server busy) wait in lpnfeedq on this phone, up to 5, and go when back online. */
-let FEEDBACK_URL=""; // the Worker's /report address, set once it is online
+let FEEDBACK_URL="https://lpn-feedback.jamie9904.workers.dev/report"; // the feedback Worker (tools/feedback-worker)
 let fbPhotoData=null;
 const fbQueue=()=>{try{const q=JSON.parse(localStorage.getItem("lpnfeedq")||"[]");return Array.isArray(q)?q.filter(x=>x&&typeof x==="object"):[]}catch(e){return[]}};
 // The waiting list is kept small (5 reports, about 300 KB, no photos) so it can never crowd out the log's own saving.

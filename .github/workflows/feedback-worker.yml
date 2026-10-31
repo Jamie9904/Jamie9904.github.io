@@ -7,6 +7,11 @@ name: Deploy feedback Worker
 # Runs by hand (Actions > Deploy feedback Worker > Run workflow) and when the Worker changes on main.
 on:
   workflow_dispatch:
+    inputs:
+      test_report:
+        description: "Also send a test report (makes one test issue in lpn-feedback)"
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths: ["tools/feedback-worker/**", ".github/workflows/feedback-worker.yml"]
@@ -43,7 +48,11 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          out=$(npx --yes wrangler@3.114.0 deploy 2>&1) || { echo "$out"; echo "::error title=Feedback Worker::deploy failed"; exit 1; }
+          out=$(npx --yes wrangler@3.114.0 deploy 2>&1) || {
+            echo "$out"
+            # Show Cloudflare's own reason in the notice, so it can be fixed without opening the log.
+            why=$(echo "$out" | sed 's/\x1b\[[0-9;]*m//g' | grep -A3 'ERROR' | grep -v '^\s*$' | tr '\n' ' ' | cut -c1-500)
+            echo "::error title=Feedback Worker deploy failed::$why"; exit 1; }
           echo "$out"
           url=$(echo "$out" | grep -oE 'https://[a-z0-9.-]+\.workers\.dev' | head -1)
           echo "::notice title=Feedback Worker address::$url"
@@ -60,7 +69,19 @@ jobs:
       - name: The Worker answers
         if: steps.ready.outputs.ok == '1'
         run: |
-          sleep 5
-          code=$(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS -H "Origin: https://jamie9904.github.io" "${{ steps.deploy.outputs.url }}/report")
+          # A new workers.dev address can take a few minutes to start answering.
+          for i in $(seq 1 24); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS -H "Origin: https://jamie9904.github.io" "${{ steps.deploy.outputs.url }}/report" || true)
+            [ "$code" = 204 ] && break; sleep 5
+          done
           echo "OPTIONS /report: $code"
-          [ "$code" = 204 ] || { echo "::error title=Feedback Worker::didn't answer (HTTP $code)"; exit 1; }
+          [ "$code" = 204 ] || { echo "::error title=Feedback Worker::didn't answer after 2 minutes (HTTP $code). A new address can take a little longer: run this again in a few minutes."; exit 1; }
+          echo "::notice title=Feedback Worker::answers at ${{ steps.deploy.outputs.url }}/report"
+      - name: Send a test report
+        if: steps.ready.outputs.ok == '1' && inputs.test_report
+        run: |
+          out=$(curl -s -w '\n%{http_code}' -X POST -H "Origin: https://jamie9904.github.io" -H "Content-Type: application/json" \
+            -d '{"kind":"idea","text":"Test report from the deploy check. Safe to close.","app":"LPN Pallet Log"}' "${{ steps.deploy.outputs.url }}/report")
+          echo "$out"
+          code=$(echo "$out" | tail -1)
+          [ "$code" = 200 ] && echo "::notice title=Feedback Worker test::A test issue was made in lpn-feedback: $(echo "$out" | head -1)" || { echo "::error title=Feedback Worker test::HTTP $code: $(echo "$out" | head -1). Check the GitHub token has Issues read and write on lpn-feedback."; exit 1; }
