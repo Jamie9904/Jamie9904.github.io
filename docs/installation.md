@@ -73,11 +73,11 @@ It needs `git`, the GitHub CLI (`gh`, signed in with access to `Jamie9904/Jamie9
 2. Checks out `main`, pulls it with `--ff-only`, fast-forwards it to `updates`, pushes `main` and goes back to `updates`.
 3. Waits for the **Checks** run and the **pages build and deployment** run on `main`, and prints the Checks notices (the annotations with a title, cut at 300 characters).
 4. Starts the weekly health check (`health.yml`) on `main` straight away and waits for it: the live site serves the new build, the CDN libraries download, the live demo video plays, and the live site reads the user's manifest photos (see [testing.md](testing.md#weekly-health-check)). It prints that run's notices too.
-5. If `/mnt/user-data/outputs` exists, copies every file tracked in git except `.claude/`, `docs/`, `tools/` and `.mcp.json` to `/mnt/user-data/outputs/lpn-site` and updates `lpn-site.zip` (`zip -FS`).
+5. If `/mnt/user-data/outputs` exists, copies every file tracked in git except `.claude/`, `docs/`, `tools/` and `.mcp.json` to `/mnt/user-data/outputs/lpn-site`, removes any file in `lpn-site` that is not in that list (printing `removed <file> from the download copy` for each), and updates `lpn-site.zip` (`zip -FS`).
 
 It stops at the first problem with a line starting `STOPPED:` (for example "not on the updates branch", "updates isn't pushed to GitHub yet", "Checks on main: failure" or "live site check failed (run N)", with the health check's notices) and goes back to `updates`. Each wait for a Checks or Pages run gives up after 15 minutes. It ends with `Done: lpn-log-vN is live. Next: docs-updater.`; the `docs` branch is not touched, so update it afterwards. Its first use, on 31 Oct 2026, passed every step.
 
-Files are only copied into the download folder, never removed from it, so a file deleted from the app stays in `lpn-site` until it is removed by hand. Like the rest of `tools/`, the script is not part of the site zip.
+Because files the app no longer has are removed from `lpn-site`, the download copy and `lpn-site.zip` hold exactly the site files of the release. Like the rest of `tools/`, the script is not part of the site zip.
 
 ### Re-recording the Guide demo video
 
@@ -91,6 +91,12 @@ sh tools/demo-video/make.sh
 2. Run `make.sh`. Without `SFX_DIR` the video has the voice only; set `SFX_DIR` to a folder with `whoosh.wav`, `ding.wav`, `pop.wav` and `starter-beat.mp3` to add music and sound effects (these files are not in the repository).
 3. Look at the check frames in `tools/demo-video/out/check-*.jpg` and play `media/demo.mp4` once.
 4. Commit `media/` and `tools/demo-video/screens.json`. `make.sh` rewrites `screens.json` (the fingerprint of the key screens, see [testing.md](testing.md#demo-video-screen-fingerprint)) after recording. The working files in `tools/demo-video/out/` are ignored by git.
+
+How `record.mjs` records:
+
+- The browser context uses the `en-GB` locale and the `Europe/London` time zone, so dates in the video show UK style.
+- There is no camera, so before the app loads it replaces `navigator.mediaDevices.getUserMedia` with a stream from a drawn canvas (`captureStream(30)`): a grey background with a white label that shows bars and the code in `window.__showCode`, or "…" when that is empty. It also replaces `window.BarcodeDetector` with a stand-in whose `detect()` returns `window.__showCode` while one is set. Everything after the code is reported (adding the pallet with the selected type and the "Added" message) is the app's own `onCode`.
+- The scanning scene (8.4 s) taps **FMCG**, **Scan** and **Live scan**, scrolls the camera box and **Stop scanning** into view, shows `VLT004037901` (added as FMCG), taps **BB**, then shows `RUN0001830770` (added as BB). It then taps **Stop scanning** and closes the scan buttons, so the next scene starts with them closed. Its headline is "Log pallets" / "Pick the type, then scan." and its narration is "Pick the pallet type first, then scan. Each pallet is logged with that type, so change it before the next one."
 
 A check in `tests/run.js` fails if the video is over 3 MB. Re-record when `npm test` prints that the screens differ from the demo video (on GitHub, the "Demo video may be out of date" warning) and the change shows in the video. The weekly health check also downloads the live video and checks it plays.
 
@@ -118,7 +124,7 @@ The last line reads the photos with the app at that address (here the live site)
 - **Docs stay off `main`:** a `git commit` on `main` is blocked if it would include files in `docs/`, and merging `docs` into `main` or pushing `docs` to `main` is blocked. The documentation is updated on the `docs` branch instead.
 - **Checks before push:** a `git push` runs `node tests/run.js` (the `npm test` checks) first and is blocked if any fail (see [testing.md](testing.md)). Pushes of only the `docs` branch skip this.
 - **Docs reminder:** at the end of a Claude Code turn, if `origin/main` has app changes that `origin/docs` does not, Claude is reminded once per `main` commit to update the docs branch. Like the session-start hook, it also finds the repository one folder below the project folder.
-- **Download copy reminder:** `.claude/hooks/outputs_reminder.py` (also a `Stop` hook, 60-second limit) compares each site file in `origin/main` (everything except `.claude/`, `docs/`, `tools/` and `.mcp.json`) with the copy in `/mnt/user-data/outputs/lpn-site` by git blob hash. The outputs storage rewrites the metadata of pictures and video after they are saved, so a `.mp4`, `.webm`, `.jpg`, `.jpeg` or `.png` whose bytes differ still counts as matching if `ffmpeg` decodes the same picture from both copies (an MD5 of the first video stream) and the file in the repository is the same as on `origin/main`. It also checks `lpn-site.zip` isn't older than that folder. If they don't match it reminds Claude, once per `main` commit, to sync them. It does nothing where there is no outputs folder, such as on your own computer.
+- **Download copy reminder:** `.claude/hooks/outputs_reminder.py` (also a `Stop` hook, 60-second limit) compares each site file in `origin/main` (everything except `.claude/`, `docs/`, `tools/` and `.mcp.json`) with the copy in `/mnt/user-data/outputs/lpn-site` by git blob hash. The outputs storage rewrites the metadata of pictures and video after they are saved, so a `.mp4`, `.webm`, `.jpg`, `.jpeg` or `.png` whose bytes differ still counts as matching if `ffmpeg` decodes the same picture from both main's own copy and the outputs copy (an MD5 of the first video stream). Main's copy is taken from git (`git show origin/main:<file>` into a temporary file), not from the working tree, which may hold a newer picture or video that isn't live yet. It also checks `lpn-site.zip` isn't older than that folder. If they don't match it reminds Claude, once per `main` commit, to sync them. It does nothing where there is no outputs folder, such as on your own computer.
 
 ### Agents for Claude Code
 

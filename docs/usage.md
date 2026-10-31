@@ -129,8 +129,9 @@ Section 9 of the Guide tells staff: if something isn't working, open Settings st
 The **Guide** button in the header opens the Guide in the side panel. It starts with a **▶ Watch the demo video (38 seconds)** button, above the contents bar and the guide sections.
 
 - Nothing is downloaded until the button is tapped (the video is set to `preload="none"`).
-- Tapping it hides the button and shows a video player in its place, which starts playing. The video is portrait (720×1280, about 1.5 MB), has narration and subtitles, and shows a still picture (`media/demo-poster.jpg`) before it plays. The player has the usual controls (play, pause, full screen) and plays inside the page on iPhones rather than jumping to full screen.
+- Tapping it hides the button and shows a video player in its place, which starts playing. The video is portrait (720×1280, about 40 seconds, about 1.5 MB), has narration and subtitles, and shows a still picture (`media/demo-poster.jpg`) before it plays. The player has the usual controls (play, pause, full screen) and plays inside the page on iPhones rather than jumping to full screen.
 - The video starts at half volume, so it isn't too loud; the player's volume control can turn it up. iPhone Safari ignores volume set by a page, so there the phone's own volume buttons set the level.
+- The scanning part shows picking the pallet type before scanning: FMCG is tapped, then **Scan** and **Live scan**; the first barcode is added as FMCG ("Added #9 … FMCG"), then BB is tapped and the next barcode is added as BB. The narration says: "Pick the pallet type first, then scan. Each pallet is logged with that type, so change it before the next one."
 - Closing the Guide pauses the video. Opening the Guide again shows the button again.
 - The video needs internet: it is not saved for offline use. If it can't play, the Guide shows "The video couldn’t play. Check you’re online, then try again."
 

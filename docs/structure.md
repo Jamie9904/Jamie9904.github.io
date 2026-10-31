@@ -15,7 +15,7 @@
 ├── logo.png                 default logo for the header and exports (optional)
 ├── presets.json             shared LPN prefix presets (optional)
 ├── media/
-│   ├── demo.mp4             narrated demo video for the Guide (720×1280, about 38 seconds, about 1.5 MB; loaded only when tapped, not cached)
+│   ├── demo.mp4             narrated demo video for the Guide (720×1280, about 40 seconds, about 1.5 MB; loaded only when tapped, not cached)
 │   └── demo-poster.jpg      still picture shown before the video plays
 ├── fonts/
 │   ├── AtkinsonHyperlegible-{Regular,Bold}.woff2
@@ -38,7 +38,7 @@
 │   ├── lines.json           the spoken line for each scene
 │   ├── voice.py             speaks the lines offline (Kokoro "Heart" voice through sherpa-onnx, downloaded once into ~/.cache/lpn-voice)
 │   ├── stage.html           the 1080×1920 stage: headline, phone frame with the live app, subtitles, cards
-│   ├── record.mjs           serves the repository locally, drives the app scene by scene (SCENES) with Playwright and records frames
+│   ├── record.mjs           serves the repository locally, drives the app scene by scene (SCENES) with Playwright and records frames (en-GB locale; a drawn barcode label stands in for the Live scan camera)
 │   ├── render.py            joins the frames with the narration; adds music and sound effects only when SFX_DIR is set
 │   ├── screens.js           fingerprint of the key screens the video shows (npm test compares; --write saves it)
 │   ├── screens.json         the saved fingerprint, rewritten by make.sh after each recording

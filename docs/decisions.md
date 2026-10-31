@@ -325,7 +325,7 @@ The hooks, agents and working notes for Claude Code are committed in `.claude/` 
 - **Accessibility reviewer agent:** a read-only `a11y-reviewer` agent, used after UI changes, measures accessibility in a real browser (Playwright at 360, 390 and 1300 px wide, light and dark) instead of reading the code alone, because contrast with a user-picked theme colour, tap target sizes, focus hidden under the fixed entry bar and overlaps at 200% zoom or Extra large text only show on the rendered page. Its 44 px tap target rule is for the controls used while scanning, since the app is used on phones with gloves and in poor light.
 - **Security reviewer agent:** a read-only `security-reviewer` agent with a checklist for files and text from outside and for the libraries, used when import code, library loading, `package.json` versions or `index.html` change.
 - **Cache bump compared with the live site:** the commit check accepts a `CACHE` number higher than the one in `origin/main:sw.js`, as well as a `CACHE` line changed in the commit itself. A branch that has already bumped the cache once therefore doesn't need a new bump for each later commit before it is published.
-- **Media compared by what it shows:** the outputs storage rewrites the metadata of pictures and video after they are saved, so comparing raw bytes reported the download copy as out of date every time. `outputs_reminder.py` compares their decoded frames with `ffmpeg` instead. If `ffmpeg` is missing or fails, the file counts as different, so the reminder errs towards syncing.
+- **Media compared by what it shows:** the outputs storage rewrites the metadata of pictures and video after they are saved, so comparing raw bytes reported the download copy as out of date every time. `outputs_reminder.py` compares their decoded frames with `ffmpeg` instead. It decodes main's own copy from git rather than the file in the working tree: after a new video is recorded on `updates`, the working tree holds a file that isn't live yet, and comparing that would hide that the download copy still matches (or doesn't match) what is published. If `ffmpeg` is missing or fails, the file counts as different, so the reminder errs towards syncing.
 
 ## One working branch, updates
 
@@ -343,7 +343,7 @@ Publishing is `sh tools/release/ship.sh`, not a list of git commands followed by
 - **Why:** the steps after the push (wait for Checks and Pages, check the live site, update the download copy and zip) were easy to skip or do in a different order. The script does them the same way every time and stops at the first problem, so a release is only reported as done when the live site has been checked.
 - **Why it waits for Checks on `updates` first:** `main` is only fast-forwarded to a commit that has already passed every check on GitHub, including the real-library and photo reading checks that are skipped locally.
 - **Why it starts the health check:** the weekly `health.yml` already checks the live build number, the CDN libraries, the live demo video and the live photo reading, so running it straight after a release checks the published site rather than the repository, without a second set of checks to keep up to date.
-- **Limits:** it needs `gh` signed in and network access to GitHub; it never touches the `docs` branch; it only adds and overwrites files in the download folder. The built-in browser check of the live site is still done separately when the browser is connected.
+- **Limits:** it needs `gh` signed in and network access to GitHub; it never touches the `docs` branch. In the download folder it overwrites the site files and removes any file that is no longer one, so a file deleted from the app doesn't linger in `lpn-site` or the zip. The built-in browser check of the live site is still done separately when the browser is connected.
 
 ## Live photo reading in the weekly health check
 
@@ -359,6 +359,8 @@ The tool that makes `media/demo.mp4` lives in `tools/demo-video/` on `main`, and
 - **Why in the repository:** the video has to be remade whenever the screens it shows change. With the recorder next to the app, one command (`sh tools/demo-video/make.sh`) re-records it from the current files and saves a fingerprint of the key screens (`screens.json`) that `npm test` compares the app with.
 - **Why an offline voice:** the Kokoro "Heart" voice (Apache 2.0) runs locally through sherpa-onnx, so re-recording needs no account or paid speech service and gives the same voice every time. The engine and model (about 350 MB) are downloaded from GitHub once into `~/.cache/lpn-voice` rather than committed.
 - **Why music is optional:** the music and sound effects are not in the repository. `render.py` adds them only when `SFX_DIR` points at them, and otherwise renders the voice only.
+- **Why a stand-in camera for Live scan:** the recording has no camera, but the scanning scene should show the real Live scan screen. `record.mjs` gives the page a drawn barcode label as its camera stream and a stand-in `BarcodeDetector` that reports the code shown on it, so only the camera and the reading are faked; adding the pallet with the selected type and the "Added" message come from the app's own `onCode`.
+- **Why UK locale:** the recording context is set to `en-GB` and `Europe/London`, so dates on screen show UK style, as warehouse users see them.
 - **Trade-off:** `tools/` is on `main`, so GitHub Pages publishes it, though the app never loads it. It is kept out of the site zip and the download copy.
 
 ## Demo video staleness: screen fingerprint that warns, not fails
@@ -390,7 +392,7 @@ The weekly check of the live site, the CDN libraries and the tests is `.github/w
 
 ## Demo video in the Guide, loaded on demand and not cached
 
-The Guide starts with a button that shows a 38-second narrated demo video (`media/demo.mp4`, about 1.5 MB, with subtitles) instead of loading the player straight away. The service worker leaves `.mp4` and `.webm` requests to the browser.
+The Guide starts with a button that shows a narrated demo video of about 40 seconds (`media/demo.mp4`, about 1.5 MB, with subtitles; the button says 38 seconds) instead of loading the player straight away. The service worker leaves `.mp4` and `.webm` requests to the browser.
 
 - **Why a button and `preload="none"`:** most opens of the Guide are to look something up, often on mobile data. Nothing is downloaded until someone asks for the video, so opening the Guide costs nothing extra.
 - **Why it isn't cached:** browsers fetch video with range requests, and the partial (`206`) responses can't be stored with the Cache API. Saving the whole file for offline use would need extra service worker code, and would add 1.5 MB to every install for something most people watch once.
