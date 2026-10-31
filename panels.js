@@ -57,8 +57,9 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <li><b>Settings</b> has your colours, text size, date format, default pallet type, warnings, sound and vibration.</li>
 <li>LPNs are a letter prefix followed by digits, for example RUN000000000.</li>
 <li>Always check numbers read from photos before relying on them.</li>
+<li><b>Something not working?</b> Open Settings straight away and tap <b>Download problem report</b>, then send that file with a description of what happened.</li>
 </ul>`,log:`<h3>v3.30 <span class="ver">Current</span></h3>
-<ul><li>Exports: long delivery notes and longer LPNs no longer get cut off in the spreadsheets, and every export notes the app version it was made with (at the bottom of the sheet and in the page footer).</li><li>Importing an exported log and loading one in the Manifest check now read spreadsheets the same way, so the version line at the bottom is always skipped.</li><li>Safer PDFs: a PDF opened in the app (a supplier manifest or an exported log) can no longer run hidden code, and the PDF reader is updated to the latest version.</li><li>Safer backups and files: a damaged backup can no longer stop the app opening, restoring asks first and saves a copy of your current data, and files from outside can’t add links, formulas or scripts to your exports.</li><li>A security policy now only lets the app run code from its own site and its three library sources, as a second line of defence.</li><li>A demo video at the top of the Guide shows the app in action, with narration and subtitles. It starts at half volume.</li><li>Easier to use: the pallet table scrolls with the page on phones, progress only turns red when something is wrong, one count line when the manifest sets the expected number, the Manifest check starts with its steps (prefix presets tucked away), the logo moved to Settings, the entry bar steps aside in the Manifest check, and bigger tick boxes and header buttons.</li><li>Undo last pallet button on the phone entry bar, “Use n as expected” from the manifest count, an “Exported at” note with a warning before starting a new delivery that hasn’t been exported, and a “Start a new delivery?” prompt after exporting.</li><li>Trailer number, Seal in and Seal out in Delivery, shown on exports and saved deliveries.</li><li>Live manifest tracking: add the manifest numbers first and the Pallet log counts them off as you scan, shows which are still missing and warns about pallets not on the manifest.</li><li>Phone layout: a pallet counter on the entry bar, an “Added” confirmation after each pallet, Delivery folds into one line once you start logging, neater top buttons and a clearer ✕ on each row.</li><li>Smaller tweaks: a reminder when the log is dated before today, tap-to-fill “Received by” names, a check when the total differs from the expected pallets, an FSDU filter, Excel and Email PDF buttons on saved deliveries, a last-backed-up note, and an offline notice.</li><li>Exports: a title band, numbered rows, clearer grid lines, page numbers, gridlines hidden on screen, roomier headers, the logo kept in proportion and much smaller PDFs. The manifest check has the same Export menu as the log.</li><li>Date format setting (dd/mm/yyyy by default), used in exports, lists and the date box.</li><li>Fonts are now part of the app, updates show up straight away, and the tablet layout and field alignment are fixed.</li></ul>
+<ul><li>Manifest check: each photo or PDF now says how many LPNs it found, how many were new and how many were already listed, and names any left out because their prefix isn’t in the prefix list. One photo that can’t be read no longer stops the rest.</li><li>Problem report in Settings: if something goes wrong, download it and send it with what happened. It lists recent manifest reads and errors on this device.</li><li>Exports: long delivery notes and longer LPNs no longer get cut off in the spreadsheets, and every export notes the app version it was made with (at the bottom of the sheet and in the page footer).</li><li>Importing an exported log and loading one in the Manifest check now read spreadsheets the same way, so the version line at the bottom is always skipped.</li><li>Safer PDFs: a PDF opened in the app (a supplier manifest or an exported log) can no longer run hidden code, and the PDF reader is updated to the latest version.</li><li>Safer backups and files: a damaged backup can no longer stop the app opening, restoring asks first and saves a copy of your current data, and files from outside can’t add links, formulas or scripts to your exports.</li><li>A security policy now only lets the app run code from its own site and its three library sources, as a second line of defence.</li><li>A demo video at the top of the Guide shows the app in action, with narration and subtitles. It starts at half volume.</li><li>Easier to use: the pallet table scrolls with the page on phones, progress only turns red when something is wrong, one count line when the manifest sets the expected number, the Manifest check starts with its steps (prefix presets tucked away), the logo moved to Settings, the entry bar steps aside in the Manifest check, and bigger tick boxes and header buttons.</li><li>Undo last pallet button on the phone entry bar, “Use n as expected” from the manifest count, an “Exported at” note with a warning before starting a new delivery that hasn’t been exported, and a “Start a new delivery?” prompt after exporting.</li><li>Trailer number, Seal in and Seal out in Delivery, shown on exports and saved deliveries.</li><li>Live manifest tracking: add the manifest numbers first and the Pallet log counts them off as you scan, shows which are still missing and warns about pallets not on the manifest.</li><li>Phone layout: a pallet counter on the entry bar, an “Added” confirmation after each pallet, Delivery folds into one line once you start logging, neater top buttons and a clearer ✕ on each row.</li><li>Smaller tweaks: a reminder when the log is dated before today, tap-to-fill “Received by” names, a check when the total differs from the expected pallets, an FSDU filter, Excel and Email PDF buttons on saved deliveries, a last-backed-up note, and an offline notice.</li><li>Exports: a title band, numbered rows, clearer grid lines, page numbers, gridlines hidden on screen, roomier headers, the logo kept in proportion and much smaller PDFs. The manifest check has the same Export menu as the log.</li><li>Date format setting (dd/mm/yyyy by default), used in exports, lists and the date box.</li><li>Fonts are now part of the app, updates show up straight away, and the tablet layout and field alignment are fixed.</li></ul>
 <h3>v3.20</h3>
 <ul><li>Start new delivery, Saved deliveries (this week and last week) and importing an exported log.</li><li>Warnings for duplicate or unusual LPNs, Undo for removed pallets and Clear all, and tap an LPN to edit it.</li><li>Pallet type buttons, expected pallets, delivery notes, search and filter, and an Export menu with Print.</li><li>Manifest check: use the current log or a saved delivery, a Check results panel, and Fix or remove for misread numbers.</li><li>Settings: default and keep-last type, warnings, sound, vibration, confirm each scan, text size, colour contrast warning, backup and restore, and the install pop-up.</li><li>Works offline after the first use, shows an “update available” banner, a two-column layout on wide screens, line icons, and accessibility fixes.</li></ul>
 <h3>v3.0</h3>
@@ -166,7 +167,11 @@ HELP.settings=`<h3>Colours</h3>
 <div class="row"><button id="bkDl">Download backup</button><button id="bkUp">Restore backup</button><input type="file" id="bkFile" accept=".json,application/json" hidden></div>
 <div class="msg" id="bkMsg" role="status" aria-live="polite"></div>
 <div class="row" id="bkAsk" style="margin-top:10px" hidden><button id="bkGo">Replace my data with this backup</button><button id="bkNo">Cancel</button></div>
-<div class="row" id="bkDone" style="margin-top:10px" hidden><button id="bkReload">Reload the app</button></div>`;
+<div class="row" id="bkDone" style="margin-top:10px" hidden><button id="bkReload">Reload the app</button></div>
+<h3>Problem report</h3>
+<p>If something goes wrong, download a problem report straight away and send it with a description of what happened. It lists what the app has done recently on this device (such as manifest photos and PDFs read, and any errors), with the LPNs, file names and the start of the text read from photos, plus your browser and screen size. It is only kept on this device and is never sent by itself.</p>
+<div class="row"><button id="diagDl">Download problem report</button><button class="d" id="diagClear">Clear</button></div>
+<div class="msg" id="diagMsg" role="status" aria-live="polite"></div>`;
 /* ---- saved deliveries ---- */
 let hist=[];try{hist=cleanHist(JSON.parse(localStorage.getItem("lpnhist")||"[]"))}catch(e){hist=[]}
 const saveHist=()=>{try{localStorage.setItem("lpnhist",JSON.stringify(hist))}catch(e){}};
@@ -271,7 +276,7 @@ async function backupNow(msgId){
     const now=new Date().toISOString();
     try{localStorage.setItem("lpnbackup",now)}catch(e){}
     const data={};
-    for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^lpn/.test(k))data[k]=localStorage.getItem(k)}
+    for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^lpn/.test(k)&&k!=="lpndiag")data[k]=localStorage.getItem(k)}
     const json=JSON.stringify({app:"lpn-pallet-log",version:1,saved:now,data:data});
     await saveOnly(new TextEncoder().encode(json).buffer,"lpn-backup-"+localToday()+".json","application/json");
     $(msgId).textContent="Backup downloaded.";
@@ -286,6 +291,7 @@ function checkBackup(d){
   const parse=v=>{try{return JSON.parse(v)}catch(e){bad()}};
   Object.keys(d).forEach(k=>{
     const v=d[k];if(!/^lpn[a-z0-9]*$/.test(k)||typeof v!=="string")return;
+    if(k==="lpndiag")return; // the problem log belongs to this device, never to a backup
     if(k==="lpnlog"){const o=parse(v);if(!o||typeof o!=="object")bad();const r=cleanRows(o.rows);pallets=r.length;out[k]=JSON.stringify(Object.assign(cleanDel(o),{rows:r}))}
     else if(k==="lpnhist"){const h=cleanHist(parse(v));saved=h.length;out[k]=JSON.stringify(h)}
     else if(k==="lpnnames")out[k]=JSON.stringify(cleanNames(parse(v)));
@@ -296,6 +302,23 @@ function checkBackup(d){
     else out[k]=v;
   });
   return {data:out,pallets:pallets,saved:saved};
+}
+/* Problem report: a plain text file with the app version, the device, the current state and the problem log. */
+async function downloadReport(){
+  let ent=[];try{ent=JSON.parse(localStorage.getItem("lpndiag")||"[]");if(!Array.isArray(ent))ent=[]}catch(e){}
+  let ver="LPN Pallet Log";try{ver=await appVersion()}catch(e){}
+  const man=$("cmpNums").value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),lg=$("cmpLogNums").value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  const st=(window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches)||navigator.standalone;
+  const L=["LPN Pallet Log problem report","Made: "+new Date().toString(),"App: "+ver,"Browser: "+navigator.userAgent,
+    "Screen: "+screen.width+"×"+screen.height+" (window "+innerWidth+"×"+innerHeight+", pixel ratio "+(window.devicePixelRatio||1)+")",
+    "Installed as an app: "+(st?"yes":"no")+" · Online: "+(navigator.onLine?"yes":"no")+" · Service worker: "+(navigator.serviceWorker&&navigator.serviceWorker.controller?"active":"none"),
+    "","Current state","Pallets in log: "+rows.length+" · Delivery date: "+$("date").value+" · Expected: "+($("expect").value||"-"),
+    "Manifest check prefixes: "+(getPfx().join(", ")||"(none: any 1 to 3 letters)"),
+    "Manifest numbers ("+man.length+"): "+man.join(" "),"Log numbers in the Manifest check ("+lg.length+"): "+lg.join(" "),
+    "Manifest message: "+($("cmpMsg").textContent||"-"),"","Recent events (oldest first, "+ent.length+")"];
+  ent.forEach(x=>{if(x&&typeof x==="object")L.push(String(x.t||"")+"  "+String(x.k||"")+"  "+String(x.m||"").slice(0,300))});
+  try{await saveOnly(new TextEncoder().encode(L.join("\n")+"\n").buffer,"lpn-problem-report-"+localToday()+".txt","text/plain");$("diagMsg").textContent="Problem report downloaded. Send it along with what happened."}
+  catch(e){$("diagMsg").textContent="Couldn’t make the problem report: "+((e&&e.message)||"error")}
 }
 function showBackupNote(){
   const el=$("bkNote");if(!el)return;
@@ -371,6 +394,8 @@ function initSettings(){
   $("setLogo").onclick=()=>$("logoBtn").click();$("setLogoRm").onclick=()=>$("logoRm").click();showLogo();
   applyTheme();
   $("bkDl").onclick=()=>backupNow("bkMsg");
+  $("diagDl").onclick=downloadReport;
+  $("diagClear").onclick=()=>{try{localStorage.removeItem("lpndiag")}catch(e){}$("diagMsg").textContent="Problem log cleared."};
   $("bkUp").onclick=()=>{$("bkFile").value="";$("bkFile").click()};
   let pendingBk=null;
   $("bkFile").onchange=async e=>{
@@ -388,7 +413,8 @@ function initSettings(){
   $("bkGo").onclick=async()=>{
     if(!pendingBk)return;const data=pendingBk;pendingBk=null;$("bkAsk").hidden=true;
     if(!await backupNow("bkMsg")){$("bkMsg").textContent+=" Your data wasn’t replaced, because the copy of it couldn’t be saved first.";return}
-    const before={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^lpn/.test(k))before[k]=localStorage.getItem(k)}
+    const before={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^lpn/.test(k)&&k!=="lpndiag")before[k]=localStorage.getItem(k)}
+    diag("backup","Restoring a backup");
     try{
       Object.keys(before).forEach(k=>localStorage.removeItem(k));
       Object.keys(data).forEach(k=>localStorage.setItem(k,data[k]));

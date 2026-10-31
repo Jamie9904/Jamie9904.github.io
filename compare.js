@@ -83,14 +83,19 @@ async function shrink(f){
 }
 function extractLpns(text){
   const pf=getPfx().sort((a,b)=>b.length-a.length);
-  const re=new RegExp("\\b("+(pf.length?pf.join("|"):"[A-Z]{1,3}")+")[ \\t]?([0-9ODILSBZ]{8,12})\\b","gi");
-  const out=[];let m;
-  while((m=re.exec(text))){
-    const part=m[2].toUpperCase();
-    if((part.match(/[0-9]/g)||[]).length<6)continue;
-    out.push(m[1].toUpperCase()+part.replace(/[OD]/g,"0").replace(/[IL]/g,"1").replace(/S/g,"5").replace(/B/g,"8").replace(/Z/g,"2"));
-  }
+  const fix=p=>p.replace(/[OD]/g,"0").replace(/[IL]/g,"1").replace(/S/g,"5").replace(/B/g,"8").replace(/Z/g,"2");
+  const scan=(alt,dg)=>{const re=new RegExp("\\b("+alt+")[ \\t]?("+(dg||"[0-9ODILSBZ]{8,12}")+")\\b","gi"),o=[];let m;
+    while((m=re.exec(text))){const part=m[2].toUpperCase();if((part.match(/[0-9]/g)||[]).length<6)continue;o.push(m[1].toUpperCase()+fix(part))}
+    return o};
+  const out=scan(pf.length?pf.join("|"):"[A-Z]{1,3}");
+  // Only real 9 or 10 digit numbers count as possibly left out, so PO, phone and reference numbers aren't flagged.
+  out.skipped=pf.length?skippedOf(scan("[A-Z]{1,3}","[0-9]{9,10}"),out,pf):[];
   return out;
+}
+/* Numbers that look like LPNs but whose letters aren't in the prefix list, so they weren't added. */
+function skippedOf(all,kept,pf){
+  const k=new Set(kept),seen=new Set();
+  return all.filter(x=>{if(k.has(x)||seen.has(x)||pf.some(p=>x.startsWith(p)&&/^[0-9]/.test(x.slice(p.length))))return false;seen.add(x);return true});
 }
 async function prep(f){
   const b=await createImageBitmap(f);
@@ -129,10 +134,11 @@ async function ocrLpns(f){
   try{
     await w.setParameters({tessedit_char_whitelist:"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ",preserve_interword_spaces:"1"});
     const r=(await w.recognize(cv)).data;
-    const out=[],orig=new Set();
+    const out=[],orig=new Set(),skipped=[];
     await w.setParameters({tessedit_pageseg_mode:"7"});
     for(const wd of (r.words||[])){
       const found=extractLpns(wd.text);
+      skipped.push(...found.skipped);
       if(found.length!==1)continue;
       orig.add(found[0]);
       let val=found[0];
@@ -142,7 +148,9 @@ async function ocrLpns(f){
       }catch(e){}
       out.push(val);
     }
-    extractLpns(r.text).forEach(x=>{if(!orig.has(x))out.push(x)});
+    const all=extractLpns(r.text);all.forEach(x=>{if(!orig.has(x))out.push(x)});
+    out.skipped=[...new Set(skipped.concat(all.skipped))];
+    diag("ocr","Photo text read: "+(r.words||[]).length+" words, "+out.length+" LPNs found"+(out.skipped.length?", skipped for prefix: "+out.skipped.slice(0,10).join(" "):"")+". Text start: "+String(r.text||"").replace(/\s+/g," ").slice(0,150));
     return out;
   }finally{await w.terminate()}
 }
@@ -157,8 +165,19 @@ function addNums(a,id){
   id=id||"cmpNums";
   const cur=$(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
   const seen=new Set(cur.map(norm));
-  a.forEach(x=>{x=String(x).trim();if(x&&!seen.has(norm(x))){seen.add(norm(x));cur.push(x)}});
+  let added=0,dup=0;
+  a.forEach(x=>{x=String(x).trim();if(!x)return;if(seen.has(norm(x))){dup++;return}seen.add(norm(x));cur.push(x);added++});
   $(id).value=cur.join("\n");
+  return {added:added,dup:dup};
+}
+/* One line per file read: what was found, what was new, and what was left out because of the prefix list. */
+function readNote(tag,a,r,pdf){
+  const sk=(a&&a.skipped)||[];
+  let t=tag+": found "+a.length+" LPN"+(a.length===1?"":"s")+", "+r.added+" new"+(r.dup?", "+r.dup+" already in the list":"")+".";
+  if(!a.length&&!sk.length)t+=pdf?" No LPNs could be read from this PDF.":" No LPNs could be read: try a closer, sharper photo in good light.";
+  if(sk.length){const px=[...new Set(sk.map(x=>x.match(/^[A-Z]+/)[0]))];
+    t+=" "+sk.length+" other number"+(sk.length===1?"":"s")+" ("+sk.slice(0,4).join(", ")+(sk.length>4?"…":"")+") start with "+px.join(", ")+", which "+(px.length===1?"isn’t":"aren’t")+" in the prefix list. If "+(sk.length===1?"it is an LPN":"they are LPNs")+", add "+px.join(", ")+" under Prefix presets (or clear the prefixes) and read the "+(pdf?"PDF":"photo")+" again."}
+  return t;
 }
 $("cmpLogBtn").onclick=()=>{$("cmpLogFile").value="";$("cmpLogFile").click()};
 $("cmpLogFile").onchange=async e=>{
@@ -170,13 +189,14 @@ $("cmpLogFile").onchange=async e=>{
 $("cmpLogPhotoBtn").onclick=()=>{$("cmpLogPhotoFile").value="";$("cmpLogPhotoFile").click()};
 $("cmpLogPhotoFile").onchange=async e=>{
   const files=[...(e.target.files||[])];if(!files.length)return;
+  const notes=[];
   for(let i=0;i<files.length;i++){
     cmpMsg("Reading log photo "+(i+1)+" of "+files.length+"…");
-    try{addNums(await readLogPhoto(files[i]),"cmpLogNums")}
-    catch(err){cmpMsg("Couldn't read log photo "+(i+1)+": "+((err&&err.message)||"error")+" You can type the numbers in the box instead.");return}
+    try{const a=await readLogPhoto(files[i]),r=addNums(a,"cmpLogNums");notes.push(readNote("Log photo "+(i+1),a,r));diag("manifest","Log photo "+(i+1)+": found "+a.length+", added "+r.added)}
+    catch(err){const m=(err&&err.message)||"error";notes.push("Log photo "+(i+1)+": couldn’t be read ("+m+"). You can type the numbers in the box instead.");diag("manifest","Log photo "+(i+1)+" failed: "+m)}
   }
   logSrc=null;logPdfSrc=null;logSheets=null;$("cmpLogName").textContent="Read from photo of printed log";
-  cmpMsg("Done. Check the log numbers are correct, then compare."+oddNote("cmpLogNums"));
+  cmpMsg(notes.join(" ")+" Check the log numbers are correct, then compare."+oddNote("cmpLogNums"));
 };
 /* pdf.js 6 (the "legacy" build, made for older browsers and phones). It is an ES module, so it's loaded with
    import() rather than a script tag. Only jsDelivr and unpkg host the legacy build. The worker can come from
@@ -205,9 +225,10 @@ async function loadPdfJs(){
 function openPdf(bytes){return pdfjsLib.getDocument({data:bytes}).promise}
 function lpnsFromText(text){
   const pf=getPfx().sort((a,b)=>b.length-a.length);
-  const re=new RegExp("\\b("+(pf.length?pf.join("|"):"[A-Z]{1,3}")+")[ \\t]?([0-9]{8,12})\\b","gi");
-  const out=[];let m;
-  while((m=re.exec(text)))out.push(m[1].toUpperCase()+m[2]);
+  const scan=(alt,dg)=>{const re=new RegExp("\\b("+alt+")[ \\t]?("+(dg||"[0-9]{8,12}")+")\\b","gi"),o=[];let m;
+    while((m=re.exec(text)))o.push(m[1].toUpperCase()+m[2]);return o};
+  const out=scan(pf.length?pf.join("|"):"[A-Z]{1,3}");
+  out.skipped=pf.length?skippedOf(scan("[A-Z]{1,3}","[0-9]{9,10}"),out,pf):[];
   return out;
 }
 async function readPdf(f,say){
@@ -219,16 +240,18 @@ async function readPdf(f,say){
     text+=tc.items.map(i=>i.str+(i.hasEOL?"\n":" ")).join("")+"\n";
   }
   const found=lpnsFromText(text);
+  diag("pdf",f.name+": "+pdf.numPages+" pages, "+text.length+" characters of text, "+found.length+" LPNs"+(found.skipped.length?", skipped for prefix: "+found.skipped.slice(0,10).join(" "):""));
   if(found.length)return found;
-  const out=[],n=Math.min(pdf.numPages,20);
+  const out=[],n=Math.min(pdf.numPages,20);out.skipped=found.skipped.slice();
   for(let p=1;p<=n;p++){
     say("reading page "+p+" of "+n+"…");
     const page=await pdf.getPage(p),vp=page.getViewport({scale:2});
     const cv=document.createElement("canvas");cv.width=Math.round(vp.width);cv.height=Math.round(vp.height);
     await page.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;
     const blob=await new Promise(r=>cv.toBlob(r,"image/jpeg",0.85));
-    out.push(...await readPhoto(blob));
+    const got=await readPhoto(blob);out.push(...got);if(got.skipped)out.skipped.push(...got.skipped);
   }
+  out.skipped=[...new Set(out.skipped)];
   return out;
 }
 async function readLogPdf(f,say){
@@ -264,24 +287,28 @@ async function readLogPdf(f,say){
 $("cmpPdfBtn").onclick=()=>{$("cmpPdfFile").value="";$("cmpPdfFile").click()};
 $("cmpPdfFile").onchange=async e=>{
   const files=[...(e.target.files||[])];if(!files.length)return;
-  let total=0;const fails=[];
+  let total=0;const fails=[],notes=[];
   for(let i=0;i<files.length;i++){
     const tag="PDF "+(i+1)+" of "+files.length;
     cmpMsg("Reading "+tag+"…");
-    try{const found=await readPdf(files[i],m=>cmpMsg(tag+": "+m));total+=found.length;addNums(found)}
-    catch(err){if(err&&err.message===PDF_LOAD_MSG){cmpMsg(PDF_LOAD_MSG);return}fails.push(files[i].name+" ("+((err&&err.message)||"error")+")")}
+    try{const found=await readPdf(files[i],m=>cmpMsg(tag+": "+m));total+=found.length;const r=addNums(found);notes.push(readNote(files[i].name,found,r,true));diag("manifest",files[i].name+": found "+found.length+", added "+r.added+", already listed "+r.dup)}
+    catch(err){diag("manifest",files[i].name+" failed: "+((err&&err.message)||"error"));if(err&&err.message===PDF_LOAD_MSG){cmpMsg(PDF_LOAD_MSG);return}fails.push(files[i].name+" ("+((err&&err.message)||"error")+")")}
   }
-  cmpMsg("Read "+(files.length-fails.length)+" of "+files.length+" PDFs and found "+total+" LPNs."+(fails.length?" Couldn’t read: "+fails.join(", ")+". You can type those numbers in the box instead.":"")+" Check the numbers below are correct, then compare."+oddNote("cmpNums"));
+  cmpMsg("Read "+(files.length-fails.length)+" of "+files.length+" PDFs and found "+total+" LPNs. "+notes.join(" ")+(fails.length?" Couldn’t read: "+fails.join(", ")+". You can type those numbers in the box instead.":"")+" Check the numbers below are correct, then compare."+oddNote("cmpNums"));
 };
 $("cmpPhotoBtn").onclick=()=>{$("cmpPhotoFile").value="";$("cmpPhotoFile").click()};
 $("cmpPhotoFile").onchange=async e=>{
   const files=[...(e.target.files||[])];if(!files.length)return;
+  const notes=[];
+  diag("manifest","Reading "+files.length+" manifest photo(s). Prefixes: "+(getPfx().join(" ")||"any")+". Already listed: "+$("cmpNums").value.split(/\r?\n/).filter(s=>s.trim()).length);
   for(let i=0;i<files.length;i++){
+    const tag="Photo "+(i+1),f=files[i];
     cmpMsg("Reading photo "+(i+1)+" of "+files.length+"…");
-    try{addNums(await readPhoto(files[i]))}
-    catch(err){cmpMsg("Couldn't read photo "+(i+1)+": "+((err&&err.message)||"error")+" You can type the numbers in the box instead.");return}
+    diag("manifest","photo "+(i+1)+" of "+files.length+": "+(f.type||"?")+", "+Math.round((f.size||0)/1024)+" KB");
+    try{const a=await readPhoto(f),r=addNums(a);notes.push(readNote(tag,a,r));diag("manifest",tag+": found "+a.length+", added "+r.added+", already listed "+r.dup+(a.skipped&&a.skipped.length?", skipped "+a.skipped.join(" "):""))}
+    catch(err){const m=(err&&err.message)||"error";notes.push(tag+": couldn’t be read ("+m+").");diag("manifest",tag+" failed: "+m)}
   }
-  cmpMsg("Done. Check the numbers below are correct, then compare."+oddNote("cmpNums"));
+  cmpMsg(notes.join(" ")+" Check the numbers below are correct, then compare."+oddNote("cmpNums"));
 };
 $("cmpClear").onclick=()=>{logSrc=null;logPdfSrc=null;logSheets=null;$("cmpNums").value="";$("cmpLogNums").value="";$("cmpLogName").textContent="";$("cmpSum").innerHTML="";$("cmpRes").hidden=true;$("cmpRes").innerHTML="";cmpMsg("")};
 function cmpData(){

@@ -15,6 +15,9 @@ const MANIFEST = ["VLT004037790","VLT004037814","RUN0001830763","RBY006291170","
 
 /** Opens the app at phone size in `page` (already routed to the local server at url) and returns the fingerprint. */
 async function fingerprint(page, url) {
+	// The made-up delivery is dated 30 October 2026, so the page's clock is set to that day; otherwise the
+	// "log is dated before today" reminder would appear on later days and move everything down.
+	await page.clock.setFixedTime(new Date("2026-10-30T12:00:00"));
 	await page.addInitScript((seed) => { for (const [k, v] of Object.entries(seed)) localStorage.setItem(k, v); }, SEED);
 	await page.goto(url); await page.waitForTimeout(400);
 	const grab = (sels) => page.evaluate((sels) => sels.map((s) => {
