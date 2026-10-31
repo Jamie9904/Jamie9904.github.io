@@ -797,11 +797,14 @@ async function page(browser, width, opts = {}) {
     await q.focus("#body .lpnedit"); await q.keyboard.press("Enter"); await q.waitForTimeout(50);
     await q.keyboard.type("VLT004037791"); await q.keyboard.press("Enter"); await q.waitForTimeout(100);
     let u = await q.evaluate(() => { const bar = document.getElementById("undoBar").getBoundingClientRect(), dock = document.querySelector(".entry").getBoundingClientRect();
-      return { lpns: rows.map(r => r.lpn).join(), name: document.querySelector("#body .lpnedit").getAttribute("aria-label"), shown: !document.getElementById("undoBar").hidden, onScreen: bar.top >= 0 && bar.bottom <= dock.top, text: document.getElementById("undoTxt").textContent }; });
-    check("an LPN in the log can be edited with the keyboard (it's a button named for the LPN)", /^VLT004037791,/.test(u.lpns) && /^Edit LPN /.test(u.name), u);
+      return { focus: document.activeElement.className, lpns: rows.map(r => r.lpn).join(), name: document.querySelector("#body .lpnedit").getAttribute("aria-label"), shown: !document.getElementById("undoBar").hidden, onScreen: bar.top >= 0 && bar.bottom <= dock.top, text: document.getElementById("undoTxt").textContent }; });
+    check("an LPN in the log can be edited with the keyboard (it's a button named for the LPN), and focus comes back to it", /^VLT004037791,/.test(u.lpns) && /^Edit LPN /.test(u.name) && u.focus === "lpnedit", u);
     check("on a phone, Undo shows on screen just above the entry bar", u.shown && u.onScreen && /Changed VLT004037790 to VLT004037791/.test(u.text), u);
+    u = await q.evaluate(() => { addValue("RBY006291170"); const a = document.getElementById("flash").getBoundingClientRect(), b = document.getElementById("undoBar").getBoundingClientRect(); return { flashShown: !document.getElementById("flash").hidden, apart: a.bottom <= b.top + 1 }; });
+    check("on a phone, the Added note shows above the Undo bar, not under it", u.flashShown && u.apart, u);
     await q.click("#undoBtn"); u = await q.evaluate(() => rows[0].lpn);
     check("Undo from there puts the LPN back", u === "VLT004037790", u);
+    await q.evaluate(() => { rows = rows.slice(0, 2); save(); render(); });
     u = await q.evaluate(() => { document.getElementById("expBtn").click(); return !document.getElementById("expMenu").hidden; });
     await q.keyboard.press("Escape");
     u = { opened: u, closed: await q.evaluate(() => document.getElementById("expMenu").hidden && document.activeElement.id === "expBtn"), th: await q.evaluate(() => [...document.querySelectorAll("thead th")].pop().textContent) };

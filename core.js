@@ -81,13 +81,13 @@ function render(){
     const n=document.createElement("td");n.textContent=i+1;
     // The LPN is a button, so it can be edited with the keyboard and screen readers too, not only by tapping.
     const l=document.createElement("td");l.className="l";
-    const eb=document.createElement("button");eb.type="button";eb.className="lpnedit";eb.textContent=r.lpn;eb.title="Tap to edit";eb.setAttribute("aria-label","Edit LPN "+r.lpn);l.appendChild(eb);
+    const eb=document.createElement("button");eb.type="button";eb.className="lpnedit";eb.textContent=r.lpn;eb.title="Tap to edit";eb.setAttribute("aria-label","Edit LPN "+r.lpn);eb.dataset.i=i;l.appendChild(eb);
     l.onclick=()=>{
       if(l.querySelector("input"))return;
       const inp=document.createElement("input");inp.value=r.lpn;inp.setAttribute("autocapitalize","characters");inp.setAttribute("aria-label","Edit LPN");
       l.textContent="";l.appendChild(inp);inp.focus();inp.select();
       let done=false;
-      const finish=ok=>{
+      const finish=(ok,key)=>{
         if(done)return;done=true;
         const v=inp.value.trim();
         if(ok&&v&&v!==r.lpn){
@@ -100,10 +100,10 @@ function render(){
         }
         render();
         // Back on the edited LPN, so keyboard users don't lose their place.
-        const back=[...document.querySelectorAll("#body .lpnedit")].find(b=>b.textContent===r.lpn);if(back&&!ok)back.focus();
+        if(key){const back=document.querySelector('#body .lpnedit[data-i="'+i+'"]');if(back)back.focus()}
       };
       inp.onblur=()=>finish(true);
-      inp.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();finish(true)}else if(e.key==="Escape"){finish(false)}};
+      inp.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();finish(true,true)}else if(e.key==="Escape"){finish(false,true)}};
     };
     const t=document.createElement("td");
     const s=document.createElement("select");
@@ -202,7 +202,9 @@ function addValue(v,o){
 }
 let flashTimer=null;
 function flashAdded(v,t,f){
-  const el=$("flash");el.dataset.t=t;el.hidden=false;const en=document.querySelector(".entry");el.style.bottom=(matchMedia("(max-width:759px)").matches&&en?en.offsetHeight+10:20)+"px";
+  const el=$("flash");el.dataset.t=t;el.hidden=false;const en=document.querySelector(".entry");const ub=$("undoBar"),ph=matchMedia("(max-width:759px)").matches;
+  // On phones the Undo bar sits in the same place, so the note goes just above it while it shows.
+  el.style.bottom=((ph&&en?en.offsetHeight+10:20)+(ph&&ub&&!ub.hidden?ub.offsetHeight+8:0))+"px";
   let man="";
   if(typeof manState==="function"){const s=manState();if(s.total)man=s.has(v)?" · ✓ on manifest":" · ⚠ NOT on manifest"}
   el.classList.toggle("warn",man.indexOf("NOT")>=0);
