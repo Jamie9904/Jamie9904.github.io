@@ -139,6 +139,8 @@ function summary(){
   const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
   $("sum").innerHTML="<span><b>"+rows.length+"</b>Total</span><span><b>"+c.BB+"</b>BB</span><span><b>"+c.FMCG+"</b>FMCG</span><span><b>"+c.FPP+"</b>FPP</span><span><b>"+c.Mixed+"</b>Mixed</span><span><b>"+rows.filter(r=>r.fsdu).length+"</b>FSDU</span>";
 }
+/* LPN digit counts: 9 or 10 after the letters, except IM (full pallet picks), which has 10 or 11. */
+function lpnDigitsOk(x){const m=String(x).toUpperCase().replace(/\s+/g,"").match(/^([A-Z]+)(\d+)$/);if(!m)return false;const n=m[2].length;return m[1]==="IM"?n===10||n===11:n===9||n===10}
 function lpnIssues(v){
   const out=[];
   const u=v.toUpperCase().replace(/\s+/g,"");
@@ -148,7 +150,7 @@ function lpnIssues(v){
   else{
     const pf=typeof getPfx==="function"?getPfx():[];
     if(pf.length&&pf.indexOf(m[1])<0)out.push("prefix "+m[1]+" isn’t in your prefix list");
-    if(m[2].length!==9&&m[2].length!==10)out.push("has "+m[2].length+" digits (usually 9 or 10)");
+    if(!lpnDigitsOk(u))out.push("has "+m[2].length+" digits ("+(m[1]==="IM"?"IM numbers have 10 or 11":"usually 9 or 10")+")");
   }
   return out;
 }
