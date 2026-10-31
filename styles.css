@@ -365,3 +365,14 @@ details.opts>summary .note{min-width:0;overflow:hidden;text-overflow:ellipsis;wh
 
 /* Report a problem or idea: Problem / Idea side by side. */
 .fbkind{border:0;margin:0 0 8px;padding:0;display:flex;gap:18px}
+
+/* Report button at the top right, and the report box in the middle of the screen. */
+.top .report{margin-left:auto;flex:none;display:flex;align-items:center;gap:6px;min-height:44px;min-width:44px;padding:4px 12px;font-weight:700;font-size:.95rem;background:var(--sel);border:1px solid var(--bd,var(--line));color:var(--ink)}
+.top .report .ic{width:20px;height:20px;color:var(--act,var(--ac));flex:none}
+.top .report:hover{background:var(--acs);border-color:var(--ac)}
+#fbShade{position:fixed;inset:0;background:rgba(3,8,20,.65);z-index:60}
+#fbBox{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:61;width:min(480px,calc(100% - 32px));max-height:calc(100% - 32px);overflow-y:auto;background:var(--paper);color:var(--ink);border:2px solid var(--ac);border-radius:var(--r);padding:20px;box-shadow:0 18px 50px rgba(0,0,0,.5)}
+#fbBox h2{font:700 1.3rem/1.2 "Atkinson Hyperlegible",sans-serif;margin:0 0 6px}
+#fbBox p{font-size:.95rem;margin:6px 0}
+#fbBox textarea{min-height:110px}
+@media print{#fbShade,#fbBox,.top .report{display:none}}

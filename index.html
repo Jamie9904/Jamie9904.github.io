@@ -25,6 +25,7 @@
     <img id="logoImg" alt="Company logo" hidden>
     <div class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M3 5h18v9H3z"/><path d="M8 5v9M16 5v9"/><path d="M3 14v4h4v-4M10 14v4h4v-4M17 14v4h4v-4"/></svg></div>
     <div style="min-width:0"><h1>LPN Pallet Log</h1><div class="sub">Goods-in pallet documentation</div></div>
+    <button type="button" id="btnReport" class="report" aria-label="Report a problem or idea"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v12H8l-4 4z"/><path d="M12 7v4M12 13.5v.5"/></svg><span class="lbl">Report</span></button>
   </div>
   <aside id="side" aria-label="Help">
     <button id="btnGuide" aria-label="Guide"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21V5"/></svg><span class="lbl">Guide</span></button>
@@ -156,6 +157,19 @@
   <div id="panelBody"></div>
 </section>
 <div class="upd" id="updBar" hidden role="status"><span>A new version is available.</span><button class="p" id="updBtn">Refresh</button></div>
+<div id="fbShade" hidden></div>
+<section id="fbBox" role="dialog" aria-modal="true" aria-labelledby="fbTitle" hidden>
+  <h2 id="fbTitle">Report a problem or idea</h2>
+<p>Tell Jamie what went wrong or what would help. With no signal, it’s kept on this phone and sent when you’re back online.</p>
+  <fieldset class="fbkind"><legend class="sr">Type of report</legend><label class="chk"><input type="radio" name="fbKind" value="problem" checked><span>Problem</span></label><label class="chk"><input type="radio" name="fbKind" value="idea"><span>Idea</span></label></fieldset>
+  <label for="fbText">What happened, or what would help?</label>
+  <textarea id="fbText" rows="4" maxlength="4000" style="width:100%"></textarea>
+  <div class="row" style="margin-top:8px;align-items:center"><button type="button" id="fbPhotoBtn">Add a photo</button><button type="button" class="d" id="fbPhotoRm" hidden>Remove photo</button><span class="note" id="fbPhotoName" style="margin:0"></span><input type="file" id="fbPhoto" accept="image/*" hidden></div>
+  <label class="chk"><input type="checkbox" id="fbInc" checked><span>Attach the problem report (recent actions on this phone, with the LPNs involved)</span></label>
+  <p class="note">Reports go to Jamie’s private GitHub, through a Cloudflare server. The problem report includes the LPNs and manifest numbers on this phone, file names, the start of text read from photos, and your browser and screen size.</p>
+  <div class="row" style="margin-top:10px"><button class="p" id="fbSend">Send</button><button id="fbClose">Close</button></div>
+  <div class="msg" id="fbMsg" role="status" aria-live="polite"></div>
+</section>
 <div id="instShade" hidden></div>
 <section id="instBox" role="dialog" aria-modal="true" aria-labelledby="instTitle" hidden>
   <h2 id="instTitle">Install this app on your phone</h2>
