@@ -81,8 +81,8 @@ async function shrink(f){
   cv.getContext("2d").drawImage(b,0,0,cv.width,cv.height);
   return new Promise(res=>cv.toBlob(res,"image/jpeg",0.85));
 }
-function extractLpns(text){
-  const pf=getPfx().sort((a,b)=>b.length-a.length);
+function extractLpns(text,any){
+  const pf=any?[]:getPfx().sort((a,b)=>b.length-a.length);
   const fix=p=>p.replace(/[OD]/g,"0").replace(/[IL]/g,"1").replace(/S/g,"5").replace(/B/g,"8").replace(/Z/g,"2");
   const scan=(alt,dg)=>{const re=new RegExp("\\b("+alt+")[ \\t]?("+(dg||"[0-9ODILSBZ]{8,12}")+")\\b","gi"),o=[];let m;
     while((m=re.exec(text))){const part=m[2].toUpperCase();if((part.match(/[0-9]/g)||[]).length<6)continue;o.push(m[1].toUpperCase()+fix(part))}
@@ -97,19 +97,33 @@ function skippedOf(all,kept,pf){
   const k=new Set(kept),seen=new Set();
   return all.filter(x=>{if(k.has(x)||seen.has(x)||pf.some(p=>x.startsWith(p)&&/^[0-9]/.test(x.slice(p.length))))return false;seen.add(x);return true});
 }
+/* Gets a photo ready for the reader: grey, at a good size, then black ink on white. Each pixel is compared with
+   the paper around it (a blurred copy of the photo), not with the whole page, so shade across the sheet and
+   paper grain don't turn into text. A whole-page stretch did that on photos of plain paper with no dark edge. */
 async function prep(f){
   const b=await createImageBitmap(f);
   const long=Math.max(b.width,b.height);
   const sc=long<2400?Math.min(3,2400/long):Math.min(1,3200/long);
   const cv=document.createElement("canvas");cv.width=Math.round(b.width*sc);cv.height=Math.round(b.height*sc);
-  const ctx=cv.getContext("2d");ctx.imageSmoothingQuality="high";ctx.drawImage(b,0,0,cv.width,cv.height);
-  const im=ctx.getImageData(0,0,cv.width,cv.height),d=im.data,n=d.length/4,hist=new Uint32Array(256);
-  for(let i=0;i<d.length;i+=4){const g=(d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114)|0;d[i]=d[i+1]=d[i+2]=g;hist[g]++}
-  let acc=0,lo=0,hi=255;
-  for(let i=0;i<256;i++){acc+=hist[i];if(acc>=n*0.01){lo=i;break}}
-  acc=0;for(let i=255;i>=0;i--){acc+=hist[i];if(acc>=n*0.01){hi=i;break}}
-  const span=Math.max(1,hi-lo);
-  for(let i=0;i<d.length;i+=4){const v=Math.max(0,Math.min(255,((d[i]-lo)*255/span)|0));d[i]=d[i+1]=d[i+2]=v}
+  const ctx=cv.getContext("2d",{willReadFrequently:true});ctx.imageSmoothingQuality="high";ctx.drawImage(b,0,0,cv.width,cv.height);
+  if(b.close)b.close();
+  const im=ctx.getImageData(0,0,cv.width,cv.height),d=im.data;
+  for(let i=0;i<d.length;i+=4){const g=(d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114)|0;d[i]=d[i+1]=d[i+2]=g}
+  // The paper around each point: the average grey of cells about 1/40 of the page across, blended smoothly
+  // between cell centres. Worked out here rather than by shrinking a canvas, so every browser gives the same
+  // result and no second full-size image is needed.
+  const W=cv.width,H=cv.height,cell=Math.max(8,Math.round(Math.max(W,H)/20));
+  const cw=Math.ceil(W/cell),ch=Math.ceil(H/cell),sum=new Float64Array(cw*ch),cnt=new Uint32Array(cw*ch);
+  for(let y=0;y<H;y++){const cy=((y/cell)|0)*cw;for(let x=0;x<W;x++){const k=cy+((x/cell)|0);sum[k]+=d[(y*W+x)*4];cnt[k]++}}
+  for(let k=0;k<sum.length;k++)sum[k]/=cnt[k]||1;
+  for(let y=0;y<H;y++){
+    const fy=Math.min(ch-1,Math.max(0,(y+0.5)/cell-0.5)),y0=fy|0,y1=Math.min(ch-1,y0+1),ty=fy-y0;
+    for(let x=0;x<W;x++){
+      const fx=Math.min(cw-1,Math.max(0,(x+0.5)/cell-0.5)),x0=fx|0,x1=Math.min(cw-1,x0+1),tx=fx-x0;
+      const bgv=(sum[y0*cw+x0]*(1-tx)+sum[y0*cw+x1]*tx)*(1-ty)+(sum[y1*cw+x0]*(1-tx)+sum[y1*cw+x1]*tx)*ty;
+      const i=(y*W+x)*4,v=d[i]<bgv*0.85?0:255;d[i]=d[i+1]=d[i+2]=v;
+    }
+  }
   ctx.putImageData(im,0,0);return cv;
 }
 function cropScaled(cv,bb){
@@ -126,30 +140,87 @@ function cropScaled(cv,bb){
    next try downloads them again. */
 const OCR_MSG="The photo reader couldn’t load. Check you’re online and try again, or type the numbers in the box instead. (Reading photos needs iOS 16 or newer on an iPhone.)";
 async function dropOcrCache(){try{for(const n of await caches.keys()){if(!/^lpn-libs/.test(n))continue;const c=await caches.open(n);for(const r of await c.keys())if(/tesseract|tessdata/.test(r.url))await c.delete(r)}}catch(e){}}
+/* Tidies the numbers read from one photo. Each page's LPNs share a prefix and a digit count (VLT + 9 digits), so
+   a reading that doesn't fit is checked against the others: the reading that fits is used (the first read or the
+   close-up re-read), a letter read as a look-alike digit is put back (VL1004040355 → VLT004040355), and an O read
+   as an extra 0 after the prefix is dropped (RUNO01… read as RUN0001…). Readings with nothing to compare against
+   are kept as read. */
+const LOOK={"0":"ODQU","1":"ILTJ","2":"Z","5":"S","6":"G","8":"B"};
+function tidyReads(items){
+  const split=x=>{const m=/^([A-Z]+)([0-9]+)$/.exec(x||"");return m?{p:m[1],d:m[2]}:null};
+  // Each number votes once for each shape it could be: as read, and, when the raw text had a letter O, D or Q
+  // straight after the prefix letters, also with that letter left out (an O seen between the prefix and the 0s).
+  const tally={},once=new Set();
+  const dropO=(x,raw)=>{const s=split(x),m=/^([A-Z]{1,3})[ODQ]/.exec(raw);if(!s||!m||s.p!==m[1]||!/^0/.test(s.d)||s.d.length<10)return null;return s.p+s.d.slice(1)};
+  items.forEach(it=>{
+    const key=it.again||it.first;if(once.has(key))return;once.add(key);
+    const raw=String(it.raw||"").replace(/\s+/g,"").toUpperCase(),shapes=new Set();
+    [it.first,it.again].filter(Boolean).forEach(x=>[x,dropO(x,raw)].forEach(y=>{const s=split(y);if(s)shapes.add(s.p+"#"+s.d.length)}));
+    shapes.forEach(k=>{tally[k]=(tally[k]||0)+1});
+  });
+  // For each prefix, the shape most numbers have (seen at least twice) is the page's pattern.
+  const all=Object.keys(tally).filter(k=>tally[k]>=2).map(k=>({p:k.split("#")[0],n:+k.split("#")[1],c:tally[k]}));
+  const pats=all.filter(q=>!all.some(o=>o.p===q.p&&o.c>q.c)).sort((a,b)=>b.c-a.c);
+  const fits=x=>{const s=split(x);return !!s&&pats.some(q=>q.p===s.p&&q.n===s.d.length)};
+  const mend=x=>{
+    if(!x)return null;
+    for(const q of pats){
+      const len=q.p.length+q.n;
+      // a letter of the prefix read as a look-alike digit
+      if(x.length===len&&/^[0-9]+$/.test(x.slice(len-q.n))&&[...q.p].every((ch,i)=>x[i]===ch||(LOOK[x[i]]||"").indexOf(ch)>=0))return q.p+x.slice(q.p.length);
+      // the right prefix with one 0 too many straight after it
+      if(x.length===len+1&&x.startsWith(q.p+"0")&&/^[0-9]+$/.test(x.slice(q.p.length)))return q.p+x.slice(q.p.length+1);
+    }
+    return null;
+  };
+  const firsts=new Set(items.map(it=>it.first));
+  return items.map(it=>{
+    if(!pats.length)return it.again||it.first;
+    // When both readings fit the page, the first is kept: the close-up is of the black-and-white image.
+    const c=[it.first,it.again].filter(Boolean);
+    for(const x of c)if(fits(x))return x;
+    const raw=String(it.raw||"").replace(/\s+/g,"").toUpperCase();
+    for(const x of [it.again,it.first].filter(Boolean)){
+      const m=mend(x);if(!m||firsts.has(m)&&m!==it.first)continue;
+      // An extra 0 is only dropped when the raw text really had a letter straight after the prefix.
+      if(m.length===x.length)return m;
+      const q=pats.find(q=>m.startsWith(q.p));if(q&&raw.startsWith(q.p)&&/^[ODQ]/.test(raw.slice(q.p.length)))return m;
+    }
+    return it.again||it.first;
+  });
+}
+/* Tidies one photo's readings, then keeps those with a prefix in the list; the rest that look like LPNs are
+   reported as left out. */
+function photoLpns(items){
+  const pf=getPfx(),out=[],skipped=[];
+  tidyReads(items).forEach(x=>{if(!pf.length||okPfx(x))out.push(x);else if(/^[A-Z]{1,3}[0-9]{9,10}$/.test(x))skipped.push(x)});
+  out.skipped=[...new Set(skipped)];
+  return out;
+}
 async function ocrLpns(f){
   try{await loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",()=>window.Tesseract)}catch(e){await dropOcrCache();throw new Error(OCR_MSG)}
   const cv=await prep(f);
   // 90 seconds: the first use downloads the language data, which can be slow on a weak signal.
   let w;try{w=await Promise.race([Tesseract.createWorker("eng"),new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),90000))])}catch(e){await dropOcrCache();throw new Error(OCR_MSG)}
   try{
-    await w.setParameters({tessedit_char_whitelist:"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ",preserve_interword_spaces:"1"});
+    // Mode 11 (sparse text) finds every number on a manifest page; the default page layout mode skipped whole
+    // parts of a page broken up by ruled lines.
+    await w.setParameters({tessedit_char_whitelist:"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ",preserve_interword_spaces:"1",tessedit_pageseg_mode:"11"});
     const r=(await w.recognize(cv)).data;
-    const out=[],orig=new Set(),skipped=[];
+    // Read with any prefix first, so a reading with a look-alike prefix letter can still be tidied; the prefix
+    // list is applied afterwards.
+    const items=[],orig=new Set();
     await w.setParameters({tessedit_pageseg_mode:"7"});
     for(const wd of (r.words||[])){
-      const found=extractLpns(wd.text);
-      skipped.push(...found.skipped);
+      const found=extractLpns(wd.text,true);
       if(found.length!==1)continue;
       orig.add(found[0]);
-      let val=found[0];
-      try{
-        const again=extractLpns((await w.recognize(cropScaled(cv,wd.bbox))).data.text.replace(/\s+/g,""));
-        if(again.length===1)val=again[0];
-      }catch(e){}
-      out.push(val);
+      let again=null;
+      try{const a=extractLpns((await w.recognize(cropScaled(cv,wd.bbox))).data.text.replace(/\s+/g,""),true);if(a.length===1)again=a[0]}catch(e){}
+      items.push({raw:wd.text,first:found[0],again:again});
     }
-    const all=extractLpns(r.text);all.forEach(x=>{if(!orig.has(x))out.push(x)});
-    out.skipped=[...new Set(skipped.concat(all.skipped))];
+    extractLpns(r.text,true).forEach(x=>{if(!orig.has(x))items.push({raw:x,first:x,again:null})});
+    const out=photoLpns(items);
     diag("ocr","Photo text read: "+(r.words||[]).length+" words, "+out.length+" LPNs found"+(out.skipped.length?", skipped for prefix: "+out.skipped.slice(0,10).join(" "):"")+". Text start: "+String(r.text||"").replace(/\s+/g," ").slice(0,150));
     return out;
   }finally{await w.terminate()}
