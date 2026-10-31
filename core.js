@@ -1,3 +1,15 @@
+/* Problem log: the last 300 notable events (manifest reads, script errors) kept on this device, so a problem
+   report can be downloaded from Settings and sent for troubleshooting. Nothing leaves the device by itself. */
+function diag(kind,msg){
+  try{
+    let a=[];try{a=JSON.parse(localStorage.getItem("lpndiag")||"[]");if(!Array.isArray(a))a=[]}catch(e){a=[]}
+    a.push({t:new Date().toISOString(),k:String(kind).slice(0,20),m:String(msg).slice(0,300)});
+    if(a.length>300)a=a.slice(-300);
+    localStorage.setItem("lpndiag",JSON.stringify(a));
+  }catch(e){}
+}
+window.addEventListener("error",e=>diag("error",(e.message||"error")+(e.filename?" at "+String(e.filename).split("/").pop()+":"+e.lineno:"")));
+window.addEventListener("unhandledrejection",e=>{const r=e.reason;diag("error","Unhandled: "+((r&&r.message)||String(r)))});
 const TYPES=["BB","FMCG","FPP","Mixed"];
 let rows=[];
 let delCollapsed=false;

@@ -587,6 +587,61 @@ async function page(browser, width, opts = {}) {
     }
   }
 
+  {
+    // Reported: manifest photos stopped adding LPNs, with no hint why. Each photo now says how many it found and
+    // added, which were already listed, and which were skipped for a prefix not in the list; one bad photo doesn't
+    // stop the rest; and everything goes in a problem report the user can download and send.
+    console.log("Manifest photo messages and problem report");
+    const q = await page(browser, 390);
+    await q.goto(URL0); await q.waitForTimeout(300);
+    await q.evaluate(() => {
+      document.getElementById("cmpToggle").click();
+      document.getElementById("cmpPfx").value = "VLT"; document.getElementById("cmpNums").value = "VLT004037790";
+      let n = 0;
+      window.readPhoto = async () => {
+        n++;
+        if (n === 2) throw new Error("blurred");
+        const a = n === 1 ? ["VLT004037790", "VLT004037814"] : ["VLT004037858"];
+        a.skipped = n === 1 ? ["QUB001899186", "QUB001899210"] : []; return a;
+      };
+    });
+    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+    await q.setInputFiles("#cmpPhotoFile", [1, 2, 3].map(i => ({ name: "m" + i + ".jpg", mimeType: "image/jpeg", buffer: png })));
+    await q.waitForFunction(() => !/Reading photo/.test(document.getElementById("cmpMsg").textContent), null, { timeout: 5000 }).catch(() => {});
+    let s = await q.evaluate(() => ({ msg: document.getElementById("cmpMsg").textContent, nums: document.getElementById("cmpNums").value.split("\n") }));
+    check("a photo that can't be read doesn't stop the next photos", s.nums.includes("VLT004037858") && /photo 2/i.test(s.msg) && /blurred/.test(s.msg), s);
+    check("the manifest photo message says how many were added and how many were already listed", /Photo 1: found 2 LPNs, 1 new, 1 already in the list/.test(s.msg) && /Photo 3: found 1 LPN, 1 new/.test(s.msg), s.msg);
+    check("LPNs skipped for a prefix not in the list are named, with how to fix it", /QUB/.test(s.msg) && /prefix/i.test(s.msg) && s.nums.length === 3, s.msg);
+    s = await q.evaluate(() => {
+      document.getElementById("cmpPfx").value = "VLT";
+      const t = "VLT004037790 QUB001899186 RBY 006291170";
+      return { kept: extractLpns(t), skipped: extractLpns(t).skipped };
+    });
+    check("reading text keeps the listed prefixes and notes the rest", JSON.stringify(s.kept) === '["VLT004037790"]' && JSON.stringify(s.skipped) === '["QUB001899186","RBY006291170"]', s);
+    await q.evaluate(() => setTimeout(() => { throw new Error("boom-test"); }, 0));
+    await q.waitForTimeout(100);
+    s = await q.evaluate(async () => {
+      document.getElementById("btnSet").click();
+      let out = null; window.saveOnly = async (buf, name, mime) => { out = { name, mime, text: new TextDecoder().decode(buf) }; };
+      await document.getElementById("diagDl").onclick();
+      const b = document.getElementById("diagDl").getBoundingClientRect();
+      return { out, btn: b.width > 0 && b.right <= innerWidth, stored: (localStorage.getItem("lpndiag") || "").length };
+    });
+    const txt = (s.out && s.out.text) || "";
+    check("Settings has a Download problem report button", s.btn && !!s.out && /^lpn-problem-report-\d{4}-\d{2}-\d{2}\.txt$/.test(s.out.name), s.out && s.out.name);
+    check("the problem report names the build, browser and screen", /build \d+/.test(txt) && /Browser: /.test(txt) && /Screen: \d+×\d+/.test(txt), txt.slice(0, 400));
+    check("the problem report lists the manifest photo reads, the failure and the skipped prefix", /photo 1 of 3/.test(txt) && /blurred/.test(txt) && /QUB001899186/.test(txt), txt);
+    check("the problem report includes script errors", /boom-test/.test(txt), txt.slice(-600));
+    s = await q.evaluate(() => {
+      for (let i = 0; i < 900; i++) diag("test", "entry " + i + " " + "x".repeat(400));
+      const a = JSON.parse(localStorage.getItem("lpndiag")); return { n: a.length, size: localStorage.getItem("lpndiag").length, last: a[a.length - 1].m.slice(0, 9) };
+    });
+    check("the problem log keeps only recent entries and stays small", s.n <= 300 && s.size < 120000 && s.last === "entry 899", s);
+    s = await q.evaluate(() => { document.getElementById("diagClear").click(); return { left: JSON.parse(localStorage.getItem("lpndiag") || "[]").length, msg: document.getElementById("diagMsg").textContent }; });
+    check("the problem log can be cleared", s.left === 0 && /cleared/i.test(s.msg), s);
+    await q.ctx.close();
+  }
+
   console.log("Offline store and failure paths");
   {
     // The service worker is on and every outside request goes through the test's router, including its own.
