@@ -182,6 +182,16 @@ Tesseract reads photos, then `extractLpns()` only accepts `prefix + 8–12 chara
 - **Checked:** offline, the app's `prep()` on the user's four photos with Tesseract 5 gave all 18 LPNs right (7 before), also with the photos at full camera size. The automatic checks use readings taken from those photos.
 - **Trade-off / not checked:** not tested on a real iPhone. Mending relies on at least two numbers of the same shape on a photo; a photo with one LPN, or a page mixing digit counts under one prefix, gets less help. Users still need to check the numbers.
 
+## Leaving out made-up codes from paper specks (build 36)
+
+When a photo has a clear page pattern, `tidyReads()` leaves out a reading whose prefix matches no pattern on the page and whose digit count isn't 9 or 10, and `photoLpns()` notes it in the problem log ("Ignored as not looking like this page's LPNs").
+
+- **Cause (from a second user problem report):** on the phone, photo reading found all 18 real LPNs but also a made-up `DFA51400180`, read from specks on the paper.
+- **Why these two conditions together:** a code with a prefix seen nowhere else on the page and a length no LPN has is very unlikely to be real. A lone other prefix with 9 or 10 digits could be a real LPN, so it is kept (and named by the prefix list note if its prefix isn't listed). A short reading of a page prefix (`QUB00189918`) is kept, because it is probably a real number misread and the user should see it to fix it.
+- **Why only with a pattern:** with nothing on the page to compare against, the app can't tell what the page's LPNs look like, so nothing is left out.
+- **Why logged, not shown in the note:** the left-out readings are not added to the numbers box or named in the per-photo note; the problem log keeps a record in case a real number is ever left out.
+- **Trade-off:** a real LPN with an unusual prefix and length, alone on a page of other numbers, would be left out silently (only the problem log shows it). Users still need to check the numbers against the paper.
+
 ## Per-file notes and naming numbers the prefix list left out
 
 Each manifest photo, manifest PDF and log photo gets its own note (found, new, already listed), and numbers that look like LPNs but have a prefix outside the list are named, with the fix.
