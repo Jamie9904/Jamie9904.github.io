@@ -184,7 +184,7 @@ Tesseract reads photos, then `extractLpns()` only accepts `prefix + 8–12 chara
 
 ## Leaving out made-up codes from paper specks (build 36)
 
-When a photo has a clear page pattern, `tidyReads()` leaves out a reading whose prefix matches no pattern on the page and whose digit count isn't 9 or 10, and `photoLpns()` notes it in the problem log ("Ignored as not looking like this page's LPNs").
+When a photo has a clear page pattern, `tidyReads()` leaves out a reading whose prefix matches no pattern on the page and whose digit count isn't an LPN's (9 or 10; since build 39, 10 or 11 for `IM`, see `lpnDigitsOk()` below), and `photoLpns()` notes it in the problem log ("Ignored as not looking like this page's LPNs").
 
 - **Cause (from a second user problem report):** on the phone, photo reading found all 18 real LPNs but also a made-up `DFA51400180`, read from specks on the paper.
 - **Why these two conditions together:** a code with a prefix seen nowhere else on the page and a length no LPN has is very unlikely to be real. A lone other prefix with 9 or 10 digits could be a real LPN, so it is kept (and named by the prefix list note if its prefix isn't listed). A short reading of a page prefix (`QUB00189918`) is kept, because it is probably a real number misread and the user should see it to fix it.
@@ -214,12 +214,21 @@ When a photo has a clear page pattern, `tidyReads()` leaves out a reading whose 
 - **Why it prints what the reader saw on failure:** run logs can't be read from a Claude cloud session, so a "Photo reading detail" notice gives each reading (raw text, first read, close-up) for working out a fix.
 - **Trade-off:** four photos from one site; other suppliers' layouts are not covered until their photos are added. The photos make the repository bigger (about 1.3 MB) and, like the rest of `tools/`, are published by GitHub Pages but kept out of the site zip.
 
+## One digit-count rule, with IM numbers at 10 or 11 digits (build 39)
+
+`lpnDigitsOk(x)` in `core.js` is the only place that says how many digits an LPN has: 10 or 11 after `IM`, 9 or 10 after any other prefix. The log warning (`lpnIssues()`), the manifest's unusual-digits note (`oddNote()`), the "left out" scans of PDF and photo text (`extractLpns()`, `lpnsFromText()`), `photoLpns()` (`.skipped`, `.odd`) and the left-out rule in `tidyReads()` all use it.
+
+- **Cause:** the user confirmed that `IM` numbers (full pallet picks) have 2 letters and 10 or 11 digits, while other LPNs usually have 3 letters and 9 or 10 digits. Every place had its own "9 or 10" check, so a real 11-digit `IM` number was warned about when logged and called unusual on the manifest, and a 9-digit `IM` reading was not.
+- **Why one function:** the rule was copied into five places in two files. One function keeps the log, the manifest note and photo reading in agreement, and a new prefix with a different length needs one change.
+- **Why the warning names the IM rule:** "has 9 digits (IM numbers have 10 or 11)" tells the user which rule the number broke; other prefixes keep "(usually 9 or 10)", because the user said "usually".
+- **Trade-off:** only `IM` has its own length. A different prefix with its own length would be warned about until it is added to `lpnDigitsOk()`. The scans still only take 1–3 letters followed by 9 to 11 digits, so a 12-digit number is never named as left out.
+
 ## Per-file notes and naming numbers the prefix list left out
 
 Each manifest photo, manifest PDF and log photo gets its own note (found, new, already listed), and numbers that look like LPNs but have a prefix outside the list are named, with the fix.
 
 - **Why:** a user reported that manifest photos "stopped adding LPNs" with no hint why. The causes look the same from outside: the numbers were already in the box, the prefix list filtered them out, or the photo couldn't be read. One line per file tells them apart.
-- **Why only real 9–10 digit numbers:** naming every letters-and-digits match flagged PO numbers, phone numbers and references. LPNs have 9 or 10 digits, so the "left out" scan only takes exactly 9 or 10 real digits (no look-alike repair), and the wording says "if they are LPNs" because the app can't be sure.
+- **Why only real 9–10 digit numbers:** naming every letters-and-digits match flagged PO numbers, phone numbers and references. LPNs have 9 or 10 digits (10 or 11 for `IM` since build 39), so the "left out" scan only takes real digits of those counts (no look-alike repair; `lpnDigitsOk()`), and the wording says "if they are LPNs" because the app can't be sure.
 - **Why not add them anyway:** the prefix list is there to cut noise; the user decides whether to add the prefix or clear the list.
 - **One bad photo doesn't stop the rest:** before, the first failure ended the batch and lost the notes for the photos after it. Now each failure is a note and reading carries on, as it already did for PDFs (except when the PDF reader itself can't load, where every later file would fail the same way).
 - **Trade-off:** with many files the message gets long; `.msg` wraps long words so it never widens the page.
@@ -392,7 +401,7 @@ The weekly check of the live site, the CDN libraries and the tests is `.github/w
 
 ## Demo video in the Guide, loaded on demand and not cached
 
-The Guide starts with a button that shows a narrated demo video of about 40 seconds (`media/demo.mp4`, about 1.5 MB, with subtitles; the button says 38 seconds) instead of loading the player straight away. The service worker leaves `.mp4` and `.webm` requests to the browser.
+The Guide starts with a button that shows a narrated demo video of about 40 seconds (`media/demo.mp4`, about 1.5 MB, with subtitles; 39.7 seconds since build 39, when the button changed from 38 to 40 seconds) instead of loading the player straight away. The service worker leaves `.mp4` and `.webm` requests to the browser.
 
 - **Why a button and `preload="none"`:** most opens of the Guide are to look something up, often on mobile data. Nothing is downloaded until someone asks for the video, so opening the Guide costs nothing extra.
 - **Why it isn't cached:** browsers fetch video with range requests, and the partial (`206`) responses can't be stored with the Cache API. Saving the whole file for offline use would need extra service worker code, and would add 1.5 MB to every install for something most people watch once.
