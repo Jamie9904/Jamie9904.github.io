@@ -155,6 +155,7 @@ function lpnIssues(v){
   return out;
 }
 let pendingAdd=null;
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("chkBar").hidden)$("chkSkip").click()});
 function hideCheck(){pendingAdd=null;$("chkBar").hidden=true}
 function tryAdd(v,scan){
   if(pendingAdd)return false;
@@ -172,6 +173,9 @@ function tryAdd(v,scan){
 function add(){
   const v=$("lpn").value.trim();
   if(!v){$("msg").textContent="Enter an LPN number first.";return}
+  // A warning is waiting for an answer: keep this LPN in the box rather than losing it (a handheld scanner types
+  // and presses Enter without anyone looking at the screen).
+  if(pendingAdd){$("msg").textContent="Answer the check first (Skip or Add anyway), then add "+v+".";sfx("warn");return}
   tryAdd(v);
   $("lpn").value="";$("lpn").focus();
 }
