@@ -47,6 +47,9 @@ On phones, while the Manifest check is open and its top is in the upper part of 
 - **Log sources:** Use current log, a saved delivery, an exported `.xlsx`/`.csv`/`.xls`, an app-made PDF (read exactly), another PDF, or a photo of a printed log.
 - **Use n as expected:** while a manifest is loaded and Expected pallets is empty, the progress line offers to copy the manifest count into Expected pallets.
 - **Prefix presets** (tap the heading to open) limit which numbers OCR picks up. Leave the list empty for any 1–3 letter prefix. Presets come from `presets.json` and from presets saved on the device.
+- **What each file added:** after reading manifest photos, manifest PDFs or log photos, the message has one note per file, for example "Photo 1: found 2 LPNs, 1 new, 1 already in the list." (PDFs are named by their file name, log photos as "Log photo n"). A file where nothing was found says "No LPNs could be read: try a closer, sharper photo in good light." or, for a PDF, "No LPNs could be read from this PDF."
+- **Numbers left out by the prefix list:** when a prefix list is set, numbers of 1–3 letters followed by exactly 9 or 10 real digits whose letters aren't in the list are not added, but the note names them (up to four, then "…"), for example "2 other numbers (QUB001899186, QUB001899210) start with QUB, which isn’t in the prefix list. If they are LPNs, add QUB under Prefix presets (or clear the prefixes) and read the photo again." For PDFs it says "read the PDF again". Numbers of other lengths (PO, phone or reference numbers) are never named. With an empty prefix list nothing is left out.
+- **One bad file doesn't stop the rest:** if a manifest photo or log photo can't be read, its note says "Photo n: couldn’t be read (reason)." and the next photos are still read. Manifest PDFs already worked this way; a PDF that fails is listed under "Couldn’t read:". The exception is the PDF reader failing to load, which stops at that file with the "PDF reader couldn’t load" message.
 - A note under the manifest numbers box reminds you that numbers read from photos can be misread, so check them first. (This replaced the earlier "still being tested" warning at the top of the section.)
 - **Check results** lists Missing (on the manifest, not logged: report), Log only (logged, not on the manifest: book in) and Matched. **Fix** corrects a misread number, ✕ removes it.
 - **Export** gives the comparison as Excel (`Manifest-check-<date>.xlsx`), Email PDF or Print. With "Include a copy of the log" on, an uploaded `.xlsx` log gets the comparison as a new tab, and PDFs get the log appended. When a log PDF is appended, any links and page-open actions in it are removed; the printed pages are unchanged. Values from an uploaded log are only ever written as plain text or numbers, so a file from outside can't add formulas or links to the export.
@@ -101,6 +104,24 @@ Everything (the current log, saved deliveries, names, presets, logo and settings
 
 While checking, the app tidies the backup: anything it doesn't recognise is left out (for example an unknown pallet type becomes Mixed, and a logo that isn't a PNG or JPEG image is dropped). The same tidying happens every time the app starts, so damaged saved data can't stop it opening.
 
+The problem log (see [Problem report](#problem-report)) is never put in a backup, is ignored if a backup file contains one, and is left as it was when a backup is restored.
+
+## Problem report
+
+**Settings → Problem report** has **Download problem report** and **Clear**.
+
+The app keeps a short log of what it has done on this device: the last 300 events, each cut to 300 characters. It records manifest photo, manifest PDF and log photo reads (file type and size, how many LPNs were found, added and already listed, numbers left out by the prefix list, failures), what the photo reader and PDF reader got from each file (word or page count, LPNs found and the first 150 characters of the text read from a photo), backup restores, and script errors (including failed promises). Nothing is sent anywhere by the app.
+
+**Download problem report** saves a plain text file, `lpn-problem-report-<yyyy-mm-dd>.txt`, with:
+
+- when it was made, the app version and build, the browser (user agent), screen and window size and pixel ratio, whether it runs as an installed app, whether it is online and whether the service worker is active;
+- the current state: pallets in the log, delivery date, expected pallets, the Manifest check prefixes, the manifest numbers and log numbers in the Manifest check boxes, and the Manifest check message;
+- the recent events, oldest first, each with its time and kind (`manifest`, `pdf`, `ocr`, `backup`, `error`).
+
+The message then says "Problem report downloaded. Send it along with what happened." **Clear** empties the problem log ("Problem log cleared.").
+
+Section 9 of the Guide tells staff: if something isn't working, open Settings straight away, tap **Download problem report** and send that file with a description of what happened. The report contains LPNs, file names and text read from photos, so treat it like a delivery record.
+
 ## Guide and demo video
 
 The **Guide** button in the header opens the Guide in the side panel. It starts with a **▶ Watch the demo video (38 seconds)** button, above the contents bar and the guide sections.
@@ -113,7 +134,7 @@ The **Guide** button in the header opens the Guide in the side panel. It starts 
 
 ## Settings
 
-Colours (two colours drive the whole theme, with a contrast warning), quick themes, logo, default pallet type, keep last type, warnings, sound, vibration, confirm scans, text size, date format (dd/mm/yyyy, mm/dd/yyyy, yyyy-mm-dd), include log copy in comparisons, forget remembered names, backup and restore, install pop-up.
+Colours (two colours drive the whole theme, with a contrast warning), quick themes, logo, default pallet type, keep last type, warnings, sound, vibration, confirm scans, text size, date format (dd/mm/yyyy, mm/dd/yyyy, yyyy-mm-dd), include log copy in comparisons, forget remembered names, backup and restore, problem report, install pop-up.
 
 **Logo** (under the colours): **Add logo** / **Change logo** picks an image that is kept on this device and used in the header and on exports. A saved logo is only used if it is a PNG or JPEG image stored in the app. `logo.png` next to the app is the default; when a custom logo is set, **Reset to default logo** (or **Remove logo** if there is no default) appears. The logo controls are no longer in the Delivery card.
 
@@ -146,3 +167,5 @@ Colours (two colours drive the whole theme, with a contrast warning), quick them
 | Entry bar disappeared on a phone | The Manifest check is open and scrolled into view. Scroll up towards the log and the bar comes back. |
 | Prefix preset list not visible | It is in the closed **Prefix presets** section below the two steps; tap its heading. |
 | Numbers from photos are wrong | OCR can misread letters. Check and Fix them before comparing; set a prefix preset to reduce noise. |
+| Manifest photos stop adding LPNs | Read the note for each photo. "1 new, 3 already in the list" means the numbers were already there. "…start with QUB, which isn’t in the prefix list" means the prefix list left them out: add that prefix under **Prefix presets** (or clear the prefixes) and read the photo again. "No LPNs could be read" means try a closer, sharper photo in good light. |
+| Anything else that goes wrong | Download the problem report straight away (**Settings → Problem report → Download problem report**) and send it with a description of what happened. |

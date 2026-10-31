@@ -39,6 +39,12 @@ Open `http://localhost:8000/`. `localhost` counts as a secure origin, so the ser
 
 Users tap **Refresh** on the banner. The log is kept, because it is stored on the device.
 
+### When a user reports a problem
+
+Ask them to open **Settings → Problem report** on the device where it happened, tap **Download problem report** as soon as possible, and send the file (`lpn-problem-report-<date>.txt`) with a description of what they did and what they saw. The Guide (section 9) tells staff the same.
+
+The report shows the version and build they are running (compare it with `CACHE` in `sw.js` to see whether they have the latest update), the browser and screen, the current Manifest check prefixes, numbers and message, and the last 300 events: each manifest photo, PDF and log photo read with what was found, added and left out by the prefix list, the text the photo reader got, backup restores and script errors. It is kept only on that device (the 300 newest events, not in backups), so a report from another device or after **Clear** won't show the problem. In Claude Code, start with the `lpn-bug-triage` skill. See [usage.md](usage.md#problem-report) for what the file contains.
+
 ### Changing a library version
 
 The version of each CDN library is written in three places that must agree: the CDN addresses in `export.js`, `compare.js` or `scan.js`, the exact version in `package.json` `devDependencies`, and (for every library loaded by a script tag) the `sha384` hash in the `SRI` map in `core.js`, for both the cdnjs and jsDelivr address. The checks fail if the first two differ or if an address has no hash, and the browser refuses a file whose hash doesn't match. Run `node tests/sri.js` (needs internet) to confirm the hashes, and `node tests/advisories.js` to check the new version for advisories; remove any entries in `tests/advisories-accepted.json` that no longer apply. In Claude Code, the `lpn-library-upgrade` skill (saved to the user's Claude account, not in the repository) is the step-by-step version.

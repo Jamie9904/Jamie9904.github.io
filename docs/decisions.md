@@ -167,6 +167,26 @@ Tesseract reads photos, then `extractLpns()` only accepts `prefix + 8–12 chara
 - **Why:** manifests and printed logs are photographed in poor light; generic OCR output is too noisy. Restricting to known prefixes (presets) further cuts false matches.
 - **Trade-off:** letters in the prefix are not repaired, so users are always asked to check the numbers before comparing.
 
+## Per-file notes and naming numbers the prefix list left out
+
+Each manifest photo, manifest PDF and log photo gets its own note (found, new, already listed), and numbers that look like LPNs but have a prefix outside the list are named, with the fix.
+
+- **Why:** a user reported that manifest photos "stopped adding LPNs" with no hint why. The causes look the same from outside: the numbers were already in the box, the prefix list filtered them out, or the photo couldn't be read. One line per file tells them apart.
+- **Why only real 9–10 digit numbers:** naming every letters-and-digits match flagged PO numbers, phone numbers and references. LPNs have 9 or 10 digits, so the "left out" scan only takes exactly 9 or 10 real digits (no look-alike repair), and the wording says "if they are LPNs" because the app can't be sure.
+- **Why not add them anyway:** the prefix list is there to cut noise; the user decides whether to add the prefix or clear the list.
+- **One bad photo doesn't stop the rest:** before, the first failure ended the batch and lost the notes for the photos after it. Now each failure is a note and reading carries on, as it already did for PDFs (except when the PDF reader itself can't load, where every later file would fail the same way).
+- **Trade-off:** with many files the message gets long; `.msg` wraps long words so it never widens the page.
+
+## Problem log kept on the device, sent by hand
+
+The app keeps its last 300 notable events in `lpndiag` and offers them as a downloadable text file, rather than sending error reports anywhere.
+
+- **Why:** problems are reported after the fact from phones on the loading bay, where nobody can open developer tools. A report with the version, device, current Manifest check state and recent reads and errors shows what happened without asking staff to describe it in detail.
+- **Why not automatic reporting:** the app has no backend. Sending data out would need a service and would send LPNs and text from supplier documents off the device without the user choosing to.
+- **Why capped:** 300 entries of at most 300 characters keeps it small in `localStorage` (the check keeps it under 120,000 characters) so it can't crowd out the log and saved deliveries.
+- **Why not in backups:** the log describes this device. Restoring another device's log would mix up two devices' events, so backups leave it out, ignore it when restoring, and a restore keeps the current one.
+- **Trade-off:** the report contains LPNs, file names and the start of text read from photos. It is only made when the user taps the button, and **Clear** empties it.
+
 ## Email via the share sheet, PDF only
 
 "Email PDF" shares a PDF through `navigator.share`, not the Excel file.
@@ -285,6 +305,7 @@ Whether the demo video is out of date is judged by comparing the app's key scree
 - **Why only a warning:** re-recording needs the voice engine, `ffmpeg` and a person to look at the result, and a visible change may be in a part the video doesn't dwell on. A failing check would block unrelated releases; a "Demo video may be out of date" annotation leaves the decision to re-record to a person.
 - **Why the session start keeps a hint:** it costs nothing and needs no browser, so it only counts page and style commits and points at `npm test` for the real answer.
 - **Weekly playback check:** `health.yml` downloads the live `demo.mp4` and poster and decodes the video with `ffmpeg`, because `npm test` only checks the player and file size, not that the published file plays.
+- **Fixed date:** the made-up delivery is dated 30 October 2026, so `fingerprint()` sets the page clock to that day (`page.clock.setFixedTime`). Without it the "log is dated before today" reminder appears on any later day, moves everything below it and gives false "may be out of date" warnings.
 - **Trade-off:** only nine parts at one phone width are compared, so changes in other screens or in the scenes the recorder plays are not caught. `screens.json` has to be committed with each new video.
 
 ## Weekly health check as a GitHub workflow
