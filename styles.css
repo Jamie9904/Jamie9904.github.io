@@ -362,3 +362,6 @@ details.opts>summary .note{min-width:0;overflow:hidden;text-overflow:ellipsis;wh
   #undoBar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dockh,220px) + 10px);z-index:31;width:min(92vw,520px);margin:0;box-shadow:0 4px 14px rgba(0,0,0,.35);border-color:var(--bd,var(--line))}
   body.cmpfocus #undoBar{bottom:20px}
 }
+
+/* Report a problem or idea: Problem / Idea side by side. */
+.fbkind{border:0;margin:0 0 8px;padding:0;display:flex;gap:18px}

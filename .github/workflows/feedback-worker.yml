@@ -1,0 +1,51 @@
+name: Deploy feedback Worker
+# Puts tools/feedback-worker online on Cloudflare (free plan) and gives it the GitHub token as a secret.
+# Needs three repository secrets (Settings > Secrets and variables > Actions):
+#   CLOUDFLARE_API_TOKEN   a Cloudflare API token made from the "Edit Cloudflare Workers" template
+#   CLOUDFLARE_ACCOUNT_ID  the Cloudflare account ID
+#   FEEDBACK_GITHUB_TOKEN  a fine-grained GitHub token for Jamie9904/lpn-feedback only: Issues and Contents read and write
+# Runs by hand (Actions > Deploy feedback Worker > Run workflow) and when the Worker changes on main.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["tools/feedback-worker/**", ".github/workflows/feedback-worker.yml"]
+permissions:
+  contents: read
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Secrets are set
+        env:
+          A: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          B: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          C: ${{ secrets.FEEDBACK_GITHUB_TOKEN }}
+        run: |
+          miss=""; [ -n "$A" ] || miss="$miss CLOUDFLARE_API_TOKEN"; [ -n "$B" ] || miss="$miss CLOUDFLARE_ACCOUNT_ID"; [ -n "$C" ] || miss="$miss FEEDBACK_GITHUB_TOKEN"
+          if [ -n "$miss" ]; then echo "::error title=Feedback Worker not set up::Missing repository secrets:$miss"; exit 1; fi
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Deploy
+        id: deploy
+        working-directory: tools/feedback-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          FEEDBACK_GITHUB_TOKEN: ${{ secrets.FEEDBACK_GITHUB_TOKEN }}
+        run: |
+          out=$(npx --yes wrangler@3.114.0 deploy 2>&1) || { echo "$out"; echo "::error title=Feedback Worker::deploy failed"; exit 1; }
+          echo "$out"
+          printf '%s' "$FEEDBACK_GITHUB_TOKEN" | npx --yes wrangler@3.114.0 secret put GITHUB_TOKEN >/dev/null
+          url=$(echo "$out" | grep -oE 'https://[a-z0-9.-]+\.workers\.dev' | head -1)
+          echo "::notice title=Feedback Worker address::$url"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+      - name: The Worker answers
+        run: |
+          sleep 5
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS -H "Origin: https://jamie9904.github.io" "${{ steps.deploy.outputs.url }}/report")
+          echo "OPTIONS /report: $code"
+          [ "$code" = 204 ] || { echo "::error title=Feedback Worker::didn't answer (HTTP $code)"; exit 1; }

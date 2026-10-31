@@ -1,0 +1,10 @@
+# Cloudflare Worker that turns reports from the app into issues in a private GitHub repo.
+# Deployed by .github/workflows/feedback-worker.yml. The GitHub token is a Worker secret (GITHUB_TOKEN), never here.
+name = "lpn-feedback"
+main = "worker.mjs"
+compatibility_date = "2026-06-01"
+workers_dev = true
+
+[vars]
+REPO = "Jamie9904/lpn-feedback"
+ALLOWED_ORIGIN = "https://jamie9904.github.io"

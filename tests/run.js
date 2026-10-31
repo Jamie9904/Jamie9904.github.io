@@ -814,6 +814,76 @@ async function page(browser, width, opts = {}) {
     await q.ctx.close();
   }
 
+  {
+    // The feedback Worker (tools/feedback-worker), run here with a stand-in for GitHub.
+    console.log("Feedback Worker");
+    const W = (await import(require("url").pathToFileURL(path.join(ROOT, "tools", "feedback-worker", "worker.mjs")).href)).default;
+    const env = { REPO: "Jamie9904/lpn-feedback", ALLOWED_ORIGIN: "https://jamie9904.github.io", GITHUB_TOKEN: "test-token" };
+    const calls = []; const realFetch = global.fetch;
+    global.fetch = async (u, o) => { calls.push({ u, m: o.method, b: JSON.parse(o.body), auth: o.headers.Authorization }); return new Response(JSON.stringify({ number: 7 }), { status: 201 }); };
+    const send = (body, origin = env.ALLOWED_ORIGIN, ip = "1.2.3.4") => W.fetch(new Request("https://lpn-feedback.example.workers.dev/report", { method: "POST", headers: { Origin: origin, "Content-Type": "application/json", "CF-Connecting-IP": ip }, body: JSON.stringify(body) }), env);
+    let r = await send({ kind: "problem", text: "Photo 3 read nothing\n@someone see [link](http://x)", report: "App: LPN Pallet Log v3.30 (build 43)\nManifest numbers (2): VLT004040265", app: "LPN Pallet Log v3.30 (build 43)" });
+    let j = await r.json(); const iss = calls.find(c => /\/issues$/.test(c.u));
+    check("feedback Worker: a problem becomes an issue in the private repo", r.status === 200 && j.ok && j.issue === 7 && iss && iss.u === "https://api.github.com/repos/Jamie9904/lpn-feedback/issues" && iss.auth === "Bearer test-token" && /^Problem: Photo 3 read nothing/.test(iss.b.title), { j, iss });
+    check("feedback Worker: the typed text and report are shown as plain text (no links or mentions)", /~~~~text\nPhoto 3 read nothing\n@someone see \[link\]\(http:\/\/x\)\n~~~~/.test(iss.b.body) && /<details><summary>Problem report<\/summary>/.test(iss.b.body), iss.b.body);
+    calls.length = 0;
+    r = await send({ kind: "idea", text: "Bigger buttons", photo: "data:image/jpeg;base64," + Buffer.from("fakejpeg").toString("base64") }); j = await r.json();
+    const put = calls.find(c => c.m === "PUT"), iss2 = calls.find(c => /\/issues$/.test(c.u));
+    check("feedback Worker: a photo is saved in the repo and shown in the issue", j.ok && put && /\/contents\/photos\/\d{4}-\d{2}\/.+\.jpg$/.test(put.u) && iss2 && /!\[photo\]\(https:\/\/github\.com\/Jamie9904\/lpn-feedback\/blob\/HEAD\/photos\//.test(iss2.b.body) && /^Idea: /.test(iss2.b.title), { put: put && put.u, body: iss2 && iss2.b.body });
+    const bad = [];
+    for (const [body, origin, want] of [[{ kind: "problem", text: "x" }, "https://evil.example", 403], [{ kind: "x", text: "x" }, null, 400], [{ kind: "problem", text: "  " }, null, 400],
+      [{ kind: "problem", text: "x".repeat(4001) }, null, 400], [{ kind: "problem", text: "x", website: "spam" }, null, 400], [{ kind: "problem", text: "x", photo: "data:image/png;base64,AAAA" }, null, 400]]) {
+      const res = await send(body, origin || env.ALLOWED_ORIGIN, "9.9.9." + bad.length); bad.push(res.status === want ? "ok" : res.status + "≠" + want);
+    }
+    check("feedback Worker: refuses other sites, wrong kinds, empty or long text, spam robots and non-JPEG photos", bad.every(x => x === "ok"), bad);
+    let last = 0; for (let i = 0; i < 21; i++) last = (await send({ kind: "idea", text: "n" + i }, undefined, "5.5.5.5")).status;
+    check("feedback Worker: more than 20 reports an hour from one address are refused", last === 429, last);
+    global.fetch = async () => new Response("{}", { status: 500 });
+    r = await send({ kind: "problem", text: "x" }, undefined, "6.6.6.6"); j = await r.json();
+    check("feedback Worker: if GitHub fails, the app is told plainly (so it can try again)", r.status === 502 && !j.ok && /couldn’t|couldn't/.test(j.error), j);
+    global.fetch = realFetch;
+  }
+
+  {
+    console.log("Report a problem or idea");
+    const q = await page(browser, 390);
+    await q.goto(URL0); await q.waitForTimeout(300);
+    await q.click("#btnGuide"); await q.waitForTimeout(100);
+    await q.click("#fbGuide"); await q.waitForTimeout(150);
+    let s = await q.evaluate(() => ({ title: document.getElementById("panelTitle").textContent, focus: document.activeElement.id }));
+    check("the Guide's Report a problem link opens Settings at the form", s.title === "Settings" && s.focus === "fbText", s);
+    s = await q.evaluate(async () => { document.getElementById("fbText").value = "Photo 3 read nothing"; FEEDBACK_URL = ""; await document.getElementById("fbSend").onclick(); return document.getElementById("fbMsg").textContent; });
+    check("before the Worker is online, the form says so and points to the problem report file", /isn’t set up yet/.test(s) && /Download problem report/.test(s), s);
+    s = await q.evaluate(async () => {
+      FEEDBACK_URL = "https://lpn-feedback.test.workers.dev/report"; const sent = []; const real = window.fetch;
+      window.fetch = async (u, o) => { sent.push({ u, b: JSON.parse(o.body) }); return new Response(JSON.stringify({ ok: true, issue: 3 }), { status: 200 }); };
+      document.querySelector('input[name="fbKind"][value="idea"]').checked = true; document.getElementById("fbText").value = "Bigger buttons please";
+      await document.getElementById("fbSend").onclick();
+      const ok = { n: sent.length, u: sent[0] && sent[0].u, kind: sent[0] && sent[0].b.kind, text: sent[0] && sent[0].b.text, report: sent[0] && /LPN Pallet Log problem report/.test(sent[0].b.report), app: sent[0] && sent[0].b.app, msg: document.getElementById("fbMsg").textContent, cleared: document.getElementById("fbText").value === "" };
+      // No signal: kept on the phone, then sent when back online.
+      window.fetch = async () => { throw new TypeError("Failed to fetch"); };
+      document.querySelector('input[name="fbKind"][value="problem"]').checked = true; document.getElementById("fbText").value = "Scanner froze"; document.getElementById("fbInc").checked = false;
+      await document.getElementById("fbSend").onclick();
+      const off = { msg: document.getElementById("fbMsg").textContent, queued: fbQueue().length, report: fbQueue()[0] && fbQueue()[0].report };
+      window.fetch = async (u, o) => { sent.push({ u, b: JSON.parse(o.body) }); return new Response(JSON.stringify({ ok: true, issue: 4 }), { status: 200 }); };
+      const flushed = await fbFlush();
+      const after = { flushed, left: fbQueue().length, last: sent[sent.length - 1].b.text, stored: localStorage.getItem("lpnfeedq") };
+      // A refused report says why and isn't kept.
+      window.fetch = async () => new Response(JSON.stringify({ ok: false, error: "That's too long: keep it under 4000 characters." }), { status: 400 });
+      document.getElementById("fbText").value = "x"; await document.getElementById("fbSend").onclick();
+      const refused = { msg: document.getElementById("fbMsg").textContent, queued: fbQueue().length };
+      window.fetch = real; FEEDBACK_URL = "";
+      return { ok, off, after, refused };
+    });
+    check("sending an idea posts the kind, text, app version and problem report, then clears the form", s.ok.n === 1 && s.ok.u === "https://lpn-feedback.test.workers.dev/report" && s.ok.kind === "idea" && s.ok.text === "Bigger buttons please" && s.ok.report && /^LPN Pallet Log/.test(s.ok.app) && /Sent\. Thank you/.test(s.ok.msg) && s.ok.cleared, s.ok);
+    check("with no signal, a report is kept on the phone (without the report when unticked) and sent when back online", /saved on this phone/.test(s.off.msg) && s.off.queued === 1 && s.off.report === "" && s.after.flushed === 1 && s.after.left === 0 && s.after.last === "Scanner froze" && s.after.stored === null, s);
+    check("a report the server refuses says why and isn't kept", /too long/.test(s.refused.msg) && s.refused.queued === 0, s.refused);
+    s = await q.evaluate(() => { localStorage.setItem("lpnfeedq", JSON.stringify([{ kind: "idea", text: "x" }])); const b = checkBackup({ lpnfeedq: "[]", lpnnames: "[]" }).data; const keys = []; for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i)); localStorage.removeItem("lpnfeedq"); return { inBackup: "lpnfeedq" in b }; });
+    check("unsent reports stay on this phone: not taken from or put into backups", !s.inBackup, s);
+    check("no script errors", q.errors.length === 0, q.errors);
+    await q.ctx.close();
+  }
+
   console.log("Offline store and failure paths");
   {
     // The service worker is on and every outside request goes through the test's router, including its own.
