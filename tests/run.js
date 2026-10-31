@@ -644,6 +644,30 @@ async function page(browser, width, opts = {}) {
     check("a long word in a message wraps instead of widening the page", s.longWord);
     s = await q.evaluate(async () => { localStorage.setItem("lpndiag", "[null,5,{\"t\":\"x\",\"k\":\"y\",\"m\":\"ok-entry\"}]"); let out = ""; window.saveOnly = async (b) => { out = new TextDecoder().decode(b); }; await downloadReport(); return out; });
     check("a damaged problem log still gives a report", /ok-entry/.test(s), s.slice(-200));
+    // Readings taken from the user's four manifest photos (31 Oct 2026): first read, close-up re-read.
+    s = await q.evaluate(() => {
+      const V = tidyReads([["VLT004040265", "VLT004040265"], ["VLT004040273", "VLT004040273"], ["VLT004040278", "VLT004040278"], ["VLT004040355", "VL1004040355"], ["VLT004040416", "VLT004040416"], ["VLT004040418", "VLT004040418"]].map(([a, b], i) => ({ raw: a, first: a, again: b })));
+      const R = tidyReads([{ raw: "RUNOO1832813", first: "RUN001832813", again: null }, { raw: "RUNO001832816", first: "RUN0001832816", again: "RUN0001832816" }, { raw: "RUNO01832832", first: "RUN001832832", again: "RUN0001832832" }]);
+      const lone = tidyReads([{ raw: "RUN0001830763", first: "RUN0001830763", again: null }]);
+      const keep10 = tidyReads([{ raw: "RUN0001830763", first: "RUN0001830763", again: null }, { raw: "RUN001832813", first: "RUN001832813", again: null }, { raw: "RUN001832832", first: "RUN001832832", again: null }]);
+      return { V, R, lone, keep10 };
+    });
+    check("a prefix letter read as a digit is put back to match the rest of the page (VL1… → VLT…)", s.V.join() === "VLT004040265,VLT004040273,VLT004040278,VLT004040355,VLT004040416,VLT004040418", s.V);
+    check("an O read as an extra 0 after the prefix is dropped to match the rest of the page", s.R.join() === "RUN001832813,RUN001832816,RUN001832832", s.R);
+    check("a reading with nothing to compare against, or a real 10-digit LPN, is kept as read", s.lone.join() === "RUN0001830763" && s.keep10[0] === "RUN0001830763", s);
+    // A pale page with shade across it and paper grain, like a photo of a manifest with no dark edge in shot.
+    s = await q.evaluate(async () => {
+      const c = document.createElement("canvas"); c.width = 1600; c.height = 2000; const x = c.getContext("2d");
+      const g = x.createLinearGradient(0, 0, 1600, 2000); g.addColorStop(0, "#d2d0cc"); g.addColorStop(1, "#8f8d8a"); x.fillStyle = g; x.fillRect(0, 0, 1600, 2000);
+      const im = x.getImageData(0, 0, 1600, 2000); for (let i = 0; i < im.data.length; i += 4) { const n = (Math.random() - 0.5) * 30; im.data[i] += n; im.data[i + 1] += n; im.data[i + 2] += n; } x.putImageData(im, 0, 0);
+      x.fillStyle = "#2a2a2a"; x.font = "italic bold 60px Arial"; for (let i = 0; i < 6; i++) x.fillText("LPN:  VLT00404026" + i, 150, 300 + i * 280);
+      const blob = await new Promise(r => c.toBlob(r, "image/jpeg", 0.9));
+      const cv = await prep(new File([blob], "p.jpg", { type: "image/jpeg" }));
+      const d = cv.getContext("2d").getImageData(0, 0, cv.width, cv.height).data; let black = 0; for (let i = 0; i < d.length; i += 4) if (d[i] < 128) black++;
+      const t = cv.getContext("2d").getImageData(Math.round(160 * cv.width / 1600), Math.round(270 * cv.height / 2000), Math.round(500 * cv.width / 1600), Math.round(40 * cv.height / 2000)).data; let ink = 0; for (let i = 0; i < t.length; i += 4) if (t[i] < 128) ink++;
+      return { black: black / (d.length / 4), ink: ink / (t.length / 4) };
+    });
+    check("photo preparation turns shaded, grainy paper white and keeps the text black", s.black < 0.06 && s.ink > 0.1, s);
     s = await q.evaluate(() => { document.getElementById("diagClear").click(); return { left: JSON.parse(localStorage.getItem("lpndiag") || "[]").length, msg: document.getElementById("diagMsg").textContent }; });
     check("the problem log can be cleared", s.left === 0 && /cleared/i.test(s.msg), s);
     await q.ctx.close();
