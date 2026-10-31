@@ -18,18 +18,25 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Secrets are set
+        id: ready
         env:
           A: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           B: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           C: ${{ secrets.FEEDBACK_GITHUB_TOKEN }}
         run: |
           miss=""; [ -n "$A" ] || miss="$miss CLOUDFLARE_API_TOKEN"; [ -n "$B" ] || miss="$miss CLOUDFLARE_ACCOUNT_ID"; [ -n "$C" ] || miss="$miss FEEDBACK_GITHUB_TOKEN"
-          if [ -n "$miss" ]; then echo "::error title=Feedback Worker not set up::Missing repository secrets:$miss"; exit 1; fi
+          if [ -z "$miss" ]; then echo "ok=1" >> "$GITHUB_OUTPUT"; exit 0; fi
+          # Before set-up, a push just skips; running it by hand says what's missing.
+          if [ "${{ github.event_name }}" = workflow_dispatch ]; then echo "::error title=Feedback Worker not set up::Missing repository secrets:$miss (see tools/feedback-worker/README.md)"; exit 1; fi
+          echo "::notice title=Feedback Worker not set up::Skipped: missing repository secrets:$miss (see tools/feedback-worker/README.md)"
       - uses: actions/checkout@v5
+        if: steps.ready.outputs.ok == '1'
       - uses: actions/setup-node@v5
+        if: steps.ready.outputs.ok == '1'
         with:
           node-version: 22
       - name: Deploy
+        if: steps.ready.outputs.ok == '1'
         id: deploy
         working-directory: tools/feedback-worker
         env:
@@ -44,6 +51,7 @@ jobs:
           echo "::notice title=Feedback Worker address::$url"
           echo "url=$url" >> "$GITHUB_OUTPUT"
       - name: The Worker answers
+        if: steps.ready.outputs.ok == '1'
         run: |
           sleep 5
           code=$(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS -H "Origin: https://jamie9904.github.io" "${{ steps.deploy.outputs.url }}/report")
