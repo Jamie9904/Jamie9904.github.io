@@ -214,11 +214,28 @@ function photoLpns(items){
   out.skipped=[...new Set(skipped)];out.odd=odd;
   return out;
 }
+/* One photo reader is started for a batch of photos (or PDF pages) and reused, then closed 45 seconds after the
+   last photo to free its memory. Starting it takes a second or more per photo on a phone. A reader that fails is
+   closed straight away, so the next photo gets a fresh one. */
+let ocrW=null,ocrIdle=0;
+async function ocrWorker(){
+  clearTimeout(ocrIdle);
+  if(!ocrW){
+    // 90 seconds: the first use downloads the language data, which can be slow on a weak signal.
+    ocrW=Promise.race([Tesseract.createWorker("eng"),new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),90000))]);
+    ocrW.catch(()=>{});
+  }
+  try{return await ocrW}catch(e){ocrW=null;await dropOcrCache();throw new Error(OCR_MSG)}
+}
+function ocrDone(w,ok){
+  const close=()=>{if(ocrW){ocrW=null;try{w.terminate()}catch(e){}}};
+  clearTimeout(ocrIdle);
+  if(!ok)close();else ocrIdle=setTimeout(close,45000);
+}
 async function ocrLpns(f){
   try{await loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",()=>window.Tesseract)}catch(e){await dropOcrCache();throw new Error(OCR_MSG)}
   const cv=await prep(f);
-  // 90 seconds: the first use downloads the language data, which can be slow on a weak signal.
-  let w;try{w=await Promise.race([Tesseract.createWorker("eng"),new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),90000))])}catch(e){await dropOcrCache();throw new Error(OCR_MSG)}
+  const w=await ocrWorker();let ok=false;
   try{
     // Mode 11 (sparse text) finds every number on a manifest page; the default page layout mode skipped whole
     // parts of a page broken up by ruled lines.
@@ -240,8 +257,8 @@ async function ocrLpns(f){
     const out=photoLpns(items);
     window.__ocrItems=items; // kept for the photo reading check (tools/ocr-check)
     diag("ocr","Photo text read: "+(r.words||[]).length+" words, "+out.length+" LPNs found"+(out.skipped.length?", skipped for prefix: "+out.skipped.slice(0,10).join(" "):"")+". Text start: "+String(r.text||"").replace(/\s+/g," ").slice(0,150));
-    return out;
-  }finally{await w.terminate()}
+    ok=true;return out;
+  }finally{ocrDone(w,ok)}
 }
 async function readPhoto(f){return ocrLpns(f)}
 async function readLogPhoto(f){return ocrLpns(f)}

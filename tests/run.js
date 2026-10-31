@@ -703,9 +703,47 @@ async function page(browser, width, opts = {}) {
       return { black: black / (d.length / 4), ink: ink / (t.length / 4) };
     });
     check("photo preparation turns shaded, grainy paper white and keeps the text black", s.black < 0.06 && s.ink > 0.1, s);
+    // One photo reader for a batch: started once for three photos, closed after a quiet spell; a failed one is replaced.
+    s = await q.evaluate(async () => {
+      const real = window.Tesseract; let made = 0, closed = 0, fail = false;
+      window.Tesseract = { createWorker: async () => { made++; return { setParameters: async () => {}, terminate: async () => { closed++; },
+        recognize: async () => { if (fail) throw new Error("worker crashed"); return { data: { words: [], text: "VLT004040265" } }; } }; } };
+      const c = document.createElement("canvas"); c.width = 200; c.height = 100; const b = await new Promise(r => c.toBlob(r, "image/png"));
+      const f = new File([b], "p.png", { type: "image/png" });
+      for (let i = 0; i < 3; i++) await ocrLpns(f);
+      const afterBatch = { made, closed };
+      fail = true; let err = ""; try { await ocrLpns(f); } catch (e) { err = e.message; }
+      fail = false; await ocrLpns(f);
+      const afterFail = { made, closed };
+      ocrDone(await ocrWorker(), false); // close it now rather than waiting 45 seconds
+      window.Tesseract = real;
+      return { afterBatch, err, afterFail, closedAtEnd: closed };
+    });
+    check("one photo reader is started for a batch of photos and kept open between them", s.afterBatch.made === 1 && s.afterBatch.closed === 0, s);
+    check("a photo reader that fails is closed and the next photo gets a new one", s.err === "worker crashed" && s.afterFail.made === 2 && s.afterFail.closed === 1 && s.closedAtEnd === 2, s);
     s = await q.evaluate(() => { document.getElementById("diagClear").click(); return { left: JSON.parse(localStorage.getItem("lpndiag") || "[]").length, msg: document.getElementById("diagMsg").textContent }; });
     check("the problem log can be cleared", s.left === 0 && /cleared/i.test(s.msg), s);
     await q.ctx.close();
+  }
+
+  {
+    // Live scan on short phones: the camera view shrinks so the "Added" line and Stop scanning stay on screen.
+    // A drawn picture stands in for the camera, and a stand-in barcode reader reports one code.
+    const cam = () => { const cv = document.createElement("canvas"); cv.width = 640; cv.height = 480; const g = cv.getContext("2d");
+      setInterval(() => { g.fillStyle = "#777"; g.fillRect(0, 0, 640, 480); }, 50); const st = cv.captureStream(20);
+      if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = async () => st;
+      window.BarcodeDetector = class { async detect() { return window.__code ? [{ rawValue: window.__code }] : []; } }; };
+    for (const [w, h] of [[360, 640], [375, 667], [390, 844]]) {
+      const q = await page(browser, w, { init: cam });
+      await q.setViewportSize({ width: w, height: h });
+      await q.goto(URL0); await q.waitForTimeout(300);
+      await q.evaluate(() => { document.getElementById("scanBtn").click(); document.getElementById("scan").click(); });
+      await q.waitForTimeout(500); await q.evaluate(() => { window.__code = "VLT004040265"; }); await q.waitForTimeout(700);
+      const s = await q.evaluate(() => { const b = id => document.getElementById(id).getBoundingClientRect();
+        return { stop: Math.round(b("stopscan").bottom), msg: Math.round(b("smsg").bottom), vh: innerHeight, text: document.getElementById("smsg").textContent }; });
+      check("Live scan at " + w + "×" + h + ": the Added line and Stop scanning are on screen", /^Added: VLT004040265/.test(s.text) && s.stop <= s.vh && s.msg <= s.vh, s);
+      await q.ctx.close();
+    }
   }
 
   console.log("Offline store and failure paths");

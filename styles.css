@@ -153,6 +153,8 @@ button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
   .entry .note{display:none}
   #scanBtn{display:block;grid-column:2;grid-row:2;min-height:44px;padding:6px 14px}
   .addgrid>div:nth-child(2){grid-column:1;grid-row:2}
+  /* Camera view shorter on short screens, so the "Added" line and Stop scanning stay on screen. */
+  .entry #video{max-height:clamp(110px,24vh,200px)}
   .entry .btnrow{display:none}
   .entry .btnrow.open{display:flex}
   .addgrid{grid-template-columns:1fr auto;gap:8px 10px}
