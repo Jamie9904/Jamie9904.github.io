@@ -216,19 +216,29 @@ When a photo has a clear page pattern, `tidyReads()` leaves out a reading whose 
 
 ## One digit-count rule, with IM numbers at 10 or 11 digits (build 39)
 
-`lpnDigitsOk(x)` in `core.js` is the only place that says how many digits an LPN has: 10 or 11 after `IM`, 9 or 10 after any other prefix. The log warning (`lpnIssues()`), the manifest's unusual-digits note (`oddNote()`), the "left out" scans of PDF and photo text (`extractLpns()`, `lpnsFromText()`), `photoLpns()` (`.skipped`, `.odd`) and the left-out rule in `tidyReads()` all use it.
+`lpnDigitsOk(x)` in `core.js` is the only place that says how many digits an LPN has: 10 or 11 after `IM`, 9 or 10 after any other prefix. The log warning (`lpnIssues()`), the manifest's unusual-digits note (`oddNote()`, for lines that are letters followed by digits; see build 40 below), `photoLpns()` (`.odd`) and the left-out rule in `tidyReads()` use it directly; the "left out" scans of PDF and photo text (`extractLpns()`, `lpnsFromText()`) and `photoLpns()`'s `.skipped` use it through `maybeLpn()` since build 40.
 
 - **Cause:** the user confirmed that `IM` numbers (full pallet picks) have 2 letters and 10 or 11 digits, while other LPNs usually have 3 letters and 9 or 10 digits. Every place had its own "9 or 10" check, so a real 11-digit `IM` number was warned about when logged and called unusual on the manifest, and a 9-digit `IM` reading was not.
 - **Why one function:** the rule was copied into five places in two files. One function keeps the log, the manifest note and photo reading in agreement, and a new prefix with a different length needs one change.
 - **Why the warning names the IM rule:** "has 9 digits (IM numbers have 10 or 11)" tells the user which rule the number broke; other prefixes keep "(usually 9 or 10)", because the user said "usually".
 - **Trade-off:** only `IM` has its own length. A different prefix with its own length would be warned about until it is added to `lpnDigitsOk()`. The scans still only take 1–3 letters followed by 9 to 11 digits, so a 12-digit number is never named as left out.
 
+## Two side effects of build 39 put back (build 40)
+
+Build 39 made every digit check go through `lpnDigitsOk()`. That had two side effects, which build 40 undoes:
+
+1. **9-digit `IM` readings were no longer named as left out.** The left-out scans (`extractLpns()`, `lpnsFromText()`) and `photoLpns()`'s `.skipped` list filtered by `lpnDigitsOk()`, which rejects `IM` with 9 digits. Before build 39 such a number (9 digits, inside the old 9-or-10 rule) was named. Build 40 filters them with `maybeLpn(x)` in `compare.js`: `lpnDigitsOk(x)`, or `IM` followed by exactly 9 digits. A 9-digit `IM` number is one digit short, probably a misread, so the user is told about it instead of it vanishing.
+2. **Typed manifest lines with a dash or no letters were called unusual.** `lpnDigitsOk()` returns `false` for anything that isn't letters followed by digits, so `oddNote()` listed lines such as `VLT-004040265` or `004040265`. Build 40 uses `lpnDigitsOk()` only for lines that are letters followed by digits (spaces removed); any other line is judged by the old rule: the digits at the end of the line must number 9 or 10.
+
+- **Why not loosen `lpnDigitsOk()`:** the log warning (`lpnIssues()`) should still call a 9-digit `IM` number unusual; only the left-out list needs to be wider, so the extra case lives in `maybeLpn()`.
+- **Trade-off:** phone numbers stay out: the scans need 1–3 letters straight before (or one space or tab before) 9 to 11 digits, and `TEL 01234567890` or `MOB 07123456789` (11 digits after non-`IM` letters) fail `maybeLpn()`. A line like `IM-123456789` in the typed box is judged by its trailing 9 digits under the old rule, so it is not listed as unusual even though an `IM` number needs 10 or 11.
+
 ## Per-file notes and naming numbers the prefix list left out
 
 Each manifest photo, manifest PDF and log photo gets its own note (found, new, already listed), and numbers that look like LPNs but have a prefix outside the list are named, with the fix.
 
 - **Why:** a user reported that manifest photos "stopped adding LPNs" with no hint why. The causes look the same from outside: the numbers were already in the box, the prefix list filtered them out, or the photo couldn't be read. One line per file tells them apart.
-- **Why only real 9–10 digit numbers:** naming every letters-and-digits match flagged PO numbers, phone numbers and references. LPNs have 9 or 10 digits (10 or 11 for `IM` since build 39), so the "left out" scan only takes real digits of those counts (no look-alike repair; `lpnDigitsOk()`), and the wording says "if they are LPNs" because the app can't be sure.
+- **Why only real 9–10 digit numbers:** naming every letters-and-digits match flagged PO numbers, phone numbers and references. LPNs have 9 or 10 digits (10 or 11 for `IM` since build 39), so the "left out" scan only takes real digits of those counts (no look-alike repair; `lpnDigitsOk()`, or an `IM` number one digit short since build 40, `maybeLpn()`), and the wording says "if they are LPNs" because the app can't be sure.
 - **Why not add them anyway:** the prefix list is there to cut noise; the user decides whether to add the prefix or clear the list.
 - **One bad photo doesn't stop the rest:** before, the first failure ended the batch and lost the notes for the photos after it. Now each failure is a note and reading carries on, as it already did for PDFs (except when the PDF reader itself can't load, where every later file would fail the same way).
 - **Trade-off:** with many files the message gets long; `.msg` wraps long words so it never widens the page.
