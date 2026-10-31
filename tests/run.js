@@ -864,6 +864,9 @@ async function page(browser, width, opts = {}) {
     await q.click("#btnGuide"); await q.waitForTimeout(100);
     await q.click("#fbGuide"); await q.waitForTimeout(150);
     let s = await q.evaluate(() => ({ title: document.getElementById("panelTitle").textContent, focus: document.activeElement.id }));
+    const fbOk = await q.evaluate(() => { const u = FEEDBACK_URL, csp = document.querySelector('meta[http-equiv="Content-Security-Policy"]').content; const cs = (csp.match(/connect-src([^;]*)/) || [])[1] || "";
+      return { u, allowed: !u || cs.split(/\s+/).includes(new URL(u).origin), https: !u || /^https:\/\/[a-z0-9.-]+\.workers\.dev\/report$/.test(u) }; });
+    check("the feedback address is a workers.dev /report address, allowed exactly in the security policy", fbOk.allowed && fbOk.https, fbOk);
     check("the Guide's Report a problem link opens Settings at the form", s.title === "Settings" && s.focus === "fbText", s);
     s = await q.evaluate(async () => { document.getElementById("fbText").value = "Photo 3 read nothing"; FEEDBACK_URL = ""; await document.getElementById("fbSend").onclick(); return document.getElementById("fbMsg").textContent; });
     check("before the Worker is online, the form says so and points to the problem report file", /isn’t set up yet/.test(s) && /Download problem report/.test(s), s);
