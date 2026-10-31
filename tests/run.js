@@ -787,6 +787,19 @@ async function page(browser, width, opts = {}) {
       for (let i = 0; i < 2; i++) { try { return { found: await ocrLpns(new File([blob], "p.png", { type: "image/png" })), tries: i + 1 }; } catch (e) { if (i) return { err: e.message }; } }
     });
     check("real photo reading finds an LPN in a picture", Array.isArray(s.found) && s.found.includes("VLT003977037"), s);
+    // Real manifest photos from the user (tools/ocr-check, address boxes cut off), read exactly as on a phone.
+    {
+      const oc = require(path.join(ROOT, "tools", "ocr-check", "check.js"));
+      let right = 0, total = 0; const probs = [];
+      for (const ph of oc.load(path.join(ROOT, "tools", "ocr-check"))) {
+        const r = await oc.readJs(p, ph.file, "");
+        if (r.err) { probs.push(ph.name + ": " + r.err); total += ph.want.length; continue; }
+        const sc = oc.score(ph.want, r.found); right += sc.right.length; total += ph.want.length;
+        if (sc.missing.length || sc.extra.length) probs.push(ph.name + (sc.missing.length ? " missing " + sc.missing.join(" ") : "") + (sc.extra.length ? " extra " + sc.extra.join(" ") : ""));
+      }
+      if (process.env.GITHUB_ACTIONS) console.log("::notice title=Photo reading::" + right + " of " + total + " LPNs right on the user's manifest photos" + (probs.length ? "; " + probs.join("; ") : ", nothing extra"));
+      check("real photo reading gets every LPN on the user's manifest photos, and nothing extra", right === total && !probs.length, { right, total, probs });
+    }
     await p.ctx.close();
 
     // The app's Content-Security-Policy (index.html): every flow must work under it with nothing blocked.

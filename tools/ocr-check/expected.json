@@ -1,0 +1,7 @@
+{
+ "_about": "Manifest photos sent by the user on 31 Oct 2026 (address boxes cut off) and the LPNs printed on each. Add a photo by putting it in photos/ and its LPNs here.",
+ "rby.jpg": ["RBY006292169", "RBY006292211"],
+ "qub.jpg": ["QUB001899182", "QUB001899185", "QUB001899186", "QUB001899209", "QUB001899210", "QUB001899213", "QUB001899215"],
+ "vlt.jpg": ["VLT004040265", "VLT004040273", "VLT004040278", "VLT004040355", "VLT004040416", "VLT004040418"],
+ "run.jpg": ["RUN001832813", "RUN001832816", "RUN001832832"]
+}
