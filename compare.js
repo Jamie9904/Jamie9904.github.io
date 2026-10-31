@@ -109,7 +109,7 @@ async function prep(f){
   if(b.close)b.close();
   const im=ctx.getImageData(0,0,cv.width,cv.height),d=im.data;
   for(let i=0;i<d.length;i+=4){const g=(d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114)|0;d[i]=d[i+1]=d[i+2]=g}
-  // The paper around each point: the average grey of cells about 1/40 of the page across, blended smoothly
+  // The paper around each point: the average grey of cells about 1/20 of the page across, blended smoothly
   // between cell centres. Worked out here rather than by shrinking a canvas, so every browser gives the same
   // result and no second full-size image is needed.
   const W=cv.width,H=cv.height,cell=Math.max(8,Math.round(Math.max(W,H)/20));
@@ -174,7 +174,7 @@ function tidyReads(items){
     return null;
   };
   const firsts=new Set(items.map(it=>it.first));
-  return items.map(it=>{
+  const res=items.map(it=>{
     if(!pats.length)return it.again||it.first;
     // When both readings fit the page, the first is kept: the close-up is of the black-and-white image.
     const c=[it.first,it.again].filter(Boolean);
@@ -188,12 +188,18 @@ function tidyReads(items){
     }
     return it.again||it.first;
   });
+  // Speckles on the paper can read as a made-up code (DFA 51400180 on a page of VLT numbers). When the page has
+  // a clear pattern, a reading with a prefix seen nowhere else on it and not 9 or 10 digits is left out.
+  const out=[];out.ignored=[];
+  res.forEach(x=>{const s=split(x);if(pats.length&&s&&!pats.some(q=>q.p===s.p)&&(s.d.length<9||s.d.length>10))out.ignored.push(x);else out.push(x)});
+  return out;
 }
 /* Tidies one photo's readings, then keeps those with a prefix in the list; the rest that look like LPNs are
    reported as left out. */
 function photoLpns(items){
-  const pf=getPfx(),out=[],skipped=[];
-  tidyReads(items).forEach(x=>{if(!pf.length||okPfx(x))out.push(x);else if(/^[A-Z]{1,3}[0-9]{9,10}$/.test(x))skipped.push(x)});
+  const pf=getPfx(),out=[],skipped=[],t=tidyReads(items);
+  if(t.ignored&&t.ignored.length)diag("ocr","Ignored as not looking like this page's LPNs: "+t.ignored.join(" "));
+  t.forEach(x=>{if(!pf.length||okPfx(x))out.push(x);else if(/^[A-Z]{1,3}[0-9]{9,10}$/.test(x))skipped.push(x)});
   out.skipped=[...new Set(skipped)];
   return out;
 }

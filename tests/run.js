@@ -655,10 +655,13 @@ async function page(browser, width, opts = {}) {
       // With VLT in the prefix list, the look-alike reading is still mended and kept, not reported as left out.
       document.getElementById("cmpPfx").value = "VLT";
       const listed = photoLpns([["VLT004040265", null], ["VLT004040273", null], ["VLT004040355", "VL1004040355"], ["QUB001899186", null]].map(([a, b]) => ({ raw: a, first: a, again: b })));
-      return { V, R, lone, keep10, lot, listed: listed.join(), skipped: listed.skipped.join() };
+      const speck = tidyReads(["VLT004040265", "VLT004040273", "VLT004040278", "DFA51400180", "QUB001899185", "QUB001899186", "QUB00189918", "RBY006292169"].map(a => ({ raw: a, first: a, again: null })));
+      const speckAlone = tidyReads([{ raw: "DFA51400180", first: "DFA51400180", again: null }]);
+      return { speck: speck.join(), ignored: speck.ignored.join(), speckAlone: speckAlone.join(), V, R, lone, keep10, lot, listed: listed.join(), skipped: listed.skipped.join() };
     });
     check("a prefix letter read as a digit is put back to match the rest of the page (VL1… → VLT…)", s.V.join() === "VLT004040265,VLT004040273,VLT004040278,VLT004040355,VLT004040416,VLT004040418", s.V);
     check("an O read as an extra 0 after the prefix is dropped to match the rest of the page", s.R.join() === "RUN001832813,RUN001832816,RUN001832832", s.R);
+    check("a made-up code from speckles (DFA51400180 on a page of VLT numbers) is left out; a lone other LPN and a short reading of a page prefix are kept", s.speck === "VLT004040265,VLT004040273,VLT004040278,QUB001899185,QUB001899186,QUB00189918,RBY006292169" && s.ignored === "DFA51400180" && s.speckAlone === "DFA51400180", s);
     check("a real extra-0 number with an O in its prefix (LOT) is left alone", s.lot[0] === "LOT0123456789", s.lot);
     check("with a prefix list set, a look-alike reading is mended and kept; other prefixes are reported", s.listed === "VLT004040265,VLT004040273,VLT004040355" && s.skipped === "QUB001899186", s);
     check("a reading with nothing to compare against, or a real 10-digit LPN, is kept as read", s.lone.join() === "RUN0001830763" && s.keep10[0] === "RUN0001830763", s);
