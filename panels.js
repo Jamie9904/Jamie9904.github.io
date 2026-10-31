@@ -77,7 +77,7 @@ function guideToc(html){
   return '<nav class="guidetoc" aria-label="Guide sections">'+items.map(x=>'<a href="#g'+x[0]+'" data-g="g'+x[0]+'">'+short(x[1])+'</a>').join("")+'</nav>'+html;
 }
 /* The demo video at the top of the Guide: a button first, so nothing downloads until it's tapped. */
-const DEMO_HTML='<div class="demo"><button type="button" id="demoPlay" class="demobtn"><span aria-hidden="true">▶</span> Watch the demo video (38 seconds)</button>'+
+const DEMO_HTML='<div class="demo"><button type="button" id="demoPlay" class="demobtn"><span aria-hidden="true">▶</span> Watch the demo video (40 seconds)</button>'+
   '<video id="demoVid" hidden controls playsinline preload="none" poster="media/demo-poster.jpg" aria-label="Demo video of LPN Pallet Log, with narration and subtitles"><source src="media/demo.mp4" type="video/mp4"></video>'+
   '<p class="demonote" id="demoNote" role="status" hidden>The video couldn’t play. Check you’re online, then try again.</p></div>';
 function initDemo(){
