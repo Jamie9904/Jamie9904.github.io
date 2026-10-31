@@ -88,8 +88,8 @@ function extractLpns(text,any){
     while((m=re.exec(text))){const part=m[2].toUpperCase();if((part.match(/[0-9]/g)||[]).length<6)continue;o.push(m[1].toUpperCase()+fix(part))}
     return o};
   const out=scan(pf.length?pf.join("|"):"[A-Z]{1,3}");
-  // Only real 9 or 10 digit numbers count as possibly left out, so PO, phone and reference numbers aren't flagged.
-  out.skipped=pf.length?skippedOf(scan("[A-Z]{1,3}","[0-9]{9,10}"),out,pf):[];
+  // Only numbers with an LPN's digit count (lpnDigitsOk) count as possibly left out, so PO, phone and reference numbers aren't flagged.
+  out.skipped=pf.length?skippedOf(scan("[A-Z]{1,3}","[0-9]{9,11}").filter(lpnDigitsOk),out,pf):[];
   return out;
 }
 /* Numbers that look like LPNs but whose letters aren't in the prefix list, so they weren't added. */
@@ -198,7 +198,7 @@ function tidyReads(items){
   const out=[];out.ignored=[];
   // Also left out: a prefix of a different length from every prefix on the page (CO…, RR…, L… among VLT numbers).
   // Known prefixes are always kept, however the rest of the page looks (IM: full pallet picks, two letters).
-  res.forEach(x=>{const s=split(x);if(pats.length&&s&&KNOWN_PFX.indexOf(s.p)<0&&!pats.some(q=>q.p===s.p)&&(s.d.length<9||s.d.length>10||!pats.some(q=>q.p.length===s.p.length)))out.ignored.push(x);else out.push(x)});
+  res.forEach(x=>{const s=split(x);if(pats.length&&s&&KNOWN_PFX.indexOf(s.p)<0&&!pats.some(q=>q.p===s.p)&&(!lpnDigitsOk(x)||!pats.some(q=>q.p.length===s.p.length)))out.ignored.push(x);else out.push(x)});
   return out;
 }
 /* Tidies one photo's readings, then keeps those with a prefix in the list; the rest that look like LPNs are
@@ -207,8 +207,8 @@ function photoLpns(items){
   const pf=getPfx(),out=[],skipped=[],t=tidyReads(items);
   if(t.ignored&&t.ignored.length)diag("ocr","Ignored as not looking like this page's LPNs: "+t.ignored.join(" "));
   // Left out, but with 9 or 10 digits they could be real, so the note lists them for the user to check.
-  const odd=(t.ignored||[]).filter(x=>/^[A-Z]{1,3}[0-9]{9,10}$/.test(x));
-  t.forEach(x=>{if(!pf.length||okPfx(x))out.push(x);else if(/^[A-Z]{1,3}[0-9]{9,10}$/.test(x))skipped.push(x)});
+  const odd=(t.ignored||[]).filter(lpnDigitsOk);
+  t.forEach(x=>{if(!pf.length||okPfx(x))out.push(x);else if(lpnDigitsOk(x))skipped.push(x)});
   out.skipped=[...new Set(skipped)];out.odd=odd;
   return out;
 }
@@ -245,7 +245,7 @@ async function readPhoto(f){return ocrLpns(f)}
 async function readLogPhoto(f){return ocrLpns(f)}
 async function sendFile(buf,name,mime){return deliver(buf,name,mime)}
 function oddNote(id){
-  const odd=$(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).filter(x=>{const m=x.match(/\d+$/);const n=m?m[0].length:0;return n!==9&&n!==10});
+  const odd=$(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).filter(x=>!lpnDigitsOk(x));
   return odd.length?" These have an unusual number of digits, so check them against the paper copy: "+odd.slice(0,8).join(", ")+(odd.length>8?" and "+(odd.length-8)+" more":"")+".":"";
 }
 function addNums(a,id){
@@ -317,7 +317,7 @@ function lpnsFromText(text){
   const scan=(alt,dg)=>{const re=new RegExp("\\b("+alt+")[ \\t]?("+(dg||"[0-9]{8,12}")+")\\b","gi"),o=[];let m;
     while((m=re.exec(text)))o.push(m[1].toUpperCase()+m[2]);return o};
   const out=scan(pf.length?pf.join("|"):"[A-Z]{1,3}");
-  out.skipped=pf.length?skippedOf(scan("[A-Z]{1,3}","[0-9]{9,10}"),out,pf):[];
+  out.skipped=pf.length?skippedOf(scan("[A-Z]{1,3}","[0-9]{9,11}").filter(lpnDigitsOk),out,pf):[];
   return out;
 }
 async function readPdf(f,say){
