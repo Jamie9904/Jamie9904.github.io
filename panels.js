@@ -57,9 +57,9 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <li><b>Settings</b> has your colours, text size, date format, default pallet type, warnings, sound and vibration.</li>
 <li>LPNs are a letter prefix followed by digits, for example RUN000000000: usually 3 letters and 9 or 10 digits. IM numbers (full pallet picks) have 2 letters and 10 or 11 digits.</li>
 <li>Always check numbers read from photos before relying on them.</li>
-<li><b>Something not working?</b> Open Settings straight away and tap <b>Download problem report</b>, then send that file with a description of what happened.</li>
+<li><b>Something not working, or an idea?</b> <button type="button" class="linkbtn" id="fbGuide">Report a problem or idea</button> (also in Settings). It sends what happened along with the app’s problem report.</li>
 </ul>`,log:`<h3>v3.30 <span class="ver">Current</span></h3>
-<ul><li>Faster photo reading: one photo reader is used for a whole batch of photos instead of starting a new one for each. Live scan fits small phones: the camera view is shorter so the “Added” line and Stop scanning stay on screen.</li><li>Easier to use with gloves and in poor light: a scan made while a warning is showing is kept in the box instead of being lost (Escape skips the warning), stronger edges on boxes and buttons, accent-coloured text always readable, bigger FSDU tick box and scan buttons, the warning shows above the camera, and the Guide and Settings panels move focus in and back out for keyboard and screen reader users.</li><li>Manifest photos are read much better: shade across the page and paper grain no longer turn into junk, every number on a page with ruled lines is found, and a number read slightly wrong (VL1… for VLT…, or an extra 0) is matched to the others on the same page. Specks on the paper that look like a code are left out. IM numbers (full pallet picks, 10 or 11 digits) are always kept and not called unusual.</li><li>Manifest check: each photo or PDF now says how many LPNs it found, how many were new and how many were already listed, and names any left out because their prefix isn’t in the prefix list. One photo that can’t be read no longer stops the rest.</li><li>Problem report in Settings: if something goes wrong, download it and send it with what happened. It lists recent manifest reads and errors on this device.</li><li>Exports: long delivery notes and longer LPNs no longer get cut off in the spreadsheets, and every export notes the app version it was made with (at the bottom of the sheet and in the page footer).</li><li>Importing an exported log and loading one in the Manifest check now read spreadsheets the same way, so the version line at the bottom is always skipped.</li><li>Safer PDFs: a PDF opened in the app (a supplier manifest or an exported log) can no longer run hidden code, and the PDF reader is updated to the latest version.</li><li>Safer backups and files: a damaged backup can no longer stop the app opening, restoring asks first and saves a copy of your current data, and files from outside can’t add links, formulas or scripts to your exports.</li><li>A security policy now only lets the app run code from its own site and its three library sources, as a second line of defence.</li><li>A demo video at the top of the Guide shows the app in action, with narration and subtitles, including picking the pallet type before scanning. It starts at half volume.</li><li>Easier to use: the pallet table scrolls with the page on phones, progress only turns red when something is wrong, one count line when the manifest sets the expected number, the Manifest check starts with its steps (prefix presets tucked away), the logo moved to Settings, the entry bar steps aside in the Manifest check, and bigger tick boxes and header buttons.</li><li>Undo last pallet button on the phone entry bar, “Use n as expected” from the manifest count, an “Exported at” note with a warning before starting a new delivery that hasn’t been exported, and a “Start a new delivery?” prompt after exporting.</li><li>Trailer number, Seal in and Seal out in Delivery, shown on exports and saved deliveries.</li><li>Live manifest tracking: add the manifest numbers first and the Pallet log counts them off as you scan, shows which are still missing and warns about pallets not on the manifest.</li><li>Phone layout: a pallet counter on the entry bar, an “Added” confirmation after each pallet, Delivery folds into one line once you start logging, neater top buttons and a clearer ✕ on each row.</li><li>Smaller tweaks: a reminder when the log is dated before today, tap-to-fill “Received by” names, a check when the total differs from the expected pallets, an FSDU filter, Excel and Email PDF buttons on saved deliveries, a last-backed-up note, and an offline notice.</li><li>Exports: a title band, numbered rows, clearer grid lines, page numbers, gridlines hidden on screen, roomier headers, the logo kept in proportion and much smaller PDFs. The manifest check has the same Export menu as the log.</li><li>Date format setting (dd/mm/yyyy by default), used in exports, lists and the date box.</li><li>Fonts are now part of the app, updates show up straight away, and the tablet layout and field alignment are fixed.</li></ul>
+<ul><li>Faster photo reading: one photo reader is used for a whole batch of photos instead of starting a new one for each. Live scan fits small phones: the camera view is shorter so the “Added” line and Stop scanning stay on screen.</li><li>Report a problem or idea from Settings (or the Guide): choose Problem or Idea, say what happened, add a photo if it helps, and send. The problem report is attached unless you untick it. With no signal it waits on the phone and sends when you’re back online.</li><li>More accessibility fixes: on phones the Undo bar shows just above the entry bar and stays 20 seconds; LPNs in the log can be edited with the keyboard; Escape closes the Export menus; clearer labels for screen readers on saved deliveries and the log table; Guide links don’t animate when reduced motion is on.</li><li>Easier to use with gloves and in poor light: a scan made while a warning is showing is kept in the box instead of being lost (Escape skips the warning), stronger edges on boxes and buttons, accent-coloured text always readable, bigger FSDU tick box and scan buttons, the warning shows above the camera, and the Guide and Settings panels move focus in and back out for keyboard and screen reader users.</li><li>Manifest photos are read much better: shade across the page and paper grain no longer turn into junk, every number on a page with ruled lines is found, and a number read slightly wrong (VL1… for VLT…, or an extra 0) is matched to the others on the same page. Specks on the paper that look like a code are left out. IM numbers (full pallet picks, 10 or 11 digits) are always kept and not called unusual.</li><li>Manifest check: each photo or PDF now says how many LPNs it found, how many were new and how many were already listed, and names any left out because their prefix isn’t in the prefix list. One photo that can’t be read no longer stops the rest.</li><li>Problem report in Settings: if something goes wrong, download it and send it with what happened. It lists recent manifest reads and errors on this device.</li><li>Exports: long delivery notes and longer LPNs no longer get cut off in the spreadsheets, and every export notes the app version it was made with (at the bottom of the sheet and in the page footer).</li><li>Importing an exported log and loading one in the Manifest check now read spreadsheets the same way, so the version line at the bottom is always skipped.</li><li>Safer PDFs: a PDF opened in the app (a supplier manifest or an exported log) can no longer run hidden code, and the PDF reader is updated to the latest version.</li><li>Safer backups and files: a damaged backup can no longer stop the app opening, restoring asks first and saves a copy of your current data, and files from outside can’t add links, formulas or scripts to your exports.</li><li>A security policy now only lets the app run code from its own site and its three library sources, as a second line of defence.</li><li>A demo video at the top of the Guide shows the app in action, with narration and subtitles, including picking the pallet type before scanning. It starts at half volume.</li><li>Easier to use: the pallet table scrolls with the page on phones, progress only turns red when something is wrong, one count line when the manifest sets the expected number, the Manifest check starts with its steps (prefix presets tucked away), the logo moved to Settings, the entry bar steps aside in the Manifest check, and bigger tick boxes and header buttons.</li><li>Undo last pallet button on the phone entry bar, “Use n as expected” from the manifest count, an “Exported at” note with a warning before starting a new delivery that hasn’t been exported, and a “Start a new delivery?” prompt after exporting.</li><li>Trailer number, Seal in and Seal out in Delivery, shown on exports and saved deliveries.</li><li>Live manifest tracking: add the manifest numbers first and the Pallet log counts them off as you scan, shows which are still missing and warns about pallets not on the manifest.</li><li>Phone layout: a pallet counter on the entry bar, an “Added” confirmation after each pallet, Delivery folds into one line once you start logging, neater top buttons and a clearer ✕ on each row.</li><li>Smaller tweaks: a reminder when the log is dated before today, tap-to-fill “Received by” names, a check when the total differs from the expected pallets, an FSDU filter, Excel and Email PDF buttons on saved deliveries, a last-backed-up note, and an offline notice.</li><li>Exports: a title band, numbered rows, clearer grid lines, page numbers, gridlines hidden on screen, roomier headers, the logo kept in proportion and much smaller PDFs. The manifest check has the same Export menu as the log.</li><li>Date format setting (dd/mm/yyyy by default), used in exports, lists and the date box.</li><li>Fonts are now part of the app, updates show up straight away, and the tablet layout and field alignment are fixed.</li></ul>
 <h3>v3.20</h3>
 <ul><li>Start new delivery, Saved deliveries (this week and last week) and importing an exported log.</li><li>Warnings for duplicate or unusual LPNs, Undo for removed pallets and Clear all, and tap an LPN to edit it.</li><li>Pallet type buttons, expected pallets, delivery notes, search and filter, and an Export menu with Print.</li><li>Manifest check: use the current log or a saved delivery, a Check results panel, and Fix or remove for misread numbers.</li><li>Settings: default and keep-last type, warnings, sound, vibration, confirm each scan, text size, colour contrast warning, backup and restore, and the install pop-up.</li><li>Works offline after the first use, shows an “update available” banner, a two-column layout on wide screens, line icons, and accessibility fixes.</li></ul>
 <h3>v3.0</h3>
@@ -182,8 +182,18 @@ HELP.settings=`<h3>Colours</h3>
 <div class="msg" id="bkMsg" role="status" aria-live="polite"></div>
 <div class="row" id="bkAsk" style="margin-top:10px" hidden><button id="bkGo">Replace my data with this backup</button><button id="bkNo">Cancel</button></div>
 <div class="row" id="bkDone" style="margin-top:10px" hidden><button id="bkReload">Reload the app</button></div>
+<h3 id="fbHead">Report a problem or idea</h3>
+<p>Tell Jamie what went wrong or what would help. The problem report below is attached if you leave it ticked. With no signal, it’s kept on this phone and sent when you’re back online.</p>
+<fieldset class="fbkind"><legend class="sr">Type of report</legend><label class="chk"><input type="radio" name="fbKind" value="problem" checked><span>Problem</span></label><label class="chk"><input type="radio" name="fbKind" value="idea"><span>Idea</span></label></fieldset>
+<label for="fbText">What happened, or what would help?</label>
+<textarea id="fbText" rows="4" maxlength="4000" style="width:100%"></textarea>
+<div class="row" style="margin-top:8px;align-items:center"><button type="button" id="fbPhotoBtn">Add a photo</button><button type="button" class="d" id="fbPhotoRm" hidden>Remove photo</button><span class="note" id="fbPhotoName" style="margin:0"></span><input type="file" id="fbPhoto" accept="image/*" hidden></div>
+<label class="chk"><input type="checkbox" id="fbInc" checked><span>Attach the problem report (recent actions on this phone, with the LPNs involved)</span></label>
+<p class="note">Reports go to Jamie’s private GitHub, through a Cloudflare server. The problem report includes the LPNs and manifest numbers on this phone, file names, the start of text read from photos, and your browser and screen size.</p>
+<div class="row"><button class="p" id="fbSend">Send</button></div>
+<div class="msg" id="fbMsg" role="status" aria-live="polite"></div>
 <h3>Problem report</h3>
-<p>If something goes wrong, download a problem report straight away and send it with a description of what happened. It lists what the app has done recently on this device (such as manifest photos and PDFs read, and any errors), with the LPNs, file names and the start of the text read from photos, plus your browser and screen size. It is only kept on this device and is never sent by itself.</p>
+<p>If something goes wrong, download a problem report straight away and send it with a description of what happened. It lists what the app has done recently on this device (such as manifest photos and PDFs read, and any errors), with the LPNs, file names and the start of the text read from photos, plus your browser and screen size. It is kept on this device, and is only sent if you attach it to a report above.</p>
 <div class="row"><button id="diagDl">Download problem report</button><button class="d" id="diagClear">Clear</button></div>
 <div class="msg" id="diagMsg" role="status" aria-live="polite"></div>`;
 /* ---- saved deliveries ---- */
@@ -290,7 +300,7 @@ async function backupNow(msgId){
     const now=new Date().toISOString();
     try{localStorage.setItem("lpnbackup",now)}catch(e){}
     const data={};
-    for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^lpn/.test(k)&&k!=="lpndiag")data[k]=localStorage.getItem(k)}
+    for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^lpn/.test(k)&&k!=="lpndiag"&&k!=="lpnfeedq")data[k]=localStorage.getItem(k)}
     const json=JSON.stringify({app:"lpn-pallet-log",version:1,saved:now,data:data});
     await saveOnly(new TextEncoder().encode(json).buffer,"lpn-backup-"+localToday()+".json","application/json");
     $(msgId).textContent="Backup downloaded.";
@@ -305,7 +315,7 @@ function checkBackup(d){
   const parse=v=>{try{return JSON.parse(v)}catch(e){bad()}};
   Object.keys(d).forEach(k=>{
     const v=d[k];if(!/^lpn[a-z0-9]*$/.test(k)||typeof v!=="string")return;
-    if(k==="lpndiag")return; // the problem log belongs to this device, never to a backup
+    if(k==="lpndiag"||k==="lpnfeedq")return; // the problem log and unsent reports belong to this device, never to a backup
     if(k==="lpnlog"){const o=parse(v);if(!o||typeof o!=="object")bad();const r=cleanRows(o.rows);pallets=r.length;out[k]=JSON.stringify(Object.assign(cleanDel(o),{rows:r}))}
     else if(k==="lpnhist"){const h=cleanHist(parse(v));saved=h.length;out[k]=JSON.stringify(h)}
     else if(k==="lpnnames")out[k]=JSON.stringify(cleanNames(parse(v)));
@@ -318,7 +328,7 @@ function checkBackup(d){
   return {data:out,pallets:pallets,saved:saved};
 }
 /* Problem report: a plain text file with the app version, the device, the current state and the problem log. */
-async function downloadReport(){
+async function reportText(){
   let ent=[];try{ent=JSON.parse(localStorage.getItem("lpndiag")||"[]");if(!Array.isArray(ent))ent=[]}catch(e){}
   let ver="LPN Pallet Log";try{ver=await appVersion()}catch(e){}
   const man=$("cmpNums").value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),lg=$("cmpLogNums").value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
@@ -331,8 +341,82 @@ async function downloadReport(){
     "Manifest numbers ("+man.length+"): "+man.join(" "),"Log numbers in the Manifest check ("+lg.length+"): "+lg.join(" "),
     "Manifest message: "+($("cmpMsg").textContent||"-"),"","Recent events (oldest first, "+ent.length+")"];
   ent.forEach(x=>{if(x&&typeof x==="object")L.push(String(x.t||"")+"  "+String(x.k||"")+"  "+String(x.m||"").slice(0,300))});
-  try{await saveOnly(new TextEncoder().encode(L.join("\n")+"\n").buffer,"lpn-problem-report-"+localToday()+".txt","text/plain");$("diagMsg").textContent="Problem report downloaded. Send it along with what happened."}
+  return L.join("\n")+"\n";
+}
+async function downloadReport(){
+  try{await saveOnly(new TextEncoder().encode(await reportText()).buffer,"lpn-problem-report-"+localToday()+".txt","text/plain");$("diagMsg").textContent="Problem report downloaded. Send it along with what happened."}
   catch(e){$("diagMsg").textContent="Couldn’t make the problem report: "+((e&&e.message)||"error")}
+}
+/* ---- Report a problem or idea ----
+   Sent to the feedback Worker (tools/feedback-worker), which makes an issue in a private GitHub repo. Reports that
+   can't be sent (no signal, server busy) wait in lpnfeedq on this phone, up to 5, and go when back online. */
+let FEEDBACK_URL=""; // the Worker's /report address, set once it is online
+let fbPhotoData=null;
+const fbQueue=()=>{try{const q=JSON.parse(localStorage.getItem("lpnfeedq")||"[]");return Array.isArray(q)?q.filter(x=>x&&typeof x==="object"):[]}catch(e){return[]}};
+// The waiting list is kept small (5 reports, about 300 KB, no photos) so it can never crowd out the log's own saving.
+const fbSave=q=>{try{const s=JSON.stringify(q);if(q.length>5||s.length>300000)return false;if(q.length)localStorage.setItem("lpnfeedq",s);else localStorage.removeItem("lpnfeedq");return true}catch(e){return false}};
+async function fbPost(item){
+  let r;try{r=await fetch(FEEDBACK_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(item)})}
+  catch(e){throw Object.assign(new Error("no connection"),{retry:true})}
+  let j={};try{j=await r.json()}catch(e){}
+  if(r.ok&&j&&j.ok)return j;
+  throw Object.assign(new Error(String((j&&j.error)||"The report couldn’t be sent (HTTP "+r.status+").").slice(0,300)),{retry:r.status>=500||r.status===429});
+}
+let fbBusy=false;
+async function fbFlush(){
+  if(!FEEDBACK_URL||fbBusy||!navigator.onLine)return 0;
+  fbBusy=true;let sent=0;
+  // The list is read again before each change, so a report saved meanwhile (from Send) is never lost.
+  const drop=id=>fbSave(fbQueue().filter(x=>x.id!==id));
+  try{for(let item=fbQueue()[0];item;item=fbQueue()[0]){
+      const {id,...body}=item;
+      try{await fbPost(body);drop(id);sent++}
+      catch(e){if(e.retry)break;diag("feedback","A saved report was refused and removed: "+e.message);drop(id)}}
+  }finally{fbBusy=false}
+  if(sent)diag("feedback","Sent "+sent+" saved report"+(sent===1?"":"s"));
+  return sent;
+}
+window.addEventListener("online",()=>{fbFlush()});
+setTimeout(()=>{fbFlush()},4000);
+/* A photo is made smaller before sending: at most 1600 px along its long side, as a JPEG. */
+async function fbShrink(f){
+  const b=await createImageBitmap(f),sc=Math.min(1,1600/Math.max(b.width,b.height));
+  const c=document.createElement("canvas");c.width=Math.round(b.width*sc);c.height=Math.round(b.height*sc);
+  c.getContext("2d").drawImage(b,0,0,c.width,c.height);if(b.close)b.close();
+  let d=c.toDataURL("image/jpeg",.8);if(d.length>1900000)d=c.toDataURL("image/jpeg",.6);
+  c.width=c.height=0;return d;
+}
+function initFeedback(){
+  const msg=t=>{$("fbMsg").textContent=t};
+  const showPhoto=name=>{$("fbPhotoName").textContent=name||"";$("fbPhotoRm").hidden=!name;$("fbPhotoBtn").textContent=name?"Change photo":"Add a photo"};
+  showPhoto(fbPhotoData?"Photo added":"");
+  $("fbPhotoBtn").onclick=()=>{$("fbPhoto").value="";$("fbPhoto").click()};
+  $("fbPhotoRm").onclick=()=>{fbPhotoData=null;showPhoto("")};
+  $("fbPhoto").onchange=async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;
+    try{fbPhotoData=await fbShrink(f);showPhoto("Photo added ("+Math.round(fbPhotoData.length*0.75/1024)+" KB)")}catch(err){fbPhotoData=null;showPhoto("");msg("That photo couldn’t be read.")}};
+  const waiting=fbQueue().length;if(waiting)msg(waiting+" report"+(waiting===1?" is":"s are")+" waiting to be sent when you’re back online.");
+  $("fbSend").onclick=async()=>{
+    const text=$("fbText").value.trim();
+    if(!text){msg("Write what happened first.");$("fbText").focus();return}
+    if(!FEEDBACK_URL){msg("Reporting isn’t set up yet. Use Download problem report below and send the file to Jamie instead.");return}
+    const kind=(document.querySelector('input[name="fbKind"]:checked')||{}).value==="idea"?"idea":"problem";
+    let app="LPN Pallet Log";try{app=await appVersion()}catch(e){}
+    const item={kind,text,app,report:$("fbInc").checked?await reportText():"",photo:fbPhotoData||undefined};
+    $("fbSend").disabled=true;msg("Sending…");
+    const done=()=>{$("fbText").value="";fbPhotoData=null;showPhoto("")};
+    try{const j=await fbPost(item);done();diag("feedback","Sent a "+kind+" report (issue "+j.issue+")");msg("Sent. Thank you!")}
+    catch(e){
+      if(e.retry){
+        const q=fbQueue();let note="";
+        if(item.photo){delete item.photo;note=" Photos can’t be kept for later, so send the photo again when you have signal if it matters."}
+        if(item.report&&item.report.length>60000)item.report=item.report.slice(0,60000);
+        item.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+        q.push(item);
+        if(fbSave(q)){done();diag("feedback","Saved a "+kind+" report to send later");msg("No signal or the server is busy: saved on this phone, and it will be sent when you’re back online."+note)}
+        else msg("No signal, and there’s no room to keep more reports on this phone. Try again when you have signal, or use Download problem report below.");
+      }else msg(e.message);
+    }finally{$("fbSend").disabled=false}
+  };
 }
 function showBackupNote(){
   const el=$("bkNote");if(!el)return;
@@ -361,10 +445,10 @@ function initHistory(){
     const ts=[h.trailer?"Trailer "+h.trailer:"",h.sealIn?"Seal in "+h.sealIn:"",h.sealOut?"Seal out "+h.sealOut:""].filter(Boolean).join(", ");
     if(ts)sb.textContent+=" "+ts+".";
     const r=document.createElement("div");r.className="row";
-    const o=document.createElement("button");o.className="p";o.textContent="Open";o.onclick=()=>openHist(h.id);
+    const o=document.createElement("button");o.className="p";o.textContent="Open";o.setAttribute("aria-label","Open the delivery of "+(ukDate(h.date)||"this date"));o.onclick=()=>openHist(h.id);
     const xl=document.createElement("button");xl.textContent="Excel";xl.setAttribute("aria-label","Download Excel for "+(ukDate(h.date)||"this delivery"));xl.onclick=()=>histExport(h,false);
-    const em=document.createElement("button");em.textContent="Email PDF";em.onclick=()=>histExport(h,true);
-    const x=document.createElement("button");x.className="d";x.textContent="Delete";
+    const em=document.createElement("button");em.textContent="Email PDF";em.setAttribute("aria-label","Email PDF of "+(ukDate(h.date)||"this delivery"));em.onclick=()=>histExport(h,true);
+    const x=document.createElement("button");x.className="d";x.textContent="Delete";x.setAttribute("aria-label","Delete the delivery of "+(ukDate(h.date)||"this date"));
     x.onclick=()=>{
       const at=Math.max(0,hist.findIndex(z=>z.id===h.id));
       hist=hist.filter(z=>z.id!==h.id);saveHist();
@@ -409,6 +493,7 @@ function initSettings(){
   applyTheme();
   $("bkDl").onclick=()=>backupNow("bkMsg");
   $("diagDl").onclick=downloadReport;
+  initFeedback();
   $("diagClear").onclick=()=>{try{localStorage.removeItem("lpndiag")}catch(e){}$("diagMsg").textContent="Problem log cleared."};
   $("bkUp").onclick=()=>{$("bkFile").value="";$("bkFile").click()};
   let pendingBk=null;
@@ -427,7 +512,7 @@ function initSettings(){
   $("bkGo").onclick=async()=>{
     if(!pendingBk)return;const data=pendingBk;pendingBk=null;$("bkAsk").hidden=true;
     if(!await backupNow("bkMsg")){$("bkMsg").textContent+=" Your data wasn’t replaced, because the copy of it couldn’t be saved first.";return}
-    const before={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^lpn/.test(k)&&k!=="lpndiag")before[k]=localStorage.getItem(k)}
+    const before={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^lpn/.test(k)&&k!=="lpndiag"&&k!=="lpnfeedq")before[k]=localStorage.getItem(k)}
     diag("backup","Restoring a backup");
     try{
       Object.keys(before).forEach(k=>localStorage.removeItem(k));
@@ -498,7 +583,7 @@ $("instNow").onclick=async()=>{
 };
 $("instClose").onclick=closeInstall;$("instShade").onclick=closeInstall;
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeInstall()});
-$("panelBody").addEventListener("click",e=>{if(e.target&&e.target.id==="showInstall"){closeHelp();openInstall()}const a=e.target&&e.target.closest&&e.target.closest("a[data-g]");if(a){e.preventDefault();const t=document.getElementById(a.dataset.g);if(t)t.scrollIntoView({behavior:"smooth",block:"start"})}});
+$("panelBody").addEventListener("click",e=>{if(e.target&&e.target.id==="fbGuide"){openHelp("settings","Settings");const h=$("fbHead");if(h)h.scrollIntoView({block:"start"});setTimeout(()=>{if($("fbText"))$("fbText").focus()},0);return}if(e.target&&e.target.id==="showInstall"){closeHelp();openInstall()}const a=e.target&&e.target.closest&&e.target.closest("a[data-g]");if(a){e.preventDefault();const t=document.getElementById(a.dataset.g);if(t)t.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"})}});
 (function(){
   const installed=(window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches)||navigator.standalone;
   let seen=false;try{seen=!!localStorage.getItem("lpninstallshown")}catch(e){}

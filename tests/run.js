@@ -792,7 +792,117 @@ async function page(browser, width, opts = {}) {
     check("accent text (headings, links, focus ring) is at least 4.5:1, even with a pale or dark accent", s.every(x => x.act >= 4.5), s);
     s = await q.evaluate(() => { const sb = document.getElementById("scanbox"), ck = document.getElementById("chkBar");
       return { smsg: document.getElementById("smsg").getAttribute("role"), order: !!(ck.compareDocumentPosition(sb) & Node.DOCUMENT_POSITION_FOLLOWING), lang: document.documentElement.lang, flash: getComputedStyle(document.getElementById("flash")).pointerEvents }; });
+    // LPNs in the log can be edited with the keyboard, and Undo shows where it can be seen on a phone.
+    await q.evaluate(() => { rows = [{ lpn: "VLT004037790", type: "BB", fsdu: false }, { lpn: "QUB001899186", type: "FPP", fsdu: false }]; save(); render(); window.scrollTo(0, 0); });
+    await q.focus("#body .lpnedit"); await q.keyboard.press("Enter"); await q.waitForTimeout(50);
+    await q.keyboard.type("VLT004037791"); await q.keyboard.press("Enter"); await q.waitForTimeout(100);
+    let u = await q.evaluate(() => { const bar = document.getElementById("undoBar").getBoundingClientRect(), dock = document.querySelector(".entry").getBoundingClientRect();
+      return { focus: document.activeElement.className, lpns: rows.map(r => r.lpn).join(), name: document.querySelector("#body .lpnedit").getAttribute("aria-label"), shown: !document.getElementById("undoBar").hidden, onScreen: bar.top >= 0 && bar.bottom <= dock.top, text: document.getElementById("undoTxt").textContent }; });
+    check("an LPN in the log can be edited with the keyboard (it's a button named for the LPN), and focus comes back to it", /^VLT004037791,/.test(u.lpns) && /^Edit LPN /.test(u.name) && u.focus === "lpnedit", u);
+    check("on a phone, Undo shows on screen just above the entry bar", u.shown && u.onScreen && /Changed VLT004037790 to VLT004037791/.test(u.text), u);
+    u = await q.evaluate(() => { addValue("RBY006291170"); const a = document.getElementById("flash").getBoundingClientRect(), b = document.getElementById("undoBar").getBoundingClientRect(); return { flashShown: !document.getElementById("flash").hidden, apart: a.bottom <= b.top + 1 }; });
+    check("on a phone, the Added note shows above the Undo bar, not under it", u.flashShown && u.apart, u);
+    await q.click("#undoBtn"); u = await q.evaluate(() => rows[0].lpn);
+    check("Undo from there puts the LPN back", u === "VLT004037790", u);
+    await q.evaluate(() => { rows = rows.slice(0, 2); save(); render(); });
+    u = await q.evaluate(() => { document.getElementById("expBtn").click(); return !document.getElementById("expMenu").hidden; });
+    await q.keyboard.press("Escape");
+    u = { opened: u, closed: await q.evaluate(() => document.getElementById("expMenu").hidden && document.activeElement.id === "expBtn"), th: await q.evaluate(() => [...document.querySelectorAll("thead th")].pop().textContent) };
+    check("Escape closes the Export menu and goes back to its button; the remove column has a name", u.opened && u.closed && u.th === "Remove", u);
     check("Live scan messages are announced, the warning sits above the camera, the Added note can't block taps, page language en-GB", s.smsg === "status" && s.order && s.lang === "en-GB" && s.flash === "none", s);
+    check("no script errors", q.errors.length === 0, q.errors);
+    await q.ctx.close();
+  }
+
+  {
+    // The feedback Worker (tools/feedback-worker), run here with a stand-in for GitHub.
+    console.log("Feedback Worker");
+    const WM = await import(require("url").pathToFileURL(path.join(ROOT, "tools", "feedback-worker", "worker.mjs")).href), W = WM.default;
+    // A stand-in Durable Object store, as Cloudflare gives the Worker.
+    const mkLimits = () => { const m = new Map(); let alarm = null; const lim = new WM.Limits({ storage: { get: async k => m.get(k), put: async (k, v) => { m.set(k, v); }, getAlarm: async () => alarm, setAlarm: async t => { alarm = t; }, deleteAll: async () => m.clear() } });
+      return { idFromName: () => "all", get: () => ({ fetch: (u, o) => lim.fetch(new Request("https://limits/", o)) }) }; };
+    const env = { REPO: "Jamie9904/lpn-feedback", ALLOWED_ORIGIN: "https://jamie9904.github.io", GITHUB_TOKEN: "test-token", LIMITS: mkLimits() };
+    const calls = []; const realFetch = global.fetch;
+    global.fetch = async (u, o) => { calls.push({ u, m: o.method, b: JSON.parse(o.body), auth: o.headers.Authorization }); return new Response(JSON.stringify({ number: 7 }), { status: 201 }); };
+    const send = (body, origin = env.ALLOWED_ORIGIN, ip = "1.2.3.4") => W.fetch(new Request("https://lpn-feedback.example.workers.dev/report", { method: "POST", headers: { Origin: origin, "Content-Type": "application/json", "CF-Connecting-IP": ip }, body: JSON.stringify(body) }), env);
+    const JPEG = "data:image/jpeg;base64," + Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4, 5]).toString("base64");
+    let r = await send({ kind: "problem", text: "Photo 3 read nothing\n@someone see [link](http://x)", report: "App: LPN Pallet Log v3.30 (build 43)\nManifest numbers (2): VLT004040265", app: "LPN Pallet Log v3.30 (build 43)" });
+    let j = await r.json(); const iss = calls.find(c => /\/issues$/.test(c.u));
+    check("feedback Worker: a problem becomes an issue in the private repo", r.status === 200 && j.ok && j.issue === 7 && iss && iss.u === "https://api.github.com/repos/Jamie9904/lpn-feedback/issues" && iss.auth === "Bearer test-token" && /^Problem: Photo 3 read nothing/.test(iss.b.title) && /\(LPN Pallet Log v3\.30 \(build 43\)\)/.test(iss.b.body), { j, iss });
+    check("feedback Worker: the typed text and report are shown as plain text (no links or mentions)", /~~~~text\nPhoto 3 read nothing\n@someone see \[link\]\(http:\/\/x\)\n~~~~/.test(iss.b.body) && /<details><summary>Problem report<\/summary>/.test(iss.b.body), iss.b.body);
+    calls.length = 0;
+    r = await send({ kind: "idea", text: "Bigger buttons", app: "v3.30 https://evil.example @someone", photo: JPEG }, undefined, "2.2.2.2"); j = await r.json();
+    const order = calls.map(c => c.m + " " + c.u.replace("https://api.github.com/repos/Jamie9904/lpn-feedback", "")), patch = calls.find(c => c.m === "PATCH");
+    check("feedback Worker: the issue is made first, then the photo saved and shown in it", j.ok && order.length === 3 && order[0] === "POST /issues" && /^PUT \/contents\/photos\/\d{4}-\d{2}\/issue-7-.+\.jpg$/.test(order[1]) && order[2] === "PATCH /issues/7" && /!\[photo\]\(https:\/\/github\.com\/Jamie9904\/lpn-feedback\/blob\/HEAD\/photos\//.test(patch.b.body), order);
+    check("feedback Worker: an app field that isn't the app's version line is left out (no links or mentions)", !/evil|@someone/.test(calls[0].b.body), calls[0].b.body.slice(0, 120));
+    const bad = [];
+    for (const [body, origin, want] of [[{ kind: "problem", text: "x" }, "https://evil.example", 403], [{ kind: "x", text: "x" }, null, 400], [{ kind: "problem", text: "  " }, null, 400],
+      [{ kind: "problem", text: "x".repeat(4001) }, null, 400], [{ kind: "problem", text: "x", website: "spam" }, null, 400], [{ kind: "problem", text: "x", photo: "data:image/png;base64,AAAA" }, null, 400],
+      [{ kind: "problem", text: "x", photo: "data:image/jpeg;base64," + Buffer.from("<html>not a jpeg").toString("base64") }, null, 400]]) {
+      const res = await send(body, origin || env.ALLOWED_ORIGIN, "9.9.9." + bad.length); bad.push(res.status === want ? "ok" : res.status + "≠" + want);
+    }
+    check("feedback Worker: refuses other sites, wrong kinds, empty or long text, spam robots and photos that aren't JPEGs", bad.every(x => x === "ok"), bad);
+    let last = 0; for (let i = 0; i < WM.PER_HOUR + 1; i++) last = (await send({ kind: "idea", text: "n" + i }, undefined, "5.5.5.5")).status;
+    check("feedback Worker: more than " + WM.PER_HOUR + " reports an hour from one address are refused, across all servers", last === 429, last);
+    env.LIMITS = mkLimits(); let codes = [];
+    for (let i = 0; i < WM.DAY_ISSUES + 1; i++) codes.push((await send({ kind: "idea", text: "d" + i }, undefined, "7.7." + Math.floor(i / 5) + "." + i)).status);
+    check("feedback Worker: at most " + WM.DAY_ISSUES + " reports a day in total", codes.slice(0, WM.DAY_ISSUES).every(c => c === 200) && codes[WM.DAY_ISSUES] === 429, codes.slice(-3));
+    env.LIMITS = mkLimits();
+    global.fetch = async () => new Response("{}", { status: 500 });
+    r = await send({ kind: "problem", text: "x" }, undefined, "6.6.6.6"); j = await r.json();
+    check("feedback Worker: if GitHub is down or the key has run out, the app is told to try again later", r.status === 503 && !j.ok, j);
+    global.fetch = async () => new Response("{}", { status: 422 });
+    r = await send({ kind: "problem", text: "x" }, undefined, "6.6.6.7"); j = await r.json();
+    check("feedback Worker: a report GitHub refuses isn't retried (so it doesn't come back for ever)", r.status === 422 && !j.ok, j);
+    global.fetch = realFetch;
+  }
+
+  {
+    console.log("Report a problem or idea");
+    const q = await page(browser, 390);
+    await q.goto(URL0); await q.waitForTimeout(300);
+    await q.click("#btnGuide"); await q.waitForTimeout(100);
+    await q.click("#fbGuide"); await q.waitForTimeout(150);
+    let s = await q.evaluate(() => ({ title: document.getElementById("panelTitle").textContent, focus: document.activeElement.id }));
+    check("the Guide's Report a problem link opens Settings at the form", s.title === "Settings" && s.focus === "fbText", s);
+    s = await q.evaluate(async () => { document.getElementById("fbText").value = "Photo 3 read nothing"; FEEDBACK_URL = ""; await document.getElementById("fbSend").onclick(); return document.getElementById("fbMsg").textContent; });
+    check("before the Worker is online, the form says so and points to the problem report file", /isn’t set up yet/.test(s) && /Download problem report/.test(s), s);
+    s = await q.evaluate(async () => {
+      FEEDBACK_URL = "https://lpn-feedback.test.workers.dev/report"; const sent = []; const real = window.fetch;
+      window.fetch = async (u, o) => { sent.push({ u, b: JSON.parse(o.body) }); return new Response(JSON.stringify({ ok: true, issue: 3 }), { status: 200 }); };
+      document.querySelector('input[name="fbKind"][value="idea"]').checked = true; document.getElementById("fbText").value = "Bigger buttons please";
+      await document.getElementById("fbSend").onclick();
+      const ok = { n: sent.length, u: sent[0] && sent[0].u, kind: sent[0] && sent[0].b.kind, text: sent[0] && sent[0].b.text, report: sent[0] && /LPN Pallet Log problem report/.test(sent[0].b.report), app: sent[0] && sent[0].b.app, msg: document.getElementById("fbMsg").textContent, cleared: document.getElementById("fbText").value === "" };
+      // No signal: kept on the phone, then sent when back online.
+      window.fetch = async () => { throw new TypeError("Failed to fetch"); };
+      document.querySelector('input[name="fbKind"][value="problem"]').checked = true; document.getElementById("fbText").value = "Scanner froze"; document.getElementById("fbInc").checked = false;
+      await document.getElementById("fbSend").onclick();
+      const off = { msg: document.getElementById("fbMsg").textContent, queued: fbQueue().length, report: fbQueue()[0] && fbQueue()[0].report };
+      // A report saved while a flush is running isn't lost, and the list never grows past its limit.
+      let release; window.fetch = (u, o) => new Promise(res => { release = () => { sent.push({ u, b: JSON.parse(o.body) }); res(new Response(JSON.stringify({ ok: true, issue: 9 }), { status: 200 })); }; });
+      const fl = fbFlush(); await new Promise(r => setTimeout(r, 20));
+      fbSave(fbQueue().concat([{ id: "late", kind: "idea", text: "Added during the flush" }]));
+      release(); await new Promise(r => setTimeout(r, 20)); release && release(); await fl;
+      const race = { left: fbQueue().length, sent: sent.map(x => x.b.text) };
+      fbSave([]); const big = fbSave([{ id: "a", kind: "idea", text: "x", report: "y".repeat(400000) }]); const six = fbSave([1, 2, 3, 4, 5, 6].map(i => ({ id: "s" + i, kind: "idea", text: "t" })));
+      fbSave([{ id: "q1", kind: "problem", text: "Scanner froze", report: "", app: "LPN Pallet Log" }]);
+      window.fetch = async (u, o) => { sent.push({ u, b: JSON.parse(o.body) }); return new Response(JSON.stringify({ ok: true, issue: 4 }), { status: 200 }); };
+      const flushed = await fbFlush();
+      const after = { flushed, left: fbQueue().length, last: sent[sent.length - 1].b.text, stored: localStorage.getItem("lpnfeedq") };
+      // A refused report says why and isn't kept.
+      window.fetch = async () => new Response(JSON.stringify({ ok: false, error: "That's too long: keep it under 4000 characters." }), { status: 400 });
+      document.getElementById("fbText").value = "x"; await document.getElementById("fbSend").onclick();
+      const refused = { msg: document.getElementById("fbMsg").textContent, queued: fbQueue().length };
+      window.fetch = real; FEEDBACK_URL = "";
+      return { ok, off, after, refused, race, big, six };
+    });
+    check("sending an idea posts the kind, text, app version and problem report, then clears the form", s.ok.n === 1 && s.ok.u === "https://lpn-feedback.test.workers.dev/report" && s.ok.kind === "idea" && s.ok.text === "Bigger buttons please" && s.ok.report && /^LPN Pallet Log/.test(s.ok.app) && /Sent\. Thank you/.test(s.ok.msg) && s.ok.cleared, s.ok);
+    check("with no signal, a report is kept on the phone (without the report when unticked) and sent when back online", /saved on this phone/.test(s.off.msg) && s.off.queued === 1 && s.off.report === "" && s.after.flushed === 1 && s.after.left === 0 && s.after.last === "Scanner froze" && s.after.stored === null, s);
+    check("a report saved while saved ones are being sent isn't lost: it's sent too", s.race.left === 0 && s.race.sent.includes("Scanner froze") && s.race.sent.includes("Added during the flush"), s.race);
+    check("the waiting list refuses to grow past 5 reports or 300 KB", s.big === false && s.six === false, s);
+    check("a report the server refuses says why and isn't kept", /too long/.test(s.refused.msg) && s.refused.queued === 0, s.refused);
+    s = await q.evaluate(() => { localStorage.setItem("lpnfeedq", JSON.stringify([{ kind: "idea", text: "x" }])); const b = checkBackup({ lpnfeedq: "[]", lpnnames: "[]" }).data; const keys = []; for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i)); localStorage.removeItem("lpnfeedq"); return { inBackup: "lpnfeedq" in b }; });
+    check("unsent reports stay on this phone: not taken from or put into backups", !s.inBackup, s);
     check("no script errors", q.errors.length === 0, q.errors);
     await q.ctx.close();
   }

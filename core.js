@@ -1,5 +1,5 @@
 /* Problem log: the last 300 notable events (manifest reads, script errors) kept on this device, so a problem
-   report can be downloaded from Settings and sent for troubleshooting. Nothing leaves the device by itself. */
+   report can be downloaded from Settings and sent for troubleshooting. It only leaves the device when attached to a report the user sends (Settings > Report a problem or idea). */
 function diag(kind,msg){
   try{
     let a=[];try{a=JSON.parse(localStorage.getItem("lpndiag")||"[]");if(!Array.isArray(a))a=[]}catch(e){a=[]}
@@ -79,13 +79,15 @@ function render(){
     shown++;
     const tr=document.createElement("tr");tr.dataset.t=r.type;
     const n=document.createElement("td");n.textContent=i+1;
-    const l=document.createElement("td");l.className="l";l.textContent=r.lpn;l.title="Tap to edit";
+    // The LPN is a button, so it can be edited with the keyboard and screen readers too, not only by tapping.
+    const l=document.createElement("td");l.className="l";
+    const eb=document.createElement("button");eb.type="button";eb.className="lpnedit";eb.textContent=r.lpn;eb.title="Tap to edit";eb.setAttribute("aria-label","Edit LPN "+r.lpn);eb.dataset.i=i;l.appendChild(eb);
     l.onclick=()=>{
       if(l.querySelector("input"))return;
       const inp=document.createElement("input");inp.value=r.lpn;inp.setAttribute("autocapitalize","characters");inp.setAttribute("aria-label","Edit LPN");
       l.textContent="";l.appendChild(inp);inp.focus();inp.select();
       let done=false;
-      const finish=ok=>{
+      const finish=(ok,key)=>{
         if(done)return;done=true;
         const v=inp.value.trim();
         if(ok&&v&&v!==r.lpn){
@@ -97,9 +99,11 @@ function render(){
           showUndo("Changed "+old+" to "+v,()=>{r.lpn=old;save();render()});
         }
         render();
+        // Back on the edited LPN, so keyboard users don't lose their place.
+        if(key){const back=document.querySelector('#body .lpnedit[data-i="'+i+'"]');if(back)back.focus()}
       };
       inp.onblur=()=>finish(true);
-      inp.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();finish(true)}else if(e.key==="Escape"){finish(false)}};
+      inp.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();finish(true,true)}else if(e.key==="Escape"){finish(false,true)}};
     };
     const t=document.createElement("td");
     const s=document.createElement("select");
@@ -198,7 +202,9 @@ function addValue(v,o){
 }
 let flashTimer=null;
 function flashAdded(v,t,f){
-  const el=$("flash");el.dataset.t=t;el.hidden=false;const en=document.querySelector(".entry");el.style.bottom=(matchMedia("(max-width:759px)").matches&&en?en.offsetHeight+10:20)+"px";
+  const el=$("flash");el.dataset.t=t;el.hidden=false;const en=document.querySelector(".entry");const ub=$("undoBar"),ph=matchMedia("(max-width:759px)").matches;
+  // On phones the Undo bar sits in the same place, so the note goes just above it while it shows.
+  el.style.bottom=((ph&&en?en.offsetHeight+10:20)+(ph&&ub&&!ub.hidden?ub.offsetHeight+8:0))+"px";
   let man="";
   if(typeof manState==="function"){const s=manState();if(s.total)man=s.has(v)?" · ✓ on manifest":" · ⚠ NOT on manifest"}
   el.classList.toggle("warn",man.indexOf("NOT")>=0);
@@ -220,11 +226,16 @@ function showDate(){
 $("chkSkip").onclick=()=>{hideCheck();$("lpn").focus()};
 $("chkAdd").onclick=()=>{const p=pendingAdd;hideCheck();if(p)addValue(p.v,{type:p.type,fsdu:p.fsdu});$("lpn").focus()};
 let undoTimer=null;
+/* On phones the Undo bar shows just above the entry bar (styles.css), where it can be seen. It stays 20 seconds,
+   and doesn't go while it has focus. */
 function showUndo(text,fn){
-  $("undoTxt").textContent=text;$("undoBar").hidden=false;
+  const bar=$("undoBar");
+  $("undoTxt").textContent=text;bar.hidden=false;
+  const fl=$("flash");if(fl)fl.hidden=true;
   clearTimeout(undoTimer);
-  $("undoBtn").onclick=()=>{clearTimeout(undoTimer);$("undoBar").hidden=true;fn()};
-  undoTimer=setTimeout(()=>{$("undoBar").hidden=true},9000);
+  const hide=()=>{if(bar.contains(document.activeElement)){undoTimer=setTimeout(hide,3000);return}bar.hidden=true};
+  $("undoBtn").onclick=()=>{clearTimeout(undoTimer);bar.hidden=true;fn()};
+  undoTimer=setTimeout(hide,20000);
 }
 /* Each library file's fingerprint (Subresource Integrity). The browser refuses a file that doesn't match, so a
    changed or tampered copy on a CDN can't run in the app. tests/sri.js checks these against the CDNs every week. */

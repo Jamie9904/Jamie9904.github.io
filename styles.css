@@ -75,17 +75,17 @@ button.d:hover{background:color-mix(in srgb,var(--dg) 12%,var(--paper));border-c
 #sum span:nth-child(4)::before{background:var(--fp)}
 #sum span:nth-child(5)::before{background:var(--mx)}
 #sum span:nth-child(6)::before{background:var(--ink);border-radius:50%}
-#cmpSum span{background:var(--sel);border-radius:var(--r);padding:3px 10px;font-size:.88rem;color:var(--mu)}
+#cmpSum span{background:var(--sel);border-radius:var(--r);padding:3px 10px;font-size:.88rem;color:var(--ink)}
 #cmpSum b{color:var(--ink)}
 @media (max-width:620px){#cmpBody>.row>.grow{flex:1 1 100%}}
 .cmpres{margin-top:12px;border-top:1px solid var(--line);padding-top:6px}
-.cmpres h4{margin:14px 0 6px;font-size:1rem}
-.cmpres h4.m{color:var(--dg)}.cmpres h4.b{color:var(--wn)}
+.cmpres h3{margin:14px 0 6px;font-size:1rem}
+.cmpres h3.m{color:var(--dg)}.cmpres h3.b{color:var(--wn)}
 .cmpres .ri{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
 .cmpres .ri .l{flex:1;min-width:0;overflow-wrap:anywhere;font:600 .98rem "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace}
 .cmpres .ri input{flex:1;min-width:0;min-height:38px;font:600 .98rem "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;padding:4px 8px}
 .cmpres .ri button{min-height:38px;padding:4px 12px}
-.cmpres summary{cursor:pointer;font-weight:700;margin:14px 0 6px}
+.cmpres summary{cursor:pointer;font-weight:700;margin:14px 0 6px;min-height:44px;padding:10px 0;box-sizing:border-box}
 .wrap{overflow-x:auto;border-top:2px solid var(--ac);border-bottom:1px solid var(--line);max-height:60vh;overflow-y:auto;margin:0 -18px}
 table{width:100%;border-collapse:separate;border-spacing:0}
 th,td{text-align:left;padding:9px 12px;border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent);white-space:nowrap}
@@ -353,3 +353,15 @@ details.opts>summary .note{min-width:0;overflow:hidden;text-overflow:ellipsis;wh
 
 /* Very narrow screens or extra large text: header buttons wrap rather than pushing the page sideways. */
 @media (max-width:620px){#side{flex-wrap:wrap}#side button{flex:1 1 auto}}
+
+/* LPNs in the log are buttons that look like plain text (tap or press Enter to edit). */
+.lpnedit{background:none;border:0;padding:0;margin:0;min-height:40px;width:100%;text-align:left;font:inherit;color:inherit;cursor:text;overflow-wrap:anywhere}
+.lpnedit:hover{background:none}
+/* Phones: the Undo bar shows just above the entry bar, where it can be seen. */
+@media (max-width:759px){
+  #undoBar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dockh,220px) + 10px);z-index:31;width:min(92vw,520px);margin:0;box-shadow:0 4px 14px rgba(0,0,0,.35);border-color:var(--bd,var(--line))}
+  body.cmpfocus #undoBar{bottom:20px}
+}
+
+/* Report a problem or idea: Problem / Idea side by side. */
+.fbkind{border:0;margin:0 0 8px;padding:0;display:flex;gap:18px}
