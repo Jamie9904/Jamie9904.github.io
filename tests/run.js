@@ -668,11 +668,17 @@ async function page(browser, width, opts = {}) {
       const digits = ["VLT004040265", "VLT0004040265", "VLT04040265", "IM1234567890", "IM12345678901", "IM123456789", "IM123456789012"].map(lpnDigitsOk);
       const imIssues = [lpnIssues("IM12345678901").join(), lpnIssues("IM123456789").join()];
       document.getElementById("cmpNums").value = "IM1234567890\nIM12345678901\nVLT004040265\nIM123456789"; const imOdd = oddNote("cmpNums"); document.getElementById("cmpNums").value = "";
+      document.getElementById("cmpPfx").value = "VLT";
+      const tel = lpnsFromText("VLT004040265 TEL 01234567890 MOB 07123456789 IM 12345678901 IM 123456789").skipped.join();
+      document.getElementById("cmpNums").value = "VLT-004040265\n004040265\nVLT00404026"; const plainOdd = oddNote("cmpNums"); document.getElementById("cmpNums").value = "";
+      document.getElementById("cmpPfx").value = "";
       const im = photoLpns(["VLT004040265", "VLT004040273", "IM1234567890", "IM12345678"].map(a => ({ raw: a, first: a, again: null })));
-      return { digits: digits.join(), imIssues, imOdd, im: im.join(), junk: junk.join(), junkOdd: junk.odd.join(), note, jd: jd.join(), jdOdd: jd.odd.join(), jdNote: readNote("Photo 1", jd, { added: 2, dup: 0 }), R2: R2.join(), speck: speck.join(), ignored: speck.ignored.join(), speckAlone: speckAlone.join(), V, R, lone, keep10, lot, listed: listed.join(), skipped: listed.skipped.join() };
+      return { tel, plainOdd, digits: digits.join(), imIssues, imOdd, im: im.join(), junk: junk.join(), junkOdd: junk.odd.join(), note, jd: jd.join(), jdOdd: jd.odd.join(), jdNote: readNote("Photo 1", jd, { added: 2, dup: 0 }), R2: R2.join(), speck: speck.join(), ignored: speck.ignored.join(), speckAlone: speckAlone.join(), V, R, lone, keep10, lot, listed: listed.join(), skipped: listed.skipped.join() };
     });
     check("a prefix letter read as a digit is put back to match the rest of the page (VL1… → VLT…)", s.V.join() === "VLT004040265,VLT004040273,VLT004040278,VLT004040355,VLT004040416,VLT004040418", s.V);
     check("codes made from specks with a different prefix length are not added, and the note lists them (GitHub's reading of vlt.jpg)", s.junk === "VLT004040265,VLT004040273,VLT004040278" && s.junkOdd === "CO1080002090,RR1004040021,L1121100001" && /3 other readings \(CO1080002090, RR1004040021, L1121100001\) didn’t look like the other LPNs/.test(s.note) && /type it in the box/.test(s.note), s);
+    check("phone numbers stay out of the left-out list; IM numbers, even one digit short, are named", s.tel === "IM12345678901,IM123456789", s.tel);
+    check("typed lines with a dash or no letters are judged by their digits as before", !/VLT-004040265|, 004040265/.test(s.plainOdd) && /VLT00404026/.test(s.plainOdd), s.plainOdd);
     check("IM numbers have 10 or 11 digits, other LPNs 9 or 10", s.digits === "true,true,false,true,true,false,false", s.digits);
     check("an 11-digit IM number isn't called unusual; a 9-digit one is, with the IM rule in the message", s.imIssues[0] === "" && /IM numbers have 10 or 11/.test(s.imIssues[1]) && /IM123456789\./.test(s.imOdd) && !/IM12345678901/.test(s.imOdd) && !/IM1234567890,/.test(s.imOdd), s);
     check("IM numbers (full pallet picks, two letters) are always kept among 3-letter LPNs", s.im === "VLT004040265,VLT004040273,IM1234567890,IM12345678", s.im);
