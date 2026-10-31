@@ -614,7 +614,7 @@ async function page(browser, width, opts = {}) {
     check("LPNs skipped for a prefix not in the list are named, with how to fix it", /QUB/.test(s.msg) && /prefix/i.test(s.msg) && s.nums.length === 3, s.msg);
     s = await q.evaluate(() => {
       document.getElementById("cmpPfx").value = "VLT";
-      const t = "VLT004037790 QUB001899186 RBY 006291170";
+      const t = "VLT004037790 QUB001899186 RBY 006291170 TEL 01234567890 PO 12345678 ABCD123456789";
       return { kept: extractLpns(t), skipped: extractLpns(t).skipped };
     });
     check("reading text keeps the listed prefixes and notes the rest", JSON.stringify(s.kept) === '["VLT004037790"]' && JSON.stringify(s.skipped) === '["QUB001899186","RBY006291170"]', s);
@@ -637,6 +637,13 @@ async function page(browser, width, opts = {}) {
       const a = JSON.parse(localStorage.getItem("lpndiag")); return { n: a.length, size: localStorage.getItem("lpndiag").length, last: a[a.length - 1].m.slice(0, 9) };
     });
     check("the problem log keeps only recent entries and stays small", s.n <= 300 && s.size < 120000 && s.last === "entry 899", s);
+    s = await q.evaluate(() => ({ pdf: readNote("m.pdf", Object.assign([], { skipped: [] }), { added: 0, dup: 0 }, true), sk: readNote("m.pdf", Object.assign([], { skipped: ["QUB001899186"] }), { added: 0, dup: 0 }, true),
+      bk: checkBackup({ lpndiag: "[" + "\"x\",".repeat(10) + "\"x\"]", lpnnames: "[]" }).data, longWord: (() => { const m = document.getElementById("cmpMsg"); m.textContent = "Photo 4: couldn’t be read (https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/worker.min.js/aaaaaaaaaaaaaaaaaaaa)"; return document.documentElement.scrollWidth <= innerWidth; })() }));
+    check("PDF messages talk about the PDF, not a photo", /from this PDF/.test(s.pdf) && /read the PDF again/.test(s.sk) && !/photo/.test(s.pdf + s.sk), s);
+    check("a backup can't bring in a problem log", !("lpndiag" in s.bk), Object.keys(s.bk));
+    check("a long word in a message wraps instead of widening the page", s.longWord);
+    s = await q.evaluate(async () => { localStorage.setItem("lpndiag", "[null,5,{\"t\":\"x\",\"k\":\"y\",\"m\":\"ok-entry\"}]"); let out = ""; window.saveOnly = async (b) => { out = new TextDecoder().decode(b); }; await downloadReport(); return out; });
+    check("a damaged problem log still gives a report", /ok-entry/.test(s), s.slice(-200));
     s = await q.evaluate(() => { document.getElementById("diagClear").click(); return { left: JSON.parse(localStorage.getItem("lpndiag") || "[]").length, msg: document.getElementById("diagMsg").textContent }; });
     check("the problem log can be cleared", s.left === 0 && /cleared/i.test(s.msg), s);
     await q.ctx.close();

@@ -9,7 +9,7 @@ function diag(kind,msg){
   }catch(e){}
 }
 window.addEventListener("error",e=>diag("error",(e.message||"error")+(e.filename?" at "+String(e.filename).split("/").pop()+":"+e.lineno:"")));
-window.addEventListener("unhandledrejection",e=>{const r=e.reason;diag("error","Unhandled: "+((r&&r.message)||String(r)))});
+window.addEventListener("unhandledrejection",e=>{let m="";try{const r=e.reason;m=(r&&r.message)||String(r)}catch(x){m="unknown"}diag("error","Unhandled: "+m)});
 const TYPES=["BB","FMCG","FPP","Mixed"];
 let rows=[];
 let delCollapsed=false;

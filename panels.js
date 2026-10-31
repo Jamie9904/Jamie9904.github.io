@@ -169,7 +169,7 @@ HELP.settings=`<h3>Colours</h3>
 <div class="row" id="bkAsk" style="margin-top:10px" hidden><button id="bkGo">Replace my data with this backup</button><button id="bkNo">Cancel</button></div>
 <div class="row" id="bkDone" style="margin-top:10px" hidden><button id="bkReload">Reload the app</button></div>
 <h3>Problem report</h3>
-<p>If something goes wrong, download a problem report straight away and send it with a description of what happened. It lists what the app has done recently on this device (such as manifest photos read and any errors) and the LPNs involved. It is only kept on this device.</p>
+<p>If something goes wrong, download a problem report straight away and send it with a description of what happened. It lists what the app has done recently on this device (such as manifest photos and PDFs read, and any errors), with the LPNs, file names and the start of the text read from photos, plus your browser and screen size. It is only kept on this device and is never sent by itself.</p>
 <div class="row"><button id="diagDl">Download problem report</button><button class="d" id="diagClear">Clear</button></div>
 <div class="msg" id="diagMsg" role="status" aria-live="polite"></div>`;
 /* ---- saved deliveries ---- */
@@ -291,6 +291,7 @@ function checkBackup(d){
   const parse=v=>{try{return JSON.parse(v)}catch(e){bad()}};
   Object.keys(d).forEach(k=>{
     const v=d[k];if(!/^lpn[a-z0-9]*$/.test(k)||typeof v!=="string")return;
+    if(k==="lpndiag")return; // the problem log belongs to this device, never to a backup
     if(k==="lpnlog"){const o=parse(v);if(!o||typeof o!=="object")bad();const r=cleanRows(o.rows);pallets=r.length;out[k]=JSON.stringify(Object.assign(cleanDel(o),{rows:r}))}
     else if(k==="lpnhist"){const h=cleanHist(parse(v));saved=h.length;out[k]=JSON.stringify(h)}
     else if(k==="lpnnames")out[k]=JSON.stringify(cleanNames(parse(v)));
@@ -315,7 +316,7 @@ async function downloadReport(){
     "Manifest check prefixes: "+(getPfx().join(", ")||"(none: any 1 to 3 letters)"),
     "Manifest numbers ("+man.length+"): "+man.join(" "),"Log numbers in the Manifest check ("+lg.length+"): "+lg.join(" "),
     "Manifest message: "+($("cmpMsg").textContent||"-"),"","Recent events (oldest first, "+ent.length+")"];
-  ent.forEach(x=>L.push(String(x.t||"")+"  "+String(x.k||"")+"  "+String(x.m||"")));
+  ent.forEach(x=>{if(x&&typeof x==="object")L.push(String(x.t||"")+"  "+String(x.k||"")+"  "+String(x.m||"").slice(0,300))});
   try{await saveOnly(new TextEncoder().encode(L.join("\n")+"\n").buffer,"lpn-problem-report-"+localToday()+".txt","text/plain");$("diagMsg").textContent="Problem report downloaded. Send it along with what happened."}
   catch(e){$("diagMsg").textContent="Couldn’t make the problem report: "+((e&&e.message)||"error")}
 }
@@ -412,7 +413,8 @@ function initSettings(){
   $("bkGo").onclick=async()=>{
     if(!pendingBk)return;const data=pendingBk;pendingBk=null;$("bkAsk").hidden=true;
     if(!await backupNow("bkMsg")){$("bkMsg").textContent+=" Your data wasn’t replaced, because the copy of it couldn’t be saved first.";return}
-    const before={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^lpn/.test(k))before[k]=localStorage.getItem(k)}
+    const before={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(/^lpn/.test(k)&&k!=="lpndiag")before[k]=localStorage.getItem(k)}
+    diag("backup","Restoring a backup");
     try{
       Object.keys(before).forEach(k=>localStorage.removeItem(k));
       Object.keys(data).forEach(k=>localStorage.setItem(k,data[k]));
