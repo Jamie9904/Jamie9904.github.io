@@ -703,8 +703,97 @@ async function page(browser, width, opts = {}) {
       return { black: black / (d.length / 4), ink: ink / (t.length / 4) };
     });
     check("photo preparation turns shaded, grainy paper white and keeps the text black", s.black < 0.06 && s.ink > 0.1, s);
+    // One photo reader for a batch: started once for three photos, closed after a quiet spell; a failed one is replaced.
+    s = await q.evaluate(async () => {
+      const real = window.Tesseract; let made = 0, closed = 0, fail = false;
+      window.Tesseract = { createWorker: async () => { made++; return { setParameters: async () => {}, terminate: async () => { closed++; },
+        recognize: async () => { if (fail) throw new Error("worker crashed"); return { data: { words: [], text: "VLT004040265" } }; } }; } };
+      const c = document.createElement("canvas"); c.width = 200; c.height = 100; const b = await new Promise(r => c.toBlob(r, "image/png"));
+      const f = new File([b], "p.png", { type: "image/png" });
+      for (let i = 0; i < 3; i++) await ocrLpns(f);
+      const afterBatch = { made, closed };
+      fail = true; let err = ""; try { await ocrLpns(f); } catch (e) { err = e.message; }
+      fail = false; await ocrLpns(f);
+      const afterFail = { made, closed };
+      // Two batches at once (manifest photos and a log photo) take turns: each page read is in mode 11, each close-up in mode 7.
+      ocrDone(await ocrWorker(), false); // close the earlier stand-in reader first
+      const modes = []; let cur = "";
+      window.Tesseract = { createWorker: async () => { made++; return { setParameters: async p => { if (p.tessedit_pageseg_mode) cur = p.tessedit_pageseg_mode; await new Promise(r => setTimeout(r, 5)); }, terminate: async () => { closed++; },
+        recognize: async () => { const m = cur; await new Promise(r => setTimeout(r, 20)); modes.push(m); return { data: { words: m === "11" ? [{ text: "VLT004040265", bbox: { x0: 0, y0: 0, x1: 50, y1: 20 } }] : [], text: m === "11" ? "VLT004040265" : "VLT004040265" } }; } }; } };
+      const both = await Promise.all([ocrLpns(f), ocrLpns(f)]);
+      window.__modes = modes.join(); window.__both = both.map(x => x.join()).join("|");
+      ocrDone(await ocrWorker(), false); // close it now rather than waiting
+      window.Tesseract = real;
+      return { afterBatch, err, afterFail, closedAtEnd: closed, modes: window.__modes, both: window.__both };
+    });
+    check("one photo reader is started for a batch of photos and kept open between them", s.afterBatch.made === 1 && s.afterBatch.closed === 0, s);
+    check("a photo reader that fails is closed and the next photo gets a new one", s.err === "worker crashed" && s.afterFail.made === 2 && s.afterFail.closed === 1, s);
+    check("two photo reads started together take turns: page reads in mode 11, close-ups in mode 7", s.modes === "11,7,11,7" && s.both === "VLT004040265|VLT004040265" && s.closedAtEnd >= 2, s);
     s = await q.evaluate(() => { document.getElementById("diagClear").click(); return { left: JSON.parse(localStorage.getItem("lpndiag") || "[]").length, msg: document.getElementById("diagMsg").textContent }; });
     check("the problem log can be cleared", s.left === 0 && /cleared/i.test(s.msg), s);
+    await q.ctx.close();
+  }
+
+  {
+    // Live scan on short phones: the camera view shrinks so the "Added" line and Stop scanning stay on screen.
+    // A drawn picture stands in for the camera, and a stand-in barcode reader reports one code.
+    const cam = () => { const cv = document.createElement("canvas"); cv.width = 640; cv.height = 480; const g = cv.getContext("2d");
+      setInterval(() => { g.fillStyle = "#777"; g.fillRect(0, 0, 640, 480); }, 50); const st = cv.captureStream(20);
+      if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = async () => st;
+      window.BarcodeDetector = class { async detect() { return window.__code ? [{ rawValue: window.__code }] : []; } }; };
+    for (const [w, h] of [[360, 640], [375, 667], [390, 844]]) {
+      const q = await page(browser, w, { init: cam });
+      await q.setViewportSize({ width: w, height: h });
+      await q.goto(URL0); await q.waitForTimeout(300);
+      await q.evaluate(() => { document.getElementById("scanBtn").click(); document.getElementById("scan").click(); });
+      await q.waitForTimeout(500); await q.evaluate(() => { window.__code = "VLT004040265"; }); await q.waitForTimeout(700);
+      const s = await q.evaluate(() => { const b = id => document.getElementById(id).getBoundingClientRect();
+        return { stop: Math.round(b("stopscan").bottom), msg: Math.round(b("smsg").bottom), vh: innerHeight, text: document.getElementById("smsg").textContent }; });
+      check("Live scan at " + w + "×" + h + ": the Added line and Stop scanning are on screen", /^Added: VLT004040265/.test(s.text) && s.stop <= s.vh && s.msg <= s.vh, s);
+      await q.ctx.close();
+    }
+  }
+
+  {
+    console.log("Accessibility fixes");
+    const q = await page(browser, 390);
+    await q.setViewportSize({ width: 390, height: 844 });
+    await q.goto(URL0); await q.waitForTimeout(300);
+    // A handheld scanner types and presses Enter: a second LPN while a warning is open must not be lost.
+    await q.evaluate(() => { rows = [{ lpn: "VLT004037790", type: "BB", fsdu: false }]; save(); render(); });
+    await q.fill("#lpn", "VLT004037790"); await q.press("#lpn", "Enter");
+    await q.fill("#lpn", "VLT004037955"); await q.press("#lpn", "Enter");
+    let s = await q.evaluate(() => ({ box: document.getElementById("lpn").value, msg: document.getElementById("msg").textContent, rows: rows.length, warn: !document.getElementById("chkBar").hidden }));
+    check("a scan while a warning is open is kept in the box with a message, not lost", s.box === "VLT004037955" && /Answer the check first/.test(s.msg) && s.rows === 1 && s.warn, s);
+    await q.keyboard.press("Escape");
+    s = await q.evaluate(() => ({ warn: !document.getElementById("chkBar").hidden, rows: rows.length }));
+    check("Escape skips the warning", !s.warn && s.rows === 1, s);
+    await q.press("#lpn", "Enter");
+    s = await q.evaluate(() => rows.map(r => r.lpn).join());
+    check("after answering, the kept LPN adds with Enter", s === "VLT004037790,VLT004037955", s);
+    // The Guide acts as a dialog: focus moves to Close, the page behind is inert, focus returns to the Guide button.
+    await q.click("#btnGuide"); await q.waitForTimeout(100);
+    s = await q.evaluate(() => ({ focus: document.activeElement.id, inert: document.querySelector("main").inert && document.querySelector("header.top").inert, modal: document.getElementById("panel").getAttribute("aria-modal") }));
+    check("opening the Guide moves focus into it and the page behind can't be reached", s.focus === "panelClose" && s.inert && s.modal === "true", s);
+    await q.click("#panelClose"); await q.waitForTimeout(100);
+    s = await q.evaluate(() => ({ focus: document.activeElement.id, inert: document.querySelector("main").inert }));
+    check("closing the Guide gives focus back to the Guide button", s.focus === "btnGuide" && !s.inert, s);
+    // Contrast: box and button edges at least 3:1, accent text at least 4.5:1, even with a pale accent.
+    s = await q.evaluate(() => {
+      const rt = (a, b) => { const x = lumOf(a) + .05, y = lumOf(b) + .05; return Math.max(x, y) / Math.min(x, y); }, cs = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+      const out = [];
+      for (const [bg, ac] of [["#0c1830", "#ff8a2a"], ["#e3e8e4", "#2f6f68"], ["#1d1f23", "#f5b324"], ["#eef1f6", "#2563eb"], ["#ffffff", "#ff8a2a"], ["#0c1830", "#3f51b5"], ["#eef1f6", "#ffb74d"]]) {
+        theme = { bg, ac }; applyTheme();
+        out.push({ bg, ac, bd: +rt(cs("--bd"), cs("--paper")).toFixed(2), act: +Math.min(rt(cs("--act"), cs("--paper")), rt(cs("--act"), cs("--bg"))).toFixed(2) });
+      }
+      theme = Object.assign({}, THEME_DEFAULT); applyTheme(); return out;
+    });
+    check("box and button edges are at least 3:1 in every theme", s.every(x => x.bd >= 3), s);
+    check("accent text (headings, links, focus ring) is at least 4.5:1, even with a pale or dark accent", s.every(x => x.act >= 4.5), s);
+    s = await q.evaluate(() => { const sb = document.getElementById("scanbox"), ck = document.getElementById("chkBar");
+      return { smsg: document.getElementById("smsg").getAttribute("role"), order: !!(ck.compareDocumentPosition(sb) & Node.DOCUMENT_POSITION_FOLLOWING), lang: document.documentElement.lang, flash: getComputedStyle(document.getElementById("flash")).pointerEvents }; });
+    check("Live scan messages are announced, the warning sits above the camera, the Added note can't block taps, page language en-GB", s.smsg === "status" && s.order && s.lang === "en-GB" && s.flash === "none", s);
+    check("no script errors", q.errors.length === 0, q.errors);
     await q.ctx.close();
   }
 

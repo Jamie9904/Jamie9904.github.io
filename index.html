@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-GB">
 <head>
 <meta charset="utf-8">
 <!-- Security policy: the page may only run scripts from this site and the three library CDNs, and only talk to those
@@ -68,15 +68,15 @@
     <input type="file" id="file" accept="image/*" capture="environment" hidden>
   </div>
   <div class="note">Tip: if Live scan doesn’t work, try Scan by photo instead.</div>
+  <div class="chkbar" id="chkBar" hidden role="alert"><div id="chkTxt"></div><div class="row"><button id="chkSkip">Skip</button><button class="p" id="chkAdd">Add anyway</button></div></div>
   <div id="scanbox" hidden>
     <video id="video" playsinline muted></video>
     <div class="row" style="align-items:center;margin-top:8px">
-      <span class="msg grow" id="smsg" style="margin:0;color:var(--tx)"></span>
+      <span class="msg grow" id="smsg" role="status" aria-live="polite" style="margin:0;color:var(--tx)"></span>
       <button id="stopscan">Stop scanning</button>
     </div>
   </div>
   <div class="msg" id="msg" role="status" aria-live="polite"></div>
-  <div class="chkbar" id="chkBar" hidden role="alert"><div id="chkTxt"></div><div class="row"><button id="chkSkip">Skip</button><button class="p" id="chkAdd">Add anyway</button></div></div>
 </div>
 
 <div class="card">
@@ -148,7 +148,7 @@
 </main>
 
 <div id="shade" hidden></div>
-<section id="panel" role="dialog" aria-labelledby="panelTitle" hidden>
+<section id="panel" role="dialog" aria-modal="true" aria-labelledby="panelTitle" hidden>
   <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
     <h2 id="panelTitle"></h2>
     <button id="panelClose" aria-label="Close">✕ Close</button>
@@ -157,7 +157,7 @@
 </section>
 <div class="upd" id="updBar" hidden role="status"><span>A new version is available.</span><button class="p" id="updBtn">Refresh</button></div>
 <div id="instShade" hidden></div>
-<section id="instBox" role="dialog" aria-labelledby="instTitle" hidden>
+<section id="instBox" role="dialog" aria-modal="true" aria-labelledby="instTitle" hidden>
   <h2 id="instTitle">Install this app on your phone</h2>
   <p>Add it to your home screen so it opens full screen like an app.</p>
   <div id="instAnd">

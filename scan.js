@@ -11,7 +11,7 @@ function onCode(raw){
   if(pendingAdd)return;
   lastCode=v;lastAt=now;
   const ok=tryAdd(v,true);
-  $("smsg").textContent=ok?"Added: "+v+" ("+$("type").value+")":"Check the message below.";
+  $("smsg").textContent=ok?"Added: "+v+" ("+$("type").value+")":"Check the warning above.";
 }
 function loadZX(){
   return new Promise((res,rej)=>{

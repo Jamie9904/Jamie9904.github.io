@@ -214,16 +214,42 @@ function photoLpns(items){
   out.skipped=[...new Set(skipped)];out.odd=odd;
   return out;
 }
-async function ocrLpns(f){
+/* One photo reader is started for a batch of photos (or PDF pages) and reused, then closed 15 seconds after the
+   last photo to free its memory. Starting it takes a second or more per photo on a phone. Reads take turns
+   (ocrQ), so two batches started together never share the reader at the same moment. A reader that fails or
+   hangs is closed straight away, and the next photo gets a fresh one. */
+let ocrW=null,ocrIdle=0,ocrQ=Promise.resolve();
+async function ocrWorker(){
+  clearTimeout(ocrIdle);
+  if(!ocrW){
+    // 90 seconds: the first use downloads the language data, which can be slow on a weak signal.
+    const start=Tesseract.createWorker("eng");
+    ocrW=Promise.race([start,new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),90000))]);
+    // A reader that only finishes starting after the time limit is closed rather than left running.
+    ocrW.catch(()=>{start.then(w=>{try{Promise.resolve(w.terminate()).catch(()=>{})}catch(e){}},()=>{})});
+  }
+  const mine=ocrW;
+  try{return await mine}catch(e){if(ocrW===mine)ocrW=null;await dropOcrCache();throw new Error(OCR_MSG)}
+}
+function ocrDone(w,ok){
+  const mine=ocrW;
+  const close=()=>{if(ocrW===mine)ocrW=null;try{Promise.resolve(w.terminate()).catch(()=>{})}catch(e){}};
+  clearTimeout(ocrIdle);
+  if(!ok)close();else ocrIdle=setTimeout(close,15000);
+}
+/* A read that never finishes (the phone stopped the reader in the background) fails after this long. */
+const OCR_READ_MS=120000;
+const ocrRead=(w,img)=>Promise.race([w.recognize(img),new Promise((_,rej)=>setTimeout(()=>rej(Object.assign(new Error("The photo reader stopped. Try the photo again."),{stuck:true})),OCR_READ_MS))]);
+function ocrLpns(f){const run=ocrQ.then(()=>ocrLpnsNow(f));ocrQ=run.catch(()=>{});return run}
+async function ocrLpnsNow(f){
   try{await loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",()=>window.Tesseract)}catch(e){await dropOcrCache();throw new Error(OCR_MSG)}
   const cv=await prep(f);
-  // 90 seconds: the first use downloads the language data, which can be slow on a weak signal.
-  let w;try{w=await Promise.race([Tesseract.createWorker("eng"),new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),90000))])}catch(e){await dropOcrCache();throw new Error(OCR_MSG)}
+  const w=await ocrWorker();let ok=false;
   try{
     // Mode 11 (sparse text) finds every number on a manifest page; the default page layout mode skipped whole
     // parts of a page broken up by ruled lines.
     await w.setParameters({tessedit_char_whitelist:"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ",preserve_interword_spaces:"1",tessedit_pageseg_mode:"11"});
-    const r=(await w.recognize(cv)).data;
+    const r=(await ocrRead(w,cv)).data;
     // Read with any prefix first, so a reading with a look-alike prefix letter can still be tidied; the prefix
     // list is applied afterwards.
     const items=[],orig=new Set();
@@ -233,15 +259,15 @@ async function ocrLpns(f){
       if(found.length!==1)continue;
       orig.add(found[0]);
       let again=null;
-      try{const a=extractLpns((await w.recognize(cropScaled(cv,wd.bbox))).data.text.replace(/\s+/g,""),true);if(a.length===1)again=a[0]}catch(e){}
+      try{const a=extractLpns((await ocrRead(w,cropScaled(cv,wd.bbox))).data.text.replace(/\s+/g,""),true);if(a.length===1)again=a[0]}catch(e){if(e&&e.stuck)throw e}
       items.push({raw:wd.text,first:found[0],again:again});
     }
     extractLpns(r.text,true).forEach(x=>{if(!orig.has(x))items.push({raw:x,first:x,again:null,whole:true})});
     const out=photoLpns(items);
     window.__ocrItems=items; // kept for the photo reading check (tools/ocr-check)
     diag("ocr","Photo text read: "+(r.words||[]).length+" words, "+out.length+" LPNs found"+(out.skipped.length?", skipped for prefix: "+out.skipped.slice(0,10).join(" "):"")+". Text start: "+String(r.text||"").replace(/\s+/g," ").slice(0,150));
-    return out;
-  }finally{await w.terminate()}
+    ok=true;return out;
+  }finally{ocrDone(w,ok)}
 }
 async function readPhoto(f){return ocrLpns(f)}
 async function readLogPhoto(f){return ocrLpns(f)}
