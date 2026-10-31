@@ -1,5 +1,5 @@
 /* Problem log: the last 300 notable events (manifest reads, script errors) kept on this device, so a problem
-   report can be downloaded from Settings and sent for troubleshooting. Nothing leaves the device by itself. */
+   report can be downloaded from Settings and sent for troubleshooting. It only leaves the device when attached to a report the user sends (Settings > Report a problem or idea). */
 function diag(kind,msg){
   try{
     let a=[];try{a=JSON.parse(localStorage.getItem("lpndiag")||"[]");if(!Array.isArray(a))a=[]}catch(e){a=[]}

@@ -2,9 +2,18 @@
 # Deployed by .github/workflows/feedback-worker.yml. The GitHub token is a Worker secret (GITHUB_TOKEN), never here.
 name = "lpn-feedback"
 main = "worker.mjs"
-compatibility_date = "2026-06-01"
+compatibility_date = "2025-03-01"
 workers_dev = true
 
 [vars]
 REPO = "Jamie9904/lpn-feedback"
 ALLOWED_ORIGIN = "https://jamie9904.github.io"
+
+# The report limits (per address and per day) live in one Durable Object, so they hold across all servers.
+[[durable_objects.bindings]]
+name = "LIMITS"
+class_name = "Limits"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Limits"]

@@ -189,10 +189,11 @@ HELP.settings=`<h3>Colours</h3>
 <textarea id="fbText" rows="4" maxlength="4000" style="width:100%"></textarea>
 <div class="row" style="margin-top:8px;align-items:center"><button type="button" id="fbPhotoBtn">Add a photo</button><button type="button" class="d" id="fbPhotoRm" hidden>Remove photo</button><span class="note" id="fbPhotoName" style="margin:0"></span><input type="file" id="fbPhoto" accept="image/*" hidden></div>
 <label class="chk"><input type="checkbox" id="fbInc" checked><span>Attach the problem report (recent actions on this phone, with the LPNs involved)</span></label>
+<p class="note">Reports go to Jamie’s private GitHub, through a Cloudflare server. The problem report includes the LPNs and manifest numbers on this phone, file names, the start of text read from photos, and your browser and screen size.</p>
 <div class="row"><button class="p" id="fbSend">Send</button></div>
 <div class="msg" id="fbMsg" role="status" aria-live="polite"></div>
 <h3>Problem report</h3>
-<p>If something goes wrong, download a problem report straight away and send it with a description of what happened. It lists what the app has done recently on this device (such as manifest photos and PDFs read, and any errors), with the LPNs, file names and the start of the text read from photos, plus your browser and screen size. It is only kept on this device and is never sent by itself.</p>
+<p>If something goes wrong, download a problem report straight away and send it with a description of what happened. It lists what the app has done recently on this device (such as manifest photos and PDFs read, and any errors), with the LPNs, file names and the start of the text read from photos, plus your browser and screen size. It is kept on this device, and is only sent if you attach it to a report above.</p>
 <div class="row"><button id="diagDl">Download problem report</button><button class="d" id="diagClear">Clear</button></div>
 <div class="msg" id="diagMsg" role="status" aria-live="polite"></div>`;
 /* ---- saved deliveries ---- */
@@ -352,7 +353,8 @@ async function downloadReport(){
 let FEEDBACK_URL=""; // the Worker's /report address, set once it is online
 let fbPhotoData=null;
 const fbQueue=()=>{try{const q=JSON.parse(localStorage.getItem("lpnfeedq")||"[]");return Array.isArray(q)?q.filter(x=>x&&typeof x==="object"):[]}catch(e){return[]}};
-const fbSave=q=>{try{if(q.length)localStorage.setItem("lpnfeedq",JSON.stringify(q.slice(-5)));else localStorage.removeItem("lpnfeedq");return true}catch(e){return false}};
+// The waiting list is kept small (5 reports, about 300 KB, no photos) so it can never crowd out the log's own saving.
+const fbSave=q=>{try{const s=JSON.stringify(q);if(q.length>5||s.length>300000)return false;if(q.length)localStorage.setItem("lpnfeedq",s);else localStorage.removeItem("lpnfeedq");return true}catch(e){return false}};
 async function fbPost(item){
   let r;try{r=await fetch(FEEDBACK_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(item)})}
   catch(e){throw Object.assign(new Error("no connection"),{retry:true})}
@@ -364,9 +366,12 @@ let fbBusy=false;
 async function fbFlush(){
   if(!FEEDBACK_URL||fbBusy||!navigator.onLine)return 0;
   fbBusy=true;let sent=0;
-  try{let q=fbQueue();
-    while(q.length){try{await fbPost(q[0]);q.shift();sent++;fbSave(q)}
-      catch(e){if(e.retry)break;diag("feedback","A saved report was refused and removed: "+e.message);q.shift();fbSave(q)}}
+  // The list is read again before each change, so a report saved meanwhile (from Send) is never lost.
+  const drop=id=>fbSave(fbQueue().filter(x=>x.id!==id));
+  try{for(let item=fbQueue()[0];item;item=fbQueue()[0]){
+      const {id,...body}=item;
+      try{await fbPost(body);drop(id);sent++}
+      catch(e){if(e.retry)break;diag("feedback","A saved report was refused and removed: "+e.message);drop(id)}}
   }finally{fbBusy=false}
   if(sent)diag("feedback","Sent "+sent+" saved report"+(sent===1?"":"s"));
   return sent;
@@ -403,10 +408,12 @@ function initFeedback(){
     catch(e){
       if(e.retry){
         const q=fbQueue();let note="";
-        if(item.photo&&item.photo.length>450000){delete item.photo;note=" The photo was too big to keep, so send it again later if it matters."}
+        if(item.photo){delete item.photo;note=" Photos can’t be kept for later, so send the photo again when you have signal if it matters."}
+        if(item.report&&item.report.length>60000)item.report=item.report.slice(0,60000);
+        item.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
         q.push(item);
         if(fbSave(q)){done();diag("feedback","Saved a "+kind+" report to send later");msg("No signal or the server is busy: saved on this phone, and it will be sent when you’re back online."+note)}
-        else msg("It couldn’t be sent or saved. Use Download problem report below instead.");
+        else msg("No signal, and there’s no room to keep more reports on this phone. Try again when you have signal, or use Download problem report below.");
       }else msg(e.message);
     }finally{$("fbSend").disabled=false}
   };

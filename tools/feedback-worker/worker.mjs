@@ -15,9 +15,33 @@
 
   Settings (wrangler.toml [vars]): REPO ("owner/name" of the private repo), ALLOWED_ORIGIN (the app's address).
   Secret: GITHUB_TOKEN, a fine-grained token for that one repo with Issues and Contents read and write.
+
+  Limits are kept in one Durable Object (Limits), so they hold across all of Cloudflare's servers: at most
+  PER_HOUR reports an hour from one address, and DAY_ISSUES reports and DAY_PHOTOS photos a day in total. The
+  Origin check only stops other websites, not scripts, so these limits are what stop spam.
 */
-const MAX_BODY = 2_400_000, MAX_TEXT = 4000, MAX_REPORT = 60_000, MAX_PHOTO = 1_600_000, PER_HOUR = 20;
-const hits = new Map(); // best-effort limit per address, per Worker instance
+const MAX_BODY = 2_400_000, MAX_TEXT = 4000, MAX_REPORT = 60_000, MAX_PHOTO = 1_600_000;
+export const PER_HOUR = 10, DAY_ISSUES = 50, DAY_PHOTOS = 20;
+
+/** Durable Object holding the counts. POST {ip, photo:boolean} → {ok, photo, error?}. */
+export class Limits {
+	constructor(state) { this.state = state; }
+	async fetch(req) {
+		const { ip, photo } = await req.json(), now = Date.now(), day = new Date(now).toISOString().slice(0, 10);
+		const st = this.state.storage;
+		let d = (await st.get("day")) || { day, issues: 0, photos: 0 };
+		if (d.day !== day) d = { day, issues: 0, photos: 0 };
+		const key = "ip:" + ip, list = ((await st.get(key)) || []).filter((t) => now - t < 3600_000);
+		if (list.length >= PER_HOUR) return Response.json({ ok: false, error: "Too many reports from here in the last hour. Try again later." });
+		if (d.issues >= DAY_ISSUES) return Response.json({ ok: false, error: "Too many reports today. Try again tomorrow." });
+		const withPhoto = !!photo && d.photos < DAY_PHOTOS;
+		list.push(now); d.issues++; if (withPhoto) d.photos++;
+		await st.put(key, list); await st.put("day", d);
+		if (!(await st.getAlarm())) await st.setAlarm(now + 86_400_000);
+		return Response.json({ ok: true, photo: withPhoto });
+	}
+	async alarm() { await this.state.storage.deleteAll(); } // a daily clear-out of old addresses
+}
 
 function cors(env, origin) {
 	const ok = origin && origin === env.ALLOWED_ORIGIN;
@@ -42,12 +66,13 @@ export function check(o) {
 	if (!text) throw new Error("Write what happened first.");
 	if (text.length > MAX_TEXT) throw new Error("That's too long: keep it under " + MAX_TEXT + " characters.");
 	const report = typeof o.report === "string" ? o.report.slice(0, MAX_REPORT) : "";
-	const app = typeof o.app === "string" ? o.app.slice(0, 200).replace(/[\r\n]+/g, " ") : "";
+	// Only the app's own version line is shown, so nothing else can add links or mentions outside the text block.
+	const app = typeof o.app === "string" && /^LPN Pallet Log( v[\d.]+)?( \(build \d+\))?$/.test(o.app) ? o.app : "";
 	let photo = null;
 	if (o.photo != null && o.photo !== "") {
-		const m = /^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/.exec(String(o.photo));
-		if (!m) throw new Error("The photo couldn't be read.");
-		if (m[1].length * 0.75 > MAX_PHOTO) throw new Error("The photo is too big.");
+		const m = /^data:image\/jpeg;base64,([A-Za-z0-9+/]+={0,2})$/.exec(String(o.photo));
+		if (!m || !m[1].startsWith("/9j/")) throw new Error("The photo couldn't be read."); // a JPEG starts FF D8 FF
+		if (m[1].length / 4 * 3 - (m[1].match(/=*$/)[0].length) > MAX_PHOTO) throw new Error("The photo is too big.");
 		photo = m[1];
 	}
 	return { kind, text, report, app, photo };
@@ -57,7 +82,7 @@ export function check(o) {
 export function issueOf(r, photoPath, repo) {
 	const first = r.text.split("\n")[0].replace(/\s+/g, " ").slice(0, 70);
 	const title = (r.kind === "idea" ? "Idea: " : "Problem: ") + first + (r.text.length > first.length ? "…" : "");
-	const parts = ["**" + (r.kind === "idea" ? "Idea" : "Problem") + "** sent from the app" + (r.app ? " (" + r.app.replace(/[`*_<>[\]]/g, "") + ")" : "") + ".", "", block(r.text)];
+	const parts = ["**" + (r.kind === "idea" ? "Idea" : "Problem") + "** sent from the app" + (r.app ? " (" + r.app + ")" : "") + ".", "", block(r.text)];
 	if (photoPath) parts.push("", "Photo: [" + photoPath + "](https://github.com/" + repo + "/blob/HEAD/" + photoPath + ")", "", "![photo](https://github.com/" + repo + "/blob/HEAD/" + photoPath + "?raw=true)");
 	if (r.report) parts.push("", "<details><summary>Problem report</summary>", "", block(r.report), "", "</details>");
 	return { title, body: parts.join("\n") };
@@ -78,26 +103,31 @@ export default {
 		if (url.pathname !== "/report" || req.method !== "POST") return json(h, 404, { ok: false, error: "Not found." });
 		if (origin !== env.ALLOWED_ORIGIN) return json(h, 403, { ok: false, error: "Reports can only be sent from the app." });
 		if (!env.GITHUB_TOKEN || !env.REPO) return json(h, 503, { ok: false, error: "Reporting isn't set up yet." });
-		const ip = req.headers.get("CF-Connecting-IP") || "?", now = Date.now(), list = (hits.get(ip) || []).filter((t) => now - t < 3600_000);
-		if (list.length >= PER_HOUR) return json(h, 429, { ok: false, error: "Too many reports in the last hour. Try again later." });
 		const len = +(req.headers.get("Content-Length") || 0);
 		if (len > MAX_BODY) return json(h, 413, { ok: false, error: "That report is too big. Try a smaller photo." });
 		let r;
 		try { const raw = await req.text(); if (raw.length > MAX_BODY) throw new Error("That report is too big. Try a smaller photo."); r = check(JSON.parse(raw)); }
 		catch (e) { return json(h, 400, { ok: false, error: e instanceof SyntaxError ? "That report couldn't be read." : e.message }); }
-		list.push(now); hits.set(ip, list);
-		try {
-			let photoPath = null;
-			if (r.photo) {
-				const d = new Date().toISOString();
-				photoPath = "photos/" + d.slice(0, 7) + "/" + d.replace(/[:.]/g, "-") + "-" + Math.random().toString(36).slice(2, 8) + ".jpg";
-				await gh(env, "/contents/" + photoPath, "PUT", { message: "Photo for a report from the app", content: r.photo });
-			}
-			const is = issueOf(r, photoPath, env.REPO);
-			const made = await gh(env, "/issues", "POST", { title: is.title, body: is.body });
-			return json(h, 200, { ok: true, issue: made.number });
-		} catch (e) {
-			return json(h, 502, { ok: false, error: "The report couldn't be saved just now (" + (e.status || "error") + "). It will be tried again." });
+		const ip = req.headers.get("CF-Connecting-IP") || "?";
+		const lim = await (await env.LIMITS.get(env.LIMITS.idFromName("all")).fetch("https://limits/", { method: "POST", body: JSON.stringify({ ip, photo: !!r.photo }) })).json();
+		if (!lim.ok) return json(h, 429, { ok: false, error: lim.error });
+		let made;
+		try { const is = issueOf(r, null, env.REPO); made = await gh(env, "/issues", "POST", { title: is.title, body: is.body }); }
+		catch (e) {
+			// A key that has run out or been changed, or GitHub busy: worth trying again later. Anything else won't work on a retry.
+			const again = e.status === 401 || e.status === 403 || e.status === 429 || !e.status || e.status >= 500;
+			return json(h, again ? 503 : 422, { ok: false, error: again ? "The report couldn't be saved just now. It will be tried again." : "The report couldn't be saved (" + e.status + ")." });
 		}
+		// The photo goes in after the issue exists, so a failed issue never leaves a stray photo behind.
+		let note = r.photo && !lim.photo ? "Photo not saved: today's photo limit was reached." : "";
+		if (r.photo && lim.photo) {
+			try {
+				const d = new Date().toISOString();
+				const photoPath = "photos/" + d.slice(0, 7) + "/issue-" + made.number + "-" + d.replace(/[:.]/g, "-") + ".jpg";
+				await gh(env, "/contents/" + photoPath, "PUT", { message: "Photo for issue #" + made.number, content: r.photo });
+				await gh(env, "/issues/" + made.number, "PATCH", { body: issueOf(r, photoPath, env.REPO).body });
+			} catch (e) { note = "The photo couldn't be saved."; }
+		}
+		return json(h, 200, { ok: true, issue: made.number, note });
 	},
 };

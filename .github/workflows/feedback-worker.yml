@@ -42,14 +42,21 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          FEEDBACK_GITHUB_TOKEN: ${{ secrets.FEEDBACK_GITHUB_TOKEN }}
         run: |
           out=$(npx --yes wrangler@3.114.0 deploy 2>&1) || { echo "$out"; echo "::error title=Feedback Worker::deploy failed"; exit 1; }
           echo "$out"
-          printf '%s' "$FEEDBACK_GITHUB_TOKEN" | npx --yes wrangler@3.114.0 secret put GITHUB_TOKEN >/dev/null
           url=$(echo "$out" | grep -oE 'https://[a-z0-9.-]+\.workers\.dev' | head -1)
           echo "::notice title=Feedback Worker address::$url"
           echo "url=$url" >> "$GITHUB_OUTPUT"
+      # The GitHub token is only given to this one step, and only on stdin.
+      - name: Give the Worker its GitHub token
+        if: steps.ready.outputs.ok == '1'
+        working-directory: tools/feedback-worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          FEEDBACK_GITHUB_TOKEN: ${{ secrets.FEEDBACK_GITHUB_TOKEN }}
+        run: printf '%s' "$FEEDBACK_GITHUB_TOKEN" | npx --yes wrangler@3.114.0 secret put GITHUB_TOKEN >/dev/null
       - name: The Worker answers
         if: steps.ready.outputs.ok == '1'
         run: |
