@@ -792,6 +792,20 @@ async function page(browser, width, opts = {}) {
     check("accent text (headings, links, focus ring) is at least 4.5:1, even with a pale or dark accent", s.every(x => x.act >= 4.5), s);
     s = await q.evaluate(() => { const sb = document.getElementById("scanbox"), ck = document.getElementById("chkBar");
       return { smsg: document.getElementById("smsg").getAttribute("role"), order: !!(ck.compareDocumentPosition(sb) & Node.DOCUMENT_POSITION_FOLLOWING), lang: document.documentElement.lang, flash: getComputedStyle(document.getElementById("flash")).pointerEvents }; });
+    // LPNs in the log can be edited with the keyboard, and Undo shows where it can be seen on a phone.
+    await q.evaluate(() => { rows = [{ lpn: "VLT004037790", type: "BB", fsdu: false }, { lpn: "QUB001899186", type: "FPP", fsdu: false }]; save(); render(); window.scrollTo(0, 0); });
+    await q.focus("#body .lpnedit"); await q.keyboard.press("Enter"); await q.waitForTimeout(50);
+    await q.keyboard.type("VLT004037791"); await q.keyboard.press("Enter"); await q.waitForTimeout(100);
+    let u = await q.evaluate(() => { const bar = document.getElementById("undoBar").getBoundingClientRect(), dock = document.querySelector(".entry").getBoundingClientRect();
+      return { lpns: rows.map(r => r.lpn).join(), name: document.querySelector("#body .lpnedit").getAttribute("aria-label"), shown: !document.getElementById("undoBar").hidden, onScreen: bar.top >= 0 && bar.bottom <= dock.top, text: document.getElementById("undoTxt").textContent }; });
+    check("an LPN in the log can be edited with the keyboard (it's a button named for the LPN)", /^VLT004037791,/.test(u.lpns) && /^Edit LPN /.test(u.name), u);
+    check("on a phone, Undo shows on screen just above the entry bar", u.shown && u.onScreen && /Changed VLT004037790 to VLT004037791/.test(u.text), u);
+    await q.click("#undoBtn"); u = await q.evaluate(() => rows[0].lpn);
+    check("Undo from there puts the LPN back", u === "VLT004037790", u);
+    u = await q.evaluate(() => { document.getElementById("expBtn").click(); return !document.getElementById("expMenu").hidden; });
+    await q.keyboard.press("Escape");
+    u = { opened: u, closed: await q.evaluate(() => document.getElementById("expMenu").hidden && document.activeElement.id === "expBtn"), th: await q.evaluate(() => [...document.querySelectorAll("thead th")].pop().textContent) };
+    check("Escape closes the Export menu and goes back to its button; the remove column has a name", u.opened && u.closed && u.th === "Remove", u);
     check("Live scan messages are announced, the warning sits above the camera, the Added note can't block taps, page language en-GB", s.smsg === "status" && s.order && s.lang === "en-GB" && s.flash === "none", s);
     check("no script errors", q.errors.length === 0, q.errors);
     await q.ctx.close();

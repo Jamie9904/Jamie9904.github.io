@@ -453,7 +453,7 @@ function renderCmp(C){
   $("cmpSum").innerHTML="<span>On manifest: <b>"+man.length+"</b></span><span>✓ Matched: <b>"+cnt.ok+"</b></span><span>✗ Missing (report): <b>"+cnt.missing+"</b></span><span>⚠ On log only (book in): <b>"+cnt.book+"</b></span>";
   const box=$("cmpRes");box.hidden=false;box.innerHTML="";
   const mk=(title,cls,items,src,hint)=>{
-    const h=document.createElement("h4");h.className=cls;h.textContent=title+" ("+items.length+")";box.appendChild(h);
+    const h=document.createElement("h3");h.className=cls;h.textContent=title+" ("+items.length+")";box.appendChild(h);
     const note=document.createElement("div");note.className="note";note.style.margin="0 0 4px";note.textContent=items.length?hint:"None";box.appendChild(note);
     items.forEach(x=>{
       const row=document.createElement("div");row.className="ri";
@@ -702,6 +702,8 @@ $("prn").onclick=async()=>{
 };
 $("cmpExpBtn").onclick=()=>{const m=$("cmpExpMenu");m.hidden=!m.hidden;$("cmpExpBtn").setAttribute("aria-expanded",!m.hidden)};
 $("cmpExpMenu").addEventListener("click",e=>{if(e.target.closest("button")){$("cmpExpMenu").hidden=true;$("cmpExpBtn").setAttribute("aria-expanded","false")}});
+// Escape closes an open Export menu and puts focus back on its button.
+document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;[["expMenu","expBtn"],["cmpExpMenu","cmpExpBtn"]].forEach(([mn,bt])=>{if(!$(mn).hidden){$(mn).hidden=true;$(bt).setAttribute("aria-expanded","false");$(bt).focus()}})});
 $("cmpPrn").onclick=async()=>{
   const C=cmpData();if(!C)return;
   renderCmp(C);

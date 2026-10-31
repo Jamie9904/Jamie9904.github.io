@@ -79,7 +79,9 @@ function render(){
     shown++;
     const tr=document.createElement("tr");tr.dataset.t=r.type;
     const n=document.createElement("td");n.textContent=i+1;
-    const l=document.createElement("td");l.className="l";l.textContent=r.lpn;l.title="Tap to edit";
+    // The LPN is a button, so it can be edited with the keyboard and screen readers too, not only by tapping.
+    const l=document.createElement("td");l.className="l";
+    const eb=document.createElement("button");eb.type="button";eb.className="lpnedit";eb.textContent=r.lpn;eb.title="Tap to edit";eb.setAttribute("aria-label","Edit LPN "+r.lpn);l.appendChild(eb);
     l.onclick=()=>{
       if(l.querySelector("input"))return;
       const inp=document.createElement("input");inp.value=r.lpn;inp.setAttribute("autocapitalize","characters");inp.setAttribute("aria-label","Edit LPN");
@@ -97,6 +99,8 @@ function render(){
           showUndo("Changed "+old+" to "+v,()=>{r.lpn=old;save();render()});
         }
         render();
+        // Back on the edited LPN, so keyboard users don't lose their place.
+        const back=[...document.querySelectorAll("#body .lpnedit")].find(b=>b.textContent===r.lpn);if(back&&!ok)back.focus();
       };
       inp.onblur=()=>finish(true);
       inp.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();finish(true)}else if(e.key==="Escape"){finish(false)}};
@@ -220,11 +224,16 @@ function showDate(){
 $("chkSkip").onclick=()=>{hideCheck();$("lpn").focus()};
 $("chkAdd").onclick=()=>{const p=pendingAdd;hideCheck();if(p)addValue(p.v,{type:p.type,fsdu:p.fsdu});$("lpn").focus()};
 let undoTimer=null;
+/* On phones the Undo bar shows just above the entry bar (styles.css), where it can be seen. It stays 20 seconds,
+   and doesn't go while it has focus. */
 function showUndo(text,fn){
-  $("undoTxt").textContent=text;$("undoBar").hidden=false;
+  const bar=$("undoBar");
+  $("undoTxt").textContent=text;bar.hidden=false;
+  const fl=$("flash");if(fl)fl.hidden=true;
   clearTimeout(undoTimer);
-  $("undoBtn").onclick=()=>{clearTimeout(undoTimer);$("undoBar").hidden=true;fn()};
-  undoTimer=setTimeout(()=>{$("undoBar").hidden=true},9000);
+  const hide=()=>{if(bar.contains(document.activeElement)){undoTimer=setTimeout(hide,3000);return}bar.hidden=true};
+  $("undoBtn").onclick=()=>{clearTimeout(undoTimer);bar.hidden=true;fn()};
+  undoTimer=setTimeout(hide,20000);
 }
 /* Each library file's fingerprint (Subresource Integrity). The browser refuses a file that doesn't match, so a
    changed or tampered copy on a CDN can't run in the app. tests/sri.js checks these against the CDNs every week. */
