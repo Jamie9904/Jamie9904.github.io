@@ -165,7 +165,22 @@ The logo is redrawn on a white canvas as a JPEG (max 600px) and fitted inside th
 Tesseract reads photos, then `extractLpns()` only accepts `prefix + 8–12 characters` with at least six digits, repairs look-alike characters in the number part and re-reads each match from a cropped, enlarged region.
 
 - **Why:** manifests and printed logs are photographed in poor light; generic OCR output is too noisy. Restricting to known prefixes (presets) further cuts false matches.
-- **Trade-off:** letters in the prefix are not repaired, so users are always asked to check the numbers before comparing.
+- **Trade-off:** OCR can still misread, so users are always asked to check the numbers before comparing. Since build 35 a prefix letter read as a look-alike digit is mended only when other numbers on the same photo show the pattern (see below).
+
+## Photo clean-up against the local paper, sparse text mode and a per-page tidy-up (build 35)
+
+`prep()` compares each pixel with the paper around it instead of stretching the contrast of the whole page; Tesseract's main pass uses page segmentation mode 11 (sparse text); readings are taken with any prefix, tidied per photo by `tidyReads()`, and only then filtered by the prefix list in `photoLpns()`.
+
+- **Cause (from a user problem report):** the old `prep()` stretched contrast using the whole page's 1% and 99% grey levels. On pale, shaded manifest photos with no dark edge in shot, that stretch turned shade and paper grain into black specks: 3 of the user's 4 photos came out as junk (about 250 junk words).
+- **Why local background:** shade across a sheet changes the paper's grey from one side to the other, so one threshold for the whole page can't work. Comparing each pixel with the average of its area (cells about 1/20 of the page, blended between cell centres) and calling it ink below 0.85 × that keeps the text black and the paper white.
+- **Why worked out in JS:** shrinking and re-enlarging a canvas would get the blur from the browser, which scales differently in each browser and needs a second full-size image (memory on phones). The cell averages are computed directly, so the result is the same everywhere.
+- **Why mode 11:** the default page layout mode skipped whole parts of a manifest page broken up by ruled lines; sparse text finds every number. The close-up re-read of each word still uses mode 7 (single line).
+- **Why read with any prefix, then tidy, then filter:** a reading with a look-alike prefix (`VL1…`) would be thrown out by a prefix list of `VLT` before it could be mended. Tidying first means it is mended and kept, and only real other prefixes are reported as left out.
+- **Why vote per page:** numbers on one manifest page share a prefix and digit count. The most common shape per prefix (seen at least twice) is the evidence for mending a reading that doesn't fit. A number with nothing to compare against is kept as read.
+- **Why the first read is kept when both fit:** the close-up is cut from the black-and-white image, so it is not a better source when the first reading already fits.
+- **Why the extra-0 rule is narrow:** a real LPN can have a 0 after its prefix (`RUN0001830763`) and a prefix can contain an O (`LOT`). So a 0 is dropped only when the raw text had O, D or Q straight after the prefix, and never when the result would equal another number read on the same page.
+- **Checked:** offline, the app's `prep()` on the user's four photos with Tesseract 5 gave all 18 LPNs right (7 before), also with the photos at full camera size. The automatic checks use readings taken from those photos.
+- **Trade-off / not checked:** not tested on a real iPhone. Mending relies on at least two numbers of the same shape on a photo; a photo with one LPN, or a page mixing digit counts under one prefix, gets less help. Users still need to check the numbers.
 
 ## Per-file notes and naming numbers the prefix list left out
 

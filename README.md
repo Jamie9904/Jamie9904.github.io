@@ -16,7 +16,7 @@
 
 A goods-in web app for documenting pallet deliveries. Staff scan or type each pallet's LPN (licence plate number), tag its type (Brown Box, FMCG, FPP, Mixed) and whether it carries an FSDU, then export a print-ready Excel or PDF log. Every export notes which app version and build made it.
 
-It also checks a delivery against the supplier's manifest. Manifest numbers can come from photos (OCR), PDFs or typing, and while they are loaded the log counts them off live as pallets are scanned. Each photo or PDF read says how many LPNs it found, how many were new and which numbers the prefix list left out.
+It also checks a delivery against the supplier's manifest. Manifest numbers can come from photos (OCR), PDFs or typing, and while they are loaded the log counts them off live as pallets are scanned. Photos are cleaned up against the paper around each point and the numbers on each page are matched to each other to fix common misreads. Each photo or PDF read says how many LPNs it found, how many were new and which numbers the prefix list left out.
 
 - Runs entirely in the browser: no server, no accounts. Data stays on the device.
 - Installable on Android and iPhone as a home-screen app, and works offline after the first visit.
