@@ -743,16 +743,17 @@ async function page(browser, width, opts = {}) {
       const tr = st.getVideoTracks()[0]; window.__torch = []; tr.getCapabilities = () => ({ torch: true }); tr.applyConstraints = async c => { window.__torch.push(c.advanced[0].torch); };
       if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = async () => st;
       window.BarcodeDetector = class { async detect() { return window.__code ? [{ rawValue: window.__code }] : []; } }; };
-    for (const [w, h] of [[360, 640], [375, 667], [390, 844]]) {
+    for (const [w, h, big] of [[360, 640], [375, 667], [390, 844], [360, 640, 1], [375, 667, 1]]) {
       const q = await page(browser, w, { init: cam });
       await q.setViewportSize({ width: w, height: h });
       await q.goto(URL0); await q.waitForTimeout(300);
+      if (big) { await q.evaluate(() => { cfg.size = "1.25"; applyCfg(); }); await q.waitForTimeout(150); }
       await q.evaluate(() => { document.getElementById("scanBtn").click(); document.getElementById("scan").click(); });
       await q.waitForTimeout(500); await q.evaluate(() => { window.__code = "VLT004040265"; }); await q.waitForTimeout(700);
       const s = await q.evaluate(() => { const b = id => document.getElementById(id).getBoundingClientRect();
         return { stop: Math.round(b("stopscan").bottom), msg: Math.round(b("smsg").bottom), torch: Math.round(b("torch").bottom), torchR: Math.round(b("torch").right), vw: innerWidth, vh: innerHeight, text: document.getElementById("smsg").textContent }; });
-      check("Live scan at " + w + "×" + h + ": the Added line, Torch and Stop scanning are on screen", /^Added: VLT004040265/.test(s.text) && s.stop <= s.vh && s.msg <= s.vh && s.torch <= s.vh && s.torchR <= s.vw, s);
-      if (w === 360) {
+      check("Live scan at " + w + "×" + h + (big ? " with Extra large text" : "") + ": the Added line, Torch and Stop scanning are on screen", /^Added: VLT004040265/.test(s.text) && s.stop <= s.vh && s.msg <= s.vh && s.torch <= s.vh && s.torchR <= s.vw, s);
+      if (w === 360 && !big) {
         await q.evaluate(() => document.getElementById("torch").click()); await q.waitForTimeout(50);
         let t = await q.evaluate(() => ({ calls: window.__torch.slice(), pressed: document.getElementById("torch").getAttribute("aria-pressed") }));
         await q.evaluate(() => document.getElementById("torch").click()); await q.waitForTimeout(50);

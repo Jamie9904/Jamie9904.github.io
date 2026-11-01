@@ -226,7 +226,7 @@ function sealIssue(){
   if(a.length!==b.length)return "Seal in has "+a.length+" characters and seal out has "+b.length+". Check neither is mistyped.";
   return "";
 }
-function sealHint(live){const w=$("sealWarn");if(!w)return;const t=sealIssue();if(live&&t&&w.textContent!==t){w.textContent="";return}w.textContent=t}
+function sealHint(live){const w=$("sealWarn");if(!w)return;const t=sealIssue();if(live&&t&&w.textContent!==t){if(w.textContent)w.textContent="";return}if(w.textContent!==t)w.textContent=t}
 function updateDel(){
   const card=$("delCard");if(!card)return;
   if(!rows.length)delCollapsed=false;
