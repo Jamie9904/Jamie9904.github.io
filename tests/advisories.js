@@ -1,7 +1,7 @@
 /*
   Security advisories for the libraries the app loads from CDNs.
   Asks the OSV database (osv.dev, which includes GitHub's advisories) about the exact versions pinned in
-  package.json, which a check in tests/run.js keeps equal to the versions the app loads.
+  package.json, which a check in tests/groups/06-real-export.js keeps equal to the versions the app loads.
   - A new HIGH or CRITICAL advisory fails the run (GitHub then emails a failure notice).
   - Other new advisories are warnings.
   - Advisories listed in tests/advisories-accepted.json, with the reason they don't affect the app, are notes.

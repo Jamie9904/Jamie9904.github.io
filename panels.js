@@ -18,7 +18,7 @@ const HELP={guide:`
 <li>Scan or type the LPN and press <b>Add</b> (or Enter).</li>
 </ol>
 <p>An “Added” message confirms each pallet, and ↶ removes the last one. A repeated or odd-looking LPN gives a warning with <b>Skip</b> or <b>Add anyway</b> (warnings can be turned off in Settings).</p>
-<p><b>Changing the log:</b> tap an LPN to correct it, change its type or FSDU in the table, or remove it with ✕. Every change can be undone.</p>
+<p><b>Changing the log:</b> tap an LPN to correct it, change its type or FSDU in the table, or remove it with ✕. An <b>Undo</b> bar appears after removing, editing an LPN or Clear all.</p>
 <p><b>Damaged pallet:</b> tap the LPN, then choose Crushed, Wet or Other (type what’s wrong). It shows in red and goes on the exports. None removes it.</p>
 <p>Search and the filters find pallets; the totals always count the whole log, with FSDUs counted separately.</p>
 <h3>4. Scanning barcodes</h3>
@@ -26,7 +26,7 @@ const HELP={guide:`
 <ul>
 <li><b>Live scan:</b> the camera adds each barcode it sees. In a dark trailer, tap <b>Torch</b> (on phones that allow it; most iPhones don’t).</li>
 <li><b>Scan by photo:</b> a clear photo of the barcode, if Live scan doesn’t work.</li>
-<li><b>Handheld or Bluetooth scanner:</b> tap the LPN box and scan.</li>
+<li><b>Handheld or Bluetooth scanner:</b> tap the LPN box and scan. Not yet tested, so it may not work.</li>
 </ul>
 <p>Settings can ask you to confirm each scan before it’s logged.</p>
 <h3>5. Check against the manifest</h3>
@@ -38,10 +38,10 @@ const HELP={guide:`
 <li><b>Check results:</b> Missing (report it), On the log only (book it in) and Matched. <b>Fix</b> corrects a misread number. <b>Share missing list</b> sends the list as a message.</li>
 <li><b>Export</b> gives the comparison as Excel, Email PDF or Print, with a copy of the log added if <b>Include a copy of the log</b> is on in Settings.</li>
 </ul>
-<p><b>Prefix presets</b> limit which numbers are picked up from photos. If a photo finds numbers with a prefix that isn’t listed, one tap adds it.</p>
+<p><b>Prefix presets</b> limit which numbers are picked up from photos. If a photo finds numbers with a prefix that isn’t listed, one tap adds it. Start new delivery clears the manifest numbers.</p>
 <h3>6. Export</h3>
 <p>The <b>Export</b> menu has <b>Download (Excel)</b>, <b>Email PDF</b> and <b>Print</b>. Files have your logo, the delivery details, the numbered pallet list and the totals, fit A4, and are named with the date and trailer number. If the total doesn’t match the expected pallets, you get a reminder first.</p>
-<p><b>Email PDF</b> opens your phone’s share menu with the PDF attached. If it can’t, the file is saved for you to attach.</p>
+<p><b>Email PDF</b> opens your phone’s share menu with the PDF attached (if it says the file is ready, tap <b>Tap to share</b>). If it can’t, the file is saved for you to attach.</p>
 <h3>7. Saved deliveries and backups</h3>
 <p><b>Start new delivery</b> saves the log and clears the page, and asks you to export first if you haven’t. <b>Saved deliveries</b> keeps this week and last week (weeks start on Sunday): open, export, email or delete one, import an exported file, or <b>Find an LPN</b> to see which delivery holds it.</p>
 <p>Everything is stored on this phone only, so use <b>Back up now</b> (in Saved deliveries or Settings) now and then. <b>Restore backup</b> in Settings shows what a backup holds and saves a copy of your current data first.</p>
@@ -50,7 +50,7 @@ const HELP={guide:`
 <li><b>Android (Chrome):</b> tap the ⋮ menu, then <b>Install app</b> or <b>Add to Home screen</b>.</li>
 <li><b>iPhone (Safari):</b> tap <b>Share</b>, then <b>Add to Home Screen</b>.</li>
 <li><button id="showInstall">Show the install pop-up again</button></li>
-<li>It works offline once opened online. Export once while online so Excel and PDF work offline too. When an update is ready, tap <b>Refresh</b> on the banner.</li>
+<li>It works offline once opened online. Use Download (Excel), Email PDF and the Manifest check once while online so they work offline too. When an update is ready, tap <b>Refresh</b> on the banner.</li>
 </ul>
 <h3>9. Settings and good to know</h3>
 <ul>
