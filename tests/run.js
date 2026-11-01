@@ -12,7 +12,7 @@ const path = require("path");
 const { chromium } = require("playwright");
 
 const ROOT = path.resolve(__dirname, "..");
-const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json",
+const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".json": "application/json",
   ".png": "image/png", ".woff2": "font/woff2", ".webmanifest": "application/manifest+json", ".txt": "text/plain", ".md": "text/plain" };
 
 function serve() {
@@ -849,6 +849,13 @@ async function page(browser, width, opts = {}) {
     check("feedback Worker: a problem becomes an issue in the private repo", r.status === 200 && j.ok && j.issue === 7 && iss && iss.u === "https://api.github.com/repos/Jamie9904/lpn-feedback/issues" && iss.auth === "Bearer test-token" && /^Problem: Photo 3 read nothing/.test(iss.b.title) && /\(LPN Pallet Log v3\.30 \(build 43\)\)/.test(iss.b.body), { j, iss });
     check("feedback Worker: the typed text and report are shown as plain text (no links or mentions)", /~~~~text\nPhoto 3 read nothing\n@someone see \[link\]\(http:\/\/x\)\n~~~~/.test(iss.b.body) && /<details><summary>Problem report<\/summary>/.test(iss.b.body), iss.b.body);
     calls.length = 0;
+    r = await send({ kind: "problem", text: "Torch didn't work", name: "  Sam   @boss [x](http://y)  " }, undefined, "3.3.3.3"); j = await r.json();
+    const nb = calls[0] && calls[0].b.body;
+    check("feedback Worker: the sender's name is shown in its own plain-text block (no links or mentions)", j.ok && /From:\n\n~~~~text\nSam @boss \[x\]\(http:\/\/y\)\n~~~~/.test(nb) && !/^From:.*@boss/m.test(nb), nb);
+    calls.length = 0;
+    r = await send({ kind: "problem", text: "No name" }, undefined, "3.3.3.4"); j = await r.json();
+    check("feedback Worker: no name, no From line", j.ok && !/From:/.test(calls[0].b.body), calls[0].b.body.slice(0, 120));
+    calls.length = 0;
     r = await send({ kind: "idea", text: "Bigger buttons", app: "v3.30 https://evil.example @someone", photo: JPEG }, undefined, "2.2.2.2"); j = await r.json();
     const order = calls.map(c => c.m + " " + c.u.replace("https://api.github.com/repos/Jamie9904/lpn-feedback", "")), patch = calls.find(c => c.m === "PATCH");
     check("feedback Worker: the issue is made first, then the photo saved and shown in it", j.ok && order.length === 3 && order[0] === "POST /issues" && /^PUT \/contents\/photos\/\d{4}-\d{2}\/issue-7-.+\.jpg$/.test(order[1]) && order[2] === "PATCH /issues/7" && /!\[photo\]\(https:\/\/github\.com\/Jamie9904\/lpn-feedback\/blob\/HEAD\/photos\//.test(patch.b.body), order);
@@ -910,8 +917,10 @@ async function page(browser, width, opts = {}) {
     s = await q.evaluate(async () => {
       FEEDBACK_URL = "https://lpn-feedback.test.workers.dev/report"; const sent = []; const real = window.fetch;
       window.fetch = async (u, o) => { sent.push({ u, b: JSON.parse(o.body) }); return new Response(JSON.stringify({ ok: true, issue: 3 }), { status: 200 }); };
-      document.querySelector('input[name="fbKind"][value="idea"]').checked = true; document.getElementById("fbText").value = "Bigger buttons please";
+      document.querySelector('input[name="fbKind"][value="idea"]').checked = true; document.getElementById("fbText").value = "Bigger buttons please"; document.getElementById("fbName").value = "  Sam   Jones ";
       await document.getElementById("fbSend").onclick();
+      const named = { name: sent[0] && sent[0].b.name, kept: localStorage.getItem("lpnfbname") };
+      document.getElementById("fbName").value = "";
       const ok = { n: sent.length, u: sent[0] && sent[0].u, kind: sent[0] && sent[0].b.kind, text: sent[0] && sent[0].b.text, report: sent[0] && /LPN Pallet Log problem report/.test(sent[0].b.report), app: sent[0] && sent[0].b.app, msg: document.getElementById("fbMsg").textContent, cleared: document.getElementById("fbText").value === "" };
       // No signal: kept on the phone, then sent when back online.
       window.fetch = async () => { throw new TypeError("Failed to fetch"); };
@@ -934,9 +943,18 @@ async function page(browser, width, opts = {}) {
       document.getElementById("fbText").value = "x"; await document.getElementById("fbSend").onclick();
       const refused = { msg: document.getElementById("fbMsg").textContent, queued: fbQueue().length };
       window.fetch = real; FEEDBACK_URL = "";
-      return { ok, off, after, refused, race, big, six };
+      const noName = sent.filter(x => x.b.text === "Scanner froze").every(x => !("name" in x.b));
+      return { ok, off, after, refused, race, big, six, named, noName };
     });
     check("sending an idea posts the kind, text, app version and problem report, then clears the form", s.ok.n === 1 && s.ok.u === "https://lpn-feedback.test.workers.dev/report" && s.ok.kind === "idea" && s.ok.text === "Bigger buttons please" && s.ok.report && /^LPN Pallet Log/.test(s.ok.app) && /Sent\. Thank you/.test(s.ok.msg) && s.ok.cleared, s.ok);
+    {
+      await q.setViewportSize({ width: 360, height: 640 });
+      const fit = await q.evaluate(async () => { cfg.size = "1.25"; applyCfg(); openFeedback({}); await new Promise(r => setTimeout(r, 150));
+        const b = document.getElementById("fbSend").getBoundingClientRect(), out = { send: Math.round(b.bottom), vh: innerHeight }; closeFeedback(); cfg.size = "1"; applyCfg(); return out; });
+      check("on a 360×640 phone with Extra large text, Send in the report box is on screen without scrolling", fit.send <= fit.vh, fit);
+      await q.setViewportSize({ width: 390, height: 844 });
+    }
+    check("the optional name is sent tidied and remembered on this phone; left blank, no name is sent", s.named.name === "Sam Jones" && s.named.kept === "Sam Jones" && s.noName, { named: s.named, noName: s.noName });
     check("with no signal, a report is kept on the phone (without the report when unticked) and sent when back online", /saved on this phone/.test(s.off.msg) && s.off.queued === 1 && s.off.report === "" && s.after.flushed === 1 && s.after.left === 0 && s.after.last === "Scanner froze" && s.after.stored === null, s);
     check("a report saved while saved ones are being sent isn't lost: it's sent too", s.race.left === 0 && s.race.sent.includes("Scanner froze") && s.race.sent.includes("Added during the flush"), s.race);
     check("the waiting list refuses to grow past 5 reports or 300 KB", s.big === false && s.six === false, s);
@@ -1162,11 +1180,57 @@ async function page(browser, width, opts = {}) {
     const want = "Manifest check 01/11/2026, trailer TR4471\nMissing from the log (2): RBY006292169, RBY006292211\nOn the log only, to book in (1): QUB001899182\nMatched: 2 of 4 on the manifest";
     check("Share missing list sends the missing and extra LPNs as plain text through the share menu", s.shared && s.shared.text === want, s.shared);
     check("without a share menu, the list is copied and the message says so", s.copied === want && /copied/.test(s.msg), s);
+    // Share this app (Settings) and Your data and privacy (Guide).
+    s = await q.evaluate(async () => { document.getElementById("btnSet").click(); await new Promise(r => setTimeout(r, 200));
+      const img = document.querySelector("#panelBody .shareqr"); await new Promise(r => { if (img.complete) r(); else img.onload = img.onerror = r; });
+      let shared = null; navigator.share = async o => { shared = o; }; await document.getElementById("shareApp").onclick();
+      let copied = null; navigator.share = undefined; navigator.clipboard.writeText = async t => { copied = t; }; await document.getElementById("shareApp").onclick();
+      const r = img.getBoundingClientRect();
+      const out = { loaded: img.naturalWidth > 0, alt: img.alt, w: Math.round(r.width), right: Math.round(r.right), vw: innerWidth, url: shared && shared.url, copied, msg: document.getElementById("shareMsg").textContent };
+      closeHelp(); document.getElementById("btnGuide").click(); await new Promise(r => setTimeout(r, 200));
+      const pv = document.getElementById("g10"); out.privacy = pv ? pv.textContent : null; out.toc = !!document.querySelector('.guidetoc a[data-g="g10"]');
+      out.text = pv ? pv.nextElementSibling.textContent : ""; closeHelp(); return out; });
+    check("Settings has Share this app: a QR code that loads, and Send the link shares or copies the app's address", s.loaded && /QR code/.test(s.alt) && s.w === 180 && s.right <= s.vw && s.url === "https://jamie9904.github.io/" && s.copied === "https://jamie9904.github.io/" && /copied/.test(s.msg), s);
+    check("the Guide has a Your data and privacy section, in its contents, saying what a report sends", /Your data and privacy/.test(s.privacy || "") && s.toc && /only thing that leaves the phone/.test(s.text) && /only Jamie/.test(s.text), { p: s.privacy, toc: s.toc });
     // Desktop: a long note wraps instead of pushing FSDU and ✕ out of view.
     await q.setViewportSize({ width: 1300, height: 900 }); await q.waitForTimeout(150);
     s = await q.evaluate(() => { cfg.size = "1.25"; applyCfg(); rows[0].dmg = "Corner crushed and wrap split along one whole side x"; render();
       const t = document.querySelector("#body").closest("table"), w = t.parentElement; const r = { table: Math.round(t.scrollWidth), box: Math.round(w.clientWidth) }; cfg.size = "1"; applyCfg(); return r; });
     check("on desktop with Extra large text, a long damage note wraps and the table still fits", s.table <= s.box, s);
+    check("no script errors", q.errors.length === 0, q.errors);
+    await q.ctx.close();
+  }
+
+  {
+    console.log("Welcome and what's new");
+    // First visit: nothing of the app's stored yet.
+    let q = await page(browser, 360, { init: () => { if (!sessionStorage.getItem("again")) { localStorage.clear(); sessionStorage.setItem("again", "1"); } } });
+    await q.setViewportSize({ width: 360, height: 740 });
+    await q.goto(URL0); await q.waitForTimeout(500);
+    let s = await q.evaluate(() => { const h = document.getElementById("hello"), r = h.getBoundingClientRect(); return { shown: !h.hidden, text: h.textContent, right: Math.round(r.right), vw: innerWidth }; });
+    check("on the first visit a card offers the demo video, and fits a 360 px phone", s.shown && /New here\? The 47-second demo video/.test(s.text) && s.right <= s.vw, s);
+    await q.evaluate(() => { if (typeof closeInstall === "function") closeInstall(); [...document.querySelectorAll("#helloBtns button")].find(b => b.textContent === "Watch the demo").click(); });
+    await q.waitForTimeout(300);
+    s = await q.evaluate(() => ({ panel: !document.getElementById("panel").hidden, title: document.getElementById("panelTitle").textContent, playing: !!document.getElementById("demoVid") && !document.getElementById("demoVid").hidden, card: !document.getElementById("hello").hidden, saved: localStorage.getItem("lpnwelcome") }));
+    check("Watch the demo opens the Guide and starts the video; the card goes and isn't shown again", s.panel && /How to use/.test(s.title) && s.playing && !s.card && s.saved === "1", s);
+    await q.reload(); await q.waitForTimeout(400);
+    s = await q.evaluate(() => !document.getElementById("hello").hidden);
+    check("after answering, the welcome card doesn't come back", s === false, s);
+    check("no script errors", q.errors.length === 0, q.errors);
+    await q.ctx.close();
+    // After an update: the newest changelog line, once.
+    q = await page(browser, 375, { init: () => { if (!sessionStorage.getItem("again")) { localStorage.setItem("lpnseenbuild", "1"); localStorage.setItem("lpnlog", JSON.stringify({ rows: [] })); sessionStorage.setItem("again", "1"); } } });
+    await q.goto(URL0); await q.waitForTimeout(600);
+    s = await q.evaluate(() => { const h = document.getElementById("hello"), first = (HELP.log.match(/<li>([\s\S]*?)<\/li>/) || [])[1].replace(/<[^>]+>/g, "").slice(0, 30); return { shown: !h.hidden, text: document.getElementById("helloTxt").textContent, first, seen: localStorage.getItem("lpnseenbuild") }; });
+    const build = await q.evaluate(() => appBuildP);
+    check("after an update, a card shows the newest changelog line, and the build is remembered", s.shown && s.text.startsWith("Updated. " + s.first) && s.seen === build && +build > 1, { s, build });
+    await q.evaluate(() => [...document.querySelectorAll("#helloBtns button")].find(b => /See what/.test(b.textContent)).click()); await q.waitForTimeout(200);
+    s = await q.evaluate(() => ({ title: document.getElementById("panelTitle").textContent, card: !document.getElementById("hello").hidden, inert: document.getElementById("hello").inert }));
+    await q.evaluate(() => closeHelp()); await q.waitForTimeout(100);
+    s.back = await q.evaluate(() => document.activeElement.id);
+    check("while a panel is open the card can't be reached, and closing it puts focus back on a button that stays", s.inert === true && s.back === "btnGuide", s); await q.reload(); await q.waitForTimeout(500);
+    const again = await q.evaluate(() => !document.getElementById("hello").hidden);
+    check("See what's new opens the Changelog, and the card isn't shown again for the same build", s.title === "Changelog" && !s.card && again === false, { s, again });
     check("no script errors", q.errors.length === 0, q.errors);
     await q.ctx.close();
   }

@@ -1,3 +1,5 @@
+/* First time on this phone: nothing of the app's is stored yet (checked before anything is saved). */
+const FIRST_OPEN=(()=>{try{for(let i=0;i<localStorage.length;i++){if(/^lpn/.test(localStorage.key(i)))return false}return true}catch(e){return false}})();
 /* Problem log: the last 300 notable events (manifest reads, script errors) kept on this device, so a problem
    report can be downloaded from Settings and sent for troubleshooting. It only leaves the device when attached to a report the user sends (Settings > Report a problem or idea). */
 function diag(kind,msg){

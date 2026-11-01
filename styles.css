@@ -398,3 +398,17 @@ tr.dmg td.l{box-shadow:inset 3px 0 0 var(--dg)}
 .dmgother{display:flex;gap:6px;flex:1 1 220px;min-width:0}
 .dmgother[hidden]{display:none}
 .dmgother input{flex:1;min-width:0}
+/* Share this app: the QR code keeps its own white background in every theme so phones can read it. */
+.shareqr{display:block;width:180px;height:180px;margin:6px 0;border-radius:var(--r);image-rendering:pixelated}
+.shareurl{font:600 .98rem "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;overflow-wrap:anywhere;margin:4px 0 8px}
+/* Send and Close stay pinned to the bottom of the report box, so they are on screen however tall the form is
+   (big text, the name field, a short phone or the keyboard open). */
+#fbBox .fbfoot #fbMsg{flex-basis:100%;margin:0}
+#fbBox .fbfoot{position:sticky;bottom:-20px;margin:10px -20px -20px;padding:10px 20px 20px;background:var(--paper);border-top:1px solid var(--line);z-index:1}
+@media (max-height:700px){#fbBox textarea{min-height:76px}}
+/* The welcome and what's-new card at the top of the page. */
+.hello{max-width:720px;margin:10px auto;box-sizing:border-box;padding:12px 14px;border:2px solid var(--ac);border-radius:var(--r);background:var(--sel)}
+.hello p{margin:0 0 8px;font-weight:700}
+.hello .row button{min-height:44px}
+@media (max-width:759px){.hello{margin:10px 12px}}
+@media (min-width:1100px){.hello{max-width:1180px}}

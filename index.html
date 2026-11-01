@@ -34,6 +34,7 @@
   </aside>
 </header>
 <div class="undo off" id="offBar" hidden role="status"><span>You’re offline. Logging still works. Exports, barcode scanning and photo reading only work offline if you’ve already used them on this device.</span></div>
+<div class="hello" id="hello" role="region" aria-label="Welcome and updates" hidden><p id="helloTxt"></p><div class="row" id="helloBtns"></div></div>
 <main>
 
 <div class="card" id="delCard">
@@ -166,10 +167,11 @@
   <fieldset class="fbkind"><legend class="sr">Type of report</legend><label class="chk"><input type="radio" name="fbKind" value="problem" checked><span>Problem</span></label><label class="chk"><input type="radio" name="fbKind" value="idea"><span>Idea</span></label></fieldset>
   <label for="fbText">What happened, or what would help?</label>
   <textarea id="fbText" rows="4" maxlength="4000" style="width:100%"></textarea>
+  <label for="fbName" style="margin-top:8px">Your name (optional)</label>
+  <input id="fbName" maxlength="60" autocomplete="name" spellcheck="false" style="width:100%">
   <div class="row" style="margin-top:8px;align-items:center"><button type="button" id="fbPhotoBtn">Add a photo</button><button type="button" class="d" id="fbPhotoRm" hidden>Remove photo</button><span class="note" id="fbPhotoName" style="margin:0"></span><input type="file" id="fbPhoto" accept="image/*" hidden></div>
   <label class="chk"><input type="checkbox" id="fbInc" checked><span>Attach the problem report</span></label>
-  <div class="row" style="margin-top:10px"><button class="p" id="fbSend">Send</button><button id="fbClose">Close</button></div>
-  <div class="msg" id="fbMsg" role="status" aria-live="polite"></div>
+  <div class="row fbfoot"><button class="p" id="fbSend">Send</button><button id="fbClose">Close</button><div class="msg" id="fbMsg" role="status" aria-live="polite"></div></div>
 </section>
 <div id="instShade" hidden></div>
 <section id="instBox" role="dialog" aria-modal="true" aria-labelledby="instTitle" hidden>

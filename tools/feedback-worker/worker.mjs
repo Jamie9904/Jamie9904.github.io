@@ -9,6 +9,7 @@
     text     what happened (1 to 4000 characters)
     report   the app's problem report as plain text (optional, up to 60 000 characters)
     app      app version line, e.g. "LPN Pallet Log v3.30 (build 43)" (optional)
+    name     the sender's name, if they typed one (optional, up to 60 characters)
     photo    a JPEG as a data: URL (optional, up to about 1.5 MB)
     website  must be empty (a hidden field that only spam robots fill in)
   Answers {ok:true, issue:<number>} or {ok:false, error:"..."} with a plain message.
@@ -67,6 +68,7 @@ export function check(o) {
 	if (text.length > MAX_TEXT) throw new Error("That's too long: keep it under " + MAX_TEXT + " characters.");
 	const report = typeof o.report === "string" ? o.report.slice(0, MAX_REPORT) : "";
 	// Only the app's own version line is shown, so nothing else can add links or mentions outside the text block.
+	const name = typeof o.name === "string" ? o.name.replace(/\s+/g, " ").trim().slice(0, 60) : "";
 	const app = typeof o.app === "string" && /^LPN Pallet Log( v[\d.]+)?( \(build \d+\))?$/.test(o.app) ? o.app : "";
 	let photo = null;
 	if (o.photo != null && o.photo !== "") {
@@ -75,7 +77,7 @@ export function check(o) {
 		if (m[1].length / 4 * 3 - (m[1].match(/=*$/)[0].length) > MAX_PHOTO) throw new Error("The photo is too big.");
 		photo = m[1];
 	}
-	return { kind, text, report, app, photo };
+	return { kind, text, report, app, photo, name };
 }
 
 /** The issue's title and body. */
@@ -83,6 +85,8 @@ export function issueOf(r, photoPath, repo) {
 	const first = r.text.split("\n")[0].replace(/\s+/g, " ").slice(0, 70);
 	const title = (r.kind === "idea" ? "Idea: " : "Problem: ") + first + (r.text.length > first.length ? "…" : "");
 	const parts = ["**" + (r.kind === "idea" ? "Idea" : "Problem") + "** sent from the app" + (r.app ? " (" + r.app + ")" : "") + ".", "", block(r.text)];
+	// The name is shown as typed, in its own plain-text block, so it can't add links or mentions.
+	if (r.name) parts.push("", "From:", "", block(r.name));
 	if (photoPath) parts.push("", "Photo: [" + photoPath + "](https://github.com/" + repo + "/blob/HEAD/" + photoPath + ")", "", "![photo](https://github.com/" + repo + "/blob/HEAD/" + photoPath + "?raw=true)");
 	if (r.report) parts.push("", "<details><summary>Problem report</summary>", "", block(r.report), "", "</details>");
 	return { title, body: parts.join("\n") };
