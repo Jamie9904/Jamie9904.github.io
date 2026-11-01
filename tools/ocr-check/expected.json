@@ -1,5 +1,5 @@
 {
- "_about": "Manifest photos sent by the user on 31 Oct 2026 (address boxes cut off) and the LPNs printed on each. Add a photo by putting it in photos/ and its LPNs here. run-sideways.jpg is run.jpg turned on its side, to check sideways photos are turned and read.",
+ "_about": "Manifest photos sent by the user on 31 Oct 2026 (address boxes cut off) and the LPNs printed on each. Add a photo by putting it in photos/ and its LPNs here. run-sideways.jpg is run.jpg turned on its side, to check sideways photos are turned and read. rby-upside-down.jpg is rby.jpg turned upside down.",
  "rby.jpg": [
   "RBY006292169",
   "RBY006292211"
@@ -30,5 +30,9 @@
   "RUN001832813",
   "RUN001832816",
   "RUN001832832"
+ ],
+ "rby-upside-down.jpg": [
+  "RBY006292169",
+  "RBY006292211"
  ]
 }
