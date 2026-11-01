@@ -118,19 +118,19 @@ The problem log (see [Problem report](#problem-report)) is never put in a backup
 
 ## Report a problem or idea
 
-**Settings → Report a problem or idea** (also opened from the Guide's **Report a problem or idea** link in section 9, which opens Settings at the form with the cursor in the text box):
+Since build 44 the form is a box in the middle of the screen. Open it with the **Report** button (speech-bubble icon) at the top of the page: at the right of the title row on phones, just before **Guide** on desktop. **Settings → Report a problem or idea** and the Guide's **Report a problem or idea** link in section 9 open the same box on top of the panel, which stays open behind it. The cursor goes into the text box. **Close**, **Escape** or tapping outside the box closes it and puts you back where you were (in the Guide or Settings if you came from there).
 
 1. Choose **Problem** or **Idea**.
 2. Type what happened or what would help (up to 4000 characters).
 3. Optional: **Add a photo**. It is made smaller before sending (at most 1600px along the long side, as a JPEG) and the note shows its size, for example "Photo added (240 KB)". **Change photo** and **Remove photo** appear once one is added.
-4. **Attach the problem report (recent actions on this phone, with the LPNs involved)** is ticked by default; untick it to send only the text and photo.
-5. Tap **Send**. "Sent. Thank you!" means it has arrived.
+4. **Attach the problem report** is ticked by default; untick it to send only the text and photo. The problem report holds the recent actions on this phone, with the LPNs involved (see [Problem report](#problem-report)).
+5. Tap **Send**. "Sent. Thank you!" means it has arrived; the box closes by itself 1.5 seconds later.
 
-A note on the form says reports go to Jamie's private GitHub, through a Cloudflare server, and that the problem report includes the LPNs and manifest numbers on the phone, file names, the start of text read from photos, and the browser and screen size.
+Reports go to Jamie's private GitHub repository through a Cloudflare server. The problem report includes the LPNs and manifest numbers on the phone, file names, the start of text read from photos, and the browser and screen size. Since build 44 the box itself no longer says where reports go (the user's choice); it starts with "Tell Jamie what went wrong or what would help. With no signal, it’s kept on this phone and sent when you’re back online."
 
 **Not set up yet.** The reporting server is online (since build 43). If the app's reporting address is ever empty, **Send** says "Reporting isn’t set up yet. Use Download problem report below and send the file to Jamie instead." (see [installation](installation.md#feedback-worker-report-a-problem-or-idea)).
 
-**No signal.** If the phone is offline, or the server is busy, the report is kept on the phone and sent when it is back online (when the browser reports it is online, and 4 seconds after the app opens). The message says "No signal or the server is busy: saved on this phone, and it will be sent when you’re back online." Photos are not kept: the message then adds that the photo should be sent again when there is signal. At most 5 reports (about 300 KB in all) can wait; past that it says there's no room and suggests trying again with signal or using Download problem report. When Settings opens with reports waiting, it says how many. A report the server refuses (for example too long) shows the server's reason and is not kept. Waiting reports belong to the phone: they are never put in a backup or taken from one.
+**No signal.** If the phone is offline, or the server is busy, the report is kept on the phone and sent when it is back online (when the browser reports it is online, and 4 seconds after the app opens). The message says "No signal or the server is busy: saved on this phone, and it will be sent when you’re back online." Photos are not kept: the message then adds that the photo should be sent again when there is signal. At most 5 reports (about 300 KB in all) can wait; past that it says there's no room and suggests trying again with signal or using Download problem report. When the box opens with reports waiting, it says how many ("2 reports are waiting to be sent when you’re back online."). A report the server refuses (for example too long) shows the server's reason and is not kept. Waiting reports belong to the phone: they are never put in a backup or taken from one.
 
 ## Problem report
 
@@ -221,4 +221,4 @@ Colours (two colours drive the whole theme, with a contrast warning; since build
 | The photo was not in a report sent later | Photos aren't kept while a report waits for signal. Send the photo again in a new report once online. |
 | "That photo couldn’t be read." | The browser couldn't open the image to make it smaller. Try another photo or a screenshot. |
 | The Undo bar covers a row in the Manifest check results on a phone | Known minor issue: with the Manifest check open, the Undo bar sits near the bottom of the screen for up to 20 seconds and can cover one results row. Wait for it to go, or scroll. |
-| Anything else that goes wrong | Use **Settings → Report a problem or idea** (with the problem report attached), or download the problem report straight away (**Settings → Problem report → Download problem report**) and send it with a description of what happened. |
+| Anything else that goes wrong | Use the **Report** button at the top of the page (or **Settings → Report a problem or idea**) (with the problem report attached), or download the problem report straight away (**Settings → Problem report → Download problem report**) and send it with a description of what happened. |

@@ -2,7 +2,7 @@
 
 ```
 .
-├── index.html               page markup: header, Delivery, Add a pallet, Pallet log, Manifest check, panels, banners
+├── index.html               page markup: header, Delivery, Add a pallet, Pallet log, Manifest check, panels, report box, install box, banners
 ├── styles.css               all CSS: theme tokens, components, phone/tablet/desktop layouts, print rules
 ├── core.js                  state, persistence, tidying of saved data, table, validation, add flow, undo, library loader and fingerprints (SRI), helpers
 ├── scan.js                  live and photo barcode scanning, wake lock, input wiring

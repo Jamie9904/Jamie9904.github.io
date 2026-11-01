@@ -468,10 +468,10 @@ The audit by the `a11y-reviewer` agent that led to build 41 also suggested chang
 
 ## Report a problem or idea through a Worker into a private repo (build 42)
 
-Staff can send a problem or idea from Settings; a Cloudflare Worker (`tools/feedback-worker`) turns it into an issue in the private repo `Jamie9904/lpn-feedback`.
+Staff can send a problem or idea from the **Report** button at the top of the page (since build 44), Settings or the Guide; a Cloudflare Worker (`tools/feedback-worker`) turns it into an issue in the private repo `Jamie9904/lpn-feedback`.
 
 - **Why a Worker:** the site is public, so it can't hold a GitHub key. The Worker holds a fine-grained token for that one repo only (Issues and Contents), stored as a Worker secret, and checks every report before using it.
-- **Why a private repo:** reports can include LPNs, manifest numbers and text read from supplier documents. The form says where reports go and what the problem report contains, and attaching it can be unticked. This changes the earlier stance in "Problem log kept on the device, sent by hand": the log still never leaves the device by itself, only when attached to a report the user sends.
+- **Why a private repo:** reports can include LPNs, manifest numbers and text read from supplier documents. Attaching the problem report can be unticked. (Until build 44 the form also said where reports go and what the problem report contains; see below.) This changes the earlier stance in "Problem log kept on the device, sent by hand": the log still never leaves the device by itself, only when attached to a report the user sends.
 - **Why limits in a Durable Object:** the Origin check only stops other websites, not scripts calling the Worker directly. One Durable Object keeps the counts for all of Cloudflare's servers (10 an hour per address, 50 reports and 20 photos a day), which is what actually limits spam.
 - **Why text in `~~~~` blocks and only the version line as `app`:** anything typed or read from a photo could otherwise add links, `@` mentions or formatting to the issue.
 - **Why JPEG only, shrunk in the app:** a 1600px JPEG is small enough to send on a weak signal and to store; checking the data starts like a JPEG stops other files being saved in the repo.
@@ -487,3 +487,13 @@ Staff can send a problem or idea from Settings; a Cloudflare Worker (`tools/feed
 ## Demo video not re-recorded for build 41
 
 Build 41's header buttons size to their text, so the demo fingerprint check (see "Demo video staleness" above) now warns that `#btnGuide` moved and changed size slightly. The change is small and the video still shows the same flow, so it was not re-recorded; the warning stays until the next recording updates `tools/demo-video/screens.json`.
+
+## Report button and report box (build 44)
+
+The report form moved out of Settings into a box in the middle of the screen, opened by a **Report** button at the top of the page, by **Settings → Report a problem or idea**, or by the Guide's link.
+
+- **Why a button at the top:** inside Settings the form was several taps away and easy to miss. A labelled button (icon and the word "Report", at least 44px) in the header is always one tap away, on phones at the right of the title row and on desktop before **Guide**.
+- **Why a box over the panel, not a jump to Settings:** opened from the Guide or Settings, the box sits on top and the panel stays where it was. The panel is made `inert` while the box is open, and Escape is caught first so it closes only the box; focus goes back to the button that opened it.
+- **Why it closes by itself:** after "Sent. Thank you!" there is nothing more to do, so the box closes 1.5 seconds later (only if that message is still showing).
+- **Wording (the user's decision):** the note about where reports go was removed from the box, and the tick box says just "Attach the problem report", without the explanation in brackets. The docs still describe what the problem report contains.
+- **Trade-off:** the box no longer tells staff before sending that the problem report includes LPNs, manifest numbers and text read from photos, or that it goes to a private GitHub repository through Cloudflare. The tick box can still be unticked.
