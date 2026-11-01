@@ -64,7 +64,7 @@ function torchSetup(s){
 $("torch").onclick=async()=>{
   if(!torchTrack)return;const want=!torchOn;
   try{await torchTrack.applyConstraints({advanced:[{torch:want}]});torchOn=want}
-  catch(e){diag("scan","Torch couldn't be switched: "+((e&&e.message)||"error"));$("smsg").textContent="The torch couldn't be switched on. Try more light, or Scan by photo.";return}
+  catch(e){diag("scan","Torch couldn't be switched: "+((e&&e.message)||"error"));$("smsg").textContent=want?"The torch couldn't be switched on. Try more light, or Scan by photo.":"The torch couldn't be switched off. Stop scanning to turn it off.";return}
   const b=$("torch");b.setAttribute("aria-pressed",String(torchOn));b.classList.toggle("on",torchOn);
 };
 function stopScan(keepMsg){
