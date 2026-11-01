@@ -29,7 +29,7 @@ Read the changed files in full where the diff alone isn't enough.
    - `getDel()`/`setDel()` carry any new delivery fields, so saved deliveries, undo and history exports keep them.
    - Nothing clears user data without Undo or a reminder.
 7. **Changelog and Guide.** `HELP.log` has a bullet for each user-facing change. `HELP.guide` describes new buttons or flows.
-8. **Tests.** New behaviour has a check in `tests/run.js`. Run `NODE_PATH=$(npm root -g) node tests/run.js` (or `npm test`) and report the result.
+8. **Tests.** New behaviour has a check in the matching `tests/groups/NN-*.js` file (`tests/run.js` runs them all; shared helpers are in `tests/lib.js`). Run `NODE_PATH=$(npm root -g) node tests/run.js` (or `npm test`) and report the result.
 9. **Docs separation.** No `docs/` files on main, and no merge of the docs branch.
 10. **Text.** Plain English and UK spelling in the user-facing wording, with no leftover debug code, `console.log` calls or test data.
 

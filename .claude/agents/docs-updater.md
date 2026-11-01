@@ -21,7 +21,7 @@ You keep the documentation on the `docs` branch of `Jamie9904/Jamie9904.github.i
    - `docs/usage.md`: flows, buttons, settings, common problems;
    - `docs/architecture.md`: data stored, functions, flows;
    - `docs/decisions.md`: new trade-offs;
-   - `docs/testing.md`: new checks in `tests/run.js`;
+   - `docs/testing.md`: new checks in `tests/groups/*.js` (run by `tests/run.js`);
    - `docs/installation.md` and `docs/structure.md`: if files or setup changed;
    - `README.md`: if the summary or the technologies changed.
 

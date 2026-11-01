@@ -36,7 +36,7 @@ readings of a failing photo (read them with the annotations API as `release-lpn`
    Note anything that adds seconds per photo on a phone.
 5. **Same in every browser.** Canvas resizing and smoothing differ between Chrome and Safari; work done in
    JavaScript is the same everywhere. Flag new reliance on how a browser resizes or filters a canvas.
-6. **Checks.** New behaviour needs a check in `tests/run.js` (see the `lpn-write-check` skill), with fixed data
+6. **Checks.** New behaviour needs a check in the matching `tests/groups/NN-*.js` file (see the `lpn-write-check` skill), with fixed data
    (no `Math.random()` without a seed). Readings that came from a real photo should be used as they were seen.
    A new tricky photo belongs in `tools/ocr-check/photos/` with its LPNs in `expected.json`, with any address,
    names or other details cut off first (the repository is public).

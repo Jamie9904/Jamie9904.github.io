@@ -10,7 +10,7 @@ Worker holds it and checks every report first. Not part of the site zip.
 - `wrangler.toml`: name, repo and the app's address.
 - `.github/workflows/feedback-worker.yml`: puts it online (by hand from the Actions tab, and when this folder
   changes on `main`) and checks it answers.
-- `tests/run.js` ("Feedback Worker") runs it with a stand-in for GitHub on every push.
+- `tests/groups/11-feedback-worker.js` runs it with a stand-in for GitHub on every push.
 
 ## One-time set-up (about 15 minutes)
 

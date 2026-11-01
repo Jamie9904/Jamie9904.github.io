@@ -12,7 +12,7 @@
            js: the app's real ocrLpns() with tesseract.js, exactly as on a phone. Needs cdn.jsdelivr.net and tessdata.
   Exit code 1 when any expected LPN is missing or anything extra is found.
 
-  tests/run.js uses score() and the js engine on GitHub, where the real photo reader can be downloaded.
+  tests/groups/18-real-photo.js uses score() and the js engine on GitHub, where the real photo reader can be downloaded.
 */
 const fs = require("fs"), path = require("path"), http = require("http"), os = require("os");
 const { execFileSync } = require("child_process");
