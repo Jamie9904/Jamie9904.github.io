@@ -1,56 +1,55 @@
 /* ---- help panel ---- */
-const HELP={guide:`
-<h3>1. Quick start</h3>
+const HELP={guide:`<h3>1. Quick start</h3>
 <ol>
 <li><b>Delivery:</b> fill in the date and who received it.</li>
 <li><b>Manifest</b> (optional): add it in Manifest check, so pallets are ticked off as you scan.</li>
-<li><b>Pallets:</b> pick the type, tick FSDU if needed, then scan or type the LPN and Add.</li>
+<li><b>Pallets:</b> pick the type, tick FSDU if needed, then scan or type the LPN and tap Add.</li>
 <li><b>Export:</b> Download (Excel), Email PDF or Print.</li>
 <li><b>Start new delivery:</b> saves this one and clears the page.</li>
 </ol>
 <h3>2. Set up the delivery</h3>
-<p>Enter the <b>Date</b> and who <b>Received</b> it; names used before appear as buttons. <b>Expected pallets</b>, <b>Trailer number</b>, <b>Seal in</b>, <b>Seal out</b> and <b>Delivery notes</b> are optional and go on the exports. A note asks you to check the seals if both are the same number or have different lengths.</p>
-<p>An old date asks whether to use today’s. On a phone the details fold into one line once you start; tap it to change them. Your <b>logo</b> is set in Settings.</p>
+<p>Enter the <b>Date</b> and who <b>Received</b> it. Names used before appear as buttons. <b>Expected pallets</b>, <b>Trailer number</b>, <b>Seal in</b>, <b>Seal out</b> and <b>Delivery notes</b> are optional and go on the exports. A note asks you to check the seals if the two seal numbers are the same or have different lengths.</p>
+<p>If the date is old, the app asks whether to use today’s. On a phone, the details fold into one line once you start. Tap it to change them. Set your <b>logo</b> in Settings.</p>
 <h3>3. Log pallets</h3>
 <ol>
 <li>Tap the type: BB, FMCG, FPP or Mixed. It stays selected for the next pallet.</li>
 <li>Tick <b>FSDU</b> if the pallet has one. It clears after each pallet.</li>
 <li>Scan or type the LPN and press <b>Add</b> (or Enter).</li>
 </ol>
-<p>An “Added” message confirms each pallet, and ↶ removes the last one. A repeated or odd-looking LPN gives a warning with <b>Skip</b> or <b>Add anyway</b> (warnings can be turned off in Settings).</p>
-<p><b>Changing the log:</b> tap an LPN to correct it, change its type or FSDU in the table, or remove it with ✕. An <b>Undo</b> bar appears after removing, editing an LPN or Clear all.</p>
-<p><b>Damaged pallet:</b> tap the LPN, then choose Crushed, Wet or Other (type what’s wrong). It shows in red and goes on the exports. None removes it.</p>
-<p>Search and the filters find pallets; the totals always count the whole log, with FSDUs counted separately.</p>
+<p>An “Added” message confirms each pallet. Tap ↶ to remove the last one. A repeated or odd-looking LPN shows a warning with <b>Skip</b> or <b>Add anyway</b>. You can turn warnings off in Settings.</p>
+<p><b>Changing the log:</b> tap an LPN to correct it, change its type or FSDU in the table, or remove it with ✕. An <b>Undo</b> bar appears after you remove a pallet, edit an LPN or use Clear all.</p>
+<p><b>Damaged pallet:</b> tap the LPN, then choose Crushed, Wet or Other (type what’s wrong). It shows in red and goes on the exports. Choose None to remove the damage.</p>
+<p>Use search and the filters to find pallets. The totals always count the whole log, with FSDUs counted separately.</p>
 <h3>4. Scanning barcodes</h3>
 <p>On a phone, tap <b>Scan</b> next to Add.</p>
 <ul>
 <li><b>Live scan:</b> the camera adds each barcode it sees. In a dark trailer, tap <b>Torch</b> (on phones that allow it; most iPhones don’t).</li>
-<li><b>Scan by photo:</b> a clear photo of the barcode, if Live scan doesn’t work.</li>
-<li><b>Handheld or Bluetooth scanner:</b> tap the LPN box and scan. Not yet tested, so it may not work.</li>
+<li><b>Scan by photo:</b> use a clear photo of the barcode if Live scan doesn’t work.</li>
+<li><b>Handheld or Bluetooth scanner:</b> tap the LPN box and scan. This hasn’t been tested yet, so it may not work.</li>
 </ul>
-<p>Settings can ask you to confirm each scan before it’s logged.</p>
+<p>In Settings, you can choose to confirm each scan before it’s logged.</p>
 <h3>5. Check against the manifest</h3>
 <p>Tap the <b>Manifest check</b> heading to open it.</p>
 <ul>
-<li><b>Add the manifest:</b> photos or PDFs (several at once), or type or paste the numbers. Always check numbers read from photos. Reading photos needs iOS 16 or newer on an iPhone.</li>
-<li><b>While you scan</b>, the log shows how many manifest pallets are found and warns about pallets not on it. <b>Show missing</b> lists the rest, and <b>Use n as expected</b> copies the manifest count into Expected pallets.</li>
-<li><b>The log:</b> <b>Use current log</b>, a saved delivery, an exported file, or a photo of a printed log.</li>
+<li><b>Add the manifest:</b> add photos or PDFs (several at once), or type or paste the numbers. Always check numbers read from photos. Reading photos needs iOS 16 or newer on an iPhone.</li>
+<li><b>While you scan</b>, the log shows how many manifest pallets are found and warns about pallets not on the manifest. <b>Show missing</b> lists the manifest pallets not found yet. <b>Use n as expected</b> copies the manifest count into Expected pallets.</li>
+<li><b>The log:</b> choose <b>Use current log</b>, a saved delivery, an exported file, or a photo of a printed log.</li>
 <li><b>Check results:</b> Missing (report it), On the log only (book it in) and Matched. <b>Fix</b> corrects a misread number. <b>Share missing list</b> sends the list as a message.</li>
-<li><b>Export</b> gives the comparison as Excel, Email PDF or Print, with a copy of the log added if <b>Include a copy of the log</b> is on in Settings.</li>
+<li><b>Export</b> gives the comparison as Excel, Email PDF or Print. If <b>Include a copy of the log</b> is on in Settings, a copy of the log is added.</li>
 </ul>
-<p><b>Prefix presets</b> limit which numbers are picked up from photos. If a photo finds numbers with a prefix that isn’t listed, one tap adds it. Start new delivery clears the manifest numbers.</p>
+<p><b>Prefix presets</b> (in the Manifest check) limit which numbers are picked up from photos. If a photo finds numbers with a prefix that isn’t listed, you can add it with one tap. Start new delivery clears the manifest numbers.</p>
 <h3>6. Export</h3>
-<p>The <b>Export</b> menu has <b>Download (Excel)</b>, <b>Email PDF</b> and <b>Print</b>. Files have your logo, the delivery details, the numbered pallet list and the totals, fit A4, and are named with the date and trailer number. If the total doesn’t match the expected pallets, you get a reminder first.</p>
-<p><b>Email PDF</b> opens your phone’s share menu with the PDF attached (if it says the file is ready, tap <b>Tap to share</b>). If it can’t, the file is saved for you to attach.</p>
+<p>The <b>Export</b> menu has <b>Download (Excel)</b>, <b>Email PDF</b> and <b>Print</b>. Files show your logo, the delivery details, the numbered pallet list and the totals. They fit A4 and are named with the date and trailer number. If the total doesn’t match the expected pallets, you get a reminder first.</p>
+<p><b>Email PDF</b> opens your phone’s share menu with the PDF attached. If you see a message that the file is ready, tap <b>Tap to share</b>. If the share menu can’t open, the file is saved for you to attach.</p>
 <h3>7. Saved deliveries and backups</h3>
-<p><b>Start new delivery</b> saves the log and clears the page, and asks you to export first if you haven’t. <b>Saved deliveries</b> keeps this week and last week (weeks start on Sunday): open, export, email or delete one, import an exported file, or <b>Find an LPN</b> to see which delivery holds it.</p>
-<p>Everything is stored on this phone only, so use <b>Back up now</b> (in Saved deliveries or Settings) now and then. <b>Restore backup</b> in Settings shows what a backup holds and saves a copy of your current data first.</p>
+<p><b>Start new delivery</b> saves the log and clears the page. If you haven’t exported, it asks you to do that first. <b>Saved deliveries</b> keeps this week and last week (weeks start on Sunday). Older ones are removed automatically. There you can open, export, email or delete a delivery, import an exported file, or use <b>Find an LPN</b> to see which delivery holds it.</p>
+<p>Everything is stored on this phone only, so tap <b>Back up now</b> (in Saved deliveries or Settings) from time to time. <b>Restore backup</b> in Settings shows what a backup holds and saves a copy of your current data first.</p>
 <h3>8. Install it on your phone</h3>
 <ul>
 <li><b>Android (Chrome):</b> tap the ⋮ menu, then <b>Install app</b> or <b>Add to Home screen</b>.</li>
 <li><b>iPhone (Safari):</b> tap <b>Share</b>, then <b>Add to Home Screen</b>.</li>
 <li><button id="showInstall">Show the install pop-up again</button></li>
-<li>It works offline once opened online. Use Download (Excel), Email PDF and the Manifest check once while online so they work offline too. When an update is ready, tap <b>Refresh</b> on the banner.</li>
+<li>The app works offline once you’ve opened it online. Use Download (Excel), Email PDF and the Manifest check once while online so they work offline too. When an update is ready, tap <b>Refresh</b> on the banner.</li>
 </ul>
 <h3>9. Settings and good to know</h3>
 <ul>
@@ -60,11 +59,11 @@ const HELP={guide:`
 </ul>
 <h3>10. Your data and privacy</h3>
 <ul>
-<li>Everything you enter stays in this browser on this phone. There’s no account, and nothing is sent anywhere while you use the app.</li>
-<li>Manifest photos and PDFs are read on the phone and aren’t saved; only a short note of what was read goes in the problem log on this phone.</li>
-<li>The only thing that leaves the phone is a report you choose to send with <b>Report</b>: your message, your name if you add it, a photo if you add one and, if ticked, the problem report. That includes the numbers in the Manifest check, the delivery date and pallet counts, recent app activity and errors (with the LPNs, file names and start of the text read from photos they mention), the prefix list, and your browser, screen size and time zone. Reports go through a Cloudflare server to a private GitHub project that only Jamie, who made the app, can see. Cloudflare sees your internet address, which is kept for up to a day to stop spam.</li>
-<li>The Excel, PDF and photo reading tools are downloaded from public code servers the first time they’re needed. Your data isn’t sent to them, though like any website they see your internet address.</li>
-<li>Clearing this site’s data deletes your log and saved deliveries. On an iPhone, a page not added to the home screen can be cleared after a few weeks unused, so install the app and back up.</li>
+<li>Everything you enter stays in this browser on this phone. There’s no account, and nothing you enter is sent anywhere unless you send a report.</li>
+<li>Manifest photos and PDFs are read on the phone and aren’t saved. Only a short note of what was read goes in the problem log on this phone.</li>
+<li>The only thing that leaves the phone is a report you choose to send with <b>Report</b>: your message, your name if you add it, a photo if you add one and, if ticked, the problem report. The problem report includes the numbers in the Manifest check, the delivery date and pallet counts, recent app activity and errors (with the LPNs, file names and start of the text read from photos they mention), the prefix list, and your browser, screen size and time zone. Reports go through a Cloudflare server to a private GitHub project that only Jamie, who made the app, can see. Cloudflare sees your internet address, which is kept for up to a day to stop spam.</li>
+<li>The Excel, PDF and photo reading tools are downloaded from public code servers the first time they’re needed. Your data isn’t sent to them. Like any website, they see your internet address.</li>
+<li>Clearing this site’s data deletes your log and saved deliveries. On an iPhone, if the app isn’t on the home screen, its data can be cleared after a few weeks without use. So install the app and back up.</li>
 </ul>
 `,log:`<h3>v4.0 <span class="ver">Current</span></h3>
 <ul><li>Version 4.0, ready to share with colleagues: <b>Share this app</b> in Settings has a QR code to scan, the Guide is shorter and has a <b>Your data and privacy</b> section, and new users get a welcome card with the demo video.</li><li>Damaged pallets: tap an LPN to mark it Crushed, Wet or in your own words. It shows on the exports.</li><li>Manifest check: <b>Share missing list</b> sends the missing and extra LPNs as a message, sideways or upside-down photos are turned and read again, and one tap adds a missing prefix.</li><li>Saved deliveries: <b>Find an LPN</b> shows which delivery holds a pallet. Exported file names include the trailer number.</li><li>Live scan has a <b>Torch</b> button on phones that allow it, and a note asks you to check seal numbers that look wrong.</li><li>Colours can follow the phone’s light or dark mode, reports can include your name, and after an update a card says what’s new.</li></ul>
