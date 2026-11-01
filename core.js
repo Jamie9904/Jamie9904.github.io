@@ -15,7 +15,7 @@ let rows=[];
 let delCollapsed=false;
 const DEL_F=["date","recv","notes","expect","trailer","sealIn","sealOut"];
 let exported=null;
-function logSig(){let h=0;const s=rows.map(r=>r.lpn+"|"+r.type+"|"+(r.fsdu?1:0)).join(",");for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return rows.length+":"+h}
+function logSig(){let h=0;const s=rows.map(r=>r.lpn+"|"+r.type+"|"+(r.fsdu?1:0)+(r.dmg?"|"+r.dmg:"")).join(",");for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return rows.length+":"+h}
 /* "-TR4471" for file names: from the trailer box, or from the trailer given (the Manifest check passes the trailer of
    the delivery it checked, or "" when that isn't known). */
 function fileTag(tr){
@@ -97,6 +97,8 @@ function render(){
       // LPN box (phones would otherwise close the edit before the tap lands).
       const dr=dmgRow(r,(g,key)=>{dmgPick=g;finish(true,key)});tr.after(dr);
       inp.focus();inp.select();
+      // Keep the choices clear of the entry bar on phones (the page keeps room for it when scrolling).
+      try{dr.scrollIntoView({block:"nearest"})}catch(e){}
       let done=false,dmgPick;
       const finish=(ok,key)=>{
         if(done)return;done=true;dr.remove();
@@ -115,7 +117,8 @@ function render(){
         }
         render();
         // Back on the edited LPN, so keyboard users don't lose their place.
-        if(key){const back=document.querySelector('#body .lpnedit[data-i="'+i+'"]');if(back)back.focus()}
+        // (also when focus was on a part of the table that has just been redrawn)
+        if(key||!document.activeElement||document.activeElement===document.body){const back=document.querySelector('#body .lpnedit[data-i="'+i+'"]');if(back)back.focus({preventScroll:!key})}
       };
       // Finish when focus leaves both the LPN box and the damage choices.
       inp.onblur=()=>setTimeout(()=>{if(!dr.contains(document.activeElement)&&document.activeElement!==inp)finish(true)},0);
@@ -155,7 +158,7 @@ function dmgRow(r,pick){
   const box=document.createElement("div");box.className="dmgbox";box.setAttribute("role","group");box.setAttribute("aria-label","Damage for "+r.lpn);td.appendChild(box);
   const lab=document.createElement("span");lab.className="dmglab";lab.textContent="Damage:";box.appendChild(lab);
   const cur=r.dmg||"",keep=e=>e.preventDefault();
-  const btn=(text,val)=>{const b=document.createElement("button");b.type="button";b.textContent=text;b.setAttribute("aria-pressed",String(cur===val||(val===null&&cur&&DMG_REASONS.indexOf(cur)<0)));
+  const btn=(text,val)=>{const b=document.createElement("button");b.type="button";b.textContent=text;b.setAttribute("aria-pressed",String(cur===val||!!(val===null&&cur&&DMG_REASONS.indexOf(cur)<0)));
     b.addEventListener("pointerdown",keep);b.addEventListener("mousedown",keep);box.appendChild(b);return b};
   const nb=btn("None","");nb.classList.add("none");nb.onclick=e=>pick("",e.detail===0);
   DMG_REASONS.forEach(x=>{btn(x,x).onclick=e=>pick(x,e.detail===0)});

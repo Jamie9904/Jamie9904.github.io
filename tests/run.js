@@ -1118,6 +1118,20 @@ async function page(browser, width, opts = {}) {
     await q.keyboard.type("Torn label"); await q.keyboard.press("Enter"); await q.waitForTimeout(100);
     const s2 = await q.evaluate(() => ({ dmg: rows[1].dmg, focus: document.activeElement.className, label: document.querySelector('#body .lpnedit[data-i="1"]').getAttribute("aria-label") }));
     check("keyboard: Tab from the LPN box goes to the damage choices; Other takes typed text and focus comes back", s === "None" && s2.dmg === "Torn label" && s2.focus === "lpnedit" && /damaged: Torn label/.test(s2.label), { s, s2 });
+    // Tab past the last choice: the change is kept and focus stays on that pallet.
+    await q.focus('#body .lpnedit[data-i="0"]'); await q.keyboard.press("Enter"); await q.waitForTimeout(50);
+    for (let k = 0; k < 5; k++) await q.keyboard.press("Tab");
+    await q.waitForTimeout(100);
+    s = await q.evaluate(() => ({ focus: document.activeElement.className, i: document.activeElement.dataset && document.activeElement.dataset.i, open: !!document.querySelector(".dmgrow"), other: null }));
+    check("Tab past the last damage choice closes them and keeps focus on that pallet", s.focus === "lpnedit" && s.i === "0" && !s.open, s);
+    // The choices open in view, not under the phone entry bar, even for the last pallet.
+    s = await q.evaluate(async () => { rows = rows.concat(Array.from({ length: 12 }, (_, k) => ({ lpn: "QUB0018992" + String(10 + k), type: "BB", fsdu: false }))); save(); render();
+      const last = [...document.querySelectorAll("#body .lpnedit")].pop(); last.scrollIntoView({ block: "end" }); await new Promise(r => setTimeout(r, 100));
+      last.click(); await new Promise(r => setTimeout(r, 300));
+      const box = document.querySelector(".dmgbox").getBoundingClientRect(), bar = document.querySelector(".entry").getBoundingClientRect();
+      const ae = document.activeElement; ae.blur(); await new Promise(r => setTimeout(r, 50));
+      rows = rows.slice(0, 2); save(); render(); return { boxBottom: Math.round(box.bottom), barTop: Math.round(bar.top) }; });
+    check("on a phone, the damage choices open above the entry bar, even for the last pallet", s.boxBottom <= s.barTop, s);
     // Exports and import keep the damage note.
     s = await q.evaluate(async () => { window.saveOnly = async () => {}; await document.getElementById("dl").onclick(); await new Promise(r => setTimeout(r, 200));
       const vals = [], ws = window.__wb.sheets[0]; Object.keys(ws.rows).sort((a, b) => a - b).forEach(k => Object.keys(ws.rows[k]._c).sort((a, b) => a - b).forEach(j => { const c = ws.rows[k]._c[j]; if (c && c.value != null) vals.push(String(c.value)); }));
@@ -1125,6 +1139,8 @@ async function page(browser, width, opts = {}) {
       const imp = await parseExported(new File([csv], "x.csv"));
       return { inSheet: vals.filter(v => v === "Damaged pallet").length, val: vals.filter(v => /: (Wet|Torn label)$/.test(v)), imp: imp.rows.map(r => r.dmg || "") }; });
     check("the Excel export lists damaged pallets in Delivery Details, and importing puts the notes back", s.inSheet === 2 && JSON.stringify(s.val) === '["VLT004040265: Wet","RUN0001830763: Torn label"]' && JSON.stringify(s.imp) === '["Wet","Torn label"]', s);
+    s = await q.evaluate(() => { markExported(); const a = exported.sig === logSig(); rows[1].dmg = "Crushed"; const b = exported.sig === logSig(); rows[1].dmg = "Torn label"; return { a, b }; });
+    check("marking a pallet damaged after exporting counts as a change not yet exported", s.a && !s.b, s);
     // Clearing with None, and Undo.
     await q.click("#body .lpnedit"); await q.waitForTimeout(50); await q.click(".dmgbox button.none"); await q.waitForTimeout(100);
     s = await q.evaluate(() => ({ dmg: rows[0].dmg, tag: !!document.querySelector("#body tr:first-child .dmgtag") }));
@@ -1146,6 +1162,11 @@ async function page(browser, width, opts = {}) {
     const want = "Manifest check 01/11/2026, trailer TR4471\nMissing from the log (2): RBY006292169, RBY006292211\nOn the log only, to book in (1): QUB001899182\nMatched: 2 of 4 on the manifest";
     check("Share missing list sends the missing and extra LPNs as plain text through the share menu", s.shared && s.shared.text === want, s.shared);
     check("without a share menu, the list is copied and the message says so", s.copied === want && /copied/.test(s.msg), s);
+    // Desktop: a long note wraps instead of pushing FSDU and ✕ out of view.
+    await q.setViewportSize({ width: 1300, height: 900 }); await q.waitForTimeout(150);
+    s = await q.evaluate(() => { cfg.size = "1.25"; applyCfg(); rows[0].dmg = "Corner crushed and wrap split along one whole side x"; render();
+      const t = document.querySelector("#body").closest("table"), w = t.parentElement; const r = { table: Math.round(t.scrollWidth), box: Math.round(w.clientWidth) }; cfg.size = "1"; applyCfg(); return r; });
+    check("on desktop with Extra large text, a long damage note wraps and the table still fits", s.table <= s.box, s);
     check("no script errors", q.errors.length === 0, q.errors);
     await q.ctx.close();
   }

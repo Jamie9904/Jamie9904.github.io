@@ -387,7 +387,7 @@ details.opts>summary .note{min-width:0;overflow:hidden;text-overflow:ellipsis;wh
 #fbBox textarea{min-height:110px}
 @media print{#fbShade,#fbBox,.top .report{display:none}}
 /* Damaged pallets: a note under the LPN, and the choices shown while a pallet is edited. */
-.dmgtag{display:block;color:var(--dg);font:700 .85rem/1.3 "Atkinson Hyperlegible",system-ui,sans-serif;margin-top:2px;word-break:normal}
+.dmgtag{display:block;color:var(--dg);font:700 .85rem/1.3 "Atkinson Hyperlegible",system-ui,sans-serif;margin-top:2px;word-break:normal;white-space:normal;overflow-wrap:anywhere}
 tr.dmg td.l{box-shadow:inset 3px 0 0 var(--dg)}
 .dmgrow td{padding-top:0}
 .dmgbox{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 0}

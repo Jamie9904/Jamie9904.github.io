@@ -534,8 +534,9 @@ async function shareCmp(C){
     try{await navigator.share({title:"Manifest check",text:text});cmpMsg("");return}
     catch(e){if(e&&e.name==="AbortError")return} // closed without sharing; anything else falls back to copying
   }
-  try{await navigator.clipboard.writeText(text);cmpMsg("The missing list was copied. Paste it into a message or email.");return}catch(e){}
-  cmpMsg("Sharing isn’t available here. The list is: "+text.replace(/\n/g," · "));
+  const say=t=>{cmpMsg(t);try{$("cmpMsg").scrollIntoView({block:"nearest",behavior:"smooth"})}catch(e){}};
+  try{await navigator.clipboard.writeText(text);say("The missing list was copied. Paste it into a message or email.");return}catch(e){}
+  say("Sharing isn’t available here. The list is: "+text.replace(/\n/g," · "));
 }
 function renderCmp(C){
   const {res,cnt,man,kind}=C;

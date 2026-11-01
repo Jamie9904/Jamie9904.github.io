@@ -85,8 +85,8 @@
    "s": "#cmpRes",
    "x": 19,
    "w": 352,
-   "h": 410,
-   "text": "✗ Missing from the log (2) On the manifest but not in your log: report these. If",
+   "h": 456,
+   "text": "Share missing list ✗ Missing from the log (2) On the manifest but not in your lo",
    "bg": "rgba(0, 0, 0, 0)",
    "fg": "rgb(236, 237, 238)"
   }

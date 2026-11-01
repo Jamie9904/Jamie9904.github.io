@@ -138,6 +138,8 @@ const SCENES = [
 		await at(2000); await tap(app.locator(".dmgbox button", { hasText: "Wet" }));
 		await sleep(400); await ring(app.locator("#body tr").first());
 		await at(5200); await stage("ring", null);
+		// The Undo bar would otherwise stay over the next scenes.
+		await appFrame().evaluate(() => { clearTimeout(undoTimer); document.getElementById("undoBar").hidden = true; });
 	} },
 	{ id: "manifest", hold: 7.3, run: async (at) => {
 		await stage("head", "Manifest check", "Missing or extra,<br>caught at the dock.");
