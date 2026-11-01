@@ -45,7 +45,7 @@ label{display:block;font-size:.9rem;font-weight:700;color:var(--mu);margin-botto
 input,select,button,textarea{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--bd,var(--line));border-radius:var(--r);padding:10px 12px;max-width:100%}
 input:not([type=checkbox]),select{min-height:46px}
 input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--act,var(--ac));outline-offset:1px;border-color:var(--act,var(--ac))}
-button.p:focus-visible{outline-color:var(--ink);outline-offset:2px}
+button.p:focus-visible,#torch.on:focus-visible{outline-color:var(--ink);outline-offset:2px}
 #lpn{font:600 1.2rem/1 "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;letter-spacing:.03em;min-height:52px;border-width:2px;border-color:var(--ac)}
 #lpn::placeholder{font:400 .95rem "Atkinson Hyperlegible",system-ui,sans-serif;letter-spacing:0;color:var(--mu)}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
@@ -109,6 +109,9 @@ textarea{font:400 14px/1.5 "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace
 #fsdu{display:block;width:30px;height:30px;margin:0;accent-color:var(--ac);padding:0}
 td input[type=checkbox]{width:26px;height:26px;accent-color:var(--ac)}
 #scanbox{margin-top:10px}
+#scanbox .scanbtns{display:flex;gap:8px;flex:none;margin-left:auto}
+#torch.on{background:var(--ac);color:var(--onac);border-color:var(--ac)}
+.sealwarn{color:var(--wn);font-weight:700}
 #video{width:100%;max-height:200px;background:#000;border-radius:var(--r);object-fit:cover}
 .empty{color:var(--mu);text-align:center;padding:30px 12px}
 td.l{cursor:text}
@@ -160,6 +163,7 @@ button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
   .entry #fsdu{width:40px;height:40px}
   /* Camera view shorter on short screens, so the "Added" line and Stop scanning stay on screen. */
   .entry #video{max-height:clamp(110px,24vh,200px)}
+  .entry #scanbox.hastorch #video{max-height:clamp(84px,17vh,200px)}
   .entry .btnrow{display:none}
   .entry .btnrow.open{display:flex}
   .addgrid{grid-template-columns:1fr auto;gap:8px 10px}

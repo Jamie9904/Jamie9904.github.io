@@ -23,7 +23,7 @@ function fileTag(tr){
   return t?"-"+t:"";
 }
 function getDel(){const o={};DEL_F.forEach(k=>{o[k]=$(k).value});o.exp=exported;return o}
-function setDel(o){o=o||{};DEL_F.forEach(k=>{$(k).value=k==="date"?(o.date||localToday()):(o[k]||"")});exported=o.exp||null}
+function setDel(o){o=o||{};DEL_F.forEach(k=>{$(k).value=k==="date"?(o.date||localToday()):(o[k]||"")});exported=o.exp||null;sealHint()}
 const $=id=>document.getElementById(id);
 function syncType(){const v=$("type").value;$("type").dataset.t=v;document.querySelectorAll("#tyb button").forEach(b=>{const on=b.dataset.t===v;b.classList.toggle("on",on);b.setAttribute("aria-pressed",on)})}
 let cfg={defType:"BB",check:true,sound:true,size:"1",keepType:true,vibrate:true,confirmScan:false,dateFmt:"uk"};
@@ -217,6 +217,16 @@ function flashAdded(v,t,f){
   el.textContent="Added #"+rows.length+": "+v+" · "+t+(f?" · FSDU":"")+man;
   clearTimeout(flashTimer);flashTimer=setTimeout(()=>{el.hidden=true},man.indexOf("NOT")>=0?4000:2200);
 }
+/* A gentle check of the seal numbers: the same number in both boxes, or two lengths that differ (seals on one trailer
+   are normally the same kind). While typing it only clears a warning; a new one shows when you leave the box. */
+function sealIssue(){
+  const n=v=>String(v||"").toUpperCase().replace(/[^A-Z0-9]/g,""),a=n($("sealIn").value),b=n($("sealOut").value);
+  if(!a||!b)return "";
+  if(a===b)return "Seal in and seal out are the same number. Check them: the seal put on should be a new one.";
+  if(a.length!==b.length)return "Seal in has "+a.length+" characters and seal out has "+b.length+". Check neither is mistyped.";
+  return "";
+}
+function sealHint(live){const w=$("sealWarn");if(!w)return;const t=sealIssue();if(live&&t&&w.textContent!==t){if(w.textContent)w.textContent="";return}if(w.textContent!==t)w.textContent=t}
 function updateDel(){
   const card=$("delCard");if(!card)return;
   if(!rows.length)delCollapsed=false;
@@ -281,7 +291,8 @@ function localToday(){const n=new Date();return n.getFullYear()+"-"+String(n.get
   ["input","change"].forEach(ev=>el.addEventListener(ev,()=>{showDate();updateDel()}));
   el.addEventListener("click",()=>{try{el.showPicker&&el.showPicker()}catch(e){}});
   ["recv","expect"].forEach(id=>$(id).addEventListener("input",updateDel));
-  ["trailer","sealIn","sealOut"].forEach(id=>$(id).addEventListener("input",()=>{save();updateDel()}));
+  ["trailer","sealIn","sealOut"].forEach(id=>$(id).addEventListener("input",()=>{save();updateDel();sealHint(true)}));
+  ["sealIn","sealOut"].forEach(id=>$(id).addEventListener("change",()=>sealHint()));
   $("delSum").onclick=()=>{delCollapsed=!delCollapsed;updateDel()};
   showDate();
 })();
