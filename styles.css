@@ -202,6 +202,9 @@ button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
 .hist .hd{font-weight:700}
 .hist .sb{color:var(--mu);font-size:.88rem}
 .hist .row{margin-top:8px}
+.histfind{display:flex;flex-direction:column;gap:4px;margin:10px 0 4px}
+.histfind label{font-weight:700}
+.hist .hitl{color:var(--act,var(--ac));font-weight:700}
 #panel select{width:100%}
 [hidden]{display:none!important}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}

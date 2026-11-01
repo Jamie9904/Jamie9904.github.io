@@ -970,6 +970,78 @@ async function page(browser, width, opts = {}) {
     await q.ctx.close();
   }
 
+  {
+    console.log("Find an LPN, sideways photos, file names, Follow phone, one-tap prefix");
+    const q = await page(browser, 375);
+    await q.goto(URL0); await q.waitForTimeout(300);
+    // Find an LPN in Saved deliveries.
+    await q.evaluate(() => { const t = localToday();
+      hist = [{ id: "a1", saved: new Date().toISOString(), date: t, recv: "Jamie", trailer: "TR4471", rows: [{ lpn: "VLT004040265", type: "BB", fsdu: false }, { lpn: "RUN0001830763", type: "FMCG", fsdu: false }] },
+        { id: "a2", saved: new Date().toISOString(), date: t, recv: "Sam", rows: [{ lpn: "QUB000111222", type: "FPP", fsdu: false }] }];
+      saveHist(); rows = [{ lpn: "QUB000111222", type: "FPP", fsdu: false }]; render(); openHelp("history", "Saved deliveries"); });
+    await q.fill("#histFind", "4040 265"); await q.waitForTimeout(100);
+    let s = await q.evaluate(() => ({ shown: [...document.querySelectorAll("#histRoot .hist")].filter(c => !c.hidden).map(c => c.querySelector(".hitl").textContent), msg: document.getElementById("histFindMsg").textContent }));
+    check("Find an LPN shows only the saved delivery that holds it, and names the pallet", s.shown.length === 1 && /Found: VLT004040265 \(BB\)/.test(s.shown[0]) && /Found in 1 saved delivery\./.test(s.msg), s);
+    await q.fill("#histFind", "qub000111"); await q.waitForTimeout(100);
+    s = await q.evaluate(() => document.getElementById("histFindMsg").textContent);
+    check("Find an LPN also says when the pallet is in the current log", /Found in 1 saved delivery\. It is also in the current log\./.test(s), s);
+    await q.fill("#histFind", "ZZZ999"); await q.waitForTimeout(100);
+    s = await q.evaluate(() => ({ shown: [...document.querySelectorAll("#histRoot .hist")].filter(c => !c.hidden).length, msg: document.getElementById("histFindMsg").textContent }));
+    check("Find an LPN says when no saved delivery holds it", s.shown === 0 && /Not in any saved delivery/.test(s.msg), s);
+    await q.fill("#histFind", ""); await q.waitForTimeout(100);
+    s = await q.evaluate(() => [...document.querySelectorAll("#histRoot .hist")].filter(c => !c.hidden).length);
+    check("clearing Find an LPN shows every saved delivery again", s === 2, s);
+    s = await q.evaluate(() => { const r = document.getElementById("histFind").getBoundingClientRect(); return { right: r.right, w: innerWidth }; });
+    check("the Find an LPN box fits a 375 px phone", s.right <= s.w, s);
+    await q.evaluate(() => closeHelp());
+    // Trailer number in file names.
+    s = await q.evaluate(() => { const names = [];
+      document.getElementById("trailer").value = "TR 4471/A"; names.push(fileTag());
+      document.getElementById("trailer").value = ""; names.push(fileTag());
+      document.getElementById("trailer").value = "TR4471"; document.getElementById("cmpDate").value = "2001-01-01"; names.push(fileTag(true));
+      document.getElementById("cmpDate").value = document.getElementById("date").value; names.push(fileTag(true));
+      return names; });
+    check("file names get the trailer number (only letters, numbers and dashes), and none when it's blank", JSON.stringify(s) === '["-TR-4471-A","","","-TR4471"]', s);
+    // Sideways photo: nothing found, so it is turned and read again.
+    s = await q.evaluate(async () => { const seen = [];
+      const keep = { loadScript, prep, ocrWorker, ocrDone, ocrCanvas };
+      window.loadScript = async () => {}; window.ocrWorker = async () => ({}); window.ocrDone = () => {};
+      window.prep = async () => { const c = document.createElement("canvas"); c.width = 300; c.height = 100; return c; };
+      window.ocrCanvas = async (w, cv) => { seen.push(cv.width + "x" + cv.height); const a = seen.length === 2 ? ["VLT004040265"] : []; a.skipped = []; a.odd = []; a.mended = []; return { out: a, items: [], r: { words: [], text: "" } }; };
+      const out = await ocrLpnsNow(new Blob(["x"]));
+      Object.assign(window, keep);
+      return { seen, out: [...out], turned: out.turned, note: readNote("Photo 1", out, { added: 1, dup: 0 }) }; });
+    check("a sideways photo with nothing found is turned and read again, and the note says so", JSON.stringify(s.seen) === '["300x100","100x300"]' && s.turned === 90 && s.out[0] === "VLT004040265" && /The photo was sideways, so it was turned to read it\./.test(s.note), s);
+    // One tap adds a missing prefix and its numbers.
+    await q.evaluate(() => { document.getElementById("cmpToggle").click(); document.getElementById("cmpPfx").value = "VLT"; document.getElementById("cmpNums").value = "";
+      window.readPhoto = async () => { const a = ["VLT004040265"]; a.skipped = ["RBY001234567", "RBY001234568"]; a.odd = []; a.mended = []; return a; }; });
+    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+    await q.setInputFiles("#cmpPhotoFile", [{ name: "m.png", mimeType: "image/png", buffer: png }]);
+    await q.waitForFunction(() => !document.getElementById("cmpPfxAdd").hidden, null, { timeout: 5000 }).catch(() => {});
+    s = await q.evaluate(() => ({ btn: [...document.querySelectorAll("#cmpPfxAdd button")].map(b => b.textContent), msg: document.getElementById("cmpMsg").textContent }));
+    check("a photo with numbers whose prefix isn't listed offers a one-tap Add button", JSON.stringify(s.btn) === '["Add RBY to the prefix list"]' && /tap Add RBY below/.test(s.msg), s);
+    await q.click("#cmpPfxAdd button"); await q.waitForTimeout(100);
+    s = await q.evaluate(() => ({ pfx: document.getElementById("cmpPfx").value, nums: document.getElementById("cmpNums").value.split("\n"), hidden: document.getElementById("cmpPfxAdd").hidden, msg: document.getElementById("cmpMsg").textContent }));
+    check("tapping Add puts the prefix in the list and adds its numbers without reading again", s.pfx === "VLT, RBY" && s.nums.includes("RBY001234567") && s.nums.includes("RBY001234568") && s.hidden && /Added RBY to the prefix list and 2 numbers/.test(s.msg), s);
+    await q.evaluate(() => { document.getElementById("cmpClear").click(); document.getElementById("cmpPfx").value = ""; savePfx(); });
+    // Follow phone colours.
+    await q.emulateMedia({ colorScheme: "dark" });
+    await q.evaluate(() => { document.getElementById("btnSet").click(); });
+    await q.waitForTimeout(200);
+    await q.check("#setFollow"); await q.waitForTimeout(100);
+    const bg = () => q.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--bg").trim());
+    const dark = await bg();
+    await q.emulateMedia({ colorScheme: "light" }); await q.waitForTimeout(150);
+    const light = await bg();
+    s = await q.evaluate(() => ({ saved: JSON.parse(localStorage.getItem("lpntheme")), hex: document.getElementById("setBgHex").value }));
+    check("Follow phone uses navy in dark mode and light in light mode, switching straight away", dark === "#0c1830" && light === "#eef1f6" && s.saved.follow === true && s.hex === "#eef1f6", { dark, light, s });
+    await q.fill("#setAcHex", "#aa3300"); await q.waitForTimeout(100);
+    s = await q.evaluate(() => ({ follow: document.getElementById("setFollow").checked, saved: JSON.parse(localStorage.getItem("lpntheme")) }));
+    check("choosing your own colour turns Follow phone off and keeps the colours shown", !s.follow && !s.saved.follow && s.saved.bg === "#eef1f6" && s.saved.ac === "#aa3300", s);
+    check("no script errors", q.errors.length === 0, q.errors);
+    await q.ctx.close();
+  }
+
   console.log("Offline store and failure paths");
   {
     // The service worker is on and every outside request goes through the test's router, including its own.

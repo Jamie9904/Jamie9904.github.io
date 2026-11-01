@@ -43,7 +43,7 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <p>The spreadsheet and PDF have your logo, a title with the delivery details, the numbered pallet list, the totals by type (FSDUs listed separately), and the Delivery Details. They fit A4 portrait with page numbers, and the bottom of each says which version of the app made it. BB is shown as “Brown Box”.</p>
 <p><b>Email PDF</b> opens your phone’s share sheet with a PDF attached, as phones can’t share Excel files that way. If it says the file is ready, tap <b>Tap to share</b>. If sharing isn’t possible, the file is saved for you to attach yourself.</p>
 <h3>7. Saved deliveries and backups</h3>
-<p>After an export the log shows when it was exported and offers to start a new delivery. <b>Start new delivery</b> saves the log and clears the page (with Undo); if the delivery hasn’t been exported since its last change it asks you to export first, and pressing it again goes ahead anyway. <b>Saved deliveries</b> lists this week and last week (weeks start on Sunday): open one, export or email it directly, delete it, or import an exported spreadsheet or app-made PDF.</p>
+<p>After an export the log shows when it was exported and offers to start a new delivery. <b>Start new delivery</b> saves the log and clears the page (with Undo); if the delivery hasn’t been exported since its last change it asks you to export first, and pressing it again goes ahead anyway. <b>Saved deliveries</b> lists this week and last week (weeks start on Sunday): open one, export or email it directly, delete it, or import an exported spreadsheet or app-made PDF. Type part of an LPN in <b>Find an LPN</b> to see which saved delivery holds it. Exported file names include the date and the trailer number.</p>
 <p>Everything is stored on this device only. The Saved deliveries list shows when you last backed up; use <b>Back up now</b> there, or Settings, to download a backup, and <b>Restore backup</b> in Settings to bring it back. Before restoring, the app shows what the backup holds and downloads a copy of your current data, so nothing is lost by mistake.</p>
 <h3>8. Install it on your phone</h3>
 <ul>
@@ -59,7 +59,7 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <li>Always check numbers read from photos before relying on them.</li>
 <li><b>Something not working, or an idea?</b> <button type="button" class="linkbtn" id="fbGuide">Report a problem or idea</button> (also the <b>Report</b> button at the top of the page). It sends what happened along with the app’s problem report.</li>
 </ul>`,log:`<h3>v3.30 <span class="ver">Current</span></h3>
-<ul><li>Faster photo reading: one photo reader is used for a whole batch of photos instead of starting a new one for each. Live scan fits small phones: the camera view is shorter so the “Added” line and Stop scanning stay on screen.</li><li>Manifest photos: the note names any number the app corrected to match the page, so you can check it against the paper, and <b>Report a problem with these photos</b> sends a report with the photo attached. On desktop the seal boxes fit longer seal numbers, and with the Manifest check open on a phone, Undo shows at the top.</li><li>Report a problem or idea with the <b>Report</b> button at the top of the page (also in Settings and the Guide). It opens in the middle of the screen: choose Problem or Idea, say what happened, add a photo if it helps, and send. The problem report is attached unless you untick it. With no signal it waits on the phone and sends when you’re back online.</li><li>More accessibility fixes: on phones the Undo bar shows just above the entry bar and stays 20 seconds; LPNs in the log can be edited with the keyboard; Escape closes the Export menus; clearer labels for screen readers on saved deliveries and the log table; Guide links don’t animate when reduced motion is on.</li><li>Easier to use with gloves and in poor light: a scan made while a warning is showing is kept in the box instead of being lost (Escape skips the warning), stronger edges on boxes and buttons, accent-coloured text always readable, bigger FSDU tick box and scan buttons, the warning shows above the camera, and the Guide and Settings panels move focus in and back out for keyboard and screen reader users.</li><li>Manifest photos are read much better: shade across the page and paper grain no longer turn into junk, every number on a page with ruled lines is found, and a number read slightly wrong (VL1… for VLT…, or an extra 0) is matched to the others on the same page. Specks on the paper that look like a code are left out. IM numbers (full pallet picks, 10 or 11 digits) are always kept and not called unusual.</li><li>Manifest check: each photo or PDF now says how many LPNs it found, how many were new and how many were already listed, and names any left out because their prefix isn’t in the prefix list. One photo that can’t be read no longer stops the rest.</li><li>Problem report in Settings: if something goes wrong, download it and send it with what happened. It lists recent manifest reads and errors on this device.</li><li>Exports: long delivery notes and longer LPNs no longer get cut off in the spreadsheets, and every export notes the app version it was made with (at the bottom of the sheet and in the page footer).</li><li>Importing an exported log and loading one in the Manifest check now read spreadsheets the same way, so the version line at the bottom is always skipped.</li><li>Safer PDFs: a PDF opened in the app (a supplier manifest or an exported log) can no longer run hidden code, and the PDF reader is updated to the latest version.</li><li>Safer backups and files: a damaged backup can no longer stop the app opening, restoring asks first and saves a copy of your current data, and files from outside can’t add links, formulas or scripts to your exports.</li><li>A security policy now only lets the app run code from its own site and its three library sources, as a second line of defence.</li><li>A demo video at the top of the Guide shows the app in action, with narration and subtitles, including picking the pallet type before scanning. It starts at half volume.</li><li>Easier to use: the pallet table scrolls with the page on phones, progress only turns red when something is wrong, one count line when the manifest sets the expected number, the Manifest check starts with its steps (prefix presets tucked away), the logo moved to Settings, the entry bar steps aside in the Manifest check, and bigger tick boxes and header buttons.</li><li>Undo last pallet button on the phone entry bar, “Use n as expected” from the manifest count, an “Exported at” note with a warning before starting a new delivery that hasn’t been exported, and a “Start a new delivery?” prompt after exporting.</li><li>Trailer number, Seal in and Seal out in Delivery, shown on exports and saved deliveries.</li><li>Live manifest tracking: add the manifest numbers first and the Pallet log counts them off as you scan, shows which are still missing and warns about pallets not on the manifest.</li><li>Phone layout: a pallet counter on the entry bar, an “Added” confirmation after each pallet, Delivery folds into one line once you start logging, neater top buttons and a clearer ✕ on each row.</li><li>Smaller tweaks: a reminder when the log is dated before today, tap-to-fill “Received by” names, a check when the total differs from the expected pallets, an FSDU filter, Excel and Email PDF buttons on saved deliveries, a last-backed-up note, and an offline notice.</li><li>Exports: a title band, numbered rows, clearer grid lines, page numbers, gridlines hidden on screen, roomier headers, the logo kept in proportion and much smaller PDFs. The manifest check has the same Export menu as the log.</li><li>Date format setting (dd/mm/yyyy by default), used in exports, lists and the date box.</li><li>Fonts are now part of the app, updates show up straight away, and the tablet layout and field alignment are fixed.</li></ul>
+<ul><li>Saved deliveries has a <b>Find an LPN</b> box that shows which saved delivery holds a pallet. Manifest photos taken sideways are turned and read again. Exported file names include the trailer number, for example LPN-log-2026-11-01-TR4471.xlsx. Settings &gt; Colours can follow the phone’s light or dark mode. When a photo has numbers with a prefix that isn’t in the list, one tap adds the prefix and those numbers.</li><li>Faster photo reading: one photo reader is used for a whole batch of photos instead of starting a new one for each. Live scan fits small phones: the camera view is shorter so the “Added” line and Stop scanning stay on screen.</li><li>Manifest photos: the note names any number the app corrected to match the page, so you can check it against the paper, and <b>Report a problem with these photos</b> sends a report with the photo attached. On desktop the seal boxes fit longer seal numbers, and with the Manifest check open on a phone, Undo shows at the top.</li><li>Report a problem or idea with the <b>Report</b> button at the top of the page (also in Settings and the Guide). It opens in the middle of the screen: choose Problem or Idea, say what happened, add a photo if it helps, and send. The problem report is attached unless you untick it. With no signal it waits on the phone and sends when you’re back online.</li><li>More accessibility fixes: on phones the Undo bar shows just above the entry bar and stays 20 seconds; LPNs in the log can be edited with the keyboard; Escape closes the Export menus; clearer labels for screen readers on saved deliveries and the log table; Guide links don’t animate when reduced motion is on.</li><li>Easier to use with gloves and in poor light: a scan made while a warning is showing is kept in the box instead of being lost (Escape skips the warning), stronger edges on boxes and buttons, accent-coloured text always readable, bigger FSDU tick box and scan buttons, the warning shows above the camera, and the Guide and Settings panels move focus in and back out for keyboard and screen reader users.</li><li>Manifest photos are read much better: shade across the page and paper grain no longer turn into junk, every number on a page with ruled lines is found, and a number read slightly wrong (VL1… for VLT…, or an extra 0) is matched to the others on the same page. Specks on the paper that look like a code are left out. IM numbers (full pallet picks, 10 or 11 digits) are always kept and not called unusual.</li><li>Manifest check: each photo or PDF now says how many LPNs it found, how many were new and how many were already listed, and names any left out because their prefix isn’t in the prefix list. One photo that can’t be read no longer stops the rest.</li><li>Problem report in Settings: if something goes wrong, download it and send it with what happened. It lists recent manifest reads and errors on this device.</li><li>Exports: long delivery notes and longer LPNs no longer get cut off in the spreadsheets, and every export notes the app version it was made with (at the bottom of the sheet and in the page footer).</li><li>Importing an exported log and loading one in the Manifest check now read spreadsheets the same way, so the version line at the bottom is always skipped.</li><li>Safer PDFs: a PDF opened in the app (a supplier manifest or an exported log) can no longer run hidden code, and the PDF reader is updated to the latest version.</li><li>Safer backups and files: a damaged backup can no longer stop the app opening, restoring asks first and saves a copy of your current data, and files from outside can’t add links, formulas or scripts to your exports.</li><li>A security policy now only lets the app run code from its own site and its three library sources, as a second line of defence.</li><li>A demo video at the top of the Guide shows the app in action, with narration and subtitles, including picking the pallet type before scanning. It starts at half volume.</li><li>Easier to use: the pallet table scrolls with the page on phones, progress only turns red when something is wrong, one count line when the manifest sets the expected number, the Manifest check starts with its steps (prefix presets tucked away), the logo moved to Settings, the entry bar steps aside in the Manifest check, and bigger tick boxes and header buttons.</li><li>Undo last pallet button on the phone entry bar, “Use n as expected” from the manifest count, an “Exported at” note with a warning before starting a new delivery that hasn’t been exported, and a “Start a new delivery?” prompt after exporting.</li><li>Trailer number, Seal in and Seal out in Delivery, shown on exports and saved deliveries.</li><li>Live manifest tracking: add the manifest numbers first and the Pallet log counts them off as you scan, shows which are still missing and warns about pallets not on the manifest.</li><li>Phone layout: a pallet counter on the entry bar, an “Added” confirmation after each pallet, Delivery folds into one line once you start logging, neater top buttons and a clearer ✕ on each row.</li><li>Smaller tweaks: a reminder when the log is dated before today, tap-to-fill “Received by” names, a check when the total differs from the expected pallets, an FSDU filter, Excel and Email PDF buttons on saved deliveries, a last-backed-up note, and an offline notice.</li><li>Exports: a title band, numbered rows, clearer grid lines, page numbers, gridlines hidden on screen, roomier headers, the logo kept in proportion and much smaller PDFs. The manifest check has the same Export menu as the log.</li><li>Date format setting (dd/mm/yyyy by default), used in exports, lists and the date box.</li><li>Fonts are now part of the app, updates show up straight away, and the tablet layout and field alignment are fixed.</li></ul>
 <h3>v3.20</h3>
 <ul><li>Start new delivery, Saved deliveries (this week and last week) and importing an exported log.</li><li>Warnings for duplicate or unusual LPNs, Undo for removed pallets and Clear all, and tap an LPN to edit it.</li><li>Pallet type buttons, expected pallets, delivery notes, search and filter, and an Export menu with Print.</li><li>Manifest check: use the current log or a saved delivery, a Check results panel, and Fix or remove for misread numbers.</li><li>Settings: default and keep-last type, warnings, sound, vibration, confirm each scan, text size, colour contrast warning, backup and restore, and the install pop-up.</li><li>Works offline after the first use, shows an “update available” banner, a two-column layout on wide screens, line icons, and accessibility fixes.</li></ul>
 <h3>v3.0</h3>
@@ -106,7 +106,11 @@ function closeHelp(){const v=$("demoVid");if(v)v.pause();const was=!$("panel").h
 /* ---- settings: custom colours ---- */
 const THEME_DEFAULT={bg:"#0c1830",ac:"#ff8a2a"};
 const THEME_QUICK=[["Navy and orange","#0c1830","#ff8a2a"],["Sage and teal","#e3e8e4","#2f6f68"],["Charcoal and amber","#1d1f23","#f5b324"],["Light and blue","#eef1f6","#2563eb"]];
+const THEME_LIGHT={bg:"#eef1f6",ac:"#2563eb"};
 let theme=Object.assign({},THEME_DEFAULT);
+// Follow phone: navy and orange when the phone is in dark mode, light and blue when it is in light mode.
+const mqDark=window.matchMedia?window.matchMedia("(prefers-color-scheme: dark)"):null;
+const themeNow=()=>theme.follow?(mqDark&&!mqDark.matches?THEME_LIGHT:THEME_DEFAULT):theme;
 const hexOk=v=>/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(v).trim());
 function hexNorm(v){let h=String(v).trim().replace("#","").toLowerCase();if(h.length===3)h=h.split("").map(c=>c+c).join("");return "#"+h}
 const toRgb=h=>{h=hexNorm(h);return [1,3,5].map(i=>parseInt(h.substr(i,2),16))};
@@ -114,7 +118,7 @@ const toHex=a=>"#"+a.map(n=>Math.max(0,Math.min(255,Math.round(n))).toString(16)
 const mixC=(a,b,t)=>{const x=toRgb(a),y=toRgb(b);return toHex(x.map((v,i)=>v+(y[i]-v)*t))};
 const lumOf=h=>{const c=toRgb(h).map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)});return .2126*c[0]+.7152*c[1]+.0722*c[2]};
 function applyTheme(){
-  const bg=hexNorm(theme.bg),ac=hexNorm(theme.ac),dark=lumOf(bg)<.3;
+  const T=themeNow(),bg=hexNorm(T.bg),ac=hexNorm(T.ac),dark=lumOf(bg)<.3;
   const paper=dark?mixC(bg,"#ffffff",.08):mixC(bg,"#ffffff",.7);
   const v={
     "--bg":bg,"--paper":paper,
@@ -141,10 +145,12 @@ function applyTheme(){
   if(w){const r=Math.min(rt(ac,bg),rt(ac,paper));w.textContent=r<3?"Low contrast: the accent colour is hard to see against this background (ratio "+r.toFixed(1)+", aim for 3 or more). Headings, links and highlights may be hard to read. Try a lighter or darker accent.":""}
 }
 function saveTheme(){try{localStorage.setItem("lpntheme",JSON.stringify(theme))}catch(e){}}
-try{const t=JSON.parse(localStorage.getItem("lpntheme")||"null");if(t&&hexOk(t.bg)&&hexOk(t.ac))theme={bg:hexNorm(t.bg),ac:hexNorm(t.ac)}}catch(e){}
+try{const t=JSON.parse(localStorage.getItem("lpntheme")||"null");if(t&&hexOk(t.bg)&&hexOk(t.ac))theme={bg:hexNorm(t.bg),ac:hexNorm(t.ac),follow:t.follow===true}}catch(e){}
 applyTheme();
+if(mqDark){const f=()=>{if(theme.follow){applyTheme();if(window.themeSync)window.themeSync()}};if(mqDark.addEventListener)mqDark.addEventListener("change",f);else if(mqDark.addListener)mqDark.addListener(f)}
 HELP.settings=`<h3>Colours</h3>
 <p>Choose your own background and accent colours. Use the colour picker or type a hex code such as <b>#0c1830</b>. Changes apply straight away and are saved on this device.</p>
+<label class="chk"><input type="checkbox" id="setFollow"><span>Follow phone: dark (navy and orange) when the phone is in dark mode, light (light and blue) when it isn’t</span></label>
 <div class="setrow"><label for="setBgPick">Background</label><div class="setfields"><input type="color" id="setBgPick" aria-label="Background colour picker"><input id="setBgHex" maxlength="7" autocomplete="off" spellcheck="false" aria-label="Background hex code" placeholder="#0c1830"></div></div>
 <div class="setrow"><label for="setAcPick">Accent</label><div class="setfields"><input type="color" id="setAcPick" aria-label="Accent colour picker"><input id="setAcHex" maxlength="7" autocomplete="off" spellcheck="false" aria-label="Accent hex code" placeholder="#ff8a2a"></div></div>
 <div class="msg" id="setMsg" role="status" aria-live="polite"></div>
@@ -272,6 +278,8 @@ HELP.history=`<p>Deliveries you save are kept in this browser on this device. We
 <div class="row" style="margin:10px 0"><button id="histImport">Import an exported log</button><input type="file" id="histFile" accept=".xlsx,.csv,.xls,.pdf,application/pdf" hidden></div>
 <div class="bkinfo"><span id="bkNote"></span><button id="histBk">Back up now</button></div>
 <div class="msg" id="histMsg" role="status" aria-live="polite"></div>
+<div class="histfind"><label for="histFind">Find an LPN</label><input type="search" id="histFind" autocomplete="off" spellcheck="false" enterkeyhint="search" placeholder="Type or paste part of an LPN"></div>
+<div class="msg" id="histFindMsg" role="status" aria-live="polite"></div>
 <div id="histRoot"></div>`;
 async function histExport(h,mail){
   const msg=$("histMsg"),sv=Object.assign({rows:rows},getDel());
@@ -315,7 +323,7 @@ function checkBackup(d){
     else if(k==="lpncfg")out[k]=JSON.stringify(cleanCfg(parse(v)));
     else if(k==="lpnpresets"){const p=parse(v),o={};if(p&&typeof p==="object"&&!Array.isArray(p))Object.keys(p).forEach(n=>{if(isTxt(p[n])||Array.isArray(p[n])){const l=normList(p[n]);if(l)o[String(n).slice(0,60)]=l}});out[k]=JSON.stringify(o)}
     else if(k==="lpnlogo"){if(okLogo(v))out[k]=v}
-    else if(k==="lpntheme"){const t=parse(v);if(t&&typeof t==="object"&&hexOk(t.bg)&&hexOk(t.ac))out[k]=JSON.stringify({bg:t.bg,ac:t.ac})}
+    else if(k==="lpntheme"){const t=parse(v);if(t&&typeof t==="object"&&hexOk(t.bg)&&hexOk(t.ac))out[k]=JSON.stringify(t.follow===true?{bg:t.bg,ac:t.ac,follow:true}:{bg:t.bg,ac:t.ac})}
     else out[k]=v;
   });
   return {data:out,pallets:pallets,saved:saved};
@@ -485,8 +493,10 @@ function initHistory(){
       const row=document.createElement("div");row.className="row";row.style.alignItems="center";row.append(t,u);d.appendChild(row);
       d.setAttribute("role","status");
     };
-    r.append(o,xl,em,x);d.append(hd,tt,sb,r);root.appendChild(d);
+    const fm=document.createElement("div");fm.className="sb hitl";fm.hidden=true;
+    r.append(o,xl,em,x);d.append(hd,tt,sb,fm,r);d._h=h;root.appendChild(d);
   });
+  $("histFind").oninput=histFilter;histFilter();
   $("histImport").onclick=()=>{$("histFile").value="";$("histFile").click()};
   $("histFile").onchange=async e=>{
     const f=e.target.files&&e.target.files[0];if(!f)return;
@@ -511,6 +521,22 @@ function initHistory(){
       }
     }catch(err){$("histMsg").textContent=(err&&err.message)||"Couldn’t read that file."}
   };
+}
+/* Find an LPN: shows only the saved deliveries that hold it (3 or more letters or numbers, any part of the LPN). */
+function histFilter(){
+  const inp=$("histFind"),msg=$("histFindMsg");if(!inp||!msg)return;
+  const q=norm(inp.value),cards=[...$("histRoot").children].filter(c=>c._h);
+  let n=0;
+  cards.forEach(c=>{
+    const fm=c.querySelector(".hitl");
+    if(q.length<3){c.hidden=false;fm.hidden=true;return}
+    const hit=c._h.rows.filter(z=>norm(z.lpn).includes(q));
+    c.hidden=!hit.length;fm.hidden=!hit.length;
+    if(hit.length){n++;fm.textContent="Found: "+hit.slice(0,3).map(z=>z.lpn+" ("+z.type+")").join(", ")+(hit.length>3?" and "+(hit.length-3)+" more":"")}
+  });
+  if(q.length<3){msg.textContent=q?"Type at least 3 letters or numbers.":"";return}
+  const inLog=rows.some(z=>norm(z.lpn).includes(q))?" It is also in the current log.":"";
+  msg.textContent=(n?"Found in "+n+(n===1?" saved delivery.":" saved deliveries."):"Not in any saved delivery from the last two weeks.")+inLog;
 }
 $("newDel").onclick=newDelivery;
 $("histBtn").onclick=()=>openHelp("history","Saved deliveries");
@@ -563,15 +589,23 @@ function initSettings(){
   $("setSize").value=cfg.size;$("setSize").onchange=()=>{cfg.size=$("setSize").value;saveCfg();applyCfg()};
   $("setMerge").checked=mergeLog;
   $("setMerge").onchange=()=>{mergeLog=$("setMerge").checked;try{localStorage.setItem("lpnmergelog",mergeLog?"1":"0")}catch(e){}};
-  const sync=()=>{$("setBgPick").value=hexNorm(theme.bg);$("setAcPick").value=hexNorm(theme.ac);$("setBgHex").value=hexNorm(theme.bg);$("setAcHex").value=hexNorm(theme.ac)};
+  // The boxes show the colours in use. Choosing your own colours turns Follow phone off.
+  const sync=()=>{const T=themeNow();$("setBgPick").value=hexNorm(T.bg);$("setAcPick").value=hexNorm(T.ac);$("setBgHex").value=hexNorm(T.bg);$("setAcHex").value=hexNorm(T.ac);$("setFollow").checked=!!theme.follow};
+  window.themeSync=()=>{if($("setFollow"))sync()};
   sync();
-  const pick=(id,key,hexId)=>{$(id).oninput=()=>{theme[key]=$(id).value;$(hexId).value=hexNorm(theme[key]);$("setMsg").textContent="";applyTheme();saveTheme()}};
+  const own=()=>{if(theme.follow){const T=themeNow();theme={bg:T.bg,ac:T.ac};$("setFollow").checked=false}};
+  $("setFollow").onchange=()=>{
+    if($("setFollow").checked)theme={bg:hexNorm(theme.bg),ac:hexNorm(theme.ac),follow:true};else own();
+    sync();applyTheme();saveTheme();
+    $("setMsg").textContent=theme.follow?"Colours now follow the phone’s light or dark mode.":"";
+  };
+  const pick=(id,key,hexId)=>{$(id).oninput=()=>{own();theme[key]=$(id).value;$(hexId).value=hexNorm(theme[key]);$("setMsg").textContent="";applyTheme();saveTheme()}};
   pick("setBgPick","bg","setBgHex");pick("setAcPick","ac","setAcHex");
   const typed=(hexId,key,pickId)=>{$(hexId).oninput=()=>{
     const v=$(hexId).value;
-    if(hexOk(v)){theme[key]=hexNorm(v);$(pickId).value=theme[key];$("setMsg").textContent="";$(hexId).style.borderColor="";applyTheme();saveTheme()}
+    if(hexOk(v)){own();theme[key]=hexNorm(v);$(pickId).value=theme[key];$("setMsg").textContent="";$(hexId).style.borderColor="";applyTheme();saveTheme()}
     else{$("setMsg").textContent="Enter a hex code with 3 or 6 digits, for example #ff8a2a.";$(hexId).style.borderColor="var(--dg)"}
-  };$(hexId).onblur=()=>{$(hexId).value=hexNorm(theme[key]);$(hexId).style.borderColor="";$("setMsg").textContent=""}};
+  };$(hexId).onblur=()=>{$(hexId).value=hexNorm(themeNow()[key]);$(hexId).style.borderColor="";$("setMsg").textContent=""}};
   typed("setBgHex","bg","setBgPick");typed("setAcHex","ac","setAcPick");
   const q=$("setQuick");q.innerHTML="";
   THEME_QUICK.forEach(t=>{
