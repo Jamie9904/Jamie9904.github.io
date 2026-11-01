@@ -739,6 +739,8 @@ async function page(browser, width, opts = {}) {
     // A drawn picture stands in for the camera, and a stand-in barcode reader reports one code.
     const cam = () => { const cv = document.createElement("canvas"); cv.width = 640; cv.height = 480; const g = cv.getContext("2d");
       setInterval(() => { g.fillStyle = "#777"; g.fillRect(0, 0, 640, 480); }, 50); const st = cv.captureStream(20);
+      // A camera with a torch, as on most Android phones; the calls to switch it are recorded.
+      const tr = st.getVideoTracks()[0]; window.__torch = []; tr.getCapabilities = () => ({ torch: true }); tr.applyConstraints = async c => { window.__torch.push(c.advanced[0].torch); };
       if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = async () => st;
       window.BarcodeDetector = class { async detect() { return window.__code ? [{ rawValue: window.__code }] : []; } }; };
     for (const [w, h] of [[360, 640], [375, 667], [390, 844]]) {
@@ -748,8 +750,23 @@ async function page(browser, width, opts = {}) {
       await q.evaluate(() => { document.getElementById("scanBtn").click(); document.getElementById("scan").click(); });
       await q.waitForTimeout(500); await q.evaluate(() => { window.__code = "VLT004040265"; }); await q.waitForTimeout(700);
       const s = await q.evaluate(() => { const b = id => document.getElementById(id).getBoundingClientRect();
-        return { stop: Math.round(b("stopscan").bottom), msg: Math.round(b("smsg").bottom), vh: innerHeight, text: document.getElementById("smsg").textContent }; });
-      check("Live scan at " + w + "×" + h + ": the Added line and Stop scanning are on screen", /^Added: VLT004040265/.test(s.text) && s.stop <= s.vh && s.msg <= s.vh, s);
+        return { stop: Math.round(b("stopscan").bottom), msg: Math.round(b("smsg").bottom), torch: Math.round(b("torch").bottom), torchR: Math.round(b("torch").right), vw: innerWidth, vh: innerHeight, text: document.getElementById("smsg").textContent }; });
+      check("Live scan at " + w + "×" + h + ": the Added line, Torch and Stop scanning are on screen", /^Added: VLT004040265/.test(s.text) && s.stop <= s.vh && s.msg <= s.vh && s.torch <= s.vh && s.torchR <= s.vw, s);
+      if (w === 360) {
+        await q.evaluate(() => document.getElementById("torch").click()); await q.waitForTimeout(50);
+        let t = await q.evaluate(() => ({ calls: window.__torch.slice(), pressed: document.getElementById("torch").getAttribute("aria-pressed") }));
+        await q.evaluate(() => document.getElementById("torch").click()); await q.waitForTimeout(50);
+        t.after = await q.evaluate(() => ({ calls: window.__torch.slice(), pressed: document.getElementById("torch").getAttribute("aria-pressed") }));
+        await q.click("#stopscan"); await q.waitForTimeout(50);
+        t.hidden = await q.evaluate(() => document.getElementById("torch").hidden);
+        check("Torch switches the camera light on and off, says if it's on, and goes when scanning stops", JSON.stringify(t.calls) === "[true]" && t.pressed === "true" && JSON.stringify(t.after.calls) === "[true,false]" && t.after.pressed === "false" && t.hidden, t);
+        // A camera without a torch (most iPhones): no button.
+        await q.evaluate(() => { const g = navigator.mediaDevices.getUserMedia; navigator.mediaDevices.getUserMedia = async () => { const st = await g(); st.getVideoTracks()[0].getCapabilities = () => ({}); return st; }; document.getElementById("scan").click(); });
+        await q.waitForTimeout(400);
+        t = await q.evaluate(() => ({ hidden: document.getElementById("torch").hidden, msg: document.getElementById("smsg").textContent }));
+        check("with no torch on the camera, the Torch button isn't shown", t.hidden && /Point the camera|Added/.test(t.msg), t);
+        check("no script errors", q.errors.length === 0, q.errors);
+      }
       await q.ctx.close();
     }
   }
@@ -1050,6 +1067,18 @@ async function page(browser, width, opts = {}) {
     check("tapping Add puts the prefix in the list and adds its numbers without reading again, keeping the earlier note", s.pfx === "VLT, RBY" && s.nums.includes("RBY001234567") && s.nums.includes("RBY001234568") && s.hidden && /Added RBY to the prefix list and 2 numbers/.test(s.msg) && /Photo 1: found 1 LPN/.test(s.msg) && !/tap Add/.test(s.msg), s);
     check("after tapping Add, keyboard focus moves to the manifest numbers", s.focus === "cmpNums", s.focus);
     await q.evaluate(() => { document.getElementById("cmpClear").click(); document.getElementById("cmpPfx").value = ""; savePfx(); });
+    // Seal hint: the same number twice, or different lengths; quiet while typing.
+    s = await q.evaluate(async () => { const out = {}, i = document.getElementById("sealIn"), o = document.getElementById("sealOut"), w = () => document.getElementById("sealWarn").textContent;
+      const put = (el, v) => { el.value = v; el.dispatchEvent(new Event("input")); };
+      put(i, "SL123456"); put(o, "SL12"); out.typing = w();
+      put(o, "SL1234567"); o.dispatchEvent(new Event("change")); out.len = w();
+      put(o, "sl 123456"); o.dispatchEvent(new Event("change")); out.same = w();
+      put(o, "SL654321"); out.fixed = w();
+      put(o, "SL1234567"); o.dispatchEvent(new Event("change")); setDel({ sealIn: "A1", sealOut: "" }); out.cleared = w();
+      setDel({ sealIn: "SEAL99", sealOut: "SEAL99" }); out.loaded = w(); setDel({});
+      return out; });
+    check("seal numbers that differ in length get a gentle warning when you leave the box, not while typing", s.typing === "" && /Seal in has 8 characters and seal out has 9\. Check neither is mistyped\./.test(s.len), s);
+    check("the same seal number in both boxes is flagged, and the warning goes when it's fixed or cleared", /Seal in and seal out are the same number/.test(s.same) && s.fixed === "" && s.cleared === "" && /same number/.test(s.loaded), s);
     // Follow phone colours.
     await q.emulateMedia({ colorScheme: "dark" });
     await q.evaluate(() => { document.getElementById("btnSet").click(); });

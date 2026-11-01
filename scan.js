@@ -45,6 +45,7 @@ async function startScan(){
       await zxReader.decodeFromConstraints({video:{facingMode:{ideal:"environment"}},audio:false},v,(res)=>{if(res)onCode(res.getText())});
     }
     keepAwake(true);
+    torchSetup(v.srcObject);
     $("smsg").textContent="Point the camera at a pallet barcode.";
   }catch(e){
     stopScan(true);
@@ -53,8 +54,22 @@ async function startScan(){
     $("smsg").textContent=denied?"Camera access was blocked. Allow camera permission for this site in your browser settings, make sure the page is opened over https, or use “Scan by photo”.":"Couldn't start the scanner ("+((e&&e.message)||"error")+").";
   }
 }
+/* Torch: shown only when the phone lets a web page turn its light on (most Android phones; iPhones mostly don't). */
+let torchTrack=null,torchOn=false;
+function torchSetup(s){
+  const b=$("torch");torchTrack=null;torchOn=false;b.hidden=true;b.setAttribute("aria-pressed","false");b.classList.remove("on");
+  try{const t=s&&s.getVideoTracks&&s.getVideoTracks()[0],c=t&&t.getCapabilities&&t.getCapabilities();if(c&&c.torch){torchTrack=t;b.hidden=false}}catch(e){}
+  $("scanbox").classList.toggle("hastorch",!b.hidden); // the camera view is a little shorter so both buttons stay on screen
+}
+$("torch").onclick=async()=>{
+  if(!torchTrack)return;const want=!torchOn;
+  try{await torchTrack.applyConstraints({advanced:[{torch:want}]});torchOn=want}
+  catch(e){diag("scan","Torch couldn't be switched: "+((e&&e.message)||"error"));$("smsg").textContent="The torch couldn't be switched on. Try more light, or Scan by photo.";return}
+  const b=$("torch");b.setAttribute("aria-pressed",String(torchOn));b.classList.toggle("on",torchOn);
+};
 function stopScan(keepMsg){
   scanning=false;keepAwake(false);
+  torchSetup(null);
   if(timer){clearInterval(timer);timer=null}
   if(zxReader){try{zxReader.reset()}catch(e){}zxReader=null}
   if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
