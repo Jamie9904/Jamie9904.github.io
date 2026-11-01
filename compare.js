@@ -213,7 +213,7 @@ function photoLpns(items){
   t.forEach(x=>{if(!pf.length||okPfx(x))out.push(x);else if(maybeLpn(x))skipped.push(x)});
   out.skipped=[...new Set(skipped)];out.odd=odd;
   // Numbers changed to match the rest of the page, so the note can ask for them to be checked.
-  out.mended=(t.mended||[]).filter(x=>out.includes(x));
+  out.mended=[...new Set(t.mended||[])].filter(x=>out.includes(x));
   return out;
 }
 /* One photo reader is started for a batch of photos (or PDF pages) and reused, then closed 15 seconds after the
@@ -408,6 +408,7 @@ async function readLogPdf(f,say){
 $("cmpPdfBtn").onclick=()=>{$("cmpPdfFile").value="";$("cmpPdfFile").click()};
 $("cmpPdfFile").onchange=async e=>{
   const files=[...(e.target.files||[])];if(!files.length)return;
+  cmpForgetPhotos();
   let total=0;const fails=[],notes=[];
   for(let i=0;i<files.length;i++){
     const tag="PDF "+(i+1)+" of "+files.length;
@@ -429,7 +430,7 @@ $("cmpPhotoFile").onchange=async e=>{
     const tag="Photo "+(i+1),f=files[i];
     cmpMsg("Reading photo "+(i+1)+" of "+files.length+"…");
     diag("manifest","photo "+(i+1)+" of "+files.length+": "+(f.type||"?")+", "+Math.round((f.size||0)/1024)+" KB");
-    try{const a=await readPhoto(f),r=addNums(a);notes.push(readNote(tag,a,r));cmpLastPhotos.push({file:f,tag,found:a.length,odd:((a.skipped||[]).length+(a.odd||[]).length+(a.mended||[]).length)});diag("manifest",tag+": found "+a.length+", added "+r.added+", already listed "+r.dup+(a.skipped&&a.skipped.length?", skipped "+a.skipped.join(" "):"")+(a.odd&&a.odd.length?", left out as unlike the page "+a.odd.join(" "):""))}
+    try{const a=await readPhoto(f),r=addNums(a);notes.push(readNote(tag,a,r));cmpLastPhotos.push({file:f,tag,found:a.length,odd:((a.skipped||[]).length+(a.odd||[]).length+(a.mended||[]).length)});diag("manifest",tag+": found "+a.length+", added "+r.added+", already listed "+r.dup+(a.skipped&&a.skipped.length?", skipped "+a.skipped.join(" "):"")+(a.odd&&a.odd.length?", left out as unlike the page "+a.odd.join(" "):"")+(a.mended&&a.mended.length?", corrected to match the page "+a.mended.join(" "):""))}
     catch(err){const m=(err&&err.message)||"error";notes.push(tag+": couldn’t be read ("+m+").");diag("manifest",tag+" failed: "+m);cmpLastPhotos.push({file:f,tag,found:-1,odd:0})}
   }
   cmpMsg(notes.join(" ")+" Check the numbers below are correct, then compare."+oddNote("cmpNums"));
@@ -438,9 +439,10 @@ $("cmpPhotoFile").onchange=async e=>{
 // Opens the report box with the photo that read worst (couldn't be read, fewest numbers, or most corrected).
 $("cmpReport").onclick=()=>{
   const w=cmpLastPhotos.slice().sort((a,b)=>(a.found<0?-1:0)-(b.found<0?-1:0)||a.found-b.found||b.odd-a.odd)[0];
-  if(typeof openFeedback==="function")openFeedback({kind:"problem",text:"Manifest photo reading: "+(w?w.tag+" ":"")+"(say what went wrong, e.g. which numbers were missing or wrong)",photo:w&&w.file,photoName:w&&w.tag});
+  if(typeof openFeedback==="function")openFeedback({kind:"problem",hint:"What went wrong with "+(w?w.tag.toLowerCase():"the photos")+"? For example, which numbers were missing or wrong.",photo:w&&w.file,photoName:w&&w.tag});
 };
-$("cmpClear").onclick=()=>{logSrc=null;logPdfSrc=null;logSheets=null;$("cmpNums").value="";$("cmpLogNums").value="";$("cmpLogName").textContent="";$("cmpSum").innerHTML="";$("cmpRes").hidden=true;$("cmpRes").innerHTML="";cmpMsg("")};
+function cmpForgetPhotos(){cmpLastPhotos=[];$("cmpReport").hidden=true}
+$("cmpClear").onclick=()=>{cmpForgetPhotos();logSrc=null;logPdfSrc=null;logSheets=null;$("cmpNums").value="";$("cmpLogNums").value="";$("cmpLogName").textContent="";$("cmpSum").innerHTML="";$("cmpRes").hidden=true;$("cmpRes").innerHTML="";cmpMsg("")};
 function cmpData(){
   const lines=id=>$(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
   const uniq=a=>{const seen=new Set();return a.filter(x=>{const k=norm(x);if(!k||seen.has(k))return false;seen.add(k);return true})};

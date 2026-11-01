@@ -381,13 +381,20 @@ async function fbShrink(f){
 }
 /* The report form is a box in the middle of the screen, opened from the Report button at the top, Settings or the
    Guide. It can open over a panel: the panel is set aside while it's open, and focus goes back where it came from. */
-let fbOpener=null;
+let fbOpener=null,fbPhotoJob=0;
 function openFeedback(opts){
   if(!$("fbBox").hidden)return;
   opts=opts||{};
   if(opts.kind){const r=document.querySelector('input[name="fbKind"][value="'+(opts.kind==="idea"?"idea":"problem")+'"]');if(r)r.checked=true}
-  if(opts.text&&!$("fbText").value.trim())$("fbText").value=opts.text;
-  if(opts.photo){fbShrink(opts.photo).then(d=>{fbPhotoData=d;fbShowPhoto((opts.photoName||"Photo")+" attached ("+Math.round(d.length*0.75/1024)+" KB)")}).catch(()=>{})}
+  // A suggested question goes in as the box's hint, not as text, so a report can't be sent without the person's own words.
+  $("fbText").placeholder=opts.hint||"";
+  if(opts.photo){
+    // The photo is made smaller first; Send waits for it, and a box closed meanwhile doesn't keep it.
+    const mine=++fbPhotoJob;$("fbSend").disabled=true;fbShowPhoto("Adding "+(opts.photoName||"the photo").toLowerCase()+"…");
+    fbShrink(opts.photo).then(d=>{if(mine!==fbPhotoJob||$("fbBox").hidden)return;fbPhotoData=d;fbShowPhoto((opts.photoName||"Photo")+" attached ("+Math.round(d.length*0.75/1024)+" KB)")})
+      .catch(()=>{if(mine===fbPhotoJob){fbShowPhoto(fbPhotoData?"Photo added":"");$("fbMsg").textContent="That photo couldn’t be added. You can still send the report, or add it with Add a photo."}})
+      .finally(()=>{if(mine===fbPhotoJob)$("fbSend").disabled=false});
+  }
   fbOpener=document.activeElement;
   $("fbShade").hidden=false;$("fbBox").hidden=false;
   pageInert(true);if($("panel"))$("panel").inert=true;if($("instBox"))$("instBox").inert=true;
@@ -396,6 +403,7 @@ function openFeedback(opts){
 }
 function closeFeedback(){
   if($("fbBox").hidden)return;
+  fbPhotoJob++;$("fbSend").disabled=false;$("fbText").placeholder="";
   $("fbShade").hidden=true;$("fbBox").hidden=true;
   if($("panel"))$("panel").inert=false;if($("instBox"))$("instBox").inert=false;
   if($("panel").hidden&&$("instBox").hidden)pageInert(false);
