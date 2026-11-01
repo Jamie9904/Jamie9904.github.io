@@ -518,10 +518,32 @@ function replaceLine(id,old,nv){
   $(id).value=out.join("\n");
 }
 function refreshCmp(){const C=cmpData();if(C)renderCmp(C);else $("cmpRes").hidden=true}
+/* The result as plain text, to send by WhatsApp, Teams, email or text from the phone's share menu. */
+function cmpShareText(C){
+  const {res,cnt,man,kind}=C,d=$("cmpDate").value;
+  const miss=res.filter(x=>kind(x)==="missing").map(x=>x.n),book=res.filter(x=>kind(x)==="book").map(x=>x.n);
+  return ["Manifest check"+(d?" "+ukDate(d):"")+(cmpTrailer?", trailer "+cmpTrailer:""),
+    "Missing from the log ("+miss.length+"): "+(miss.join(", ")||"none"),
+    "On the log only, to book in ("+book.length+"): "+(book.join(", ")||"none"),
+    "Matched: "+cnt.ok+" of "+man.length+" on the manifest"].join("\n");
+}
+async function shareCmp(C){
+  const text=cmpShareText(C);
+  diag("manifest","Share missing list: "+(navigator.share?"share menu":navigator.clipboard?"copy":"none"));
+  if(navigator.share){
+    try{await navigator.share({title:"Manifest check",text:text});cmpMsg("");return}
+    catch(e){if(e&&e.name==="AbortError")return} // closed without sharing; anything else falls back to copying
+  }
+  try{await navigator.clipboard.writeText(text);cmpMsg("The missing list was copied. Paste it into a message or email.");return}catch(e){}
+  cmpMsg("Sharing isn’t available here. The list is: "+text.replace(/\n/g," · "));
+}
 function renderCmp(C){
   const {res,cnt,man,kind}=C;
   $("cmpSum").innerHTML="<span>On manifest: <b>"+man.length+"</b></span><span>✓ Matched: <b>"+cnt.ok+"</b></span><span>✗ Missing (report): <b>"+cnt.missing+"</b></span><span>⚠ On log only (book in): <b>"+cnt.book+"</b></span>";
   const box=$("cmpRes");box.hidden=false;box.innerHTML="";
+  const sh=document.createElement("div");sh.className="row";sh.style.margin="0 0 8px";
+  const sb=document.createElement("button");sb.type="button";sb.id="cmpShare";sb.textContent="Share missing list";
+  sb.onclick=()=>shareCmp(C);sh.appendChild(sb);box.appendChild(sh);
   const mk=(title,cls,items,src,hint)=>{
     const h=document.createElement("h3");h.className=cls;h.textContent=title+" ("+items.length+")";box.appendChild(h);
     const note=document.createElement("div");note.className="note";note.style.margin="0 0 4px";note.textContent=items.length?hint:"None";box.appendChild(note);

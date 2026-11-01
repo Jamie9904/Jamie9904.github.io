@@ -180,7 +180,7 @@ const pdfCell=(t,o)=>({content:String(t),styles:Object.assign({},o||{})});
 async function buildLogPdf(d){
   await loadJsPdf();await appVersion();
   const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:"portrait"});
-  doc.setProperties({title:"LPN log "+d,subject:"LPN log",keywords:"LPNLOG2:"+encodeURIComponent(JSON.stringify({app:appVer||appVerTry,d:d,r:($("recv").value||"").trim(),n:($("notes").value||"").trim(),e:$("expect").value||"",t:($("trailer").value||"").trim(),si:($("sealIn").value||"").trim(),so:($("sealOut").value||"").trim(),rows:rows.map(r=>[r.lpn,r.type,r.fsdu?1:0])}))});
+  doc.setProperties({title:"LPN log "+d,subject:"LPN log",keywords:"LPNLOG2:"+encodeURIComponent(JSON.stringify({app:appVer||appVerTry,d:d,r:($("recv").value||"").trim(),n:($("notes").value||"").trim(),e:$("expect").value||"",t:($("trailer").value||"").trim(),si:($("sealIn").value||"").trim(),so:($("sealOut").value||"").trim(),rows:rows.map(r=>r.dmg?[r.lpn,r.type,r.fsdu?1:0,r.dmg]:[r.lpn,r.type,r.fsdu?1:0])}))});
   const who=($("recv").value||"").trim();
   const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
   const L=10,LW=100,RX=L+LW+8,RW=190-LW-8;

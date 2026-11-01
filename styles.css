@@ -386,3 +386,15 @@ details.opts>summary .note{min-width:0;overflow:hidden;text-overflow:ellipsis;wh
 #fbBox p{font-size:.95rem;margin:6px 0}
 #fbBox textarea{min-height:110px}
 @media print{#fbShade,#fbBox,.top .report{display:none}}
+/* Damaged pallets: a note under the LPN, and the choices shown while a pallet is edited. */
+.dmgtag{display:block;color:var(--dg);font:700 .85rem/1.3 "Atkinson Hyperlegible",system-ui,sans-serif;margin-top:2px;word-break:normal}
+tr.dmg td.l{box-shadow:inset 3px 0 0 var(--dg)}
+.dmgrow td{padding-top:0}
+.dmgbox{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 0}
+.dmgbox .dmglab{font-weight:700;margin-right:2px}
+.dmgbox button{min-height:44px;padding:4px 10px}
+.dmgbox button[aria-pressed="true"]{background:var(--dg);color:var(--bg);border-color:var(--dg)}
+.dmgbox button.none[aria-pressed="true"]{background:var(--sel);color:var(--ink);border-color:var(--act,var(--ac))}
+.dmgother{display:flex;gap:6px;flex:1 1 220px;min-width:0}
+.dmgother[hidden]{display:none}
+.dmgother input{flex:1;min-width:0}
