@@ -537,3 +537,45 @@ On phones with the Manifest check open, the Undo bar shows at the top of the scr
 ## Demo video recorded with a UK browser language (build 45)
 
 The demo video was re-recorded to show the **Report** button. The context's `en-GB` locale wasn't enough for the date box, which follows the browser's own language, so `record.mjs` now also starts Chromium with `--lang=en-GB` and `LANG=en_GB.UTF-8`, `LANGUAGE=en_GB`, and date boxes show day/month/year.
+
+## Find an LPN in Saved deliveries (build 46)
+
+A search box in Saved deliveries hides the deliveries that don't hold the LPN typed, rather than listing matching pallets separately.
+
+- **Why any part, normalised:** staff often have only part of a label, or type it with spaces. The search uses the same `norm()` as the Manifest check (upper case, letters and digits only), so `4040 265` finds `VLT004040265`.
+- **Why 3 characters:** one or two characters match almost every delivery, so below 3 the list is left as it is and the message asks for more.
+- **Why the current log is mentioned:** the current log isn't in Saved deliveries until a new delivery is started, so without that sentence a pallet logged today would look missing.
+- **Limit:** only what Saved deliveries holds (this week and last week) can be found; the "Not in any saved delivery from the last two weeks." wording says so.
+
+## Sideways manifest photos are turned and read again (build 46)
+
+A photo is turned only when the first reading finds nothing that looks like an LPN (no LPNs, nothing left out for the prefix, no odd readings), 90° first and then 270°.
+
+- **Why only then:** an upright photo costs nothing extra. A photo whose numbers were only left out by the prefix list has been read correctly, so it isn't turned.
+- **Trade-off:** a photo with nothing readable now takes up to three page reads before it reports "No LPNs could be read", so the message says "turning the photo to try again" meanwhile. An upside-down photo (180°) is not tried.
+- **Why canvases are emptied straight away:** each full-size canvas and turned copy is set to 0×0 when it is replaced and when the read ends, because phones (Safari above all) give canvas memory back late, and a turned copy doubles the memory held.
+- **Checked on a real photo:** `run-sideways.jpg` in `tools/ocr-check` is `run.jpg` turned, and the `cli` engine follows the same turn loop, so the photo check covers it.
+
+## Trailer number in export file names (build 46)
+
+File names are `LPN-log-<date>-<trailer>` and `Manifest-check-<date>-<trailer>`, so several deliveries on one day get different names.
+
+- **Why sanitised:** a trailer number is typed freely; anything but letters, numbers and dashes becomes a dash and it is cut to 20 characters, so the name works on every phone and computer.
+- **Why the Manifest check uses the checked delivery's trailer:** the check may be of a saved delivery while another delivery is in the trailer box. `cmpTrailer` comes from **Use current log** or the saved delivery chosen; an uploaded log or a log photo has no trailer the app can trust, so its file has none.
+
+## Follow phone colours (build 46)
+
+**Follow phone** switches between two fixed themes, navy and orange in dark mode and light and blue in light mode, not between colours the user picked.
+
+- **Why fixed themes:** both are existing quick themes that pass the contrast checks, and one setting needs no second set of colour boxes.
+- **Why choosing colours turns it off:** the colour boxes show the colours in use; changing one means the person wants their own colours. The colours showing are kept, so the screen doesn't jump.
+- **Saved with the colours:** `follow: true` is stored in `lpntheme` and kept by backups, so a restored phone follows the mode too.
+
+## One-tap prefix add (build 46)
+
+When photos or PDFs give numbers with a prefix that isn't in the prefix list, **Add <prefix> to the prefix list** adds the prefix and the numbers already read.
+
+- **Why not read again:** reading photos takes time on a phone, and the numbers were already read and only left out by the list. They are added from what was kept in memory (`cmpSkipped`), with the usual "Check them against the paper copy".
+- **Why the earlier notes are kept:** the other per-photo notes (found, new, corrected) still matter after the tap, so only the "tap Add" sentence is taken out.
+- **Why focus moves to the manifest box:** the button pressed disappears, so keyboard and screen reader users would otherwise lose their place.
+- **Not for log photos:** the button only adds to the manifest list.

@@ -102,7 +102,7 @@ A check in `tests/run.js` fails if the video is over 3 MB. Re-record when `npm t
 
 ### Checking photo reading on real manifest photos
 
-`tools/ocr-check/` scores the app's photo reading on the user's four manifest photos (`photos/`, address boxes cut off) against `expected.json` (18 LPNs). It needs Node.js with Playwright, and either the Tesseract 5 command (`cli` engine, offline) or internet access to `cdn.jsdelivr.net` and the tessdata download (`js` engine, the app's real `ocrLpns()`):
+`tools/ocr-check/` scores the app's photo reading on the user's four manifest photos and a sideways copy of `run.jpg` (`photos/`, address boxes cut off) against `expected.json` (21 LPNs since build 46). It needs Node.js with Playwright, and either the Tesseract 5 command (`cli` engine, offline) or internet access to `cdn.jsdelivr.net` and the tessdata download (`js` engine, the app's real `ocrLpns()`):
 
 ```bash
 NODE_PATH=$(npm root -g) node tools/ocr-check/check.js
