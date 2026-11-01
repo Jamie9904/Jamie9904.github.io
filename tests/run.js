@@ -12,7 +12,7 @@ const path = require("path");
 const { chromium } = require("playwright");
 
 const ROOT = path.resolve(__dirname, "..");
-const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json",
+const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".json": "application/json",
   ".png": "image/png", ".woff2": "font/woff2", ".webmanifest": "application/manifest+json", ".txt": "text/plain", ".md": "text/plain" };
 
 function serve() {
@@ -849,6 +849,13 @@ async function page(browser, width, opts = {}) {
     check("feedback Worker: a problem becomes an issue in the private repo", r.status === 200 && j.ok && j.issue === 7 && iss && iss.u === "https://api.github.com/repos/Jamie9904/lpn-feedback/issues" && iss.auth === "Bearer test-token" && /^Problem: Photo 3 read nothing/.test(iss.b.title) && /\(LPN Pallet Log v3\.30 \(build 43\)\)/.test(iss.b.body), { j, iss });
     check("feedback Worker: the typed text and report are shown as plain text (no links or mentions)", /~~~~text\nPhoto 3 read nothing\n@someone see \[link\]\(http:\/\/x\)\n~~~~/.test(iss.b.body) && /<details><summary>Problem report<\/summary>/.test(iss.b.body), iss.b.body);
     calls.length = 0;
+    r = await send({ kind: "problem", text: "Torch didn't work", name: "  Sam   @boss [x](http://y)  " }, undefined, "3.3.3.3"); j = await r.json();
+    const nb = calls[0] && calls[0].b.body;
+    check("feedback Worker: the sender's name is shown in its own plain-text block (no links or mentions)", j.ok && /From:\n\n~~~~text\nSam @boss \[x\]\(http:\/\/y\)\n~~~~/.test(nb) && !/^From:.*@boss/m.test(nb), nb);
+    calls.length = 0;
+    r = await send({ kind: "problem", text: "No name" }, undefined, "3.3.3.4"); j = await r.json();
+    check("feedback Worker: no name, no From line", j.ok && !/From:/.test(calls[0].b.body), calls[0].b.body.slice(0, 120));
+    calls.length = 0;
     r = await send({ kind: "idea", text: "Bigger buttons", app: "v3.30 https://evil.example @someone", photo: JPEG }, undefined, "2.2.2.2"); j = await r.json();
     const order = calls.map(c => c.m + " " + c.u.replace("https://api.github.com/repos/Jamie9904/lpn-feedback", "")), patch = calls.find(c => c.m === "PATCH");
     check("feedback Worker: the issue is made first, then the photo saved and shown in it", j.ok && order.length === 3 && order[0] === "POST /issues" && /^PUT \/contents\/photos\/\d{4}-\d{2}\/issue-7-.+\.jpg$/.test(order[1]) && order[2] === "PATCH /issues/7" && /!\[photo\]\(https:\/\/github\.com\/Jamie9904\/lpn-feedback\/blob\/HEAD\/photos\//.test(patch.b.body), order);
@@ -910,8 +917,10 @@ async function page(browser, width, opts = {}) {
     s = await q.evaluate(async () => {
       FEEDBACK_URL = "https://lpn-feedback.test.workers.dev/report"; const sent = []; const real = window.fetch;
       window.fetch = async (u, o) => { sent.push({ u, b: JSON.parse(o.body) }); return new Response(JSON.stringify({ ok: true, issue: 3 }), { status: 200 }); };
-      document.querySelector('input[name="fbKind"][value="idea"]').checked = true; document.getElementById("fbText").value = "Bigger buttons please";
+      document.querySelector('input[name="fbKind"][value="idea"]').checked = true; document.getElementById("fbText").value = "Bigger buttons please"; document.getElementById("fbName").value = "  Sam   Jones ";
       await document.getElementById("fbSend").onclick();
+      const named = { name: sent[0] && sent[0].b.name, kept: localStorage.getItem("lpnfbname") };
+      document.getElementById("fbName").value = "";
       const ok = { n: sent.length, u: sent[0] && sent[0].u, kind: sent[0] && sent[0].b.kind, text: sent[0] && sent[0].b.text, report: sent[0] && /LPN Pallet Log problem report/.test(sent[0].b.report), app: sent[0] && sent[0].b.app, msg: document.getElementById("fbMsg").textContent, cleared: document.getElementById("fbText").value === "" };
       // No signal: kept on the phone, then sent when back online.
       window.fetch = async () => { throw new TypeError("Failed to fetch"); };
@@ -934,9 +943,11 @@ async function page(browser, width, opts = {}) {
       document.getElementById("fbText").value = "x"; await document.getElementById("fbSend").onclick();
       const refused = { msg: document.getElementById("fbMsg").textContent, queued: fbQueue().length };
       window.fetch = real; FEEDBACK_URL = "";
-      return { ok, off, after, refused, race, big, six };
+      const noName = sent.filter(x => x.b.text === "Scanner froze").every(x => !("name" in x.b));
+      return { ok, off, after, refused, race, big, six, named, noName };
     });
     check("sending an idea posts the kind, text, app version and problem report, then clears the form", s.ok.n === 1 && s.ok.u === "https://lpn-feedback.test.workers.dev/report" && s.ok.kind === "idea" && s.ok.text === "Bigger buttons please" && s.ok.report && /^LPN Pallet Log/.test(s.ok.app) && /Sent\. Thank you/.test(s.ok.msg) && s.ok.cleared, s.ok);
+    check("the optional name is sent tidied and remembered on this phone; left blank, no name is sent", s.named.name === "Sam Jones" && s.named.kept === "Sam Jones" && s.noName, { named: s.named, noName: s.noName });
     check("with no signal, a report is kept on the phone (without the report when unticked) and sent when back online", /saved on this phone/.test(s.off.msg) && s.off.queued === 1 && s.off.report === "" && s.after.flushed === 1 && s.after.left === 0 && s.after.last === "Scanner froze" && s.after.stored === null, s);
     check("a report saved while saved ones are being sent isn't lost: it's sent too", s.race.left === 0 && s.race.sent.includes("Scanner froze") && s.race.sent.includes("Added during the flush"), s.race);
     check("the waiting list refuses to grow past 5 reports or 300 KB", s.big === false && s.six === false, s);
@@ -1162,6 +1173,18 @@ async function page(browser, width, opts = {}) {
     const want = "Manifest check 01/11/2026, trailer TR4471\nMissing from the log (2): RBY006292169, RBY006292211\nOn the log only, to book in (1): QUB001899182\nMatched: 2 of 4 on the manifest";
     check("Share missing list sends the missing and extra LPNs as plain text through the share menu", s.shared && s.shared.text === want, s.shared);
     check("without a share menu, the list is copied and the message says so", s.copied === want && /copied/.test(s.msg), s);
+    // Share this app (Settings) and Your data and privacy (Guide).
+    s = await q.evaluate(async () => { document.getElementById("btnSet").click(); await new Promise(r => setTimeout(r, 200));
+      const img = document.querySelector("#panelBody .shareqr"); await new Promise(r => { if (img.complete) r(); else img.onload = img.onerror = r; });
+      let shared = null; navigator.share = async o => { shared = o; }; await document.getElementById("shareApp").onclick();
+      let copied = null; navigator.share = undefined; navigator.clipboard.writeText = async t => { copied = t; }; await document.getElementById("shareApp").onclick();
+      const r = img.getBoundingClientRect();
+      const out = { loaded: img.naturalWidth > 0, alt: img.alt, w: Math.round(r.width), right: Math.round(r.right), vw: innerWidth, url: shared && shared.url, copied, msg: document.getElementById("shareMsg").textContent };
+      closeHelp(); document.getElementById("btnGuide").click(); await new Promise(r => setTimeout(r, 200));
+      const pv = document.getElementById("g10"); out.privacy = pv ? pv.textContent : null; out.toc = !!document.querySelector('.guidetoc a[data-g="g10"]');
+      out.text = pv ? pv.nextElementSibling.textContent : ""; closeHelp(); return out; });
+    check("Settings has Share this app: a QR code that loads, and Send the link shares or copies the app's address", s.loaded && /QR code/.test(s.alt) && s.w === 180 && s.right <= s.vw && s.url === "https://jamie9904.github.io/" && s.copied === "https://jamie9904.github.io/" && /copied/.test(s.msg), s);
+    check("the Guide has a Your data and privacy section, in its contents, saying what a report sends", /Your data and privacy/.test(s.privacy || "") && s.toc && /only thing that leaves the phone/.test(s.text) && /only Jamie/.test(s.text), { p: s.privacy, toc: s.toc });
     // Desktop: a long note wraps instead of pushing FSDU and ✕ out of view.
     await q.setViewportSize({ width: 1300, height: 900 }); await q.waitForTimeout(150);
     s = await q.evaluate(() => { cfg.size = "1.25"; applyCfg(); rows[0].dmg = "Corner crushed and wrap split along one whole side x"; render();

@@ -166,6 +166,8 @@
   <fieldset class="fbkind"><legend class="sr">Type of report</legend><label class="chk"><input type="radio" name="fbKind" value="problem" checked><span>Problem</span></label><label class="chk"><input type="radio" name="fbKind" value="idea"><span>Idea</span></label></fieldset>
   <label for="fbText">What happened, or what would help?</label>
   <textarea id="fbText" rows="4" maxlength="4000" style="width:100%"></textarea>
+  <label for="fbName" style="margin-top:8px">Your name (optional, so Jamie knows who to ask)</label>
+  <input id="fbName" maxlength="60" autocomplete="name" spellcheck="false" style="width:100%">
   <div class="row" style="margin-top:8px;align-items:center"><button type="button" id="fbPhotoBtn">Add a photo</button><button type="button" class="d" id="fbPhotoRm" hidden>Remove photo</button><span class="note" id="fbPhotoName" style="margin:0"></span><input type="file" id="fbPhoto" accept="image/*" hidden></div>
   <label class="chk"><input type="checkbox" id="fbInc" checked><span>Attach the problem report</span></label>
   <div class="row" style="margin-top:10px"><button class="p" id="fbSend">Send</button><button id="fbClose">Close</button></div>

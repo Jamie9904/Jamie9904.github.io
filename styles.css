@@ -398,3 +398,6 @@ tr.dmg td.l{box-shadow:inset 3px 0 0 var(--dg)}
 .dmgother{display:flex;gap:6px;flex:1 1 220px;min-width:0}
 .dmgother[hidden]{display:none}
 .dmgother input{flex:1;min-width:0}
+/* Share this app: the QR code keeps its own white background in every theme so phones can read it. */
+.shareqr{display:block;width:180px;height:180px;margin:6px 0;border-radius:var(--r);image-rendering:pixelated}
+.shareurl{font:600 .98rem "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;overflow-wrap:anywhere;margin:4px 0 8px}
