@@ -1209,6 +1209,9 @@ async function page(browser, width, opts = {}) {
     await q.goto(URL0); await q.waitForTimeout(500);
     let s = await q.evaluate(() => { const h = document.getElementById("hello"), r = h.getBoundingClientRect(); return { shown: !h.hidden, text: h.textContent, right: Math.round(r.right), vw: innerWidth }; });
     check("on the first visit a card offers the demo video, and fits a 360 px phone", s.shown && /New here\? The 47-second demo video/.test(s.text) && s.right <= s.vw, s);
+    await q.evaluate(() => { if (typeof closeInstall === "function") closeInstall(); }); await q.reload(); await q.waitForTimeout(500);
+    s = await q.evaluate(() => !document.getElementById("hello").hidden);
+    check("the welcome card stays until it is answered (still there after a reload)", s === true, s);
     await q.evaluate(() => { if (typeof closeInstall === "function") closeInstall(); [...document.querySelectorAll("#helloBtns button")].find(b => b.textContent === "Watch the demo").click(); });
     await q.waitForTimeout(300);
     s = await q.evaluate(() => ({ panel: !document.getElementById("panel").hidden, title: document.getElementById("panelTitle").textContent, playing: !!document.getElementById("demoVid") && !document.getElementById("demoVid").hidden, card: !document.getElementById("hello").hidden, saved: localStorage.getItem("lpnwelcome") }));

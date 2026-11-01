@@ -63,7 +63,7 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <ul>
 <li>Everything you enter (pallets, deliveries, names and settings) stays in this browser on this phone. There’s no account, and nothing is sent anywhere while you use the app.</li>
 <li>Photos and PDFs of manifests are read on the phone itself and aren’t saved; only a short note of what was read goes in the problem log on this phone.</li>
-<li>The only thing that leaves the phone is a report you choose to send with <b>Report</b>: your message, your name if you add it, a photo if you add one and, if ticked, the problem report. The problem report includes the numbers in the Manifest check, the delivery date and pallet counts, recent app activity and errors (with the LPNs, file names and start of the text read from photos they mention), the prefix list, and your browser, screen size and time zone. Reports go through a Cloudflare server to a private GitHub project that only Jamie, who made the app, can see. Cloudflare sees your internet address, which is kept for an hour to stop spam.</li>
+<li>The only thing that leaves the phone is a report you choose to send with <b>Report</b>: your message, your name if you add it, a photo if you add one and, if ticked, the problem report. The problem report includes the numbers in the Manifest check, the delivery date and pallet counts, recent app activity and errors (with the LPNs, file names and start of the text read from photos they mention), the prefix list, and your browser, screen size and time zone. Reports go through a Cloudflare server to a private GitHub project that only Jamie, who made the app, can see. Cloudflare sees your internet address, which is kept for up to a day to stop spam.</li>
 <li>The Excel, PDF and photo reading tools are downloaded from public code servers the first time they’re needed. Your data isn’t sent to them, though like any website they see your internet address.</li>
 <li>Clearing this site’s data in your browser deletes your log and saved deliveries. On an iPhone, a web page that isn’t added to the home screen can also be cleared after a few weeks unused, so install the app and use <b>Back up now</b>.</li>
 </ul>`,log:`<h3>v3.30 <span class="ver">Current</span></h3>
@@ -412,7 +412,7 @@ function openFeedback(opts){
   if(opts.kind){const r=document.querySelector('input[name="fbKind"][value="'+(opts.kind==="idea"?"idea":"problem")+'"]');if(r)r.checked=true}
   // A suggested question goes in as the box's hint, not as text, so a report can't be sent without the person's own words.
   $("fbText").placeholder=opts.hint||"";
-  // The name typed last time is filled in again (kept on this phone only).
+  // The name typed last time is filled in again (kept on this phone, and in its backups).
   if(!$("fbName").value){try{$("fbName").value=String(localStorage.getItem("lpnfbname")||"").slice(0,60)}catch(e){}}
   if(opts.photo){
     // The photo is made smaller first; Send waits for it, and a box closed meanwhile doesn't keep it.
@@ -684,10 +684,11 @@ $("panelBody").addEventListener("click",e=>{if(e.target&&(e.target.id==="fbGuide
 async function hello(){
   const box=$("hello"),txt=$("helloTxt"),btns=$("helloBtns");
   let b="";try{b=await appBuildP}catch(e){}
-  let seen="",welcomed=false;try{seen=localStorage.getItem("lpnseenbuild")||"";welcomed=!!localStorage.getItem("lpnwelcome")}catch(e){}
+  // The welcome stays until it is answered: marked "ask" on the very first visit, "1" once answered.
+  let seen="",welcome="";try{seen=localStorage.getItem("lpnseenbuild")||"";welcome=localStorage.getItem("lpnwelcome")||"";if(FIRST_OPEN&&!welcome){welcome="ask";localStorage.setItem("lpnwelcome","ask")}}catch(e){}
   const close=()=>{box.hidden=true;btns.innerHTML=""};
   const btn=(t,cls,fn)=>{const x=document.createElement("button");x.type="button";x.textContent=t;if(cls)x.className=cls;x.onclick=()=>{$("btnGuide").focus();close();fn&&fn()};/* focus moves somewhere that stays before the card goes */btns.appendChild(x);return x};
-  if(FIRST_OPEN&&!welcomed){
+  if(welcome==="ask"){
     txt.textContent="New here? The 47-second demo video shows how the app works.";
     const done=()=>{try{localStorage.setItem("lpnwelcome","1")}catch(e){}};
     btn("Watch the demo","p",()=>{done();openHelp("guide","How to use this app");setTimeout(()=>{const p=$("demoPlay");if(p)p.click()},100)});

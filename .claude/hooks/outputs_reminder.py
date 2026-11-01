@@ -83,7 +83,18 @@ def main():
             return sums[0] == sums[1]
         except Exception:
             return False
-    stale = [p for p in stale if not (p in have and re.search(r"\.(mp4|webm|jpe?g|png)$", p, re.I) and same_media(p))]
+    # SVGs get a <metadata> block (content credentials) added the same way: compare them without it.
+    def same_svg(p):
+        try:
+            blob = subprocess.run(["git", "show", "refs/remotes/origin/main:" + p], cwd=top, capture_output=True, timeout=60)
+            if blob.returncode != 0:
+                return False
+            strip = lambda t: re.sub(r"<metadata>.*?</metadata>", "", re.sub(r'\s+xmlns:c2pa="[^"]*"', "", t), flags=re.S)
+            with open(os.path.join(SITE, p), encoding="utf-8") as f:
+                return strip(f.read()) == strip(blob.stdout.decode("utf-8"))
+        except Exception:
+            return False
+    stale = [p for p in stale if not (p in have and ((re.search(r"\.(mp4|webm|jpe?g|png)$", p, re.I) and same_media(p)) or (p.lower().endswith(".svg") and same_svg(p))))]
 
     zip_note = ""
     try:
