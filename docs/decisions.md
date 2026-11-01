@@ -345,6 +345,7 @@ The hooks, agents and working notes for Claude Code are committed in `.claude/` 
 - **Security reviewer agent:** a read-only `security-reviewer` agent with a checklist for files and text from outside and for the libraries, used when import code, library loading, `package.json` versions or `index.html` change.
 - **Cache bump compared with the live site:** the commit check accepts a `CACHE` number higher than the one in `origin/main:sw.js`, as well as a `CACHE` line changed in the commit itself. A branch that has already bumped the cache once therefore doesn't need a new bump for each later commit before it is published.
 - **Media compared by what it shows:** the outputs storage rewrites the metadata of pictures and video after they are saved, so comparing raw bytes reported the download copy as out of date every time. `outputs_reminder.py` compares their decoded frames with `ffmpeg` instead. It decodes main's own copy from git rather than the file in the working tree: after a new video is recorded on `updates`, the working tree holds a file that isn't live yet, and comparing that would hide that the download copy still matches (or doesn't match) what is published. If `ffmpeg` is missing or fails, the file counts as different, so the reminder errs towards syncing.
+- **SVGs compared without their metadata (build 51):** the outputs storage also adds a `<metadata>` block (content credentials, with an `xmlns:c2pa` attribute) to SVGs such as `media/share-qr.svg`, so they are compared as text with that block and attribute removed. SVG is text, so no decoding is needed; anything else that differs, or a read failure, still counts as different.
 
 ## One working branch, updates
 
@@ -637,7 +638,7 @@ The Guide's section 10 says what stays on the phone and what a report sends, in 
 
 - **Why in the Guide:** staff already open it, it works offline, and the Settings report section points to it. The report box itself still doesn't say where reports go (the user's choice in build 44).
 - **Why it lists the problem report's contents:** a report can hold LPNs, file names and text read from photos, so people should know before ticking **Attach the problem report**. The list was checked against `reportText()`; a change to either needs the other changed too.
-- **The Cloudflare address:** the Guide says the internet address is "kept for an hour to stop spam", which is the window it counts towards the hourly limit. The Worker's `Limits` storage is only cleared by its daily alarm, so an address can stay in storage for up to about a day (see [architecture](architecture.md#feedback-worker-toolsfeedback-worker)).
+- **The Cloudflare address:** the Worker's `Limits` storage keeps `ip:<address>` until its daily alarm clears it, so an address can stay stored for up to about a day (see [architecture](architecture.md#feedback-worker-toolsfeedback-worker)). Build 50's Guide said "kept for an hour", the window it counts towards the hourly limit; since build 51 it says "kept for up to a day", so the Guide matches how long it is actually stored rather than how long it counts.
 
 ## Optional name on reports (build 50)
 
@@ -657,7 +658,7 @@ The report box has **Your name (optional)** so Jamie knows who to ask about a re
 A card at the top of the page offers the demo video on the first visit, and shows the newest Changelog line after an update.
 
 - **Why a card, not a pop-up:** it doesn't block logging, it can be ignored, and on the first visit the install pop-up is already a dialog. It is set `inert` while a dialog is open, like the page.
-- **Why "first visit" means no `lpn*` keys at all, checked first thing in `core.js`:** any earlier use of the app leaves a key, and the check has to run before the app saves anything on that load. It is offered on that one load only, so a reload counts as "not now".
+- **Why "first visit" means no `lpn*` keys at all, checked first thing in `core.js`:** any earlier use of the app leaves a key, and the check has to run before the app saves anything on that load. Build 50 offered it on that one load only, so a reload counted as "not now". Since build 51 that first load marks `lpnwelcome` as `"ask"` and the card stays until it is answered: a first load is often interrupted (the install pop-up opens over it, or the page is reloaded), and the card shouldn't be lost then. It is still never shown to anyone who used the app before the first visit was marked, because `FIRST_OPEN` is false for them.
 - **Why one Changelog line, cut to 170 characters:** the card should fit a phone screen; **See what’s new** opens the full Changelog.
 - **Why the build is stored on every load:** so the card shows once per update and never on a fresh install. Phones that update from build 49 had no stored build, so they see no card for build 50; the first what's-new card comes with the next update.
 - **Why focus goes to the Guide button:** the card's buttons disappear when pressed; moving focus first to a button that stays in the header means keyboard and screen reader users aren't left on nothing.
