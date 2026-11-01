@@ -947,6 +947,13 @@ async function page(browser, width, opts = {}) {
       return { ok, off, after, refused, race, big, six, named, noName };
     });
     check("sending an idea posts the kind, text, app version and problem report, then clears the form", s.ok.n === 1 && s.ok.u === "https://lpn-feedback.test.workers.dev/report" && s.ok.kind === "idea" && s.ok.text === "Bigger buttons please" && s.ok.report && /^LPN Pallet Log/.test(s.ok.app) && /Sent\. Thank you/.test(s.ok.msg) && s.ok.cleared, s.ok);
+    {
+      await q.setViewportSize({ width: 360, height: 640 });
+      const fit = await q.evaluate(async () => { cfg.size = "1.25"; applyCfg(); openFeedback({}); await new Promise(r => setTimeout(r, 150));
+        const b = document.getElementById("fbSend").getBoundingClientRect(), out = { send: Math.round(b.bottom), vh: innerHeight }; closeFeedback(); cfg.size = "1"; applyCfg(); return out; });
+      check("on a 360×640 phone with Extra large text, Send in the report box is on screen without scrolling", fit.send <= fit.vh, fit);
+      await q.setViewportSize({ width: 390, height: 844 });
+    }
     check("the optional name is sent tidied and remembered on this phone; left blank, no name is sent", s.named.name === "Sam Jones" && s.named.kept === "Sam Jones" && s.noName, { named: s.named, noName: s.noName });
     check("with no signal, a report is kept on the phone (without the report when unticked) and sent when back online", /saved on this phone/.test(s.off.msg) && s.off.queued === 1 && s.off.report === "" && s.after.flushed === 1 && s.after.left === 0 && s.after.last === "Scanner froze" && s.after.stored === null, s);
     check("a report saved while saved ones are being sent isn't lost: it's sent too", s.race.left === 0 && s.race.sent.includes("Scanner froze") && s.race.sent.includes("Added during the flush"), s.race);
