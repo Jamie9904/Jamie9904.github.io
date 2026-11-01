@@ -15,7 +15,7 @@
 ├── logo.png                 default logo for the header and exports (optional)
 ├── presets.json             shared LPN prefix presets (optional)
 ├── media/
-│   ├── demo.mp4             narrated demo video for the Guide (720×1280, about 40 seconds, about 1.5 MB; loaded only when tapped, not cached)
+│   ├── demo.mp4             narrated demo video for the Guide (720×1280, about 47 seconds, about 1.8 MB; loaded only when tapped, not cached)
 │   └── demo-poster.jpg      still picture shown before the video plays
 ├── fonts/
 │   ├── AtkinsonHyperlegible-{Regular,Bold}.woff2

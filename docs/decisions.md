@@ -411,7 +411,7 @@ The weekly check of the live site, the CDN libraries and the tests is `.github/w
 
 ## Demo video in the Guide, loaded on demand and not cached
 
-The Guide starts with a button that shows a narrated demo video of about 40 seconds (`media/demo.mp4`, about 1.5 MB, with subtitles; 39.7 seconds since build 39, when the button changed from 38 to 40 seconds) instead of loading the player straight away. The service worker leaves `.mp4` and `.webm` requests to the browser.
+The Guide starts with a button that shows a narrated demo video of about 47 seconds (`media/demo.mp4`, about 1.8 MB, with subtitles; 39.7 seconds from build 39, when the button changed from 38 to 40 seconds, and 46.6 seconds since build 49, when it was re-recorded with the damage scene and the button says 47 seconds) instead of loading the player straight away. The service worker leaves `.mp4` and `.webm` requests to the browser.
 
 - **Why a button and `preload="none"`:** most opens of the Guide are to look something up, often on mobile data. Nothing is downloaded until someone asks for the video, so opening the Guide costs nothing extra.
 - **Why it isn't cached:** browsers fetch video with range requests, and the partial (`206`) responses can't be stored with the Cache API. Saving the whole file for offline use would need extra service worker code, and would add 1.5 MB to every install for something most people watch once.
@@ -598,4 +598,27 @@ Seal in and seal out that are the same number, or of different lengths, get a no
 - **Why these two rules:** the seal put on should be a new one, so the same number in both boxes is usually a copy or typing slip; seals on one trailer are normally the same kind, so different lengths suggest a missing or extra character. Neither is certain, so nothing is blocked and the exports are unchanged.
 - **Why spaces and case are ignored:** seal numbers are typed freely, and `sl 123456` is the same seal as `SL123456`.
 - **Why a new note waits until you leave the box:** while a number is being typed it is almost always "a different length" from the other one, so showing that on each key would be noise. Typing only clears a note that no longer fits, and an unchanged note isn't rewritten, so a screen reader doesn't repeat it on every key.
+
+## Damage notes on pallets (build 49)
+
+A damaged pallet gets one short note (`r.dmg`): **Crushed**, **Wet**, or up to 60 characters of the person's own words through **Other…**.
+
+- **Why only Crushed and Wet as buttons:** **Short** and **Wrap torn** were also choices while the feature was being made, and were removed at the user's request. Whether a pallet is short can't be known at the dock without the DC breakdown, so a "Short" button would invite guesses. Anything else goes in **Other…**.
+- **Why from tapping the LPN:** tapping the LPN already opens that pallet for changes, so no new control is added to every row. The choices are only on the page while the pallet is open, in a row under it.
+- **Why the buttons don't take focus on tap:** they cancel `pointerdown`/`mousedown`. Otherwise the LPN box loses focus first, the edit finishes on blur and the row is removed before the tap lands.
+- **Why one note per pallet, as plain text up to 60 characters:** it is a short label for the printed log, not a report. Plain text keeps it safe in backups and imports (`cleanRows()` drops anything that isn't text) and keeps the Delivery Details rows short.
+- **Why in Delivery Details, not a new column:** the exports are mainly printed on A4 and read on desktop; a column for the few damaged pallets would narrow the LPN column on every page. A "Damaged pallet | LPN: reason" row per pallet keeps the table as it was and is read back by `parseExported()`. App-made PDFs also carry the note as a fourth item in each `LPNLOG2:` row, so they import exactly.
+- **Why it counts towards "changed since exported":** `logSig()` includes the note, so a pallet marked damaged after the export doesn't go unrecorded on the paper copy.
+- **Not done:** the log copy in a Manifest check export (`logGridFrom()`) has no damage notes, and the Manifest check doesn't use them.
+
+## Share missing list as text (build 49)
+
+**Share missing list** in the Manifest check results sends the missing and log-only LPNs as plain text through `navigator.share()`.
+
+- **Why text, not a file:** a short message can be read straight away in WhatsApp, Teams, email or a text, and needs no attachment; the Excel and PDF exports are still there for a record.
+- **Why it copies when there is no share menu:** most desktop browsers have no `navigator.share()`, so the text is copied and the message says so. Closing the share menu (`AbortError`) is taken as the person's choice, so nothing is copied then; any other share error falls back to copying.
+
+## No delivery start and finish times (build 49)
+
+Recording when unloading started and finished was considered and deliberately not added. The user decided against it because the times could be used to time staff and put pressure on them. Nothing new is stored: the log still has only the delivery date, the time of the last export ("Exported at hh:mm", `exp.at`) and, for saved deliveries, when they were saved.
 

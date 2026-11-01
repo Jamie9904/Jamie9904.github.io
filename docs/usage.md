@@ -23,7 +23,7 @@ The in-app **Guide** covers the same ground for staff. This page is the referenc
 - Each add shows "Added #n: LPN · type", plus "✓ on manifest" or "⚠ NOT on manifest" while a manifest is loaded.
 - On phones the entry bar shows `n logged`, `n of expected logged`, or `n of total on manifest` (shortened to `n/total` on screens under 400px), and the Delivery card folds into one line once logging starts.
 - The ↶ button next to the entry-bar counter (phones only) removes the most recent pallet, with Undo.
-- Tap an LPN to edit it (each LPN is a button, so it can also be reached with Tab and opened with Enter or Space); Enter saves, Escape cancels, and since build 42 both put the keyboard back on that LPN. Change type or FSDU in the table; ✕ removes it. Undo appears after removing, editing or Clear all.
+- Tap an LPN to edit it (each LPN is a button, so it can also be reached with Tab and opened with Enter or Space); Enter saves, Escape cancels, and since build 42 both put the keyboard back on that LPN. Change type or FSDU in the table; ✕ removes it. Undo appears after removing, editing or Clear all. Tapping an LPN also opens the damage choices under it (see [Damaged pallets](#damaged-pallets-build-49)).
 - **Undo bar:** stays 20 seconds (9 before build 42), and doesn't go away while it has the keyboard focus. On phones (under 760px) it floats just above the entry bar, so it can be seen while logging; with the Manifest check open (the entry bar stepped aside) it shows at the top of the screen instead (since build 45; before, it sat near the bottom and could cover a results row), so it never sits over the results being worked on. While the Undo bar shows, the "Added" note appears above it instead of underneath; a new Undo bar hides any "Added" note that is showing.
 - Search and the type and FSDU filters only change what is shown; totals always cover the whole log. FSDUs are counted separately and are not part of the total.
 - With Expected pallets set, the line under the totals reads "n of x expected" with "(n to go)" in the normal text colour while counting, turns green with "✓ all accounted for" when the count matches, and turns red with "(n more than expected)" only when there are more pallets than expected. When a manifest is loaded and Expected pallets equals the manifest count, this line is hidden, because the manifest progress line already shows the same count.
@@ -31,6 +31,24 @@ The in-app **Guide** covers the same ground for staff. This page is the referenc
 - The FSDU tick boxes in the table are 32px. On phones the FSDU tick box in the entry bar is 40px and the scan option buttons (Live scan, Scan by photo) are at least 48px tall, for gloves (build 41; before, 32px and 42px). The Guide, Changelog and Settings buttons in the header are at least 44px tall on phones.
 - On screens up to 620px wide the header buttons wrap onto a second line and share the row (each sized to its text) instead of pushing the page sideways, for example with Extra large text.
 - On phones, a box or button that gets keyboard focus scrolls clear of the fixed entry bar instead of ending up behind it.
+
+## Damaged pallets (build 49)
+
+Tap an LPN in the log (or Tab to it and press Enter). As well as the LPN box for correcting the number, a row opens under the pallet: **Damage:** **None**, **Crushed**, **Wet**, **Other…**.
+
+- **Crushed** or **Wet** marks the pallet straight away and closes the row.
+- **Other…** shows a box ("What’s wrong?", up to 60 characters) with **Save**; Enter in the box saves too. An empty box isn't saved. If the pallet already has a note of its own, **Other…** opens with that text in the box.
+- **None** removes the note.
+- The current choice is shown pressed (red for a reason, normal for None).
+- A change to the LPN typed in the box at the same time is saved together with the damage choice. **Escape** cancels both.
+
+A damaged pallet shows "Damaged: <reason>" in red under its LPN, with a red line on the left of the LPN cell; a long note wraps instead of widening the table. The Undo bar says "Marked <LPN> as damaged (<reason>)" or "Damage note removed from <LPN>", and **Undo** puts the old note back. The note is saved with the log, in saved deliveries and in backups. Changing it after an export counts as a change, so the log reads "Changed since it was exported…" and Start new delivery asks for a fresh export.
+
+On exports each damaged pallet gets a row "Damaged pallet | <LPN>: <reason>" at the end of Delivery Details (Excel, the basic `.xls` and the PDF). Importing an exported log (Saved deliveries) puts the notes back on their pallets. The copy of the log in a Manifest check export doesn't include damage notes.
+
+**Keyboard:** with the LPN box open, Tab goes to the damage choices (Shift+Tab from **None** goes back to the box). Leaving both the box and the choices (for example Tab past **Save**) closes them and keeps any change; when the keyboard was used, or focus would otherwise be lost because the table was redrawn, it goes back to that pallet's LPN. On phones the row scrolls into view above the entry bar, even for the last pallet. The buttons are at least 44px tall.
+
+Short pallets and torn wrap are not choices: the user asked for them to be taken out (see [decisions](decisions.md#damage-notes-on-pallets-build-49)). Use **Other…** for anything else.
 
 ## Scanning
 
@@ -77,6 +95,16 @@ On phones, while the Manifest check is open and its top is in the upper part of 
 - **Unusual digit counts:** after reading or typing manifest or log numbers, the message ends with "These have an unusual number of digits, so check them against the paper copy: …" (up to eight, then "and n more") for lines that are letters followed by digits but not 9 or 10 digits (10 or 11 for `IM`). Since build 39 `IM` numbers with 10 or 11 digits are not listed there; a 9-digit `IM` number is. Lines in another form, such as `VLT-004040265` or `004040265`, are judged only by the digits at the end (9 or 10 is fine), as before build 39; build 39 had listed them all, and build 40 put this back.
 - A note under the manifest numbers box reminds you that numbers read from photos can be misread, so check them first. (This replaced the earlier "still being tested" warning at the top of the section.)
 - **Check results** lists Missing (on the manifest, not logged: report), Log only (logged, not on the manifest: book in) and Matched. **Fix** corrects a misread number, ✕ removes it.
+- **Share missing list (build 49):** a button at the top of the results. On a phone it opens the share menu (WhatsApp, Teams, email, text…) with a short message:
+
+  ```
+  Manifest check 01/11/2026, trailer TR4471
+  Missing from the log (2): RBY006292169, RBY006292211
+  On the log only, to book in (1): QUB001899182
+  Matched: 2 of 4 on the manifest
+  ```
+
+  The date and trailer parts are left out when they aren't known, and an empty list says "none". Closing the share menu without sending does nothing. Where there is no share menu (most computers), or sharing fails, the text is copied and the message under the buttons says "The missing list was copied. Paste it into a message or email." If copying isn't allowed either, the message shows the list itself ("Sharing isn’t available here. The list is: …").
 - **Export** gives the comparison as Excel (`Manifest-check-<date>-<trailer>.xlsx`), Email PDF or Print (`Manifest-check-<date>-<trailer>.pdf`). Since build 46 the trailer part is the trailer number of the delivery that was checked: the current log's trailer box when **Use current log** loaded it, or the saved delivery's trailer when a saved delivery was chosen. A log uploaded as a file or read from a photo gives no trailer part, and neither does a delivery without a trailer number. When the comparison is added to an uploaded `.xlsx` log, the file keeps the log's own name with " (with manifest check)". With "Include a copy of the log" on, an uploaded `.xlsx` log gets the comparison as a new tab, and PDFs get the log appended. When a log PDF is appended, any links and page-open actions in it are removed; the printed pages are unchanged. Values from an uploaded log are only ever written as plain text or numbers, so a file from outside can't add formulas or links to the export.
 - **Photo reader:** reading photos downloads the photo reader and its language data the first time, which can take a while on a weak signal. If it hasn't started after 90 seconds, or can't be downloaded, it stops with "The photo reader couldn’t load…" and the next try downloads it again. Since build 41 one reader is started for a batch of photos (or scanned PDF pages) and reused, so the second and later photos start faster; it is closed 15 seconds after the last photo to free memory. If one photo takes longer than 2 minutes to read (for example the phone stopped the reader while the app was in the background), that photo fails with "The photo reader stopped. Try the photo again." and the next photo gets a fresh reader. Reading manifest photos and a log photo at the same time is fine: they take turns. Reading photos needs iOS 16 or newer on an iPhone; older phones can still scan barcodes, read PDFs (iOS 16.4+) and type numbers.
 
@@ -169,13 +197,14 @@ Section 9 of the Guide says: "Something not working, or an idea?" with a **Repor
 
 ## Guide and demo video
 
-The **Guide** button in the header opens the Guide in the side panel. It starts with a **▶ Watch the demo video (40 seconds)** button, above the contents bar and the guide sections. (The button said 38 seconds before build 39; the video is 39.7 seconds.) Section 9 also says what LPNs look like: a letter prefix followed by digits, usually 3 letters and 9 or 10 digits, while `IM` numbers (full pallet picks) have 2 letters and 10 or 11 digits; the v3.30 changelog notes that `IM` numbers are always kept and not called unusual.
+The **Guide** button in the header opens the Guide in the side panel. It starts with a **▶ Watch the demo video (47 seconds)** button, above the contents bar and the guide sections. (The button said 38 seconds before build 39 and 40 seconds from build 39 to 48; since build 49 the video is 46.6 seconds.) Section 9 also says what LPNs look like: a letter prefix followed by digits, usually 3 letters and 9 or 10 digits, while `IM` numbers (full pallet picks) have 2 letters and 10 or 11 digits; the v3.30 changelog notes that `IM` numbers are always kept and not called unusual.
 
 - Nothing is downloaded until the button is tapped (the video is set to `preload="none"`).
-- Tapping it hides the button and shows a video player in its place, which starts playing. The video is portrait (720×1280, about 40 seconds, about 1.5 MB), has narration and subtitles, and shows a still picture (`media/demo-poster.jpg`) before it plays. The player has the usual controls (play, pause, full screen) and plays inside the page on iPhones rather than jumping to full screen.
+- Tapping it hides the button and shows a video player in its place, which starts playing. The video is portrait (720×1280, about 47 seconds, about 1.8 MB), has narration and subtitles, and shows a still picture (`media/demo-poster.jpg`) before it plays. The player has the usual controls (play, pause, full screen) and plays inside the page on iPhones rather than jumping to full screen.
 - The video starts at half volume, so it isn't too loud; the player's volume control can turn it up. iPhone Safari ignores volume set by a page, so there the phone's own volume buttons set the level.
 - The scanning part shows picking the pallet type before scanning: FMCG is tapped, then **Scan** and **Live scan**; the first barcode is added as FMCG ("Added #9 … FMCG"), then BB is tapped and the next barcode is added as BB. The narration says: "Pick the pallet type first, then scan. Each pallet is logged with that type, so change it before the next one."
 - The video was re-recorded for build 45, so it shows the **Report** button in the header, and the date box shows day/month/year as on a UK phone.
+- Re-recorded again for build 49 with a "Damage" scene: the first pallet is tapped and marked **Wet** ("Damaged pallet? Tap it and mark it crushed, wet, or say what's wrong."). The Manifest check scene ends with a tap on **Share missing list** ("…and share the missing list in one tap."); the phone's share menu itself isn't shown.
 - Closing the Guide pauses the video. Opening the Guide again shows the button again.
 - When the video starts, keyboard focus moves to the player, so its controls can be used straight away.
 - The video needs internet: it is not saved for offline use. If it can't play, the Guide shows "The video couldn’t play. Check you’re online, then try again."
@@ -185,7 +214,7 @@ The **Guide** button in the header opens the Guide in the side panel. It starts 
 - The Guide, Changelog, Settings and Saved deliveries panel and the install box act as dialogs (build 41): when one opens, focus moves into it (to **✕ Close** in the panel, to the first visible button in the install box), the page behind can't be reached with Tab or a screen reader, and when it closes focus goes back to the button that opened it. Escape closes them.
 - The page language is British English (`lang="en-GB"`), so screen readers use a UK voice.
 - Since build 42:
-  - each LPN in the log is a button named "Edit LPN <number>" (see [Logging behaviour](#logging-behaviour));
+  - each LPN in the log is a button named "Edit LPN <number>" (see [Logging behaviour](#logging-behaviour)); since build 49 it reads "Edit LPN <number>, or mark damage", or "Edit LPN <number>, damaged: <reason>, or mark damage", and the damage choices are a group named "Damage for <number>" with each choice announced as pressed or not;
   - Escape closes an open Export menu (the log's or the Manifest check's) and puts focus back on its **Export** button;
   - the remove (✕) column in the pallet table has the heading "Remove" for screen readers (not shown on screen);
   - the buttons in Saved deliveries say which delivery they act on, for example "Open the delivery of <date>", "Email PDF of <date>" and "Delete the delivery of <date>" (Excel already did);
@@ -251,4 +280,8 @@ Colours (Follow phone, two colours drive the whole theme, with a contrast warnin
 | "No numbers found, so turning the photo to try again…" | Nothing LPN-like was found on the photo, so it is being read again turned on its side. Wait for it to finish; it takes longer than an upright photo. |
 | Colours change by themselves in the evening | **Follow phone** is on in **Settings → Colours** and the phone switched to dark mode. Untick it, or pick your own colours. |
 | An export file name has no trailer number | The Trailer number box was empty when it was exported. For the Manifest check, the log came from an uploaded file or a photo, which carry no trailer number; load it with **Use current log** or from Saved deliveries instead. |
+| The damage choices don't appear | Tap the LPN itself (the number), not the type or FSDU. They show under that pallet while its LPN box is open. |
+| A damage note is missing from the Manifest check export | The copy of the log in a Manifest check export doesn't include damage notes. They are in Delivery Details on the log's own exports. |
+| A damaged pallet was marked by mistake | Tap **Undo** on the Undo bar, or tap the LPN and choose **None**. |
+| **Share missing list** copied the text instead of opening the share menu | The browser has no share menu (most computers) or refused it. Paste the copied text into a message or email. |
 | Anything else that goes wrong | Use the **Report** button at the top of the page (or **Settings → Report a problem or idea**) (with the problem report attached), or download the problem report straight away (**Settings → Problem report → Download problem report**) and send it with a description of what happened. |
