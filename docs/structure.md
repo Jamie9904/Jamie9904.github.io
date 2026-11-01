@@ -38,7 +38,7 @@
 │   ├── lines.json           the spoken line for each scene
 │   ├── voice.py             speaks the lines offline (Kokoro "Heart" voice through sherpa-onnx, downloaded once into ~/.cache/lpn-voice)
 │   ├── stage.html           the 1080×1920 stage: headline, phone frame with the live app, subtitles, cards
-│   ├── record.mjs           serves the repository locally, drives the app scene by scene (SCENES) with Playwright and records frames (en-GB locale; a drawn barcode label stands in for the Live scan camera)
+│   ├── record.mjs           serves the repository locally, drives the app scene by scene (SCENES) with Playwright and records frames (en-GB locale and browser language; a drawn barcode label stands in for the Live scan camera)
 │   ├── render.py            joins the frames with the narration; adds music and sound effects only when SFX_DIR is set
 │   ├── screens.js           fingerprint of the key screens the video shows (npm test compares; --write saves it)
 │   ├── screens.json         the saved fingerprint, rewritten by make.sh after each recording
@@ -57,7 +57,7 @@
 ├── .github/workflows/
 │   ├── test.yml             runs the checks on every push and pull request (advisories and fingerprints without blocking)
 │   ├── feedback-worker.yml  deploys tools/feedback-worker to Cloudflare (by hand, or when it changes on main; skips until its secrets exist)
-│   └── health.yml           weekly health check of the live site, the live demo video, the report system (on `updates`), CDN libraries, advisories, fingerprints, checks and the live site's photo reading
+│   └── health.yml           weekly health check of the live site, the live demo video, the report system, CDN libraries, advisories, fingerprints, checks and the live site's photo reading
 └── .claude/                 Claude Code automations (development only)
     ├── CLAUDE.md            working notes: branches, release steps, user decisions
     ├── settings.json        registers the hooks below

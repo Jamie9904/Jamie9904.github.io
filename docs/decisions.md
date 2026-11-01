@@ -498,9 +498,9 @@ The report form moved out of Settings into a box in the middle of the screen, op
 - **Wording (the user's decision):** the note about where reports go was removed from the box, and the tick box says just "Attach the problem report", without the explanation in brackets. The docs still describe what the problem report contains.
 - **Trade-off:** the box no longer tells staff before sending that the problem report includes LPNs, manifest numbers and text read from photos, or that it goes to a private GitHub repository through Cloudflare. The tick box can still be unticked.
 
-## Report system in the weekly health check, and reruns of cancelled runs (on `updates`)
+## Report system in the weekly health check, and reruns of cancelled runs
 
-Tooling only, no app change; on the `updates` branch and live with the next release.
+Tooling only, no app change; on `main` since build 45's release.
 
 - **Why check the report system every week:** the Worker and its GitHub token fail silently: when the token stops working, the Worker answers 503 and phones keep the reports in their queue, so nobody sees an error. `health.yml` now tests the Worker answers, that `FEEDBACK_GITHUB_TOKEN` can read `lpn-feedback`, and that it doesn't run out within 30 days, so the failure email arrives before reports start waiting.
 - **Why the token is checked from GitHub, not through the Worker:** the Worker's own copy of the token can't be read back. The health check uses the repository secret the deploy job copies to the Worker, so it only proves the Worker's token works if the last deploy succeeded; sending a real test report would prove it but makes an issue every week, which is why that stays a tick box on the deploy workflow.
@@ -508,4 +508,32 @@ Tooling only, no app change; on the `updates` branch and live with the next rele
 - **Why a warning, not a failure, for changed Worker code:** a push to `main` that touches `tools/feedback-worker` already redeploys it; the warning only catches a deploy that was skipped or failed. It needs the full history (`fetch-depth: 0`) to compare with the deployed commit.
 - **Why Checks has 20 minutes:** a slow Playwright browser install on GitHub made build 44's Checks run hit the 10-minute limit and be cancelled, though no check had failed.
 - **Why `ship.sh` reruns a cancelled run once:** a run GitHub cancelled (for example at the time limit) isn't a failed check, so stopping the release for it would be wrong; rerunning more than once could hide a run that always runs too long, so a second cancel stops the release.
-- **Feedback triage:** reading the reports is a Claude Code skill (`lpn-feedback-triage`, proposed to the user's account), not a workflow. A weekly Claude scheduled task to summarise new reports is planned, but needs the user's approval and the Claude GitHub app's access to `lpn-feedback` first.
+- **Feedback triage:** reading the reports is a Claude Code skill (`lpn-feedback-triage`, saved to the user's account), not a workflow. Claude now has read access to `lpn-feedback`, and a weekly Claude scheduled task summarises new reports (Mondays at 10:13 UK time, with a push notification). The task lives in the user's Claude account, not in the repository.
+
+## Corrected numbers named in the photo note (build 45)
+
+When `tidyReads()` changes a reading to match the rest of the page, the photo's note names it and asks for it to be checked against the paper, and the problem log records it.
+
+- **Why:** the tidy-up is a guess from the other numbers on the page. It is usually right, but a wrong guess gives a real-looking LPN that would quietly match or miss the manifest. Naming it costs one sentence and points the check at the numbers most likely to be wrong.
+- **Why only those still on the list:** a mended number the prefix list then drops isn't added, so asking to check it would be noise. A number read twice is named once.
+
+## Report a problem with these photos (build 45)
+
+After a batch of manifest photos, a link opens the report box with the worst photo already attached.
+
+- **Why the worst photo, not all:** the report box takes one photo, and each is shrunk and sent in the report body. The one that couldn't be read, or found fewest numbers, or had most skipped, left-out or corrected numbers, is the one most likely to show the problem.
+- **Why kept in memory only:** manifest photos can show addresses and other delivery details. Holding the `File` objects in a variable until **Clear**, a PDF read or the next batch means nothing new is stored on the phone, and nothing is sent unless the person sends the report. The trade-off is that the link is gone after a reload.
+- **Why a hint, not text:** a ready-made question in the box would let a report be sent with no description at all. As a placeholder it suggests what to say but the box stays empty until the person types.
+- **Why Send waits:** sending before the photo is shrunk would send the report without it. A box closed meanwhile drops the photo, so it doesn't turn up in an unrelated later report.
+
+## Seal boxes three across only when the card is wide enough (build 45)
+
+The trailer and seal boxes use a container query on `.dc-trl` (three across at 520px of card width) instead of a 560px screen-width media query. On desktop the Delivery card is a column of a wider layout, so a screen-width rule put three boxes side by side in a card too narrow for an 11-character seal number. The trade-off is that on some wider screens the seals now sit two across under a full-width trailer box.
+
+## Undo at the top with the Manifest check open on phones (build 45)
+
+On phones with the Manifest check open, the Undo bar shows at the top of the screen (below the safe area) instead of near the bottom, where it could cover a results row for up to 20 seconds while **Fix** or ✕ was being used. This replaces the known issue listed in usage.md before build 45.
+
+## Demo video recorded with a UK browser language (build 45)
+
+The demo video was re-recorded to show the **Report** button. The context's `en-GB` locale wasn't enough for the date box, which follows the browser's own language, so `record.mjs` now also starts Chromium with `--lang=en-GB` and `LANG=en_GB.UTF-8`, `LANGUAGE=en_GB`, and date boxes show day/month/year.
