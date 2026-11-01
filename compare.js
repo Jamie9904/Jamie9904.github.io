@@ -1,6 +1,6 @@
 /* ---- manifest check ---- */
 let mergeLog=true;try{if(localStorage.getItem("lpnmergelog")==="0")mergeLog=false}catch(e){}
-let logLpns=null,logSrc=null,logPdfSrc=null,logSheets=null;
+let logLpns=null,logSrc=null,logPdfSrc=null,logSheets=null,cmpTrailer="";
 const norm=v=>String(v).toUpperCase().replace(/[^A-Z0-9]/g,"");
 const cmpMsg=t=>{$("cmpMsg").textContent=t};
 function getPfx(){return [...new Set(($("cmpPfx").value||"").toUpperCase().split(/[^A-Z]+/).filter(Boolean))]}
@@ -57,7 +57,7 @@ function logGridFrom(rows,d,who){
   return g;
 }
 async function readLog(f){
-  logSrc=null;logPdfSrc=null;logSheets=null;
+  logSrc=null;logPdfSrc=null;logSheets=null;cmpTrailer="";
   const name=f.name.toLowerCase();
   if(name.endsWith(".pdf"))return readLogPdf(f,m=>cmpMsg("Reading log PDF: "+m));
   if(name.endsWith(".xlsx")){
@@ -243,15 +243,16 @@ function ocrDone(w,ok){
 const OCR_READ_MS=120000;
 const ocrRead=(w,img)=>Promise.race([w.recognize(img),new Promise((_,rej)=>setTimeout(()=>rej(Object.assign(new Error("The photo reader stopped. Try the photo again."),{stuck:true})),OCR_READ_MS))]);
 function ocrLpns(f){const run=ocrQ.then(()=>ocrLpnsNow(f));ocrQ=run.catch(()=>{});return run}
+let ocrSay=null; // set while manifest photos are read, to show "turning the photo" on screen
 /* A copy of the canvas turned by 90 or 270 degrees, for manifest photos taken sideways. */
 function turnCanvas(cv,deg){
   const c=document.createElement("canvas");c.width=cv.height;c.height=cv.width;
-  const x=c.getContext("2d");x.translate(c.width/2,c.height/2);x.rotate(deg*Math.PI/180);x.drawImage(cv,-cv.width/2,-cv.height/2);
+  const x=c.getContext("2d");x.imageSmoothingEnabled=false;x.translate(c.width/2,c.height/2);x.rotate(deg*Math.PI/180);x.drawImage(cv,-cv.width/2,-cv.height/2);
   return c;
 }
 async function ocrLpnsNow(f){
   try{await loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js",()=>window.Tesseract)}catch(e){await dropOcrCache();throw new Error(OCR_MSG)}
-  let cv=await prep(f);
+  let cv=await prep(f),tc=null;
   const w=await ocrWorker();let ok=false;
   try{
     let got=await ocrCanvas(w,cv),turned=0;
@@ -259,16 +260,22 @@ async function ocrLpnsNow(f){
     const none=o=>!o.length&&!o.skipped.length&&!(o.odd||[]).length;
     for(const deg of [90,270]){
       if(!none(got.out))break;
-      const tc=turnCanvas(cv,deg),g=await ocrCanvas(w,tc);
+      if(ocrSay)ocrSay("No numbers found, so turning the photo to try again…");
+      tc=turnCanvas(cv,deg);const g=await ocrCanvas(w,tc);
       diag("ocr","Nothing found, so the photo was turned "+deg+"° and read again: "+g.out.length+" LPNs found.");
-      if(!none(g.out)){got=g;turned=deg;cv.width=cv.height=0;cv=tc}else{tc.width=tc.height=0}
+      if(!none(g.out)){got=g;turned=deg;cv.width=cv.height=0;cv=tc}else tc.width=tc.height=0;
+      tc=null;
     }
     const out=got.out,r=got.r;
     if(turned)out.turned=turned;
     window.__ocrItems=got.items; // kept for the photo reading check (tools/ocr-check)
     diag("ocr","Photo text read: "+(r.words||[]).length+" words, "+out.length+" LPNs found"+(turned?" (turned "+turned+"°)":"")+(out.skipped.length?", skipped for prefix: "+out.skipped.slice(0,10).join(" "):"")+". Text start: "+String(r.text||"").replace(/\s+/g," ").slice(0,150));
     ok=true;return out;
-  }finally{ocrDone(w,ok)}
+  }finally{
+    ocrDone(w,ok);
+    // Free the full-size copies now: phones (Safari above all) give canvas memory back late.
+    cv.width=cv.height=0;if(tc)tc.width=tc.height=0;
+  }
 }
 /* Reads one prepared canvas: the whole page, then a close-up of each number found. */
 async function ocrCanvas(w,cv){
@@ -337,7 +344,7 @@ $("cmpLogPhotoFile").onchange=async e=>{
     try{const a=await readLogPhoto(files[i]),r=addNums(a,"cmpLogNums");notes.push(readNote("Log photo "+(i+1),a,r));diag("manifest","Log photo "+(i+1)+": found "+a.length+", added "+r.added)}
     catch(err){const m=(err&&err.message)||"error";notes.push("Log photo "+(i+1)+": couldn’t be read ("+m+"). You can type the numbers in the box instead.");diag("manifest","Log photo "+(i+1)+" failed: "+m)}
   }
-  logSrc=null;logPdfSrc=null;logSheets=null;$("cmpLogName").textContent="Read from photo of printed log";
+  logSrc=null;logPdfSrc=null;logSheets=null;cmpTrailer="";$("cmpLogName").textContent="Read from photo of printed log";
   cmpMsg(notes.join(" ")+" Check the log numbers are correct, then compare."+oddNote("cmpLogNums"));
 };
 /* pdf.js 6 (the "legacy" build, made for older browsers and phones). It is an ES module, so it's loaded with
@@ -437,7 +444,7 @@ $("cmpPdfFile").onchange=async e=>{
     try{const found=await readPdf(files[i],m=>cmpMsg(tag+": "+m));total+=found.length;const r=addNums(found);notes.push(readNote(files[i].name,found,r,true,true));cmpSkipped.push(...(found.skipped||[]));diag("manifest",files[i].name+": found "+found.length+", added "+r.added+", already listed "+r.dup)}
     catch(err){diag("manifest",files[i].name+" failed: "+((err&&err.message)||"error"));if(err&&err.message===PDF_LOAD_MSG){cmpMsg(PDF_LOAD_MSG);return}fails.push(files[i].name+" ("+((err&&err.message)||"error")+")")}
   }
-  cmpMsg("Read "+(files.length-fails.length)+" of "+files.length+" PDFs and found "+total+" LPNs. "+notes.join(" ")+(fails.length?" Couldn’t read: "+fails.join(", ")+". You can type those numbers in the box instead.":"")+" Check the numbers below are correct, then compare."+oddNote("cmpNums"));
+  cmpLastNote="Read "+(files.length-fails.length)+" of "+files.length+" PDFs and found "+total+" LPNs. "+notes.join(" ")+(fails.length?" Couldn’t read: "+fails.join(", ")+". You can type those numbers in the box instead.":"")+" Check the numbers below are correct, then compare."+oddNote("cmpNums");cmpMsg(cmpLastNote);
   showPfxAdd();
 };
 $("cmpPhotoBtn").onclick=()=>{$("cmpPhotoFile").value="";$("cmpPhotoFile").click()};
@@ -452,10 +459,12 @@ $("cmpPhotoFile").onchange=async e=>{
     const tag="Photo "+(i+1),f=files[i];
     cmpMsg("Reading photo "+(i+1)+" of "+files.length+"…");
     diag("manifest","photo "+(i+1)+" of "+files.length+": "+(f.type||"?")+", "+Math.round((f.size||0)/1024)+" KB");
+    ocrSay=t=>cmpMsg("Photo "+(i+1)+" of "+files.length+": "+t);
     try{const a=await readPhoto(f),r=addNums(a);notes.push(readNote(tag,a,r,false,true));cmpSkipped.push(...(a.skipped||[]));cmpLastPhotos.push({file:f,tag,found:a.length,odd:((a.skipped||[]).length+(a.odd||[]).length+(a.mended||[]).length)});diag("manifest",tag+": found "+a.length+", added "+r.added+", already listed "+r.dup+(a.skipped&&a.skipped.length?", skipped "+a.skipped.join(" "):"")+(a.odd&&a.odd.length?", left out as unlike the page "+a.odd.join(" "):"")+(a.mended&&a.mended.length?", corrected to match the page "+a.mended.join(" "):""))}
     catch(err){const m=(err&&err.message)||"error";notes.push(tag+": couldn’t be read ("+m+").");diag("manifest",tag+" failed: "+m);cmpLastPhotos.push({file:f,tag,found:-1,odd:0})}
+    ocrSay=null;
   }
-  cmpMsg(notes.join(" ")+" Check the numbers below are correct, then compare."+oddNote("cmpNums"));
+  cmpLastNote=notes.join(" ")+" Check the numbers below are correct, then compare."+oddNote("cmpNums");cmpMsg(cmpLastNote);
   $("cmpReport").hidden=!cmpLastPhotos.length;showPfxAdd();
 };
 // Opens the report box with the photo that read worst (couldn't be read, fewest numbers, or most corrected).
@@ -466,25 +475,28 @@ $("cmpReport").onclick=()=>{
 function cmpForgetPhotos(){cmpLastPhotos=[];$("cmpReport").hidden=true;cmpSkipped=[];showPfxAdd()}
 /* Numbers left out of the last photos or PDFs because their prefix isn't in the list. A button per prefix adds it
    to the list and adds those numbers straight away, so nothing needs reading again. */
-let cmpSkipped=[];
+let cmpSkipped=[],cmpLastNote="";
 function showPfxAdd(){
   const box=$("cmpPfxAdd");box.innerHTML="";
   const pf=getPfx(),px=pf.length?[...new Set(cmpSkipped.map(x=>(x.match(/^[A-Z]+/)||[""])[0]).filter(Boolean))].filter(p=>!pf.includes(p)):[];
   box.hidden=!px.length;
-  px.slice(0,4).forEach(p=>{
+  px.forEach(p=>{
     const b=document.createElement("button");b.type="button";b.textContent="Add "+p+" to the prefix list";
     b.onclick=()=>{
       $("cmpPfx").value=normList([...getPfx(),p]);savePfx();syncSelect();
       const nums=cmpSkipped.filter(x=>okPfx(x)),r=addNums(nums);
       cmpSkipped=cmpSkipped.filter(x=>!okPfx(x));
       diag("manifest","Prefix "+p+" added from the photo note: "+r.added+" numbers added");
-      cmpMsg("Added "+p+" to the prefix list and "+r.added+" number"+(r.added===1?"":"s")+" starting with "+p+" to the manifest list"+(r.dup?" ("+r.dup+" already there)":"")+". Check them against the paper copy.");
+      cmpMsg("Added "+p+" to the prefix list and "+r.added+" number"+(r.added===1?"":"s")+" starting with "+p+" to the manifest list"+(r.dup?" ("+r.dup+" already there)":"")+". Check them against the paper copy. "+cmpLastNote.replace(/ \d+ other numbers? \([^)]*\) start with .*? below to add (it|them) to the prefix list\./g,""));
+      if(!$("cmpRes").hidden)refreshCmp();
       showPfxAdd();
+      // The button pressed has gone, so keep keyboard focus nearby.
+      const nx=$("cmpPfxAdd").querySelector("button");(nx||$("cmpNums")).focus();
     };
     box.appendChild(b);
   });
 }
-$("cmpClear").onclick=()=>{cmpForgetPhotos();logSrc=null;logPdfSrc=null;logSheets=null;$("cmpNums").value="";$("cmpLogNums").value="";$("cmpLogName").textContent="";$("cmpSum").innerHTML="";$("cmpRes").hidden=true;$("cmpRes").innerHTML="";cmpMsg("")};
+$("cmpClear").onclick=()=>{cmpForgetPhotos();cmpTrailer="";logSrc=null;logPdfSrc=null;logSheets=null;$("cmpNums").value="";$("cmpLogNums").value="";$("cmpLogName").textContent="";$("cmpSum").innerHTML="";$("cmpRes").hidden=true;$("cmpRes").innerHTML="";cmpMsg("")};
 function cmpData(){
   const lines=id=>$(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
   const uniq=a=>{const seen=new Set();return a.filter(x=>{const k=norm(x);if(!k||seen.has(k))return false;seen.add(k);return true})};
@@ -537,8 +549,8 @@ function renderCmp(C){
   const ml=document.createElement("div");ml.className="note";ml.style.cssText="margin:0;overflow-wrap:anywhere";ml.textContent=ok.map(x=>x.n).join(", ")||"None";det.appendChild(ml);
   box.appendChild(det);
 }
-function setLogFrom(list,rowsArr,d,recv,label){
-  logSrc=null;logPdfSrc=null;
+function setLogFrom(list,rowsArr,d,recv,label,trailer){
+  logSrc=null;logPdfSrc=null;cmpTrailer=trailer||"";
   logSheets=[{name:"Log copy",grid:logGridFrom(rowsArr,d,recv)}];
   $("cmpLogNums").value=list.join("\n");$("cmpLogName").textContent=label;
   cmpMsg("Log loaded. Add the manifest, then press Check results.");
@@ -546,7 +558,7 @@ function setLogFrom(list,rowsArr,d,recv,label){
 }
 $("cmpUseLog").onclick=()=>{
   if(!rows.length){cmpMsg("The log is empty. Add some pallets first, or upload a log.");return}
-  setLogFrom(rows.map(r=>r.lpn),rows,$("date").value,$("recv").value,"Current log: "+rows.length+" LPNs");
+  setLogFrom(rows.map(r=>r.lpn),rows,$("date").value,$("recv").value,"Current log: "+rows.length+" LPNs",$("trailer").value);
 };
 function fillCmpHist(){
   try{pruneHist()}catch(e){}
@@ -556,7 +568,7 @@ function fillCmpHist(){
 $("cmpHist").addEventListener("pointerdown",fillCmpHist);$("cmpHist").addEventListener("focus",fillCmpHist);
 $("cmpHist").onchange=()=>{
   const h=hist.find(x=>x.id===$("cmpHist").value);if(!h)return;
-  setLogFrom(h.rows.map(r=>r.lpn),h.rows,h.date,h.recv,"Saved delivery: "+(ukDate(h.date)||"No date")+", "+h.rows.length+" LPNs");
+  setLogFrom(h.rows.map(r=>r.lpn),h.rows,h.date,h.recv,"Saved delivery: "+(ukDate(h.date)||"No date")+", "+h.rows.length+" LPNs",h.trailer);
   $("cmpHist").value="";
 };
 $("cmpCheck").onclick=()=>{
@@ -643,7 +655,7 @@ $("cmpGo").onclick=async()=>{
         lw.pageSetup={orientation:nc>4?"landscape":"portrait",paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:"1:1",margins:{left:0.4,right:0.4,top:0.6,bottom:0.6,header:0.3,footer:0.3}};
       });
     }
-    const outName=mergeSrc?mergeSrc.name.replace(/\.xlsx$/i,"")+" (with manifest check).xlsx":"Manifest-check-"+d+fileTag(true)+".xlsx";
+    const outName=mergeSrc?mergeSrc.name.replace(/\.xlsx$/i,"")+" (with manifest check).xlsx":"Manifest-check-"+d+fileTag(cmpTrailer)+".xlsx";
     pdfJob=()=>buildCmpPdf(res,cnt,man.length,d,merge?{list:logList,pdf:logPdfSrc,sheets:logSheets}:null);
     await sendFile(await wb.xlsx.writeBuffer(),outName,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     cmpMsg("");
@@ -768,7 +780,7 @@ $("cmpPrn").onclick=async()=>{
   try{
     cmpMsg("Preparing the print copy…");
     const buf=await buildCmpPdf(C.res,C.cnt,C.man.length,d,merge?{list:C.logList,pdf:logPdfSrc,sheets:logSheets}:null);
-    await printBuf(buf,"Manifest-check-"+d+fileTag(true)+".pdf",{set textContent(t){cmpMsg(t)}});
+    await printBuf(buf,"Manifest-check-"+d+fileTag(cmpTrailer)+".pdf",{set textContent(t){cmpMsg(t)}});
   }catch(e){cmpMsg("Couldn’t prepare the print copy: "+((e&&e.message)||"error"))}
 };
 $("cmpMail").onclick=()=>emailVia($("cmpGo").onclick,"cmpMsg");

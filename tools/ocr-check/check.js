@@ -43,9 +43,23 @@ function tess(png, psm, tsv) {
 	return execFileSync("tesseract", [f, "-", "--psm", String(psm), ...WL, ...(tsv ? ["tsv"] : [])], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
 }
 
-/** The cli engine: app prep → Tesseract (mode 11) → app close-up crops → Tesseract (mode 7) → app tidy-up. */
+/** The cli engine: app prep → Tesseract (mode 11) → app close-up crops → Tesseract (mode 7) → app tidy-up. Like
+    ocrLpnsNow, a photo with nothing LPN-like is turned 90° and then 270° and read again. */
 async function readCli(page, file, prefix) {
-	const png = await inPage(page, file, async f => { window.__cv = await prep(f); return window.__cv.toDataURL("image/png").split(",")[1]; });
+	await inPage(page, file, async f => { window.__cv0 = window.__cv = await prep(f); return 1; });
+	let got = await readCliCanvas(page, prefix), turned = 0;
+	const none = o => !o.found.length && !o.skipped.length && !(o.odd || []).length;
+	for (const deg of [90, 270]) {
+		if (!none(got)) break;
+		await page.evaluate(deg => { window.__cv = turnCanvas(window.__cv0, deg); }, deg);
+		const g = await readCliCanvas(page, prefix);
+		if (!none(g)) { got = g; turned = deg; }
+	}
+	if (turned) got.turned = turned;
+	return got;
+}
+async function readCliCanvas(page, prefix) {
+	const png = await page.evaluate(() => window.__cv.toDataURL("image/png").split(",")[1]);
 	const rows = tess(Buffer.from(png, "base64"), 11, true).trim().split("\n").slice(1).map(l => l.split("\t")).filter(r => r.length > 11 && r[11].trim());
 	const items = [], orig = new Set();
 	for (const r of rows) {

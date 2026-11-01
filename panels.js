@@ -486,6 +486,7 @@ function initHistory(){
     x.onclick=()=>{
       const at=Math.max(0,hist.findIndex(z=>z.id===h.id));
       hist=hist.filter(z=>z.id!==h.id);saveHist();
+      delete d._h;d.hidden=false;
       d.innerHTML="";d.className="hist";
       const t=document.createElement("span");t.textContent="Deleted. ";
       const u=document.createElement("button");u.textContent="Undo";u.className="p";
@@ -528,7 +529,7 @@ function histFilter(){
   const q=norm(inp.value),cards=[...$("histRoot").children].filter(c=>c._h);
   let n=0;
   cards.forEach(c=>{
-    const fm=c.querySelector(".hitl");
+    const fm=c.querySelector(".hitl");if(!fm)return;
     if(q.length<3){c.hidden=false;fm.hidden=true;return}
     const hit=c._h.rows.filter(z=>norm(z.lpn).includes(q));
     c.hidden=!hit.length;fm.hidden=!hit.length;

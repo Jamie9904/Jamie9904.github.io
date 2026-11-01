@@ -993,25 +993,47 @@ async function page(browser, width, opts = {}) {
     check("clearing Find an LPN shows every saved delivery again", s === 2, s);
     s = await q.evaluate(() => { const r = document.getElementById("histFind").getBoundingClientRect(); return { right: r.right, w: innerWidth }; });
     check("the Find an LPN box fits a 375 px phone", s.right <= s.w, s);
+    // Delete a delivery, then search: the deleted one isn't counted and nothing breaks.
+    await q.evaluate(() => document.querySelector('#histRoot .hist button.d').click());
+    await q.fill("#histFind", "4040265"); await q.waitForTimeout(100);
+    s = await q.evaluate(() => ({ msg: document.getElementById("histFindMsg").textContent, undo: !!document.querySelector("#histRoot .hist .row button.p") }));
+    check("after deleting a saved delivery, Find an LPN still works and doesn't count the deleted one", /Not in any saved delivery/.test(s.msg) && s.undo, s);
     await q.evaluate(() => closeHelp());
     // Trailer number in file names.
     s = await q.evaluate(() => { const names = [];
       document.getElementById("trailer").value = "TR 4471/A"; names.push(fileTag());
       document.getElementById("trailer").value = ""; names.push(fileTag());
-      document.getElementById("trailer").value = "TR4471"; document.getElementById("cmpDate").value = "2001-01-01"; names.push(fileTag(true));
-      document.getElementById("cmpDate").value = document.getElementById("date").value; names.push(fileTag(true));
+      // The Manifest check is named after the trailer of the delivery it checked.
+      document.getElementById("trailer").value = "TR9999";
+      setLogFrom(["QUB000111222"], [{ lpn: "QUB000111222", type: "FPP", fsdu: false }], localToday(), "Sam", "Saved delivery", "TR4471"); names.push(fileTag(cmpTrailer));
+      setLogFrom(["QUB000111222"], [{ lpn: "QUB000111222", type: "FPP", fsdu: false }], localToday(), "Sam", "Saved delivery", ""); names.push(fileTag(cmpTrailer));
+      document.getElementById("cmpUseLog").click(); names.push(fileTag(cmpTrailer));
+      document.getElementById("cmpClear").click(); names.push(fileTag(cmpTrailer));
+      document.getElementById("trailer").value = "";
       return names; });
-    check("file names get the trailer number (only letters, numbers and dashes), and none when it's blank", JSON.stringify(s) === '["-TR-4471-A","","","-TR4471"]', s);
+    check("file names get the trailer number (only letters, numbers and dashes); the Manifest check uses the checked delivery's trailer", JSON.stringify(s) === '["-TR-4471-A","","-TR4471","","-TR9999",""]', s);
     // Sideways photo: nothing found, so it is turned and read again.
-    s = await q.evaluate(async () => { const seen = [];
-      const keep = { loadScript, prep, ocrWorker, ocrDone, ocrCanvas };
-      window.loadScript = async () => {}; window.ocrWorker = async () => ({}); window.ocrDone = () => {};
-      window.prep = async () => { const c = document.createElement("canvas"); c.width = 300; c.height = 100; return c; };
-      window.ocrCanvas = async (w, cv) => { seen.push(cv.width + "x" + cv.height); const a = seen.length === 2 ? ["VLT004040265"] : []; a.skipped = []; a.odd = []; a.mended = []; return { out: a, items: [], r: { words: [], text: "" } }; };
-      const out = await ocrLpnsNow(new Blob(["x"]));
-      Object.assign(window, keep);
-      return { seen, out: [...out], turned: out.turned, note: readNote("Photo 1", out, { added: 1, dup: 0 }) }; });
-    check("a sideways photo with nothing found is turned and read again, and the note says so", JSON.stringify(s.seen) === '["300x100","100x300"]' && s.turned === 90 && s.out[0] === "VLT004040265" && /The photo was sideways, so it was turned to read it\./.test(s.note), s);
+    s = await q.evaluate(async () => {
+      const keep = { loadScript, prep, ocrWorker, ocrDone, ocrCanvas }, res = {};
+      // answer(n, cv): what the n-th read of one photo finds.
+      const run = async answer => { const seen = []; let first = null;
+        window.prep = async () => { const c = document.createElement("canvas"); c.width = 300; c.height = 100; return first = c; };
+        window.ocrCanvas = async (w, cv) => { seen.push(cv.width + "x" + cv.height); const a = answer(seen.length); const o = a.lpns.slice(); o.skipped = a.skipped || []; o.odd = []; o.mended = []; return { out: o, items: [], r: { words: [], text: "" } }; };
+        const out = await ocrLpnsNow(new Blob(["x"]));
+        return { seen, out: [...out], turned: out.turned, freed: first.width === 0, note: readNote("Photo 1", out, { added: out.length, dup: 0 }) }; };
+      try {
+        window.loadScript = async () => {}; window.ocrWorker = async () => ({}); window.ocrDone = () => {};
+        res.at90 = await run(n => ({ lpns: n === 2 ? ["VLT004040265"] : [] }));
+        res.at270 = await run(n => ({ lpns: n === 3 ? ["VLT004040265"] : [] }));
+        res.upright = await run(() => ({ lpns: ["VLT004040265"] }));
+        res.prefixOnly = await run(n => ({ lpns: [], skipped: n === 1 ? ["RBY001234567"] : [] }));
+        res.nothing = await run(() => ({ lpns: [] }));
+      } finally { Object.assign(window, keep); }
+      return res; });
+    check("a sideways photo with nothing found is turned and read again, and the note says so", JSON.stringify(s.at90.seen) === '["300x100","100x300"]' && s.at90.turned === 90 && s.at90.out[0] === "VLT004040265" && /The photo was sideways, so it was turned to read it\./.test(s.at90.note), s.at90);
+    check("if turning one way finds nothing, the other way is tried", JSON.stringify(s.at270.seen) === '["300x100","100x300","100x300"]' && s.at270.turned === 270, s.at270);
+    check("an upright photo, or one with only unlisted-prefix numbers, is read once and not called sideways", s.upright.seen.length === 1 && !s.upright.turned && !/sideways/.test(s.upright.note) && s.prefixOnly.seen.length === 1 && !s.prefixOnly.turned, { u: s.upright, p: s.prefixOnly });
+    check("a photo with nothing readable either way gives the usual note, and its canvas is freed", s.nothing.seen.length === 3 && !s.nothing.turned && /No LPNs could be read/.test(s.nothing.note) && s.nothing.freed && s.at90.freed, s.nothing);
     // One tap adds a missing prefix and its numbers.
     await q.evaluate(() => { document.getElementById("cmpToggle").click(); document.getElementById("cmpPfx").value = "VLT"; document.getElementById("cmpNums").value = "";
       window.readPhoto = async () => { const a = ["VLT004040265"]; a.skipped = ["RBY001234567", "RBY001234568"]; a.odd = []; a.mended = []; return a; }; });
@@ -1022,7 +1044,9 @@ async function page(browser, width, opts = {}) {
     check("a photo with numbers whose prefix isn't listed offers a one-tap Add button", JSON.stringify(s.btn) === '["Add RBY to the prefix list"]' && /tap Add RBY below/.test(s.msg), s);
     await q.click("#cmpPfxAdd button"); await q.waitForTimeout(100);
     s = await q.evaluate(() => ({ pfx: document.getElementById("cmpPfx").value, nums: document.getElementById("cmpNums").value.split("\n"), hidden: document.getElementById("cmpPfxAdd").hidden, msg: document.getElementById("cmpMsg").textContent }));
-    check("tapping Add puts the prefix in the list and adds its numbers without reading again", s.pfx === "VLT, RBY" && s.nums.includes("RBY001234567") && s.nums.includes("RBY001234568") && s.hidden && /Added RBY to the prefix list and 2 numbers/.test(s.msg), s);
+    s.focus = await q.evaluate(() => document.activeElement.id);
+    check("tapping Add puts the prefix in the list and adds its numbers without reading again, keeping the earlier note", s.pfx === "VLT, RBY" && s.nums.includes("RBY001234567") && s.nums.includes("RBY001234568") && s.hidden && /Added RBY to the prefix list and 2 numbers/.test(s.msg) && /Photo 1: found 1 LPN/.test(s.msg) && !/tap Add/.test(s.msg), s);
+    check("after tapping Add, keyboard focus moves to the manifest numbers", s.focus === "cmpNums", s.focus);
     await q.evaluate(() => { document.getElementById("cmpClear").click(); document.getElementById("cmpPfx").value = ""; savePfx(); });
     // Follow phone colours.
     await q.emulateMedia({ colorScheme: "dark" });
