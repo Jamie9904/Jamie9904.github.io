@@ -100,7 +100,7 @@ async function fallbackXls(d){
   await appVersion();
   const nw=new Date(),hm=String(nw.getHours()).padStart(2,"0")+":"+String(nw.getMinutes()).padStart(2,"0");
   h+="</table><p style=\"font-family:Arial;font-size:10pt;color:#595959;font-style:italic\">Made with "+esc(appVer||appVerTry)+" on "+esc(ukDate(localToday()))+" at "+hm+".</p></body></html>";
-  await deliver(h,"LPN-log-"+d+".xls","application/vnd.ms-excel");
+  await deliver(h,"LPN-log-"+d+fileTag()+".xls","application/vnd.ms-excel");
 }
 function pdfLogSheet(doc,sh,multi){
   const g=trimGrid(sh.grid);
@@ -387,7 +387,7 @@ $("dl").onclick=async()=>{
     xlPrint(ws,H);
     const buf=await wb.xlsx.writeBuffer();
     pdfJob=()=>buildLogPdf(d);
-    const done=await deliver(buf,"LPN-log-"+d+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    const done=await deliver(buf,"LPN-log-"+d+fileTag()+".xlsx","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     m.textContent="";
     if(done!==false)markExported();
   }catch(e){

@@ -16,6 +16,12 @@ let delCollapsed=false;
 const DEL_F=["date","recv","notes","expect","trailer","sealIn","sealOut"];
 let exported=null;
 function logSig(){let h=0;const s=rows.map(r=>r.lpn+"|"+r.type+"|"+(r.fsdu?1:0)).join(",");for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return rows.length+":"+h}
+/* "-TR4471" for file names: from the trailer box, or from the trailer given (the Manifest check passes the trailer of
+   the delivery it checked, or "" when that isn't known). */
+function fileTag(tr){
+  const t=String((tr!==undefined?tr:$("trailer")&&$("trailer").value)||"").trim().replace(/[^A-Za-z0-9-]+/g,"-").replace(/-{2,}/g,"-").replace(/^-+|-+$/g,"").slice(0,20);
+  return t?"-"+t:"";
+}
 function getDel(){const o={};DEL_F.forEach(k=>{o[k]=$(k).value});o.exp=exported;return o}
 function setDel(o){o=o||{};DEL_F.forEach(k=>{$(k).value=k==="date"?(o.date||localToday()):(o[k]||"")});exported=o.exp||null}
 const $=id=>document.getElementById(id);
