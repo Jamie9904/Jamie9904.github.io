@@ -47,7 +47,7 @@
 ├── tools/ocr-check/         photo reading check on real manifest photos (development only)
 │   ├── check.js             runs the app's photo code on the photos and scores the LPNs (also used by tests/run.js on GitHub)
 │   ├── expected.json        the LPNs printed on each photo (18)
-│   └── photos/              the user's four manifest photos, address boxes cut off (qub, rby, run, vlt .jpg), and run-sideways.jpg (run.jpg turned, build 46)
+│   └── photos/              the user's four manifest photos, address boxes cut off (qub, rby, run, vlt .jpg), run-sideways.jpg (run.jpg turned, build 46) and rby-upside-down.jpg (rby.jpg turned 180°, build 47)
 ├── tools/feedback-worker/   Cloudflare Worker that turns Report a problem or idea into issues in a private repo (not part of the site)
 │   ├── worker.mjs           POST /report: checks, limits (Limits Durable Object), GitHub issue and photo
 │   ├── wrangler.toml        Worker name, repo, allowed origin, Durable Object binding

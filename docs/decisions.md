@@ -547,14 +547,15 @@ A search box in Saved deliveries hides the deliveries that don't hold the LPN ty
 - **Why the current log is mentioned:** the current log isn't in Saved deliveries until a new delivery is started, so without that sentence a pallet logged today would look missing.
 - **Limit:** only what Saved deliveries holds (this week and last week) can be found; the "Not in any saved delivery from the last two weeks." wording says so.
 
-## Sideways manifest photos are turned and read again (build 46)
+## Sideways and upside-down manifest photos are turned and read again (builds 46 and 47)
 
-A photo is turned only when the first reading finds nothing that looks like an LPN (no LPNs, nothing left out for the prefix, no odd readings), 90° first and then 270°.
+A photo is turned only when the first reading finds nothing that looks like an LPN (no LPNs, nothing left out for the prefix, no odd readings), 90° first, then 270°, then (since build 47) 180°.
 
 - **Why only then:** an upright photo costs nothing extra. A photo whose numbers were only left out by the prefix list has been read correctly, so it isn't turned.
-- **Trade-off:** a photo with nothing readable now takes up to three page reads before it reports "No LPNs could be read", so the message says "turning the photo to try again" meanwhile. An upside-down photo (180°) is not tried.
+- **Why sideways before upside down:** phones are more often held sideways than upside down, so the two sideways turns are tried first and an upright-but-sideways photo is found sooner.
+- **Trade-off:** a photo with nothing readable (blank or blurry) now takes four page reads before it reports "No LPNs could be read" (three in build 46), so the message says "turning the photo to try again" meanwhile.
 - **Why canvases are emptied straight away:** each full-size canvas and turned copy is set to 0×0 when it is replaced and when the read ends, because phones (Safari above all) give canvas memory back late, and a turned copy doubles the memory held.
-- **Checked on a real photo:** `run-sideways.jpg` in `tools/ocr-check` is `run.jpg` turned, and the `cli` engine follows the same turn loop, so the photo check covers it.
+- **Checked on real photos:** `run-sideways.jpg` in `tools/ocr-check` is `run.jpg` turned on its side and `rby-upside-down.jpg` (build 47) is `rby.jpg` turned 180°; the `cli` engine follows the same turn loop (90°, 270°, 180°), so the photo check covers both.
 
 ## Trailer number in export file names (build 46)
 
