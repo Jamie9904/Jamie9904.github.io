@@ -1,7 +1,7 @@
 /*
   Fingerprint of the screens the Guide demo video shows: position, size, text and colours of the key parts of the
   log view and the manifest check results, with the same made-up delivery the video uses (fixed date).
-  tests/run.js compares the app against screens.json and warns (never fails) when they differ, meaning the video
+  tests/groups/08-demo-video.js compares the app against screens.json and warns (never fails) when they differ, meaning the video
   may be out of date. make.sh writes screens.json after re-recording:  node tools/demo-video/screens.js --write
 */
 const fs = require("fs");
