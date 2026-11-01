@@ -580,3 +580,22 @@ When photos or PDFs give numbers with a prefix that isn't in the prefix list, **
 - **Why the earlier notes are kept:** the other per-photo notes (found, new, corrected) still matter after the tap, so only the "tap Add" sentence is taken out.
 - **Why focus moves to the manifest box:** the button pressed disappears, so keyboard and screen reader users would otherwise lose their place.
 - **Not for log photos:** the button only adds to the manifest list.
+
+## Torch button only where the camera offers it (build 48)
+
+The **Torch** button is shown only when the running camera track reports `torch` in `getCapabilities()`, and is switched with `applyConstraints({advanced:[{torch}]})`.
+
+- **Why not always shown:** a button that does nothing on most iPhones would look broken in a dark trailer. Hiding it there leaves **Scan by photo** (with the camera app's own flash) as the way round it.
+- **Why checked after the camera starts:** the capability belongs to the track, so it can only be read once the camera is running; the button appears a moment after Live scan opens.
+- **Why off on every stop:** `stopScan()` stops the camera tracks, which turns the light off, so the button state is reset to match instead of remembering the last choice. A torch left on drains the battery.
+- **Trade-off: shorter camera view.** On phones the view drops to `clamp(84px,17vh,200px)` only while the button shows, so the "Added" line and both buttons fit on 360×640 and 375×667 screens with Extra large text. Phones without a torch keep the build 41 height.
+- **Not checked on a real phone by the automatic checks:** they use a stand-in camera track that reports a torch and records the calls.
+
+## Seal check is a note, not a block (build 48)
+
+Seal in and seal out that are the same number, or of different lengths, get a note under the boxes rather than a warning that has to be answered.
+
+- **Why these two rules:** the seal put on should be a new one, so the same number in both boxes is usually a copy or typing slip; seals on one trailer are normally the same kind, so different lengths suggest a missing or extra character. Neither is certain, so nothing is blocked and the exports are unchanged.
+- **Why spaces and case are ignored:** seal numbers are typed freely, and `sl 123456` is the same seal as `SL123456`.
+- **Why a new note waits until you leave the box:** while a number is being typed it is almost always "a different length" from the other one, so showing that on each key would be noise. Typing only clears a note that no longer fits, and an unchanged note isn't rewritten, so a screen reader doesn't repeat it on every key.
+

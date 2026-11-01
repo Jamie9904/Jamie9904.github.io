@@ -4,7 +4,7 @@ The in-app **Guide** covers the same ground for staff. This page is the referenc
 
 ## Main flow
 
-1. **Delivery:** set the date and who received it. Optional: expected pallets, trailer number, seal in, seal out (the three boxes sit side by side only when the Delivery card is at least 520px wide, enough for an 11-character seal number in each; otherwise the trailer box is full width with the two seal boxes under it, since build 45), notes (up to 2000 characters). Previously used names appear as one-tap buttons.
+1. **Delivery:** set the date and who received it. Optional: expected pallets, trailer number, seal in, seal out (the three boxes sit side by side only when the Delivery card is at least 520px wide, enough for an 11-character seal number in each; otherwise the trailer box is full width with the two seal boxes under it, since build 45), notes (up to 2000 characters). Previously used names appear as one-tap buttons. Since build 48, if seal in and seal out are the same number, or have different lengths (spaces and upper/lower case are ignored), a note under the seal boxes asks you to check them (see [Seal check](#seal-check-build-48)).
 2. **Manifest (optional):** open **Manifest check** and add the manifest by photo, PDF or typing, before scanning.
 3. **Log pallets:** choose the type (BB, FMCG, FPP, Mixed), tick FSDU if needed, scan or type the LPN, press Add or Enter.
 4. **Export:** **Export → Download (Excel)**, **Email PDF** or **Print**. The log then shows "Exported at hh:mm" and offers **Start a new delivery?**
@@ -43,6 +43,17 @@ The in-app **Guide** covers the same ground for staff. This page is the referenc
 "Ask me to confirm each scanned barcode" in Settings shows each scan for approval first.
 
 **Live scan on phones (build 41).** The camera view is at most `clamp(110px, 24vh, 200px)` tall, so on short phones the "Added: LPN (type)" line and **Stop scanning** stay on screen while scanning (checked at 360×640, 375×667 and 390×844). A warning about a scanned LPN (Skip / Add anyway) appears above the camera view, and the line under the camera says "Check the warning above." (it said "Check the message below." before build 41). Live scan messages are announced by screen readers. The "Added" confirmation note at the bottom of the screen can't block taps on the buttons under it.
+
+**Torch (build 48).** A **Torch** button appears next to **Stop scanning** once the camera has started, but only when the phone lets a web page switch its light on (most Android phones; most iPhones don't, so there is no button there). Tap it to turn the light on, and again to turn it off; while it is on the button is filled in the accent colour and screen readers hear it as pressed. **Stop scanning** turns the light off and hides the button, and the next Live scan starts with it off. If the light can't be switched, the line under the camera says "The torch couldn't be switched on. Try more light, or Scan by photo." (or, when switching off, "The torch couldn't be switched off. Stop scanning to turn it off."), and the problem report gets a `scan` entry. When the button shows, the camera view on phones is a little shorter (at most `clamp(84px, 17vh, 200px)`) so the "Added" line, **Torch** and **Stop scanning** stay on screen, including with Extra large text on 360×640 and 375×667 screens.
+
+## Seal check (build 48)
+
+When both **Seal in** and **Seal out** have something in them, the app compares them after removing spaces and anything that isn't a letter or digit, ignoring upper/lower case:
+
+- the same number in both: "Seal in and seal out are the same number. Check them: the seal put on should be a new one."
+- different lengths: "Seal in has 8 characters and seal out has 9. Check neither is mistyped." (with the real counts)
+
+The note shows under the seal boxes when you leave a seal box (and whenever the delivery fields are filled in by the app: opening the app, loading a saved delivery or an imported log, or **Undo** after **Start new delivery**; starting a new delivery clears it). While you are typing, a note that no longer fits goes away, but a new one waits until you leave the box, so it doesn't flash up half-way through a number. It is only a reminder: it doesn't stop anything, the note itself isn't saved, and it doesn't appear on exports. Screen readers announce it.
 
 ## Manifest check
 
@@ -195,6 +206,9 @@ Colours (Follow phone, two colours drive the whole theme, with a contrast warnin
 
 | Problem | Fix |
 |---|---|
+| No Torch button in Live scan | The phone or browser doesn't let web pages switch the light on (most iPhones). Use more light, or **Scan by photo** with the camera app's own flash. The button only appears after the camera has started. |
+| "The torch couldn't be switched on…" | The phone refused. Try again, use more light, or use **Scan by photo**. If it says it couldn't be switched off, tap **Stop scanning**, which turns the camera (and its light) off. |
+| "Seal in and seal out are the same number…" or "Seal in has n characters and seal out has m…" | Check both seal numbers against the seals. If they really are right (for example a different kind of seal was put on), carry on: the note doesn't block anything and isn't on the exports. |
 | Live scan doesn't start | The site must be on HTTPS and camera permission allowed. Use Scan by photo instead. |
 | Export says the builder couldn't load | The device is offline and the library hasn't been cached yet. A basic `.xls` is saved; export once while online to cache it. |
 | A feature that worked offline needs internet after an update | The update to build 30 clears the old library store (`lpn-libs-v1`) once, so Excel, PDF, the Manifest check readers, the photo reader and the barcode fallback each need one online use again before they work offline. |
