@@ -10,5 +10,5 @@ ffmpeg -y -loglevel error -i out/demo-full.mp4 -vf scale=720:1280 -c:v libx264 -
   -c:a aac -b:a 96k -movflags +faststart ../../media/demo.mp4
 ffmpeg -y -loglevel error -ss 9.5 -i ../../media/demo.mp4 -frames:v 1 -q:v 4 ../../media/demo-poster.jpg
 NODE_PATH="${NODE_PATH:-$(npm root -g)}" node screens.js --write
-for t in 1.6 12 16.5 23.6 28.5 35; do ffmpeg -y -loglevel error -ss $t -i out/demo-full.mp4 -frames:v 1 -vf scale=270:480 out/check-$t.jpg; done
+for t in 1.6 12 18 24.5 31.5 36 42; do ffmpeg -y -loglevel error -ss $t -i out/demo-full.mp4 -frames:v 1 -vf scale=270:480 out/check-$t.jpg; done
 echo "Done: media/demo.mp4 ($(du -k ../../media/demo.mp4 | cut -f1) KB). Look at out/check-*.jpg before committing."

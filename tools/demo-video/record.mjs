@@ -129,7 +129,17 @@ const SCENES = [
 		await ring(app.locator("#sum"));
 		await at(4300); await stage("ring", null);
 	} },
-	{ id: "manifest", hold: 6.0, run: async (at) => {
+	{ id: "damage", hold: 5.6, run: async (at) => {
+		await stage("head", "Damage", "Mark it on the pallet.");
+		await scrollTo("#body", 160); await sleep(600);
+		const first = app.locator("#body .lpnedit").first();
+		await at(700); await tap(first);
+		await app.locator(".dmgbox").waitFor({ state: "visible" });
+		await at(2000); await tap(app.locator(".dmgbox button", { hasText: "Wet" }));
+		await sleep(400); await ring(app.locator("#body tr").first());
+		await at(5200); await stage("ring", null);
+	} },
+	{ id: "manifest", hold: 7.3, run: async (at) => {
 		await stage("head", "Manifest check", "Missing or extra,<br>caught at the dock.");
 		const tg = app.locator("#cmpToggle");
 		await scrollTo("#cmpToggle", 200); await sleep(500);
@@ -141,7 +151,10 @@ const SCENES = [
 		await sleep(500);
 		await scrollTo("#cmpSum", 120); await sleep(800);
 		await ring(app.locator("#cmpSum"));
-		await at(5600); await stage("ring", null);
+		// The phone's share menu can't be filmed here, so Share missing list is shown being tapped.
+		await appFrame().evaluate(() => { navigator.share = async () => {}; });
+		await at(4300); await stage("ring", null); await tap(app.locator("#cmpShare")); await ring(app.locator("#cmpShare"));
+		await at(6900); await stage("ring", null);
 	} },
 	{ id: "export", hold: 5.1, run: async (at) => {
 		await stage("head", "Exports", "Excel or PDF,<br>ready to print.");
