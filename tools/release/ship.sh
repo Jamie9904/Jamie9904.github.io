@@ -14,16 +14,23 @@ REPO=Jamie9904/Jamie9904.github.io
 say() { printf '%s\n' "$*"; }
 die() { say "STOPPED: $*"; git checkout -q updates 2>/dev/null || true; exit 1; }
 
-# Waits for the named workflow run on a commit and prints "id conclusion".
+# Waits for the named workflow run on a commit and prints "id conclusion". A run GitHub cancelled (for example a
+# slow browser install hitting the time limit) is rerun once, since that isn't a failed check.
 wait_run() { # name sha branch
-  i=0
-  while [ $i -lt 60 ]; do
-    r=$(gh run list -R $REPO --branch "$3" --limit 10 --json databaseId,headSha,name,status,conclusion \
-      -q ".[]|select(.name==\"$1\" and (.headSha|startswith(\"$2\")))|\"\(.databaseId) \(.status) \(.conclusion)\"" | head -1)
-    case "$r" in *" completed "*) say "$r" | awk '{print $1, $3}'; return 0;; esac
-    i=$((i+1)); sleep 15
+  tries=0
+  while :; do
+    i=0; r=""
+    while [ $i -lt 80 ]; do
+      r=$(gh run list -R $REPO --branch "$3" --limit 10 --json databaseId,headSha,name,status,conclusion \
+        -q ".[]|select(.name==\"$1\" and (.headSha|startswith(\"$2\")))|\"\(.databaseId) \(.status) \(.conclusion)\"" | head -1)
+      case "$r" in *" completed "*) break;; esac
+      i=$((i+1)); sleep 15
+    done
+    case "$r" in *" completed "*) ;; *) say "none timeout"; return 0;; esac
+    id=${r%% *}; c=${r##* }
+    if [ "$c" = cancelled ] && [ $tries -eq 0 ]; then tries=1; say "($1 was cancelled by GitHub: running it again)" >&2; gh run rerun -R $REPO "$id" >/dev/null; sleep 20; continue; fi
+    say "$id $c"; return 0
   done
-  say "none timeout"
 }
 notices() { # run id
   j=$(gh api repos/$REPO/actions/runs/$1/jobs -q '.jobs[0].id')

@@ -1,7 +1,9 @@
 name: Weekly health check
 # Every Monday morning: checks the live site is up and running the latest version,
 # that every library the app loads from a CDN still downloads, that none of them has a new security advisory,
-# runs the automatic checks, and reads the user's manifest photos with the live app (tools/ocr-check).
+# runs the automatic checks, reads the user's manifest photos with the live app (tools/ocr-check), and checks the
+# report system: the feedback Worker answers, its GitHub token still works (warning 30 days before it runs out),
+# and the Worker online matches the code on main.
 # GitHub emails a failure notice if any step fails; a passing run sends nothing.
 on:
   schedule:
@@ -17,6 +19,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ref: main
+          fetch-depth: 0
       - name: Live site is up and on the latest version
         run: |
           set -e
@@ -50,6 +53,32 @@ jobs:
           ffmpeg -v error -i demo.mp4 -f null - || { echo "::error title=Demo video damaged::the video doesn't decode"; exit 1; }
           awk "BEGIN{exit !($d > 20)}" && [ "$v" = h264 ] && [ "$a" = aac ] || { echo "::error title=Demo video wrong::duration $d s, video $v, audio $a"; exit 1; }
           echo "::notice title=Demo video::plays: $d s, $v and $a"
+      - name: Report system works (feedback Worker and its GitHub token)
+        env:
+          FEEDBACK_GITHUB_TOKEN: ${{ secrets.FEEDBACK_GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          fail=0
+          url=$(grep -o 'https://[a-z0-9.-]*\.workers\.dev/report' panels.js | head -1)
+          if [ -n "$url" ]; then
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS -H "Origin: https://jamie9904.github.io" "$url" || true)
+            if [ "$code" = 204 ]; then echo "Worker answers: $url"; else echo "::error title=Report system::The feedback Worker didn't answer (HTTP $code) at $url"; fail=1; fi
+          fi
+          if [ -z "$FEEDBACK_GITHUB_TOKEN" ]; then echo "::warning title=Report system::FEEDBACK_GITHUB_TOKEN isn't set here, so the token can't be checked"; exit $fail; fi
+          # The same token the Worker holds (the deploy job copies it there). GitHub sends its expiry date with every answer.
+          hdr=$(curl -s -D - -o /dev/null -H "Authorization: Bearer $FEEDBACK_GITHUB_TOKEN" -H "Accept: application/vnd.github+json" https://api.github.com/repos/Jamie9904/lpn-feedback)
+          st=$(echo "$hdr" | head -1 | awk '{print $2}')
+          if [ "$st" != 200 ]; then echo "::error title=Report system::The GitHub token for reports doesn't work any more (HTTP $st). Reports are waiting on phones. Make a new token (tools/feedback-worker/README.md step 2), update FEEDBACK_GITHUB_TOKEN and run Deploy feedback Worker."; exit 1; fi
+          exp=$(echo "$hdr" | tr -d '\r' | grep -i '^github-authentication-token-expiration:' | cut -d' ' -f2-)
+          if [ -n "$exp" ]; then
+            days=$(( ( $(date -d "$exp" +%s) - $(date +%s) ) / 86400 ))
+            if [ $days -lt 30 ]; then echo "::error title=Report system::The GitHub token for reports runs out in $days days ($exp). Make a new one (tools/feedback-worker/README.md step 2), update FEEDBACK_GITHUB_TOKEN and run Deploy feedback Worker."; fail=1
+            else echo "::notice title=Report system::Worker answers; GitHub token works and runs out in $days days ($exp)"; fi
+          else echo "::notice title=Report system::Worker answers; GitHub token works (no expiry date)"; fi
+          # The Worker online should be the one on main: compare with the last successful deploy.
+          dep=$(gh run list -R "$GITHUB_REPOSITORY" --workflow feedback-worker.yml --status success --limit 1 --json headSha -q '.[0].headSha')
+          if [ -n "$dep" ] && ! git diff --quiet "$dep" HEAD -- tools/feedback-worker; then echo "::warning title=Report system::The feedback Worker code on main changed after its last deploy ($dep). Run Deploy feedback Worker."; fi
+          exit $fail
       - name: Security advisories for the app's libraries
         run: node tests/advisories.js
       - name: Library files still match their fingerprints

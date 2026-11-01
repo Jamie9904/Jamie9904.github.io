@@ -25,7 +25,7 @@ const server = createServer((req, res) => {
 });
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const base = `http://127.0.0.1:${server.address().port}`;
-const browser = await chromium.launch({ headless: true, args: ["--hide-scrollbars"] });
+const browser = await chromium.launch({ headless: true, args: ["--hide-scrollbars", "--lang=en-GB"], env: { ...process.env, LANG: "en_GB.UTF-8", LANGUAGE: "en_GB" } });
 const ctx = await browser.newContext({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: 1, serviceWorkers: "block", locale: "en-GB", timezoneId: "Europe/London" });
 // No camera here: Live scan gets a drawn barcode label as its camera, and a stand-in barcode reader that reports
 // whatever code window.__showCode puts on the label. Everything after that (adding the pallet with the selected

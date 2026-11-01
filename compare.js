@@ -180,7 +180,7 @@ function tidyReads(items){
     }
     return null;
   };
-  const firsts=new Set(items.map(it=>it.first));
+  const firsts=new Set(items.map(it=>it.first)),mended=[];
   const res=items.map(it=>{
     if(!pats.length)return it.again||it.first;
     // When both readings fit the page, the first is kept: the close-up is of the black-and-white image.
@@ -190,14 +190,14 @@ function tidyReads(items){
     for(const x of [it.again,it.first].filter(Boolean)){
       const m=mend(x);if(!m||firsts.has(m)&&m!==it.first)continue;
       // An extra 0 is only dropped when the raw text really had a letter straight after the prefix.
-      if(m.length===x.length)return m;
-      const q=pats.find(q=>m.startsWith(q.p));if(q&&raw.startsWith(q.p)&&/^[ODQ]/.test(raw.slice(q.p.length)))return m;
+      if(m.length===x.length){mended.push(m);return m}
+      const q=pats.find(q=>m.startsWith(q.p));if(q&&raw.startsWith(q.p)&&/^[ODQ]/.test(raw.slice(q.p.length))){mended.push(m);return m}
     }
     return it.again||it.first;
   });
   // Speckles on the paper can read as a made-up code (DFA 51400180 on a page of VLT numbers). When the page has
   // a clear pattern, a reading with a prefix seen nowhere else on it and not 9 or 10 digits is left out.
-  const out=[];out.ignored=[];
+  const out=[];out.ignored=[];out.mended=mended;
   // Also left out: a prefix of a different length from every prefix on the page (CO…, RR…, L… among VLT numbers).
   // Known prefixes are always kept, however the rest of the page looks (IM: full pallet picks, two letters).
   res.forEach(x=>{const s=split(x);if(pats.length&&s&&KNOWN_PFX.indexOf(s.p)<0&&!pats.some(q=>q.p===s.p)&&(!lpnDigitsOk(x)||!pats.some(q=>q.p.length===s.p.length)))out.ignored.push(x);else out.push(x)});
@@ -212,6 +212,8 @@ function photoLpns(items){
   const odd=(t.ignored||[]).filter(lpnDigitsOk);
   t.forEach(x=>{if(!pf.length||okPfx(x))out.push(x);else if(maybeLpn(x))skipped.push(x)});
   out.skipped=[...new Set(skipped)];out.odd=odd;
+  // Numbers changed to match the rest of the page, so the note can ask for them to be checked.
+  out.mended=[...new Set(t.mended||[])].filter(x=>out.includes(x));
   return out;
 }
 /* One photo reader is started for a batch of photos (or PDF pages) and reused, then closed 15 seconds after the
@@ -292,6 +294,8 @@ function readNote(tag,a,r,pdf){
   if(!a.length&&!sk.length)t+=pdf?" No LPNs could be read from this PDF.":" No LPNs could be read: try a closer, sharper photo in good light.";
   if(sk.length){const px=[...new Set(sk.map(x=>x.match(/^[A-Z]+/)[0]))];
     t+=" "+sk.length+" other number"+(sk.length===1?"":"s")+" ("+sk.slice(0,4).join(", ")+(sk.length>4?"…":"")+") start with "+px.join(", ")+", which "+(px.length===1?"isn’t":"aren’t")+" in the prefix list. If "+(sk.length===1?"it is an LPN":"they are LPNs")+", add "+px.join(", ")+" under Prefix presets (or clear the prefixes) and read the "+(pdf?"PDF":"photo")+" again."}
+  const md=(a&&a.mended)||[];
+  if(md.length)t+=" "+md.length+(md.length===1?" number was":" numbers were")+" corrected to match the others on the page ("+md.slice(0,4).join(", ")+(md.length>4?"…":"")+"): check "+(md.length===1?"it":"them")+" against the paper.";
   const od=(a&&a.odd)||[];
   if(od.length)t+=" "+od.length+" other reading"+(od.length===1?"":"s")+" ("+od.slice(0,4).join(", ")+(od.length>4?"…":"")+") didn’t look like the other LPNs on this page, so "+(od.length===1?"it was":"they were")+" left out. If one is a real LPN, type it in the box.";
   return t;
@@ -404,6 +408,7 @@ async function readLogPdf(f,say){
 $("cmpPdfBtn").onclick=()=>{$("cmpPdfFile").value="";$("cmpPdfFile").click()};
 $("cmpPdfFile").onchange=async e=>{
   const files=[...(e.target.files||[])];if(!files.length)return;
+  cmpForgetPhotos();
   let total=0;const fails=[],notes=[];
   for(let i=0;i<files.length;i++){
     const tag="PDF "+(i+1)+" of "+files.length;
@@ -414,20 +419,30 @@ $("cmpPdfFile").onchange=async e=>{
   cmpMsg("Read "+(files.length-fails.length)+" of "+files.length+" PDFs and found "+total+" LPNs. "+notes.join(" ")+(fails.length?" Couldn’t read: "+fails.join(", ")+". You can type those numbers in the box instead.":"")+" Check the numbers below are correct, then compare."+oddNote("cmpNums"));
 };
 $("cmpPhotoBtn").onclick=()=>{$("cmpPhotoFile").value="";$("cmpPhotoFile").click()};
+/* The last batch of manifest photos, kept in memory (not stored) so "Report a problem with these photos" can attach
+   the one that read worst. */
+let cmpLastPhotos=[];
 $("cmpPhotoFile").onchange=async e=>{
   const files=[...(e.target.files||[])];if(!files.length)return;
-  const notes=[];
+  const notes=[];cmpLastPhotos=[];$("cmpReport").hidden=true;
   diag("manifest","Reading "+files.length+" manifest photo(s). Prefixes: "+(getPfx().join(" ")||"any")+". Already listed: "+$("cmpNums").value.split(/\r?\n/).filter(s=>s.trim()).length);
   for(let i=0;i<files.length;i++){
     const tag="Photo "+(i+1),f=files[i];
     cmpMsg("Reading photo "+(i+1)+" of "+files.length+"…");
     diag("manifest","photo "+(i+1)+" of "+files.length+": "+(f.type||"?")+", "+Math.round((f.size||0)/1024)+" KB");
-    try{const a=await readPhoto(f),r=addNums(a);notes.push(readNote(tag,a,r));diag("manifest",tag+": found "+a.length+", added "+r.added+", already listed "+r.dup+(a.skipped&&a.skipped.length?", skipped "+a.skipped.join(" "):"")+(a.odd&&a.odd.length?", left out as unlike the page "+a.odd.join(" "):""))}
-    catch(err){const m=(err&&err.message)||"error";notes.push(tag+": couldn’t be read ("+m+").");diag("manifest",tag+" failed: "+m)}
+    try{const a=await readPhoto(f),r=addNums(a);notes.push(readNote(tag,a,r));cmpLastPhotos.push({file:f,tag,found:a.length,odd:((a.skipped||[]).length+(a.odd||[]).length+(a.mended||[]).length)});diag("manifest",tag+": found "+a.length+", added "+r.added+", already listed "+r.dup+(a.skipped&&a.skipped.length?", skipped "+a.skipped.join(" "):"")+(a.odd&&a.odd.length?", left out as unlike the page "+a.odd.join(" "):"")+(a.mended&&a.mended.length?", corrected to match the page "+a.mended.join(" "):""))}
+    catch(err){const m=(err&&err.message)||"error";notes.push(tag+": couldn’t be read ("+m+").");diag("manifest",tag+" failed: "+m);cmpLastPhotos.push({file:f,tag,found:-1,odd:0})}
   }
   cmpMsg(notes.join(" ")+" Check the numbers below are correct, then compare."+oddNote("cmpNums"));
+  $("cmpReport").hidden=!cmpLastPhotos.length;
 };
-$("cmpClear").onclick=()=>{logSrc=null;logPdfSrc=null;logSheets=null;$("cmpNums").value="";$("cmpLogNums").value="";$("cmpLogName").textContent="";$("cmpSum").innerHTML="";$("cmpRes").hidden=true;$("cmpRes").innerHTML="";cmpMsg("")};
+// Opens the report box with the photo that read worst (couldn't be read, fewest numbers, or most corrected).
+$("cmpReport").onclick=()=>{
+  const w=cmpLastPhotos.slice().sort((a,b)=>(a.found<0?-1:0)-(b.found<0?-1:0)||a.found-b.found||b.odd-a.odd)[0];
+  if(typeof openFeedback==="function")openFeedback({kind:"problem",hint:"What went wrong with "+(w?w.tag.toLowerCase():"the photos")+"? For example, which numbers were missing or wrong.",photo:w&&w.file,photoName:w&&w.tag});
+};
+function cmpForgetPhotos(){cmpLastPhotos=[];$("cmpReport").hidden=true}
+$("cmpClear").onclick=()=>{cmpForgetPhotos();logSrc=null;logPdfSrc=null;logSheets=null;$("cmpNums").value="";$("cmpLogNums").value="";$("cmpLogName").textContent="";$("cmpSum").innerHTML="";$("cmpRes").hidden=true;$("cmpRes").innerHTML="";cmpMsg("")};
 function cmpData(){
   const lines=id=>$(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
   const uniq=a=>{const seen=new Set();return a.filter(x=>{const k=norm(x);if(!k||seen.has(k))return false;seen.add(k);return true})};
