@@ -15,7 +15,7 @@
 ├── logo.png                 default logo for the header and exports (optional)
 ├── presets.json             shared LPN prefix presets (optional)
 ├── media/
-│   ├── demo.mp4             narrated demo video for the Guide (720×1280, about 47 seconds, about 1.8 MB; loaded only when tapped, not cached)
+│   ├── demo.mp4             narrated demo video for the Guide (720×1280, about 47 seconds, about 1.7 MB; re-recorded for v4.0 in build 52; loaded only when tapped, not cached)
 │   ├── demo-poster.jpg      still picture shown before the video plays
 │   └── share-qr.svg         QR code for Settings → Share this app (opens https://jamie9904.github.io/; in the offline shell, build 50)
 ├── fonts/
@@ -30,7 +30,12 @@
 ├── .mcp.json                Context7 documentation server for Claude Code (development only)
 ├── .gitignore               keeps `__pycache__/`, `*.pyc` and `node_modules/` out of git
 ├── tests/
-│   ├── run.js               automatic checks (`npm test`)
+│   ├── run.js               the runner for the automatic checks (`npm test`): starts the server and browser, runs every file in groups/ in name order, prints the totals
+│   ├── lib.js               shared helpers for the checks: serve(), check(), page(), EXCEL_STUB, LIBS / libFile() / REAL_LIBS, file types (TYPES), counts()
+│   ├── groups/              the checks, one self-contained file per area (since build 52)
+│   │   ├── 01-layout.js … 06-real-export.js     layout; phone flows and Settings; Excel export; version note, PDF safety and spreadsheet import; saved data from outside and fingerprints; real export libraries and library versions
+│   │   ├── 07-security-policy.js … 12-report.js security policy; demo video; manifest photos and problem report; accessibility; feedback Worker; Report a problem or idea
+│   │   └── 13-photo-notes.js … 19-offline.js    photo notes; Find an LPN and turned photos; damaged pallets and Share this app; welcome card; offline store; real photo reading (GitHub only); offline
 │   ├── advisories.js        asks osv.dev about security advisories for the pinned libraries
 │   ├── advisories-accepted.json  advisories checked and found not to affect the app, with reasons
 │   └── sri.js               checks the library fingerprints in core.js against the CDNs
@@ -46,8 +51,8 @@
 │   ├── README.md            how to re-record
 │   └── .gitignore           keeps the working folder out/ out of git
 ├── tools/ocr-check/         photo reading check on real manifest photos (development only)
-│   ├── check.js             runs the app's photo code on the photos and scores the LPNs (also used by tests/run.js on GitHub)
-│   ├── expected.json        the LPNs printed on each photo (18)
+│   ├── check.js             runs the app's photo code on the photos and scores the LPNs (also used by tests/groups/18-real-photo.js on GitHub)
+│   ├── expected.json        the LPNs printed on each photo (23)
 │   └── photos/              the user's four manifest photos, address boxes cut off (qub, rby, run, vlt .jpg), run-sideways.jpg (run.jpg turned, build 46) and rby-upside-down.jpg (rby.jpg turned 180°, build 47)
 ├── tools/feedback-worker/   Cloudflare Worker that turns Report a problem or idea into issues in a private repo (not part of the site)
 │   ├── worker.mjs           POST /report: checks, limits (Limits Durable Object), GitHub issue and photo
@@ -63,10 +68,10 @@
     ├── CLAUDE.md            working notes: branches, release steps, user decisions
     ├── settings.json        registers the hooks below
     ├── hooks/
-    │   ├── session_start.py fetches every branch, sets the upstream and NODE_PATH, prints a status line (including the updates branch and page or style changes since the demo video)
+    │   ├── session_start.py fetches every branch, sets the upstream and NODE_PATH, prints a status line (including the updates branch and page or style changes since the demo video); the docs lag counts main commits that touch the app files, `tests/run.js`, `tests/lib.js` or `tests/groups/`
     │   ├── syntax-check.sh  `node --check` after a `.js` file is edited
     │   ├── lpn_git_guard.py commit and push guard (cache bump, docs on main, no commits on main or new branches, tests before push)
-    │   ├── docs_reminder.py reminds when the docs branch is behind main
+    │   ├── docs_reminder.py reminds when the docs branch is behind main (counting main commits that touch the app files, `tests/run.js`, `tests/lib.js` or `tests/groups/`)
     │   └── outputs_reminder.py reminds when the download copy (outputs folder and zip) doesn't match main
     └── agents/              export-reviewer, phone-layout-checker, docs-updater, release-reviewer, security-reviewer, ocr-reviewer, a11y-reviewer
 ```
@@ -98,9 +103,9 @@
 `tests/`, `tools/`, `package.json`, `.gitignore`, `.github/`, `.claude/`, `.mcp.json`, `docs/`, `DESIGN.md` and `README.md` are for development only. None of them is loaded by the app or cached by `sw.js`.
 
 - `tests/`, `tools/`, `package.json`, `DESIGN.md` and `README.md` are on `main`, so GitHub Pages publishes them alongside the app. `tools/` is kept out of the site zip and the download copy (`outputs_reminder.py` doesn't count it as a site file).
-- `tools/demo-video/` only reads the app files; its output goes to `media/demo.mp4` and `media/demo-poster.jpg`, which the app does use, and to `tools/demo-video/screens.json`, which only `tests/run.js` reads.
-- `tools/ocr-check/` only reads the app files and its own photos; `tests/run.js` loads `check.js` to read the photos on GitHub, and `health.yml` runs it with `--url=` against the live site.
-- `tools/feedback-worker/` runs on Cloudflare, not on GitHub Pages; the app only talks to it through `FEEDBACK_URL` in `panels.js` (`https://lpn-feedback.jamie9904.workers.dev/report` since build 43). `tests/run.js` imports `worker.mjs` to check it.
+- `tools/demo-video/` only reads the app files; its output goes to `media/demo.mp4` and `media/demo-poster.jpg`, which the app does use, and to `tools/demo-video/screens.json`, which only `tests/groups/08-demo-video.js` reads.
+- `tools/ocr-check/` only reads the app files and its own photos; `tests/groups/18-real-photo.js` loads `check.js` to read the photos on GitHub, and `health.yml` runs it with `--url=` against the live site.
+- `tools/feedback-worker/` runs on Cloudflare, not on GitHub Pages; the app only talks to it through `FEEDBACK_URL` in `panels.js` (`https://lpn-feedback.jamie9904.workers.dev/report` since build 43). `tests/groups/11-feedback-worker.js` imports `worker.mjs` to check it.
 - `tools/release/ship.sh` only runs git and `gh` commands and copies files to the download folder; nothing in the app or the checks uses it.
 - `.github/`, `.claude/` and `.mcp.json` are on `main` but not published: Jekyll, which GitHub Pages uses to build the site, leaves out files and folders whose names start with a dot.
 - `docs/`, and the version of `README.md` that goes with it, live only on the `docs` branch (`main` has its own `README.md`). Pages publishes from `main`, so they are not on the site. The git guard in `.claude/hooks/lpn_git_guard.py` blocks committing `docs/` files on `main` and merging or pushing `docs` into `main`.

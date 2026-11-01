@@ -36,11 +36,11 @@ App files are fetched network-first with `cache:"no-cache"`, and the install ste
 The app reads PDFs with pdf.js 6.4.299, the "legacy" build. Every PDF is opened through one function, `openPdf()` in `compare.js`, which is plain `getDocument({data:bytes})`.
 
 - **Why upgrade:** the app opens PDFs it did not make: supplier manifests in the Manifest check, and exported logs that may have been passed around before being loaded back. The previous version, 3.11.174, had a flaw (CVE-2024-4367, advisory GHSA-wgrm-67xf-hhpq) where a specially made font in a PDF could make pdf.js run code in the page. Build 28 worked round it with `isEvalSupported:false`; build 29 replaces that with the real fix by moving to a version past the known flaws: CVE-2024-4367 (fixed in 4.2.67) and CVE-2026-16633 / GHSA-hq66-cqwq-w95j (affected 5.6.83 up to 6.2.108).
-- **No options needed:** pdf.js 6 no longer has `isEvalSupported` or `enableScripting`. It no longer compiles anything from a file, and a PDF's own scripts only run in the pdf.js viewer, which the app doesn't use. So the protection is the version, and a check in `tests/run.js` reads the pdf.js version from the URLs in `compare.js` and fails if it is in either known bad range.
+- **No options needed:** pdf.js 6 no longer has `isEvalSupported` or `enableScripting`. It no longer compiles anything from a file, and a PDF's own scripts only run in the pdf.js viewer, which the app doesn't use. So the protection is the version, and a check in `tests/groups/04-version-note.js` reads the pdf.js version from the URLs in `compare.js` and fails if it is in either known bad range.
 - **Legacy build:** it is made for older browsers and phones. Even so it needs roughly iOS/Safari 16.4+, Chrome 94+ or Firefox 93+. On older phones PDF reading fails with a plain message (`PDF_LOAD_MSG`) that says to type the numbers in the box instead; the rest of the app is unaffected.
 - **Loaded with `import()`:** pdf.js 4 and later are published only as ES modules, so `loadScript()` (a script tag) can't load them. `loadPdfJs()` uses a dynamic `import()` with a 15-second limit per host and sets `window.pdfjsLib` itself, so the rest of the code is unchanged.
 - **jsDelivr then unpkg:** cdnjs only hosts the modern build, so the hosts differ from the other libraries. The worker (`pdf.worker.min.mjs`) comes from the same host as the library; pdf.js wraps a worker from another site itself, so no copy on the app's own site is needed. `unpkg.com` was already in the service worker's `CDN` list, so both files are cached in the library store (now `lpn-libs-v2`) on first use.
-- **One function for every reader:** `readPdf()`, `readLogPdf()` and `parseExported()` all call `openPdf()`, and a scan in `tests/run.js` fails if `getDocument(` appears anywhere else, so a new PDF reader can't bypass it.
+- **One function for every reader:** `readPdf()`, `readLogPdf()` and `parseExported()` all call `openPdf()`, and a scan in `tests/groups/04-version-note.js` fails if `getDocument(` appears anywhere else, so a new PDF reader can't bypass it.
 - **pdf-lib not affected:** pdf-lib (merging the uploaded log PDF into the manifest check PDF) only copies objects from one PDF into another and never runs anything from the file.
 - **Trade-off:** the version check only knows the bad ranges written into it. A new pdf.js advisory means adding its range to the check and, if the pinned version is affected, moving it (in `compare.js` and `package.json` together).
 
@@ -83,7 +83,7 @@ When the Manifest check adds an uploaded log PDF to its own PDF, `buildCmpPdf()`
 Every library loaded by a script tag has a `sha384` integrity hash in the `SRI` map in `core.js`, and is loaded with `crossorigin="anonymous"`.
 
 - **Why:** the app runs code from cdnjs and jsDelivr. If a file there were changed or tampered with, the browser now refuses it instead of running it with access to the user's data.
-- **Checked both ways:** a check in `tests/run.js` fails if a library address in the code has no hash or a hash has no address, and `tests/sri.js` downloads every file and compares the hash each week, so a CDN change shows up as an email before users notice a feature failing.
+- **Checked both ways:** a check in `tests/groups/05-outside-data.js` fails if a library address in the code has no hash or a hash has no address, and `tests/sri.js` downloads every file and compares the hash each week, so a CDN change shows up as an email before users notice a feature failing.
 - **Not covered:** pdf.js is loaded with `import()`, which has no integrity option in this code, and Tesseract fetches its worker, engine and language data itself. Those files are not fingerprinted.
 - **Trade-off:** upgrading a library now also means updating its hashes in `SRI` (both CDN addresses), or the browser will refuse the new file. The `lpn-library-upgrade` skill is the procedure for upgrades.
 
@@ -113,14 +113,14 @@ The service worker saves a library only if the download succeeded (`res.ok`), ne
   - `base-uri 'none'` and `form-action 'none'`: nothing can change where relative addresses point or send a form anywhere.
 - **Trade-off:** reading photos now needs iOS 16 or newer on an iPhone, because older Safari doesn't understand `'wasm-unsafe-eval'` and blocks the photo reader's engine. The app's message and the Guide say so. Barcode scanning, typing numbers and reading PDFs (iOS 16.4+ since build 29) are unaffected.
 - **Other trade-offs:** adding a new library host, or a library that fetches from a new place, means updating the policy too, or the feature fails as if the library couldn't load. `'unsafe-inline'` for styles stays, because the app relies on inline style attributes.
-- **How it is kept working:** `tests/run.js` checks the policy is in place before any script with no general eval, that everyday screens run with nothing blocked, and (on GitHub, with the real libraries and the real photo reader) that Excel, PDF export, PDF reading, pdf-lib, photo reading, printing and ZXing all work with nothing blocked in the page or its workers. This automated coverage of photo reading was what held the policy back before.
+- **How it is kept working:** The checks (`tests/groups/07-security-policy.js`, and on GitHub `18-real-photo.js`) check the policy is in place before any script with no general eval, that everyday screens run with nothing blocked, and (on GitHub, with the real libraries and the real photo reader) that Excel, PDF export, PDF reading, pdf-lib, photo reading, printing and ZXing all work with nothing blocked in the page or its workers. This automated coverage of photo reading was what held the policy back before.
 
 ## Exports designed to be read back
 
 The Excel log keeps an `LPN` header cell and labelled delivery cells (Date, Received by, Trailer number…), and PDFs carry the whole log as JSON in the PDF keywords (`LPNLOG2:`).
 
 - **Why:** exported files are the long-term record. Saved deliveries can be rebuilt by importing them, and the manifest check can use them as the log, without OCR errors.
-- **Constraint:** layout changes must keep those labels and that keyword format. `tests/run.js` checks the import path.
+- **Constraint:** layout changes must keep those labels and that keyword format. The checks (`tests/groups/06-real-export.js`) check the import path.
 
 ## Print-first spreadsheet styling
 
@@ -206,7 +206,7 @@ When a photo has a clear page pattern, `tidyReads()` leaves out a reading whose 
 
 ## A photo reading check on the user's real photos (`tools/ocr-check`)
 
-`tools/ocr-check/check.js` runs the app's own photo code on the user's four manifest photos (`photos/`, sent on 31 Oct 2026, address boxes cut off) and scores the result against `expected.json` (18 LPNs). `tests/run.js` uses it on GitHub with the real tesseract.js and fails on any missing or extra LPN.
+`tools/ocr-check/check.js` runs the app's own photo code on the user's four manifest photos (`photos/`, sent on 31 Oct 2026, address boxes cut off) and scores the result against `expected.json` (18 LPNs). `tests/groups/18-real-photo.js` uses it on GitHub with the real tesseract.js and fails on any missing or extra LPN.
 
 - **Why real photos:** the drawn test pictures are clean; the problems users meet (shade, grain, specks, ruled lines, O read for 0) only show on real photos. The repair rules are tuned on these photos, so every change is scored against them.
 - **Why two engines:** where the Claude cloud sandbox can't download tesseract.js, the `cli` engine uses the Tesseract 5 command for the reading and the app's code (`prep`, `cropScaled`, `extractLpns`, `photoLpns`) for everything else, offline. It doesn't read exactly like tesseract.js (build 37's two fixes only showed on GitHub), so GitHub reads the photos with the `js` engine, the app's real `ocrLpns()`, as on a phone.
@@ -309,14 +309,14 @@ Atkinson Hyperlegible (chosen for legibility) and IBM Plex Mono (LPNs and number
 
 ## Automatic checks with stand-ins
 
-`tests/run.js` blocks all external requests and replaces ExcelJS with a recording stand-in.
+The checks (`page()` in `tests/lib.js`) block all external requests and replaces ExcelJS with a recording stand-in.
 
 - **Why:** runs offline, quickly and deterministically in CI, and can assert on cell values, borders and print settings.
 - **Trade-off:** a stand-in only shows what the app asked for, not what the real library makes of it. The real ExcelJS, jsPDF, pdf.js and pdf-lib are now also checked (next section); the camera, the photo reader and phone file viewers are still checked manually.
 
 ## Real export libraries in the checks, run on GitHub
 
-`tests/run.js` also makes a real log `.xlsx`, log PDF and manifest check `.xlsx` with the real ExcelJS, jsPDF, jspdf-autotable and pdf.js, and reads each back through the app's own readers (`parseExported()`, `readLog()`, `readLogPdf()`). The libraries come from `node_modules` and are served in place of the CDN URLs; all other outside requests stay blocked.
+`tests/groups/06-real-export.js` also makes a real log `.xlsx`, log PDF and manifest check `.xlsx` with the real ExcelJS, jsPDF, jspdf-autotable and pdf.js, and reads each back through the app's own readers (`parseExported()`, `readLog()`, `readLogPdf()`). The libraries come from `node_modules` and are served in place of the CDN URLs; all other outside requests stay blocked.
 
 - **Why:** the stand-ins can't catch problems that only show with the real library, such as a merged cell read in every column, a long LPN wrapped onto two lines in the PDF, or a file that the app writes but can't import again. Reading the files back with the same functions users rely on checks the whole round trip.
 - **Why only where npm works:** the Claude cloud sandbox can't download npm packages or reach the CDNs, so there the group is skipped with a note and the rest of the checks still run. GitHub's runners can always install them, so on GitHub a missing library is an error rather than a skip, and the run ends with a **Checks** notice saying whether the real checks were included. To get the real result from a cloud session, push the branch (branch pushes are fine) and read that notice through the GitHub annotations API.
@@ -482,7 +482,7 @@ Staff can send a problem or idea from the **Report** button at the top of the pa
 - **Why not in backups:** like the problem log, unsent reports belong to the phone they were written on.
 - **Why the deploy skips before set-up:** pushes to `main` that touch the Worker would otherwise fail until the user has created the Cloudflare account and secrets. Running it by hand still fails and names the missing secrets. The GitHub token is only given to the one step that stores it, on stdin, so it can't appear in other steps or the command line.
 - **Live in build 43:** `FEEDBACK_URL` is `https://lpn-feedback.jamie9904.workers.dev/report`. Until then it was empty and the form said "Reporting isn’t set up yet" (pointing to Download problem report); that path is still there and still checked.
-- **Why the exact origin in `connect-src`, not `*.workers.dev`:** a wildcard would let the page send data to any Cloudflare Worker, including someone else's. Naming one origin keeps the policy as tight as before; the cost is that a new Worker address needs the policy changed too, and a check in `tests/run.js` fails if `FEEDBACK_URL`'s origin is missing from it.
+- **Why the exact origin in `connect-src`, not `*.workers.dev`:** a wildcard would let the page send data to any Cloudflare Worker, including someone else's. Naming one origin keeps the policy as tight as before; the cost is that a new Worker address needs the policy changed too, and a check in `tests/groups/12-report.js` fails if `FEEDBACK_URL`'s origin is missing from it.
 - **Why the deploy waits and the test report is optional:** a new workers.dev address can take a few minutes to answer, so the check retries for about 2 minutes instead of failing after 5 seconds. A failed deploy shows Cloudflare's own reason in the notice so it can be fixed without reading the log. The test report makes a real issue, so it only runs when ticked by hand, never on a push.
 
 ## Demo video not re-recorded for build 41
@@ -662,3 +662,29 @@ A card at the top of the page offers the demo video on the first visit, and show
 - **Why one Changelog line, cut to 170 characters:** the card should fit a phone screen; **See what’s new** opens the full Changelog.
 - **Why the build is stored on every load:** so the card shows once per update and never on a fresh install. Phones that update from build 49 had no stored build, so they see no card for build 50; the first what's-new card comes with the next update.
 - **Why focus goes to the Guide button:** the card's buttons disappear when pressed; moving focus first to a button that stays in the header means keyboard and screen reader users aren't left on nothing.
+
+## Version 4.0 with a short summary first (build 52)
+
+The Changelog's newest heading became **v4.0** with six bullets that sum up the recent work, instead of adding more bullets to the long v3.30 list. The four newest v3.30 bullets moved into it; the rest of v3.30 stayed as it was.
+
+- **Why:** the app is now shared with colleagues (Share this app, the welcome card), and a newcomer opening the Changelog should see what the app does now in a few lines, not 20 bullets of fixes.
+- **Why no code change for the number:** `appVersion()` and the footer already read the version from the first `<h3>vX.Y` in `HELP.log`, so exports, reports, the problem report and the footer show v4.0 from that one edit. The build number in `sw.js` is still what tells two releases apart.
+- **Trade-off:** the what's-new card shows the first bullet, which is now a summary ("Version 4.0, ready to share with colleagues: …") rather than the latest change; later releases add their bullet first again.
+
+## Shorter, plainer Guide (build 52)
+
+The Guide was cut from about 1,630 to about 1,180 words and then edited into plain language: short whole sentences, clear references ("Tap it" only after naming the thing) and instructions in the active voice. The ten sections and their titles stayed.
+
+- **Why:** staff read it on a phone on the loading bay; the user asks for UK English and plain wording in the app.
+- **Why keep the titles:** `guideToc()` builds the contents bar from them and its `short()` map is keyed by title, so changing a title would lose its short name.
+- **What was put back after the first cut:** Undo, working offline, **Tap to share**, the handheld scanner note and clearing the manifest numbers on Start new delivery (`2710acf`), because these answer common questions.
+- **Trade-off:** less detail in the app; the full reference is these docs, which are not on the site.
+
+## Checks split into one file per area (build 52)
+
+`tests/run.js` was one file of about 1,400 lines. It is now a short runner; shared helpers are in `tests/lib.js` and the checks in `tests/groups/01-layout.js` … `19-offline.js`, run in name order (see [testing](testing.md#how-the-checks-are-laid-out)).
+
+- **Why:** a change to one area means reading and editing one file of 13 to 190 lines instead of finding the right place in a long one, and reviewers and the `lpn-write-check` skill can point at a single file.
+- **Why each file self-contained:** a group takes only what it needs from `../lib` and keeps its own variables, so a group can be moved, renumbered or run on its own without breaking another.
+- **Why numbered names and no list of groups:** the runner picks up every `NN-name.js` file, so adding a group can't be forgotten in a second place, and the number keeps the old order (the offline check still runs last).
+- **Kept the same:** every check, its name and the output, so the counts (248 locally, 273 on GitHub) and the GitHub "Checks" notice are unchanged; `npm test` and the git guard still run `node tests/run.js`.

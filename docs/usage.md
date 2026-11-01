@@ -123,15 +123,15 @@ If an expected count is set and differs from the total, the first export attempt
 
 **Long LPNs and notes in the spreadsheets.** On the pallet log and the manifest check sheet, the LPN column widens to fit the longest LPN in the file (it never gets narrower than the usual width, and stops at 40 characters wide). A value too long even for that, such as a web address scanned by mistake, wraps onto a taller row instead of stretching the column. Rows in the Delivery Details table grow tall enough to show long notes in full. The logo above the table is sized to the width of the table.
 
-**Which version made the file.** Every export says which version of the app made it, for example "LPN Pallet Log v3.30 (build 26)". The version is the newest entry in the Changelog; the build is the cache number in `sw.js` (`lpn-log-v26` is build 26).
+**Which version made the file.** Every export says which version of the app made it, for example "LPN Pallet Log v4.0 (build 52)". The version is the newest entry in the Changelog (its first heading, `v4.0` since build 52; `v3.30` before); the build is the cache number in `sw.js` (`lpn-log-v52` is build 52).
 
 | Export | Where the version appears |
 |---|---|
-| Excel log and manifest check sheet | A small grey line under the tables: "Made with LPN Pallet Log v3.30 (build 26) on dd/mm/yyyy at hh:mm." (the date follows the Date format setting), and the left side of the printed page footer |
+| Excel log and manifest check sheet | A small grey line under the tables: "Made with LPN Pallet Log v4.0 (build 52) on dd/mm/yyyy at hh:mm." (the date follows the Date format setting), and the left side of the printed page footer |
 | PDF (Email PDF, Print, saved deliveries) | The left side of the page footer |
 | Basic `.xls` (when the spreadsheet builder can't load) | A "Made with … on … at hh:mm." line under the table |
 
-If the build number can't be found within 1.5 seconds (for example on a very weak signal), the export goes ahead without it and shows only "LPN Pallet Log v3.30".
+If the build number can't be found within 1.5 seconds (for example on a very weak signal), the export goes ahead without it and shows only "LPN Pallet Log v4.0".
 
 Importing an exported log (Saved deliveries or the Manifest check) stops reading LPNs at the "Made with" line, so it is never taken for a pallet, even if someone has deleted the blank row above it. Both read spreadsheets the same way, so a log gives the same pallets in either place.
 
@@ -200,23 +200,32 @@ Section 9 of the Guide says: "Something not working, or an idea?" with a **Repor
 
 ## Guide and demo video
 
-The **Guide** button in the header opens the Guide in the side panel. It starts with a **▶ Watch the demo video (47 seconds)** button, above the contents bar and the guide sections. (The button said 38 seconds before build 39 and 40 seconds from build 39 to 48; since build 49 the video is 46.6 seconds.) Section 9 also says what LPNs look like: a letter prefix followed by digits, usually 3 letters and 9 or 10 digits, while `IM` numbers (full pallet picks) have 2 letters and 10 or 11 digits; the v3.30 changelog notes that `IM` numbers are always kept and not called unusual.
+The **Guide** button in the header opens the Guide in the side panel. Its ten sections, with their names in the contents bar in brackets, are: 1. Quick start (Start), 2. Set up the delivery (Delivery), 3. Log pallets (Logging), 4. Scanning barcodes (Scanning), 5. Check against the manifest (Manifest), 6. Export, 7. Saved deliveries and backups (Saved), 8. Install it on your phone (Install), 9. Settings and good to know (Settings) and 10. Your data and privacy (Privacy). Build 52 shortened the text from about 1,630 to about 1,180 words and rewrote it in plain language (short whole sentences, active instructions such as "Tap the type", "Enter the Date"), with the same sections and titles. It now also says that saved deliveries older than last week are removed automatically, that **Prefix presets** are in the Manifest check, and that Start new delivery clears the manifest numbers. Undo, offline use, **Tap to share**, the handheld scanner note and Live scan's **Torch** are still covered.
+
+The Guide starts with a **▶ Watch the demo video (47 seconds)** button, above the contents bar and the guide sections. (The button said 38 seconds before build 39 and 40 seconds from build 39 to 48; since build 49 the video is 46.6 seconds.) Section 9 also says what LPNs look like: a letter prefix followed by digits, usually 3 letters and 9 or 10 digits, while `IM` numbers (full pallet picks) have 2 letters and 10 or 11 digits; the v3.30 changelog notes that `IM` numbers are always kept and not called unusual.
 
 - Nothing is downloaded until the button is tapped (the video is set to `preload="none"`).
-- Tapping it hides the button and shows a video player in its place, which starts playing. The video is portrait (720×1280, about 47 seconds, about 1.8 MB), has narration and subtitles, and shows a still picture (`media/demo-poster.jpg`) before it plays. The player has the usual controls (play, pause, full screen) and plays inside the page on iPhones rather than jumping to full screen.
+- Tapping it hides the button and shows a video player in its place, which starts playing. The video is portrait (720×1280, about 47 seconds, about 1.7 MB), has narration and subtitles, and shows a still picture (`media/demo-poster.jpg`) before it plays. The player has the usual controls (play, pause, full screen) and plays inside the page on iPhones rather than jumping to full screen.
 - The video starts at half volume, so it isn't too loud; the player's volume control can turn it up. iPhone Safari ignores volume set by a page, so there the phone's own volume buttons set the level.
 - The scanning part shows picking the pallet type before scanning: FMCG is tapped, then **Scan** and **Live scan**; the first barcode is added as FMCG ("Added #9 … FMCG"), then BB is tapped and the next barcode is added as BB. The narration says: "Pick the pallet type first, then scan. Each pallet is logged with that type, so change it before the next one."
+- Re-recorded for build 52 so its screens show v4.0 (same scenes, still about 47 seconds).
 - The video was re-recorded for build 45, so it shows the **Report** button in the header, and the date box shows day/month/year as on a UK phone.
 - Re-recorded again for build 49 with a "Damage" scene: the first pallet is tapped and marked **Wet** ("Damaged pallet? Tap it and mark it crushed, wet, or say what's wrong."). The Manifest check scene ends with a tap on **Share missing list** ("…and share the missing list in one tap."); the phone's share menu itself isn't shown.
 - Closing the Guide pauses the video. Opening the Guide again shows the button again.
 - When the video starts, keyboard focus moves to the player, so its controls can be used straight away.
 - The video needs internet: it is not saved for offline use. If it can't play, the Guide shows "The video couldn’t play. Check you’re online, then try again."
 
+## Changelog and version (v4.0, build 52)
+
+The **Changelog** button opens the list of changes, newest first. Since build 52 it starts with a short **v4.0** section marked **Current**, six bullets that sum up the release for colleagues: Share this app with a QR code, the shorter Guide with its privacy section and the welcome card; damaged pallets; Share missing list, turned photos and one-tap prefix in the Manifest check; Find an LPN and trailer numbers in file names; Live scan's Torch and the seal number note; Follow phone colours, a name on reports and the what's-new card. The four newest bullets that had been under v3.30 moved into it. The full v3.30 list and the older versions (v3.20, v3.0, v2.0, v1.5, v1.0) follow unchanged.
+
+The version shown in the footer ("LPN Pallet Log v4.0 · Made by Jamie ·"), in the problem report, on reports sent with **Report** and on every export is read from that first heading, so it changed to v4.0 with no other code change.
+
 ## Your data and privacy (build 50)
 
 Section 10 of the Guide, **Your data and privacy** ("Privacy" in the contents bar), says in plain words:
 
-- Everything entered (pallets, deliveries, names and settings) stays in this browser on this phone. There is no account and nothing is sent while the app is used.
+- Everything entered (pallets, deliveries, names and settings) stays in this browser on this phone. There is no account, and "nothing you enter is sent anywhere unless you send a report" (this wording since build 52).
 - Manifest photos and PDFs are read on the phone and not saved; only a short note of what was read goes in the problem log on the phone.
 - The only thing that leaves the phone is a report the person chooses to send with **Report**: their message, their name if they add it, a photo if they add one and, if ticked, the problem report. It lists what the problem report includes: the numbers in the Manifest check, the delivery date and pallet counts, recent app activity and errors (with the LPNs, file names and start of the text read from photos they mention), the prefix list, and the browser, screen size and time zone. Reports go through a Cloudflare server to a private GitHub project only Jamie can see. Cloudflare sees the internet address, "kept for up to a day to stop spam" (since build 51; it said "for an hour" before, see the note under [Feedback Worker](architecture.md#feedback-worker-toolsfeedback-worker)).
 - The Excel, PDF and photo reading tools are downloaded from public code servers the first time they are needed. No data is sent to them, but they see the internet address.
@@ -233,7 +242,7 @@ Section 10 of the Guide, **Your data and privacy** ("Privacy" in the contents ba
 A card can appear at the top of the page, above the Delivery card:
 
 - **First visit** (nothing of the app's is stored in this browser yet): "New here? The 47-second demo video shows how the app works." with **Watch the demo** and **No thanks**. **Watch the demo** opens the Guide and starts the video; either button closes the card and it isn't shown again. Since build 51 the card stays until one of them is pressed: reloading or closing the app without answering shows it again next time.
-- **After an update** (the build on this phone is newer than the one last opened here): "Updated. " followed by the newest Changelog bullet as plain text (cut to about 170 characters at a word, with "…"), with **See what’s new** (opens the Changelog) and **Got it**. It shows once per update. The build last opened is remembered on every load, so the first what's-new card appears with the first update after build 50 (phones coming from build 49 had nothing remembered yet).
+- **After an update** (the build on this phone is newer than the one last opened here): "Updated. " followed by the newest Changelog bullet as plain text (cut to about 170 characters at a word, with "…"), with **See what’s new** (opens the Changelog) and **Got it**. It shows once per update. From build 52 that bullet is the first one of the short "v4.0 Current" summary ("Version 4.0, ready to share with colleagues: …"). The build last opened is remembered on every load, so the first what's-new card appears with the first update after build 50 (phones coming from build 49 had nothing remembered yet).
 
 On a first visit the install pop-up may open on top of the card; the card can't be reached while the install box, a panel or the report box is open. When a card button is pressed, keyboard focus moves to the **Guide** button in the header before the card goes.
 
@@ -284,7 +293,7 @@ Colours (Follow phone, two colours drive the whole theme, with a contrast warnin
 | Changes don't appear after an update | Tap **Refresh** on the update banner, or close and reopen the app. |
 | Spreadsheet looks cut off on a phone | Mobile viewers open sheets zoomed in; pinch out. Desktop and print are unaffected. |
 | Notes or LPNs cut off in an older export | Files made before v3.30 build 26 used fixed row heights and column widths. If the delivery is still in Saved deliveries, export it again. |
-| Export shows no build number | The app couldn't read `sw.js` in time (weak signal and nothing cached yet). The file is fine; the version line just shows "LPN Pallet Log v3.30" without "(build n)". |
+| Export shows no build number | The app couldn't read `sw.js` in time (weak signal and nothing cached yet). The file is fine; the version line just shows "LPN Pallet Log v4.0" without "(build n)". |
 | Which version made this file? | Look at the "Made with …" line under the table or the left side of the page footer. |
 | Import says "That file has no sheets." | The spreadsheet is empty or damaged. Import the PDF of the same delivery (made with Email PDF) instead, or export the delivery again if it is still in Saved deliveries. |
 | Import says "Couldn't find an LPN column in that file." | The file has no cell that just says `LPN`. Only logs exported from this app (or files with an `LPN` heading) can be imported. |

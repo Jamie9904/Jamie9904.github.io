@@ -12,11 +12,48 @@ npm test
 
 `npm test` runs `node tests/run.js`. It starts its own static server on a random local port, so nothing else needs to be running. Output is one line per check and a final `N passed, N failed`; the exit code is non-zero on any failure.
 
+### How the checks are laid out
+
+Since build 52 the checks are split over three places (before that everything was in one `tests/run.js` of about 1,400 lines). The split changed no check: the same 248 run locally and 273 on GitHub, with the same output.
+
+- **`tests/run.js`** is only the runner. It starts the server (`serve()`), launches Chromium, then `require`s every file in `tests/groups/` whose name matches `^\d+-.+\.js$`, sorted by name, and calls each one with `{ browser, URL0 }` (`URL0` is the local address of `index.html`), one after the other. At the end it prints `N passed, N failed`, adds the GitHub lines below when `GITHUB_ACTIONS` is set, and exits with 1 if any check failed. If a group throws, the run stops with the error (and, on GitHub, a "Test run stopped" annotation).
+- **`tests/lib.js`** holds what the groups share: `serve()` (the static server on `127.0.0.1`, with the `TYPES` content types), `check(name, ok, detail)` (prints `ok` or `FAIL`, adds an `::error` annotation on GitHub, and counts), `page(browser, width, opts)` (a new browser context and page with outside requests blocked; options `real`, `sw`, `noSW`, `net`, `handle`, `excel`, `init`, see [Strategy](#strategy)), `EXCEL_STUB` (the recording stand-in for ExcelJS), `LIBS`, `libFile()` and `REAL_LIBS` (the real library files in `node_modules` and whether they are all there), plus `ROOT`, `counts()` and `fail()`, and it re-exports `fs`, `path`, `http` and Playwright's `chromium`.
+- **`tests/groups/NN-name.js`** each export one `async ({ browser, URL0 }) => { … }` function that prints its heading, opens its own pages and closes them. Each file is self-contained: it only uses what it takes from `../lib` and its own variables, so a group can be read, changed or moved on its own. The number only fixes the order.
+
+| File | Groups it prints (see [What is covered](#what-is-covered)) |
+|---|---|
+| `01-layout.js` | Layout |
+| `02-phone.js` | Logging on a phone, Live manifest tracking, Phone usability, Quick actions, Saved deliveries, Settings and dates |
+| `03-excel-export.js` | Excel export (with a stand-in for ExcelJS) |
+| `04-version-note.js` | Export version note, with the PDF safety and spreadsheet import checks |
+| `05-outside-data.js` | Saved data and backups from outside, with the library fingerprint check |
+| `06-real-export.js` | Real export libraries, with the library versions check (which runs everywhere) |
+| `07-security-policy.js` | Security policy |
+| `08-demo-video.js` | Demo video (size limit and the screen fingerprint warning) |
+| `09-manifest-photos.js` | Manifest photo messages and problem report, with photo reading tidy-up, photo reader reuse and Live scan / Torch |
+| `10-accessibility.js` | Accessibility fixes |
+| `11-feedback-worker.js` | Feedback Worker |
+| `12-report.js` | Report a problem or idea |
+| `13-photo-notes.js` | Photo notes, Report this, seal boxes, Undo with the Manifest check |
+| `14-find-lpn.js` | Find an LPN, sideways photos, file names, seal check, Follow phone, one-tap prefix |
+| `15-damaged.js` | Damaged pallets and Share missing list, with Share this app and privacy |
+| `16-welcome.js` | Welcome and what's new |
+| `17-offline-store.js` | Offline store and failure paths |
+| `18-real-photo.js` | Real photo reading and the security policy (GitHub only) |
+| `19-offline.js` | Offline (runs last: it takes the page offline) |
+
+### Adding a check
+
+- **To an existing area:** add a `check("what the user would notice", condition, detail)` call to the group file for that area, using `page()` from `../lib` and closing the context (`await p.ctx.close()`) at the end. If it needs a helper from `tests/lib.js` that the file doesn't take yet, add it to the file's `require("../lib")` line.
+- **For a new area:** make a new `tests/groups/NN-name.js` with the same first lines as the others (a comment, the `require("../lib")` line and `module.exports = async ({ browser, URL0 }) => { … }`) and a `console.log("Heading")`. Pick the number for where it should run; `19-offline.js` should stay last. Nothing else needs registering: the runner picks up every numbered file.
+- **Shared helpers** (a new `page()` option, a new stand-in) go in `tests/lib.js` and its `module.exports`.
+- Changes to `tests/run.js`, `tests/lib.js` or `tests/groups/` count as app changes for the docs reminder and the session-start docs lag (see [installation.md](installation.md)). The git guard still runs `node tests/run.js` before a push.
+
 On GitHub, `.github/workflows/test.yml` (workflow name **Checks**) runs the same command on every push and pull request (Node 22, Chromium), with `npm install --ignore-scripts` so no package install scripts run, read-only repository access (`permissions: contents: read`) and a 20-minute limit (`timeout-minutes: 20`; it was 10 until a slow Playwright browser install on GitHub made build 44's Checks run hit the limit and be cancelled; on `main` since build 45's release). Results appear in the **Actions** tab, and failed checks are shown as annotations on the run.
 
 ### Real export libraries
 
-When all six library files are in `node_modules` (`exceljs.min.js`, `jspdf.umd.min.js`, `jspdf.plugin.autotable.min.js`, `pdf-lib.min.js`, and pdf.js's `pdf.min.mjs` and `pdf.worker.min.mjs`, taken from `pdfjs-dist/legacy/build/`), the "Real export libraries" group runs. Otherwise it prints "skipped here" and carries on; this happens where npm cannot download packages, such as the Claude cloud sandbox. Locally without the libraries the run has 248 checks at build 51 (one more than build 50; the new check runs on GitHub too); build 50 had 247, and 272 on GitHub with them (233 and 258 at build 49; 220 and 245 at build 48; 213 and 238 at build 47; 212 at build 46; 181 at build 42, when it had 206 with them; with them is always the case on GitHub).
+When all six library files are in `node_modules` (`exceljs.min.js`, `jspdf.umd.min.js`, `jspdf.plugin.autotable.min.js`, `pdf-lib.min.js`, and pdf.js's `pdf.min.mjs` and `pdf.worker.min.mjs`, taken from `pdfjs-dist/legacy/build/`), the "Real export libraries" group runs. Otherwise it prints "skipped here" and carries on; this happens where npm cannot download packages, such as the Claude cloud sandbox. Locally without the libraries the run has 248 checks at builds 51 and 52 (273 on GitHub with them; build 52 only moved the checks into `tests/groups/`), one more than build 50, which had 247, and 272 on GitHub with them (233 and 258 at build 49; 220 and 245 at build 48; 213 and 238 at build 47; 212 at build 46; 181 at build 42, when it had 206 with them; with them is always the case on GitHub).
 
 On GitHub (`GITHUB_ACTIONS` set) two extra lines are printed at the end:
 
@@ -92,7 +129,7 @@ If any step fails, GitHub sends its standard failed-workflow email (for schedule
 
 ## What is covered
 
-End-to-end checks in headless Chromium against the real page (248 checks at the time of writing, build 51, locally without the real libraries; build 50 had 247, and 272 with them on GitHub; build 49 had 233 and 258, build 48 had 220 and 245, build 47 had 213, build 46 had 212, build 45 had 195):
+End-to-end checks in headless Chromium against the real page (248 checks at the time of writing, build 52 as at build 51, locally without the real libraries, and 273 with them on GitHub; build 50 had 247 and 272; build 49 had 233 and 258, build 48 had 220 and 245, build 47 had 213, build 46 had 212, build 45 had 195):
 
 | Group | Checks |
 |---|---|
@@ -132,7 +169,7 @@ End-to-end checks in headless Chromium against the real page (248 checks at the 
 
 ## Photo reading check (`tools/ocr-check`)
 
-`tools/ocr-check/check.js` runs the app's photo reading on a folder of manifest photos and scores the LPNs against the ones printed on them. It is also a module that `tests/run.js` uses (`score`, `load`, `readJs`, `readCli`, `openApp`).
+`tools/ocr-check/check.js` runs the app's photo reading on a folder of manifest photos and scores the LPNs against the ones printed on them. It is also a module that `tests/groups/18-real-photo.js` uses (`score`, `load`, `readJs`, `readCli`, `openApp`).
 
 ```bash
 NODE_PATH=$(npm root -g) node tools/ocr-check/check.js [folder] [--engine=cli|js] [--prefix=VLT,QUB]

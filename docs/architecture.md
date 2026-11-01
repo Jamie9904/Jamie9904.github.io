@@ -124,6 +124,11 @@ Returns `"-" + trailer` for a file name, or `""`. With no argument it reads the 
 
 The video is a same-site file, so the existing `default-src 'self'` in the security policy covers it (there is no separate `media-src`).
 
+**Guide and Changelog text (`HELP.guide`, `HELP.log`, `panels.js`)**
+Both are HTML strings in the `HELP` object at the top of `panels.js`. `HELP.guide` has ten `<h3>N. Title</h3>` sections; `guideToc()` turns each into `id="gN"` and builds the contents bar from them, so a section's title must match a key in its `short()` map to get a short name (otherwise the full title is shown). Build 52 rewrote the Guide text (about 1,180 words, from about 1,630) but kept the ten titles, so the contents bar and the `#g1`…`#g10` links are unchanged. The ids `#showInstall` (section 8) and `#fbGuide` (section 9) that the code wires up are still in it.
+
+`HELP.log` starts with the newest version. Since build 52 that is `<h3>v4.0 <span class="ver">Current</span></h3>` with six bullets, followed by `<h3>v3.30</h3>` and the older versions. Two places read the version from the first `<h3>vX.Y` with the regular expression `/<h3>(v\d+\.\d+)/`: `appVersion()` in `export.js` (exports, the problem report and reports), the footer line `#verText` near the end of `panels.js` ("LPN Pallet Log v4.0 · Made by Jamie ·"). Separately, the what's-new card shows the first `<li>` of `HELP.log`. A new version is therefore made by adding a new first heading; a new bullet for the same version goes first in its list.
+
 **Your data and privacy (Guide section 10, build 50)**
 `HELP.guide` ends with `<h3>10. Your data and privacy</h3>` and a list (see [usage](usage.md#your-data-and-privacy-build-50)). `guideToc()` turns it into `#g10` and its `short()` map names it "Privacy" in the contents bar. Its list of what the problem report contains was written to match `reportText()`; keep the two in step when either changes.
 
@@ -153,7 +158,7 @@ Excel and Google Sheets don't grow a row whose height has been set, so `export.j
 **App version on exports**
 `appBuildP` runs once when `export.js` loads. It fetches `sw.js` (`cache:"no-cache"`, through the service worker like the other app files, given up after 4 seconds) and takes the number from `lpn-log-vN`. If that fails it uses the lowest `lpn-log-vN` cache name in Cache Storage, otherwise an empty string. Reading it at page load means the build matches the code the page is running, even if an update arrives later.
 
-`appVersion()` takes the version from the first `<h3>vX.Y` in `HELP.log` and waits at most 1.5 seconds for `appBuildP`, then returns for example "LPN Pallet Log v3.30 (build 26)", or "LPN Pallet Log v3.30" with no build. The result is kept in `appVer` only once a build is known; `appVerTry` holds the latest attempt. The Excel log, the manifest check sheet, `fallbackXls()`, `buildLogPdf()` and `buildCmpPdf()` all call it before building. The text is then used by:
+`appVersion()` takes the version from the first `<h3>vX.Y` in `HELP.log` and waits at most 1.5 seconds for `appBuildP`, then returns for example "LPN Pallet Log v4.0 (build 52)", or "LPN Pallet Log v4.0" with no build. The result is kept in `appVer` only once a build is known; `appVerTry` holds the latest attempt. The Excel log, the manifest check sheet, `fallbackXls()`, `buildLogPdf()` and `buildCmpPdf()` all call it before building. The text is then used by:
 
 - `xlMadeWith(ws, row, lastCol)`: row `H + n + 2` (one empty row below the tables), merged across all columns, Arial 10pt italic grey (`FF595959`), height 18, "Made with … on <date> at hh:mm.";
 - `xlPrint()`: the left part of the page footer, with `&` written as `&&` so Excel doesn't treat it as a code;
@@ -340,7 +345,7 @@ What each part is for in this app:
 | `frame-src`, `object-src` | `printBuf()` loads the PDF into a hidden `<iframe>` from a `blob:` address |
 | `base-uri`, `form-action` | Set to `'none'`: nothing can change the base address or submit a form |
 
-`connect-src` names the feedback Worker's exact origin rather than all of `*.workers.dev`, so the page can't send data to any other Worker. `tests/run.js` checks that the origin of `FEEDBACK_URL` is in `connect-src` (see testing).
+`connect-src` names the feedback Worker's exact origin rather than all of `*.workers.dev`, so the page can't send data to any other Worker. `tests/groups/12-report.js` checks that the origin of `FEEDBACK_URL` is in `connect-src` (see testing).
 
 Older Safari doesn't understand `'wasm-unsafe-eval'`, so reading photos needs iOS 16 or newer on an iPhone. A new library host, or a library that fetches from a new place, must be added to the policy, or it is blocked. See [decisions](decisions.md#content-security-policy-in-the-page-build-31).
 
