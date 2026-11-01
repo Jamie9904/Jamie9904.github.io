@@ -16,8 +16,12 @@
   "say": "Live totals count every type, and show how many pallets are still to come."
  },
  {
+  "id": "damage",
+  "say": "Damaged pallet? Tap it and mark it crushed, wet, or say what's wrong."
+ },
+ {
   "id": "manifest",
-  "say": "Then check the delivery against the manifest. Missing pallets to report, extras to book in."
+  "say": "Then check the delivery against the manifest, and share the missing list in one tap."
  },
  {
   "id": "export",

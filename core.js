@@ -15,7 +15,7 @@ let rows=[];
 let delCollapsed=false;
 const DEL_F=["date","recv","notes","expect","trailer","sealIn","sealOut"];
 let exported=null;
-function logSig(){let h=0;const s=rows.map(r=>r.lpn+"|"+r.type+"|"+(r.fsdu?1:0)).join(",");for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return rows.length+":"+h}
+function logSig(){let h=0;const s=rows.map(r=>r.lpn+"|"+r.type+"|"+(r.fsdu?1:0)+(r.dmg?"|"+r.dmg:"")).join(",");for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return rows.length+":"+h}
 /* "-TR4471" for file names: from the trailer box, or from the trailer given (the Manifest check passes the trailer of
    the delivery it checked, or "" when that isn't known). */
 function fileTag(tr){
@@ -33,7 +33,7 @@ const isTxt=v=>typeof v==="string"||typeof v==="number";
 const CFG_OK={size:["1","1.12","1.25"],dateFmt:["uk","us","iso"],defType:TYPES};
 function cleanCfg(c){const out={};if(c&&typeof c==="object"&&!Array.isArray(c))Object.keys(cfg).forEach(k=>{if(typeof c[k]===typeof cfg[k]&&(!CFG_OK[k]||CFG_OK[k].indexOf(c[k])>=0))out[k]=c[k]});return out}
 const isoTime=v=>typeof v==="string"&&/^\d{4}-\d{2}-\d{2}T[\d:.]+Z?$/.test(v)&&!isNaN(new Date(v));
-function cleanRows(a){return (Array.isArray(a)?a:[]).filter(r=>r&&typeof r==="object"&&isTxt(r.lpn)&&String(r.lpn).trim()).map(r=>({lpn:String(r.lpn).trim().slice(0,100),type:TYPES.indexOf(r.type)>=0?r.type:"Mixed",fsdu:!!r.fsdu}))}
+function cleanRows(a){return (Array.isArray(a)?a:[]).filter(r=>r&&typeof r==="object"&&isTxt(r.lpn)&&String(r.lpn).trim()).map(r=>{const o={lpn:String(r.lpn).trim().slice(0,100),type:TYPES.indexOf(r.type)>=0?r.type:"Mixed",fsdu:!!r.fsdu};const g=isTxt(r.dmg)?String(r.dmg).replace(/\s+/g," ").trim().slice(0,60):"";if(g)o.dmg=g;return o})}
 function cleanDel(o){
   o=o&&typeof o==="object"?o:{};const out={};
   DEL_F.forEach(k=>{out[k]=isTxt(o[k])?String(o[k]).slice(0,2000):""});
@@ -87,14 +87,25 @@ function render(){
     const n=document.createElement("td");n.textContent=i+1;
     // The LPN is a button, so it can be edited with the keyboard and screen readers too, not only by tapping.
     const l=document.createElement("td");l.className="l";
-    const eb=document.createElement("button");eb.type="button";eb.className="lpnedit";eb.textContent=r.lpn;eb.title="Tap to edit";eb.setAttribute("aria-label","Edit LPN "+r.lpn);eb.dataset.i=i;l.appendChild(eb);
+    const eb=document.createElement("button");eb.type="button";eb.className="lpnedit";eb.textContent=r.lpn;eb.title="Tap to edit or mark damage";eb.setAttribute("aria-label","Edit LPN "+r.lpn+(r.dmg?", damaged: "+r.dmg:"")+", or mark damage");eb.dataset.i=i;l.appendChild(eb);
+    if(r.dmg){tr.classList.add("dmg");const dt=document.createElement("span");dt.className="dmgtag";dt.textContent="Damaged: "+r.dmg;l.appendChild(dt)}
     l.onclick=()=>{
       if(l.querySelector("input"))return;
       const inp=document.createElement("input");inp.value=r.lpn;inp.setAttribute("autocapitalize","characters");inp.setAttribute("aria-label","Edit LPN");
-      l.textContent="";l.appendChild(inp);inp.focus();inp.select();
-      let done=false;
+      l.textContent="";l.appendChild(inp);
+      // Damage choices in a row under the pallet while it is being edited. Taps on them don't take focus from the
+      // LPN box (phones would otherwise close the edit before the tap lands).
+      const dr=dmgRow(r,(g,key)=>{dmgPick=g;finish(true,key)});tr.after(dr);
+      inp.focus();inp.select();
+      // Keep the choices clear of the entry bar on phones (the page keeps room for it when scrolling).
+      try{dr.scrollIntoView({block:"nearest"})}catch(e){}
+      let done=false,dmgPick;
       const finish=(ok,key)=>{
-        if(done)return;done=true;
+        if(done)return;done=true;dr.remove();
+        if(ok&&dmgPick!==undefined&&dmgPick!==(r.dmg||"")){
+          const was=r.dmg||"";if(dmgPick)r.dmg=dmgPick;else delete r.dmg;save();
+          showUndo(dmgPick?"Marked "+r.lpn+" as damaged ("+dmgPick+")":"Damage note removed from "+r.lpn,()=>{if(was)r.dmg=was;else delete r.dmg;save();render()});
+        }
         const v=inp.value.trim();
         if(ok&&v&&v!==r.lpn){
           const u=v.toUpperCase().replace(/\s+/g,"");
@@ -106,10 +117,17 @@ function render(){
         }
         render();
         // Back on the edited LPN, so keyboard users don't lose their place.
-        if(key){const back=document.querySelector('#body .lpnedit[data-i="'+i+'"]');if(back)back.focus()}
+        // (also when focus was on a part of the table that has just been redrawn)
+        if(key||!document.activeElement||document.activeElement===document.body){const back=document.querySelector('#body .lpnedit[data-i="'+i+'"]');if(back)back.focus({preventScroll:!key})}
       };
-      inp.onblur=()=>finish(true);
-      inp.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();finish(true,true)}else if(e.key==="Escape"){finish(false,true)}};
+      // Finish when focus leaves both the LPN box and the damage choices.
+      inp.onblur=()=>setTimeout(()=>{if(!dr.contains(document.activeElement)&&document.activeElement!==inp)finish(true)},0);
+      dr.addEventListener("focusout",()=>setTimeout(()=>{if(!dr.contains(document.activeElement)&&document.activeElement!==inp)finish(true)},0));
+      dr.addEventListener("keydown",e=>{if(e.key==="Escape"){e.preventDefault();finish(false,true)}});
+      inp.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();finish(true,true)}else if(e.key==="Escape"){finish(false,true)}
+        // Tab goes on to the damage choices (they come after the rest of the row on the page).
+        else if(e.key==="Tab"&&!e.shiftKey){e.preventDefault();dr.querySelector("button").focus()}};
+      dr.querySelector("button").addEventListener("keydown",e=>{if(e.key==="Tab"&&e.shiftKey){e.preventDefault();inp.focus()}});
     };
     const t=document.createElement("td");
     const s=document.createElement("select");
@@ -132,7 +150,29 @@ function render(){
   const fi=$("fltInfo");const fa=!!(q||ft);fi.hidden=!fa;if(fa)fi.textContent="Showing "+shown+" of "+rows.length+" pallets (counts above are for the whole log).";
   summary();
 }
-function extras(){const o=[];const e=parseInt($("expect").value,10);if(e>=0)o.push(["Expected pallets",String(e)]);[["trailer","Trailer number"],["sealIn","Seal in"],["sealOut","Seal out"]].forEach(f=>{const v=($(f[0]).value||"").trim();if(v)o.push([f[1],v])});const n=($("notes").value||"").trim();if(n)o.push(["Notes",n]);return o}
+/* The damage choices shown under a pallet while it is edited. pick(reason or "", fromKeyboard). */
+const DMG_REASONS=["Crushed","Wet"];
+function dmgRow(r,pick){
+  const tr=document.createElement("tr");tr.className="dmgrow";
+  const td=document.createElement("td");td.colSpan=5;tr.appendChild(td);
+  const box=document.createElement("div");box.className="dmgbox";box.setAttribute("role","group");box.setAttribute("aria-label","Damage for "+r.lpn);td.appendChild(box);
+  const lab=document.createElement("span");lab.className="dmglab";lab.textContent="Damage:";box.appendChild(lab);
+  const cur=r.dmg||"",keep=e=>e.preventDefault();
+  const btn=(text,val)=>{const b=document.createElement("button");b.type="button";b.textContent=text;b.setAttribute("aria-pressed",String(cur===val||!!(val===null&&cur&&DMG_REASONS.indexOf(cur)<0)));
+    b.addEventListener("pointerdown",keep);b.addEventListener("mousedown",keep);box.appendChild(b);return b};
+  const nb=btn("None","");nb.classList.add("none");nb.onclick=e=>pick("",e.detail===0);
+  DMG_REASONS.forEach(x=>{btn(x,x).onclick=e=>pick(x,e.detail===0)});
+  const oth=btn("Other…",null);
+  const ow=document.createElement("span");ow.className="dmgother";ow.hidden=true;
+  const oi=document.createElement("input");oi.maxLength=60;oi.setAttribute("aria-label","Other damage, for example torn label");oi.placeholder="What’s wrong?";
+  const ok=document.createElement("button");ok.type="button";ok.textContent="Save";ok.addEventListener("pointerdown",keep);ok.addEventListener("mousedown",keep);
+  const go=key=>{const v=oi.value.replace(/\s+/g," ").trim().slice(0,60);if(v)pick(v,key);else oi.focus()};
+  ok.onclick=e=>go(e.detail===0);oi.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();go(true)}};
+  ow.append(oi,ok);box.appendChild(ow);
+  oth.onclick=()=>{ow.hidden=false;if(cur&&DMG_REASONS.indexOf(cur)<0)oi.value=cur;oi.focus()};
+  return tr;
+}
+function extras(){const o=[];const e=parseInt($("expect").value,10);if(e>=0)o.push(["Expected pallets",String(e)]);[["trailer","Trailer number"],["sealIn","Seal in"],["sealOut","Seal out"]].forEach(f=>{const v=($(f[0]).value||"").trim();if(v)o.push([f[1],v])});const n=($("notes").value||"").trim();if(n)o.push(["Notes",n]);rows.forEach(r=>{if(r.dmg)o.push(["Damaged pallet",r.lpn+": "+r.dmg])});return o}
 function summary(){
   $("undoLast").hidden=!rows.length;
   {const en=$("expNote"),fresh=exported&&exported.sig===logSig();
