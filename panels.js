@@ -99,7 +99,7 @@ function initDemo(){
 /* The panels and the install box act as dialogs: focus moves in, the page behind can't be reached, and focus goes
    back to the button that opened them. */
 let dlgOpener=null;
-function pageInert(on){["main","header.top"].forEach(s=>{const e=document.querySelector(s);if(e)e.inert=on})}
+function pageInert(on){["main","header.top","#hello"].forEach(s=>{const e=document.querySelector(s);if(e)e.inert=on})}
 function dlgOpen(focusEl){if(!dlgOpener)dlgOpener=document.activeElement;pageInert(true);setTimeout(()=>{if(focusEl)focusEl.focus()},0)}
 function dlgClose(){if(!$("panel").hidden||!$("instBox").hidden)return; // the other dialog is still open
   pageInert(false);const o=dlgOpener;dlgOpener=null;if(o&&o.focus&&document.contains(o))o.focus()}
@@ -686,7 +686,7 @@ async function hello(){
   let b="";try{b=await appBuildP}catch(e){}
   let seen="",welcomed=false;try{seen=localStorage.getItem("lpnseenbuild")||"";welcomed=!!localStorage.getItem("lpnwelcome")}catch(e){}
   const close=()=>{box.hidden=true;btns.innerHTML=""};
-  const btn=(t,cls,fn)=>{const x=document.createElement("button");x.type="button";x.textContent=t;if(cls)x.className=cls;x.onclick=()=>{close();fn&&fn()};btns.appendChild(x);return x};
+  const btn=(t,cls,fn)=>{const x=document.createElement("button");x.type="button";x.textContent=t;if(cls)x.className=cls;x.onclick=()=>{$("btnGuide").focus();close();fn&&fn()};/* focus moves somewhere that stays before the card goes */btns.appendChild(x);return x};
   if(FIRST_OPEN&&!welcomed){
     txt.textContent="New here? The 47-second demo video shows how the app works.";
     const done=()=>{try{localStorage.setItem("lpnwelcome","1")}catch(e){}};

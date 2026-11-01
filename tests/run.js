@@ -1225,8 +1225,10 @@ async function page(browser, width, opts = {}) {
     const build = await q.evaluate(() => appBuildP);
     check("after an update, a card shows the newest changelog line, and the build is remembered", s.shown && s.text.startsWith("Updated. " + s.first) && s.seen === build && +build > 1, { s, build });
     await q.evaluate(() => [...document.querySelectorAll("#helloBtns button")].find(b => /See what/.test(b.textContent)).click()); await q.waitForTimeout(200);
-    s = await q.evaluate(() => ({ title: document.getElementById("panelTitle").textContent, card: !document.getElementById("hello").hidden }));
-    await q.evaluate(() => closeHelp()); await q.reload(); await q.waitForTimeout(500);
+    s = await q.evaluate(() => ({ title: document.getElementById("panelTitle").textContent, card: !document.getElementById("hello").hidden, inert: document.getElementById("hello").inert }));
+    await q.evaluate(() => closeHelp()); await q.waitForTimeout(100);
+    s.back = await q.evaluate(() => document.activeElement.id);
+    check("while a panel is open the card can't be reached, and closing it puts focus back on a button that stays", s.inert === true && s.back === "btnGuide", s); await q.reload(); await q.waitForTimeout(500);
     const again = await q.evaluate(() => !document.getElementById("hello").hidden);
     check("See what's new opens the Changelog, and the card isn't shown again for the same build", s.title === "Changelog" && !s.card && again === false, { s, again });
     check("no script errors", q.errors.length === 0, q.errors);
