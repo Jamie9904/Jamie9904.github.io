@@ -244,9 +244,9 @@ const OCR_READ_MS=120000;
 const ocrRead=(w,img)=>Promise.race([w.recognize(img),new Promise((_,rej)=>setTimeout(()=>rej(Object.assign(new Error("The photo reader stopped. Try the photo again."),{stuck:true})),OCR_READ_MS))]);
 function ocrLpns(f){const run=ocrQ.then(()=>ocrLpnsNow(f));ocrQ=run.catch(()=>{});return run}
 let ocrSay=null; // set while manifest photos are read, to show "turning the photo" on screen
-/* A copy of the canvas turned by 90 or 270 degrees, for manifest photos taken sideways. */
+/* A copy of the canvas turned by 90, 180 or 270 degrees, for manifest photos taken sideways or upside down. */
 function turnCanvas(cv,deg){
-  const c=document.createElement("canvas");c.width=cv.height;c.height=cv.width;
+  const side=deg%180!==0,c=document.createElement("canvas");c.width=side?cv.height:cv.width;c.height=side?cv.width:cv.height;
   const x=c.getContext("2d");x.imageSmoothingEnabled=false;x.translate(c.width/2,c.height/2);x.rotate(deg*Math.PI/180);x.drawImage(cv,-cv.width/2,-cv.height/2);
   return c;
 }
@@ -256,9 +256,10 @@ async function ocrLpnsNow(f){
   const w=await ocrWorker();let ok=false;
   try{
     let got=await ocrCanvas(w,cv),turned=0;
-    // Nothing at all that looks like an LPN: the photo may be sideways, so turn it and read again (both ways).
+    // Nothing at all that looks like an LPN: the photo may be sideways or upside down, so turn it and read again
+    // (both sideways turns first, as phones are more often held that way, then upside down).
     const none=o=>!o.length&&!o.skipped.length&&!(o.odd||[]).length;
-    for(const deg of [90,270]){
+    for(const deg of [90,270,180]){
       if(!none(got.out))break;
       if(ocrSay)ocrSay("No numbers found, so turning the photo to try again…");
       tc=turnCanvas(cv,deg);const g=await ocrCanvas(w,tc);
@@ -321,7 +322,7 @@ function readNote(tag,a,r,pdf,tap){
   if(!a.length&&!sk.length)t+=pdf?" No LPNs could be read from this PDF.":" No LPNs could be read: try a closer, sharper photo in good light.";
   if(sk.length){const px=[...new Set(sk.map(x=>x.match(/^[A-Z]+/)[0]))];
     t+=" "+sk.length+" other number"+(sk.length===1?"":"s")+" ("+sk.slice(0,4).join(", ")+(sk.length>4?"…":"")+") start with "+px.join(", ")+", which "+(px.length===1?"isn’t":"aren’t")+" in the prefix list. If "+(sk.length===1?"it is an LPN":"they are LPNs")+", "+(tap?"tap Add "+px.join(", ")+" below to add "+(px.length===1?"it":"them")+" to the prefix list.":"add "+px.join(", ")+" under Prefix presets (or clear the prefixes) and read the "+(pdf?"PDF":"photo")+" again.")}
-  if(a&&a.turned)t+=" The photo was sideways, so it was turned to read it.";
+  if(a&&a.turned)t+=a.turned===180?" The photo was upside down, so it was turned to read it.":" The photo was sideways, so it was turned to read it.";
   const md=(a&&a.mended)||[];
   if(md.length)t+=" "+md.length+(md.length===1?" number was":" numbers were")+" corrected to match the others on the page ("+md.slice(0,4).join(", ")+(md.length>4?"…":"")+"): check "+(md.length===1?"it":"them")+" against the paper.";
   const od=(a&&a.odd)||[];

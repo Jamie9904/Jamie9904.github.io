@@ -1027,13 +1027,15 @@ async function page(browser, width, opts = {}) {
         res.at270 = await run(n => ({ lpns: n === 3 ? ["VLT004040265"] : [] }));
         res.upright = await run(() => ({ lpns: ["VLT004040265"] }));
         res.prefixOnly = await run(n => ({ lpns: [], skipped: n === 1 ? ["RBY001234567"] : [] }));
+        res.at180 = await run(n => ({ lpns: n === 4 ? ["RBY006292169"] : [] }));
         res.nothing = await run(() => ({ lpns: [] }));
       } finally { Object.assign(window, keep); }
       return res; });
     check("a sideways photo with nothing found is turned and read again, and the note says so", JSON.stringify(s.at90.seen) === '["300x100","100x300"]' && s.at90.turned === 90 && s.at90.out[0] === "VLT004040265" && /The photo was sideways, so it was turned to read it\./.test(s.at90.note), s.at90);
     check("if turning one way finds nothing, the other way is tried", JSON.stringify(s.at270.seen) === '["300x100","100x300","100x300"]' && s.at270.turned === 270, s.at270);
     check("an upright photo, or one with only unlisted-prefix numbers, is read once and not called sideways", s.upright.seen.length === 1 && !s.upright.turned && !/sideways/.test(s.upright.note) && s.prefixOnly.seen.length === 1 && !s.prefixOnly.turned, { u: s.upright, p: s.prefixOnly });
-    check("a photo with nothing readable either way gives the usual note, and its canvas is freed", s.nothing.seen.length === 3 && !s.nothing.turned && /No LPNs could be read/.test(s.nothing.note) && s.nothing.freed && s.at90.freed, s.nothing);
+    check("if neither sideways turn finds anything, the photo is read upside down, and the note says so", JSON.stringify(s.at180.seen) === '["300x100","100x300","100x300","300x100"]' && s.at180.turned === 180 && s.at180.out[0] === "RBY006292169" && /The photo was upside down, so it was turned to read it\./.test(s.at180.note) && !/sideways/.test(s.at180.note), s.at180);
+    check("a photo with nothing readable any way up gives the usual note, and its canvas is freed", s.nothing.seen.length === 4 && !s.nothing.turned && /No LPNs could be read/.test(s.nothing.note) && s.nothing.freed && s.at90.freed, s.nothing);
     // One tap adds a missing prefix and its numbers.
     await q.evaluate(() => { document.getElementById("cmpToggle").click(); document.getElementById("cmpPfx").value = "VLT"; document.getElementById("cmpNums").value = "";
       window.readPhoto = async () => { const a = ["VLT004040265"]; a.skipped = ["RBY001234567", "RBY001234568"]; a.odd = []; a.mended = []; return a; }; });
