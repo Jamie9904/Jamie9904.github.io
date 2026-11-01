@@ -169,11 +169,14 @@ Since build 44 the form is a box in the middle of the screen. Open it with the *
 
 1. Choose **Problem** or **Idea**.
 2. Type what happened or what would help (up to 4000 characters).
-3. Optional: **Add a photo**. It is made smaller before sending (at most 1600px along the long side, as a JPEG) and the note shows its size, for example "Photo added (240 KB)". **Change photo** and **Remove photo** appear once one is added.
-4. **Attach the problem report** is ticked by default; untick it to send only the text and photo. The problem report holds the recent actions on this phone, with the LPNs involved (see [Problem report](#problem-report)).
-5. Tap **Send**. "Sent. Thank you!" means it has arrived; the box closes by itself 1.5 seconds later.
+3. Optional (build 50): **Your name (optional)**, up to 60 characters, so Jamie knows who to ask. Runs of spaces become one and the ends are trimmed. The name is remembered on this phone and filled in the next time the box opens; clearing the box and sending forgets it. Left empty, no name is sent.
+4. Optional: **Add a photo**. It is made smaller before sending (at most 1600px along the long side, as a JPEG) and the note shows its size, for example "Photo added (240 KB)". **Change photo** and **Remove photo** appear once one is added.
+5. **Attach the problem report** is ticked by default; untick it to send only the text and photo. The problem report holds the recent actions on this phone, with the LPNs involved (see [Problem report](#problem-report)).
+6. Tap **Send**. "Sent. Thank you!" means it has arrived; the box closes by itself 1.5 seconds later.
 
-Reports go to Jamie's private GitHub repository through a Cloudflare server. The problem report includes the LPNs and manifest numbers on the phone, file names, the start of text read from photos, and the browser and screen size. Since build 44 the box itself no longer says where reports go (the user's choice); it starts with "Tell Jamie what went wrong or what would help. With no signal, it’s kept on this phone and sent when you’re back online."
+Since build 50, **Send**, **Close** and the status line under them are pinned to the bottom of the box, so they stay on screen however tall the form gets (Extra large text, the name box, a short phone or the keyboard open); the form scrolls above them. On screens no taller than 700px the text box is a little shorter (at least 76px).
+
+Reports go to Jamie's private GitHub repository through a Cloudflare server. A name, when given, shows in the issue under "From:" as plain text. Settings' **Report a problem or idea** section points to the Guide's **Your data and privacy** section for what a report includes (see [Your data and privacy](#your-data-and-privacy-build-50)). The problem report includes the LPNs and manifest numbers on the phone, file names, the start of text read from photos, and the browser and screen size. Since build 44 the box itself no longer says where reports go (the user's choice); it starts with "Tell Jamie what went wrong or what would help. With no signal, it’s kept on this phone and sent when you’re back online."
 
 **Not set up yet.** The reporting server is online (since build 43). If the app's reporting address is ever empty, **Send** says "Reporting isn’t set up yet. Use Download problem report below and send the file to Jamie instead." (see [installation](installation.md#feedback-worker-report-a-problem-or-idea)).
 
@@ -209,6 +212,31 @@ The **Guide** button in the header opens the Guide in the side panel. It starts 
 - When the video starts, keyboard focus moves to the player, so its controls can be used straight away.
 - The video needs internet: it is not saved for offline use. If it can't play, the Guide shows "The video couldn’t play. Check you’re online, then try again."
 
+## Your data and privacy (build 50)
+
+Section 10 of the Guide, **Your data and privacy** ("Privacy" in the contents bar), says in plain words:
+
+- Everything entered (pallets, deliveries, names and settings) stays in this browser on this phone. There is no account and nothing is sent while the app is used.
+- Manifest photos and PDFs are read on the phone and not saved; only a short note of what was read goes in the problem log on the phone.
+- The only thing that leaves the phone is a report the person chooses to send with **Report**: their message, their name if they add it, a photo if they add one and, if ticked, the problem report. It lists what the problem report includes: the numbers in the Manifest check, the delivery date and pallet counts, recent app activity and errors (with the LPNs, file names and start of the text read from photos they mention), the prefix list, and the browser, screen size and time zone. Reports go through a Cloudflare server to a private GitHub project only Jamie can see. Cloudflare sees the internet address, "kept for an hour to stop spam" (see the note under [Feedback Worker](architecture.md#feedback-worker-toolsfeedback-worker) on how long it is actually stored).
+- The Excel, PDF and photo reading tools are downloaded from public code servers the first time they are needed. No data is sent to them, but they see the internet address.
+- Clearing the site's data in the browser deletes the log and saved deliveries. On an iPhone, a web page not added to the home screen can be cleared after a few weeks unused, so install the app and use **Back up now**.
+
+## Share this app (build 50)
+
+**Settings → Share this app** (between Date format and Install) shows a QR code (180×180px) that opens `https://jamie9904.github.io/`, the address written out under it, and **Send the link**. A colleague scans the code with their phone camera, opens the app and installs it from there. The code keeps its white background in every colour theme so phone cameras can read it, and it is saved for offline use with the rest of the app.
+
+**Send the link** opens the phone's share menu with "LPN Pallet Log: the goods-in pallet log app." and the address. Closing the share menu does nothing. Where there is no share menu (most computers), or sharing fails, the address is copied and the message says "Link copied. Paste it into a message or email."; if copying isn't allowed either, it says "Sharing isn’t available here. Send them this link: https://jamie9904.github.io/".
+
+## Welcome and what's new card (build 50)
+
+A card can appear at the top of the page, above the Delivery card:
+
+- **First visit** (nothing of the app's is stored in this browser yet): "New here? The 47-second demo video shows how the app works." with **Watch the demo** and **No thanks**. **Watch the demo** opens the Guide and starts the video; either button closes the card and it isn't shown again. It is only offered on the very first load: if the page is reloaded without answering, it doesn't come back.
+- **After an update** (the build on this phone is newer than the one last opened here): "Updated. " followed by the newest Changelog bullet as plain text (cut to about 170 characters at a word, with "…"), with **See what’s new** (opens the Changelog) and **Got it**. It shows once per update. The build last opened is remembered on every load, so the first what's-new card appears with the first update after build 50 (phones coming from build 49 had nothing remembered yet).
+
+On a first visit the install pop-up may open on top of the card; the card can't be reached while the install box, a panel or the report box is open. When a card button is pressed, keyboard focus moves to the **Guide** button in the header before the card goes.
+
 ## Keyboard and screen readers
 
 - The Guide, Changelog, Settings and Saved deliveries panel and the install box act as dialogs (build 41): when one opens, focus moves into it (to **✕ Close** in the panel, to the first visible button in the install box), the page behind can't be reached with Tab or a screen reader, and when it closes focus goes back to the button that opened it. Escape closes them.
@@ -225,7 +253,7 @@ The **Guide** button in the header opens the Guide in the side panel. It starts 
 
 ## Settings
 
-Colours (Follow phone, two colours drive the whole theme, with a contrast warning; since build 41 the edges of boxes and buttons and any accent-coloured text, such as panel headings and links, are adjusted automatically so they stay readable with any chosen colours), quick themes, logo, default pallet type, keep last type, warnings, sound, vibration, confirm scans, text size, date format (dd/mm/yyyy, mm/dd/yyyy, yyyy-mm-dd), include log copy in comparisons, forget remembered names, backup and restore, report a problem or idea, problem report, install pop-up.
+Colours (Follow phone, two colours drive the whole theme, with a contrast warning; since build 41 the edges of boxes and buttons and any accent-coloured text, such as panel headings and links, are adjusted automatically so they stay readable with any chosen colours), quick themes, logo, default pallet type, keep last type, warnings, sound, vibration, confirm scans, text size, date format (dd/mm/yyyy, mm/dd/yyyy, yyyy-mm-dd), include log copy in comparisons, forget remembered names, share this app (QR code and **Send the link**, build 50, see [Share this app](#share-this-app-build-50)), install pop-up, backup and restore, report a problem or idea, problem report.
 
 **Follow phone (build 46):** the tick box at the top of **Colours**, "Follow phone: dark (navy and orange) when the phone is in dark mode, light (light and blue) when it isn’t". When ticked, the app uses navy `#0c1830` with orange `#ff8a2a` while the phone or computer is in dark mode, and light `#eef1f6` with blue `#2563eb` otherwise, and switches straight away when the phone changes mode, without a reload. The message says "Colours now follow the phone’s light or dark mode." and the colour boxes show the colours in use. Choosing a colour with the picker or typing a hex code turns it off and keeps the colours that were showing (with your change); choosing a quick theme or **Reset to default colours** turns it off too. It is saved on the device (and in backups) with the colours.
 
@@ -284,4 +312,9 @@ Colours (Follow phone, two colours drive the whole theme, with a contrast warnin
 | A damage note is missing from the Manifest check export | The copy of the log in a Manifest check export doesn't include damage notes. They are in Delivery Details on the log's own exports. |
 | A damaged pallet was marked by mistake | Tap **Undo** on the Undo bar, or tap the LPN and choose **None**. |
 | **Share missing list** copied the text instead of opening the share menu | The browser has no share menu (most computers) or refused it. Paste the copied text into a message or email. |
+| A colleague's camera won't read the QR code in Settings | Make the screen brighter and hold the phones steady; the code is 180px. Or tap **Send the link**, or give them the address shown under the code. |
+| **Send the link** said "Link copied" | The browser has no share menu (most computers). Paste the link into a message or email. |
+| The welcome card didn't offer the demo | It only shows on the very first load in a browser with nothing of the app's stored. Open the **Guide** and tap **Watch the demo video**. |
+| No "Updated" card after an update | It only shows when this phone remembers an older build (remembered since build 50) and only once per update. The **Changelog** always has the full list. |
+| My name is filled in on the report box | It was remembered from the last report on this phone. Clear the box before sending to send without it (and forget it). |
 | Anything else that goes wrong | Use the **Report** button at the top of the page (or **Settings → Report a problem or idea**) (with the problem report attached), or download the problem report straight away (**Settings → Problem report → Download problem report**) and send it with a description of what happened. |

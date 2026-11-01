@@ -22,7 +22,8 @@ It also checks a delivery against the supplier's manifest. Manifest numbers can 
 - Installable on Android and iPhone as a home-screen app, and works offline after the first visit.
 - Built for a phone in one hand on a loading bay: big touch targets, a pallet table that scrolls with the page, a docked entry bar with a counter and undo-last button (it slides aside while the Manifest check is in use) and the Undo bar just above it, sound and vibration feedback, and a Torch button in Live scan on phones that allow it. A scan made while a warning is open is kept rather than lost, edges and accent text keep readable contrast in any colour theme, the side panels work as dialogs, and LPNs in the log can be edited from the keyboard.
 - A problem report in Settings: a plain text file with the version, device, current state and the last 300 events (manifest reads, errors) kept on the device, for users to send when something goes wrong.
-- **Report a problem or idea** from the **Report** button at the top of the page (also in Settings and the Guide), in a box in the middle of the screen: Problem or Idea, a description, an optional photo and the problem report, sent through a small Cloudflare Worker (`tools/feedback-worker`) that makes an issue in a private GitHub repo. The Worker is online at `lpn-feedback.jamie9904.workers.dev` (at most 10 reports an hour from one address, 50 reports and 20 photos a day in total), and the security policy allows that one address only. Reports wait on the phone without signal.
+- **Report a problem or idea** from the **Report** button at the top of the page (also in Settings and the Guide), in a box in the middle of the screen: Problem or Idea, a description, an optional name and photo, and the problem report, sent through a small Cloudflare Worker (`tools/feedback-worker`) that makes an issue in a private GitHub repo. The Worker is online at `lpn-feedback.jamie9904.workers.dev` (at most 10 reports an hour from one address, 50 reports and 20 photos a day in total), and the security policy allows that one address only. Reports wait on the phone without signal. The Guide's **Your data and privacy** section says exactly what stays on the phone and what a report sends.
+- **Share this app** in Settings: a QR code a colleague can scan to open the app, and **Send the link**. A card at the top of the page offers the demo video on the first visit and shows the newest Changelog line after an update.
 - Guards against common slips: duplicate and malformed LPN warnings, an expected-count check, a note when seal in and seal out are the same or of different lengths, and a reminder before starting a new delivery that hasn't been exported.
 - Careful with files from outside: backups are checked and shown before restoring (with a copy of the current data downloaded first), saved data is tidied when read, files loaded back in only give plain text to exports, every library file loaded by a script tag is checked against its fingerprint, and a security policy in the page only lets it run code from its own site and the three library CDNs.
 
@@ -82,7 +83,7 @@ A single page (`index.html`) loads five classic scripts in a fixed order that sh
 ├── sw.js               service worker
 ├── manifest.webmanifest, icon-*.png, apple-touch-icon.png
 ├── fonts/              self-hosted fonts + licences
-├── media/              demo video for the Guide (demo.mp4) and its poster
+├── media/              demo video for the Guide (demo.mp4), its poster, and the Settings QR code (share-qr.svg)
 ├── logo.png            default logo (optional)
 ├── presets.json        shared LPN prefix presets (optional)
 ├── DESIGN.md           design system notes

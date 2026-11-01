@@ -25,6 +25,8 @@ Open `http://localhost:8000/`. `localhost` counts as a secure origin, so the ser
 2. Repository **Settings → Pages → Build and deployment**: Deploy from a branch, `main`, `/ (root)`.
 3. Wait for the "pages build and deployment" run in the **Actions** tab to finish (about a minute).
 
+**Publishing at another address.** Since build 50 the address `https://jamie9904.github.io/` is fixed in the app in four places: the Settings QR code `media/share-qr.svg`, `shareApp()` and the `#shareUrl` text and QR `alt` text in `HELP.settings` (`panels.js`). On another host, regenerate the QR code for the new address (it was made with reportlab's QR encoder, version 3, error correction M), check that it decodes to that address, and change the other three. The feedback Worker's `ALLOWED_ORIGIN` in `tools/feedback-worker/wrangler.toml` also names the address (see [Feedback Worker](#feedback-worker-report-a-problem-or-idea)).
+
 ## Publishing an update
 
 1. If any app file changed, increase the cache name at the top of `sw.js`:

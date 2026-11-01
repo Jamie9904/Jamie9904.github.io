@@ -622,3 +622,42 @@ A damaged pallet gets one short note (`r.dmg`): **Crushed**, **Wet**, or up to 6
 
 Recording when unloading started and finished was considered and deliberately not added. The user decided against it because the times could be used to time staff and put pressure on them. Nothing new is stored: the log still has only the delivery date, the time of the last export ("Exported at hh:mm", `exp.at`) and, for saved deliveries, when they were saved.
 
+
+## Share this app with a fixed QR code file (build 50)
+
+**Settings → Share this app** shows `media/share-qr.svg`, a QR code made once outside the app (reportlab's QR encoder, version 3, error correction M), rather than one drawn by the app.
+
+- **Why a static file:** making a QR code in the page would need a new library from a CDN (another fingerprint, another host for the security policy) or a QR encoder written into the app. The address doesn't change, so a 180px SVG that is in the offline shell does the job with no new code to load.
+- **The address is written in the app:** `shareApp()`, `#shareUrl` and the QR code all use `https://jamie9904.github.io/` rather than `location`, so a copy opened from `localhost` or a test server still shares the live site. The cost is that a move to another address means regenerating the QR code (and decode-checking it) and changing the text in `panels.js`.
+- **Why share, then copy, then show:** the same fallbacks as **Share missing list**: the share menu on phones, a copied link on computers, and the address on screen when neither is allowed. Closing the share menu is the person's choice, so nothing else happens.
+
+## Privacy section in the Guide (build 50)
+
+The Guide's section 10 says what stays on the phone and what a report sends, in plain words, instead of a separate privacy page.
+
+- **Why in the Guide:** staff already open it, it works offline, and the Settings report section points to it. The report box itself still doesn't say where reports go (the user's choice in build 44).
+- **Why it lists the problem report's contents:** a report can hold LPNs, file names and text read from photos, so people should know before ticking **Attach the problem report**. The list was checked against `reportText()`; a change to either needs the other changed too.
+- **The Cloudflare address:** the Guide says the internet address is "kept for an hour to stop spam", which is the window it counts towards the hourly limit. The Worker's `Limits` storage is only cleared by its daily alarm, so an address can stay in storage for up to about a day (see [architecture](architecture.md#feedback-worker-toolsfeedback-worker)).
+
+## Optional name on reports (build 50)
+
+The report box has **Your name (optional)** so Jamie knows who to ask about a report.
+
+- **Why optional and remembered:** filling it in again from `lpnfbname` saves typing it for every report, and leaving it empty (which also forgets it) keeps reports without a name possible.
+- **Why its own plain-text block in the issue:** the name is typed freely, so the Worker puts it under "From:" in a `~~~~text` block like the message, tidied and cut to 60 characters, so it can't add mentions, links or formatting to the issue. With no name there is no "From:" line.
+
+## Report box buttons pinned to the bottom (build 50)
+
+**Send**, **Close** and the status line are in a sticky footer (`.fbfoot`) at the bottom of the report box.
+
+- **Why:** the box scrolls when it is taller than the screen, and big text, the new name box, a short phone or the open keyboard can make it so; **Send** and the "Sent" or "saved on this phone" message would then need scrolling inside the box to see. The footer keeps them on screen while the form above scrolls. The check at 360×640 with Extra large text guards it.
+
+## Welcome and what's new card (build 50)
+
+A card at the top of the page offers the demo video on the first visit, and shows the newest Changelog line after an update.
+
+- **Why a card, not a pop-up:** it doesn't block logging, it can be ignored, and on the first visit the install pop-up is already a dialog. It is set `inert` while a dialog is open, like the page.
+- **Why "first visit" means no `lpn*` keys at all, checked first thing in `core.js`:** any earlier use of the app leaves a key, and the check has to run before the app saves anything on that load. It is offered on that one load only, so a reload counts as "not now".
+- **Why one Changelog line, cut to 170 characters:** the card should fit a phone screen; **See what’s new** opens the full Changelog.
+- **Why the build is stored on every load:** so the card shows once per update and never on a fresh install. Phones that update from build 49 had no stored build, so they see no card for build 50; the first what's-new card comes with the next update.
+- **Why focus goes to the Guide button:** the card's buttons disappear when pressed; moving focus first to a button that stays in the header means keyboard and screen reader users aren't left on nothing.
