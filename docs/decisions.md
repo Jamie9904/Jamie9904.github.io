@@ -497,3 +497,15 @@ The report form moved out of Settings into a box in the middle of the screen, op
 - **Why it closes by itself:** after "Sent. Thank you!" there is nothing more to do, so the box closes 1.5 seconds later (only if that message is still showing).
 - **Wording (the user's decision):** the note about where reports go was removed from the box, and the tick box says just "Attach the problem report", without the explanation in brackets. The docs still describe what the problem report contains.
 - **Trade-off:** the box no longer tells staff before sending that the problem report includes LPNs, manifest numbers and text read from photos, or that it goes to a private GitHub repository through Cloudflare. The tick box can still be unticked.
+
+## Report system in the weekly health check, and reruns of cancelled runs (on `updates`)
+
+Tooling only, no app change; on the `updates` branch and live with the next release.
+
+- **Why check the report system every week:** the Worker and its GitHub token fail silently: when the token stops working, the Worker answers 503 and phones keep the reports in their queue, so nobody sees an error. `health.yml` now tests the Worker answers, that `FEEDBACK_GITHUB_TOKEN` can read `lpn-feedback`, and that it doesn't run out within 30 days, so the failure email arrives before reports start waiting.
+- **Why the token is checked from GitHub, not through the Worker:** the Worker's own copy of the token can't be read back. The health check uses the repository secret the deploy job copies to the Worker, so it only proves the Worker's token works if the last deploy succeeded; sending a real test report would prove it but makes an issue every week, which is why that stays a tick box on the deploy workflow.
+- **Why 30 days:** fine-grained tokens usually expire, and GitHub sends the expiry date with every answer (`github-authentication-token-expiration`). An error 30 days ahead gives four weekly emails to replace it. The current token sends no expiry date, so the check only confirms it works.
+- **Why a warning, not a failure, for changed Worker code:** a push to `main` that touches `tools/feedback-worker` already redeploys it; the warning only catches a deploy that was skipped or failed. It needs the full history (`fetch-depth: 0`) to compare with the deployed commit.
+- **Why Checks has 20 minutes:** a slow Playwright browser install on GitHub made build 44's Checks run hit the 10-minute limit and be cancelled, though no check had failed.
+- **Why `ship.sh` reruns a cancelled run once:** a run GitHub cancelled (for example at the time limit) isn't a failed check, so stopping the release for it would be wrong; rerunning more than once could hide a run that always runs too long, so a second cancel stops the release.
+- **Feedback triage:** reading the reports is a Claude Code skill (`lpn-feedback-triage`, proposed to the user's account), not a workflow. A weekly Claude scheduled task to summarise new reports is planned, but needs the user's approval and the Claude GitHub app's access to `lpn-feedback` first.

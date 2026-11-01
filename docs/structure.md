@@ -57,7 +57,7 @@
 ├── .github/workflows/
 │   ├── test.yml             runs the checks on every push and pull request (advisories and fingerprints without blocking)
 │   ├── feedback-worker.yml  deploys tools/feedback-worker to Cloudflare (by hand, or when it changes on main; skips until its secrets exist)
-│   └── health.yml           weekly health check of the live site, the live demo video, CDN libraries, advisories, fingerprints, checks and the live site's photo reading
+│   └── health.yml           weekly health check of the live site, the live demo video, the report system (on `updates`), CDN libraries, advisories, fingerprints, checks and the live site's photo reading
 └── .claude/                 Claude Code automations (development only)
     ├── CLAUDE.md            working notes: branches, release steps, user decisions
     ├── settings.json        registers the hooks below
