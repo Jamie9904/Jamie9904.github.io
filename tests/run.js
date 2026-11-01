@@ -867,7 +867,26 @@ async function page(browser, width, opts = {}) {
     const fbOk = await q.evaluate(() => { const u = FEEDBACK_URL, csp = document.querySelector('meta[http-equiv="Content-Security-Policy"]').content; const cs = (csp.match(/connect-src([^;]*)/) || [])[1] || "";
       return { u, allowed: !u || cs.split(/\s+/).includes(new URL(u).origin), https: !u || /^https:\/\/[a-z0-9.-]+\.workers\.dev\/report$/.test(u) }; });
     check("the feedback address is a workers.dev /report address, allowed exactly in the security policy", fbOk.allowed && fbOk.https, fbOk);
-    check("the Guide's Report a problem link opens Settings at the form", s.title === "Settings" && s.focus === "fbText", s);
+    s = await q.evaluate(() => ({ box: !document.getElementById("fbBox").hidden, panelInert: document.getElementById("panel").inert, focus: document.activeElement.id }));
+    check("the Guide's Report a problem link opens the report box over the Guide", s.box && s.panelInert && s.focus === "fbText", s);
+    await q.keyboard.press("Escape"); await q.waitForTimeout(50);
+    s = await q.evaluate(() => ({ box: !document.getElementById("fbBox").hidden, panel: !document.getElementById("panel").hidden, panelInert: document.getElementById("panel").inert, focus: document.activeElement.id }));
+    check("Escape closes the report box only; the Guide stays open with focus back on its link", !s.box && s.panel && !s.panelInert && s.focus === "fbGuide", s);
+    await q.click("#panelClose"); await q.waitForTimeout(50);
+    // The Report button on the main page: on screen in the top bar, opens the box in the middle of the screen.
+    for (const [w, h] of [[360, 740], [390, 844], [1300, 900]]) {
+      await q.setViewportSize({ width: w, height: h }); await q.waitForTimeout(100);
+      const r = await q.evaluate(() => { window.scrollTo(0, 0); const b = document.getElementById("btnReport").getBoundingClientRect(); return { inBar: b.top >= 0 && b.right <= innerWidth && b.height >= 44 && b.width >= 44, page: document.documentElement.scrollWidth <= innerWidth }; });
+      check("at " + w + " px the Report button is in the top bar, big enough to tap, and the page doesn't scroll sideways", r.inBar && r.page, r);
+    }
+    await q.setViewportSize({ width: 390, height: 844 });
+    await q.click("#btnReport"); await q.waitForTimeout(80);
+    s = await q.evaluate(() => { const b = document.getElementById("fbBox").getBoundingClientRect(); return { open: !document.getElementById("fbBox").hidden, centred: Math.abs((b.left + b.right) / 2 - innerWidth / 2) < 2 && Math.abs((b.top + b.bottom) / 2 - innerHeight / 2) < 2, fits: b.top >= 0 && b.bottom <= innerHeight, inert: document.querySelector("main").inert, focus: document.activeElement.id }; });
+    check("the Report button opens the report box in the middle of the screen, with focus in it and the page behind set aside", s.open && s.centred && s.fits && s.inert && s.focus === "fbText", s);
+    await q.click("#fbClose"); await q.waitForTimeout(50);
+    s = await q.evaluate(() => ({ open: !document.getElementById("fbBox").hidden, inert: document.querySelector("main").inert, focus: document.activeElement.id }));
+    check("Close shuts the box and focus goes back to the Report button", !s.open && !s.inert && s.focus === "btnReport", s);
+    await q.evaluate(() => openFeedback());
     s = await q.evaluate(async () => { document.getElementById("fbText").value = "Photo 3 read nothing"; FEEDBACK_URL = ""; await document.getElementById("fbSend").onclick(); return document.getElementById("fbMsg").textContent; });
     check("before the Worker is online, the form says so and points to the problem report file", /isn’t set up yet/.test(s) && /Download problem report/.test(s), s);
     s = await q.evaluate(async () => {

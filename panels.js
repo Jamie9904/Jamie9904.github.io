@@ -57,9 +57,9 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <li><b>Settings</b> has your colours, text size, date format, default pallet type, warnings, sound and vibration.</li>
 <li>LPNs are a letter prefix followed by digits, for example RUN000000000: usually 3 letters and 9 or 10 digits. IM numbers (full pallet picks) have 2 letters and 10 or 11 digits.</li>
 <li>Always check numbers read from photos before relying on them.</li>
-<li><b>Something not working, or an idea?</b> <button type="button" class="linkbtn" id="fbGuide">Report a problem or idea</button> (also in Settings). It sends what happened along with the app’s problem report.</li>
+<li><b>Something not working, or an idea?</b> <button type="button" class="linkbtn" id="fbGuide">Report a problem or idea</button> (also the <b>Report</b> button at the top of the page). It sends what happened along with the app’s problem report.</li>
 </ul>`,log:`<h3>v3.30 <span class="ver">Current</span></h3>
-<ul><li>Faster photo reading: one photo reader is used for a whole batch of photos instead of starting a new one for each. Live scan fits small phones: the camera view is shorter so the “Added” line and Stop scanning stay on screen.</li><li>Report a problem or idea from Settings (or the Guide): choose Problem or Idea, say what happened, add a photo if it helps, and send. The problem report is attached unless you untick it. With no signal it waits on the phone and sends when you’re back online.</li><li>More accessibility fixes: on phones the Undo bar shows just above the entry bar and stays 20 seconds; LPNs in the log can be edited with the keyboard; Escape closes the Export menus; clearer labels for screen readers on saved deliveries and the log table; Guide links don’t animate when reduced motion is on.</li><li>Easier to use with gloves and in poor light: a scan made while a warning is showing is kept in the box instead of being lost (Escape skips the warning), stronger edges on boxes and buttons, accent-coloured text always readable, bigger FSDU tick box and scan buttons, the warning shows above the camera, and the Guide and Settings panels move focus in and back out for keyboard and screen reader users.</li><li>Manifest photos are read much better: shade across the page and paper grain no longer turn into junk, every number on a page with ruled lines is found, and a number read slightly wrong (VL1… for VLT…, or an extra 0) is matched to the others on the same page. Specks on the paper that look like a code are left out. IM numbers (full pallet picks, 10 or 11 digits) are always kept and not called unusual.</li><li>Manifest check: each photo or PDF now says how many LPNs it found, how many were new and how many were already listed, and names any left out because their prefix isn’t in the prefix list. One photo that can’t be read no longer stops the rest.</li><li>Problem report in Settings: if something goes wrong, download it and send it with what happened. It lists recent manifest reads and errors on this device.</li><li>Exports: long delivery notes and longer LPNs no longer get cut off in the spreadsheets, and every export notes the app version it was made with (at the bottom of the sheet and in the page footer).</li><li>Importing an exported log and loading one in the Manifest check now read spreadsheets the same way, so the version line at the bottom is always skipped.</li><li>Safer PDFs: a PDF opened in the app (a supplier manifest or an exported log) can no longer run hidden code, and the PDF reader is updated to the latest version.</li><li>Safer backups and files: a damaged backup can no longer stop the app opening, restoring asks first and saves a copy of your current data, and files from outside can’t add links, formulas or scripts to your exports.</li><li>A security policy now only lets the app run code from its own site and its three library sources, as a second line of defence.</li><li>A demo video at the top of the Guide shows the app in action, with narration and subtitles, including picking the pallet type before scanning. It starts at half volume.</li><li>Easier to use: the pallet table scrolls with the page on phones, progress only turns red when something is wrong, one count line when the manifest sets the expected number, the Manifest check starts with its steps (prefix presets tucked away), the logo moved to Settings, the entry bar steps aside in the Manifest check, and bigger tick boxes and header buttons.</li><li>Undo last pallet button on the phone entry bar, “Use n as expected” from the manifest count, an “Exported at” note with a warning before starting a new delivery that hasn’t been exported, and a “Start a new delivery?” prompt after exporting.</li><li>Trailer number, Seal in and Seal out in Delivery, shown on exports and saved deliveries.</li><li>Live manifest tracking: add the manifest numbers first and the Pallet log counts them off as you scan, shows which are still missing and warns about pallets not on the manifest.</li><li>Phone layout: a pallet counter on the entry bar, an “Added” confirmation after each pallet, Delivery folds into one line once you start logging, neater top buttons and a clearer ✕ on each row.</li><li>Smaller tweaks: a reminder when the log is dated before today, tap-to-fill “Received by” names, a check when the total differs from the expected pallets, an FSDU filter, Excel and Email PDF buttons on saved deliveries, a last-backed-up note, and an offline notice.</li><li>Exports: a title band, numbered rows, clearer grid lines, page numbers, gridlines hidden on screen, roomier headers, the logo kept in proportion and much smaller PDFs. The manifest check has the same Export menu as the log.</li><li>Date format setting (dd/mm/yyyy by default), used in exports, lists and the date box.</li><li>Fonts are now part of the app, updates show up straight away, and the tablet layout and field alignment are fixed.</li></ul>
+<ul><li>Faster photo reading: one photo reader is used for a whole batch of photos instead of starting a new one for each. Live scan fits small phones: the camera view is shorter so the “Added” line and Stop scanning stay on screen.</li><li>Report a problem or idea with the <b>Report</b> button at the top of the page (also in Settings and the Guide). It opens in the middle of the screen: choose Problem or Idea, say what happened, add a photo if it helps, and send. The problem report is attached unless you untick it. With no signal it waits on the phone and sends when you’re back online.</li><li>More accessibility fixes: on phones the Undo bar shows just above the entry bar and stays 20 seconds; LPNs in the log can be edited with the keyboard; Escape closes the Export menus; clearer labels for screen readers on saved deliveries and the log table; Guide links don’t animate when reduced motion is on.</li><li>Easier to use with gloves and in poor light: a scan made while a warning is showing is kept in the box instead of being lost (Escape skips the warning), stronger edges on boxes and buttons, accent-coloured text always readable, bigger FSDU tick box and scan buttons, the warning shows above the camera, and the Guide and Settings panels move focus in and back out for keyboard and screen reader users.</li><li>Manifest photos are read much better: shade across the page and paper grain no longer turn into junk, every number on a page with ruled lines is found, and a number read slightly wrong (VL1… for VLT…, or an extra 0) is matched to the others on the same page. Specks on the paper that look like a code are left out. IM numbers (full pallet picks, 10 or 11 digits) are always kept and not called unusual.</li><li>Manifest check: each photo or PDF now says how many LPNs it found, how many were new and how many were already listed, and names any left out because their prefix isn’t in the prefix list. One photo that can’t be read no longer stops the rest.</li><li>Problem report in Settings: if something goes wrong, download it and send it with what happened. It lists recent manifest reads and errors on this device.</li><li>Exports: long delivery notes and longer LPNs no longer get cut off in the spreadsheets, and every export notes the app version it was made with (at the bottom of the sheet and in the page footer).</li><li>Importing an exported log and loading one in the Manifest check now read spreadsheets the same way, so the version line at the bottom is always skipped.</li><li>Safer PDFs: a PDF opened in the app (a supplier manifest or an exported log) can no longer run hidden code, and the PDF reader is updated to the latest version.</li><li>Safer backups and files: a damaged backup can no longer stop the app opening, restoring asks first and saves a copy of your current data, and files from outside can’t add links, formulas or scripts to your exports.</li><li>A security policy now only lets the app run code from its own site and its three library sources, as a second line of defence.</li><li>A demo video at the top of the Guide shows the app in action, with narration and subtitles, including picking the pallet type before scanning. It starts at half volume.</li><li>Easier to use: the pallet table scrolls with the page on phones, progress only turns red when something is wrong, one count line when the manifest sets the expected number, the Manifest check starts with its steps (prefix presets tucked away), the logo moved to Settings, the entry bar steps aside in the Manifest check, and bigger tick boxes and header buttons.</li><li>Undo last pallet button on the phone entry bar, “Use n as expected” from the manifest count, an “Exported at” note with a warning before starting a new delivery that hasn’t been exported, and a “Start a new delivery?” prompt after exporting.</li><li>Trailer number, Seal in and Seal out in Delivery, shown on exports and saved deliveries.</li><li>Live manifest tracking: add the manifest numbers first and the Pallet log counts them off as you scan, shows which are still missing and warns about pallets not on the manifest.</li><li>Phone layout: a pallet counter on the entry bar, an “Added” confirmation after each pallet, Delivery folds into one line once you start logging, neater top buttons and a clearer ✕ on each row.</li><li>Smaller tweaks: a reminder when the log is dated before today, tap-to-fill “Received by” names, a check when the total differs from the expected pallets, an FSDU filter, Excel and Email PDF buttons on saved deliveries, a last-backed-up note, and an offline notice.</li><li>Exports: a title band, numbered rows, clearer grid lines, page numbers, gridlines hidden on screen, roomier headers, the logo kept in proportion and much smaller PDFs. The manifest check has the same Export menu as the log.</li><li>Date format setting (dd/mm/yyyy by default), used in exports, lists and the date box.</li><li>Fonts are now part of the app, updates show up straight away, and the tablet layout and field alignment are fixed.</li></ul>
 <h3>v3.20</h3>
 <ul><li>Start new delivery, Saved deliveries (this week and last week) and importing an exported log.</li><li>Warnings for duplicate or unusual LPNs, Undo for removed pallets and Clear all, and tap an LPN to edit it.</li><li>Pallet type buttons, expected pallets, delivery notes, search and filter, and an Export menu with Print.</li><li>Manifest check: use the current log or a saved delivery, a Check results panel, and Fix or remove for misread numbers.</li><li>Settings: default and keep-last type, warnings, sound, vibration, confirm each scan, text size, colour contrast warning, backup and restore, and the install pop-up.</li><li>Works offline after the first use, shows an “update available” banner, a two-column layout on wide screens, line icons, and accessibility fixes.</li></ul>
 <h3>v3.0</h3>
@@ -182,18 +182,11 @@ HELP.settings=`<h3>Colours</h3>
 <div class="msg" id="bkMsg" role="status" aria-live="polite"></div>
 <div class="row" id="bkAsk" style="margin-top:10px" hidden><button id="bkGo">Replace my data with this backup</button><button id="bkNo">Cancel</button></div>
 <div class="row" id="bkDone" style="margin-top:10px" hidden><button id="bkReload">Reload the app</button></div>
-<h3 id="fbHead">Report a problem or idea</h3>
-<p>Tell Jamie what went wrong or what would help. The problem report below is attached if you leave it ticked. With no signal, it’s kept on this phone and sent when you’re back online.</p>
-<fieldset class="fbkind"><legend class="sr">Type of report</legend><label class="chk"><input type="radio" name="fbKind" value="problem" checked><span>Problem</span></label><label class="chk"><input type="radio" name="fbKind" value="idea"><span>Idea</span></label></fieldset>
-<label for="fbText">What happened, or what would help?</label>
-<textarea id="fbText" rows="4" maxlength="4000" style="width:100%"></textarea>
-<div class="row" style="margin-top:8px;align-items:center"><button type="button" id="fbPhotoBtn">Add a photo</button><button type="button" class="d" id="fbPhotoRm" hidden>Remove photo</button><span class="note" id="fbPhotoName" style="margin:0"></span><input type="file" id="fbPhoto" accept="image/*" hidden></div>
-<label class="chk"><input type="checkbox" id="fbInc" checked><span>Attach the problem report (recent actions on this phone, with the LPNs involved)</span></label>
-<p class="note">Reports go to Jamie’s private GitHub, through a Cloudflare server. The problem report includes the LPNs and manifest numbers on this phone, file names, the start of text read from photos, and your browser and screen size.</p>
-<div class="row"><button class="p" id="fbSend">Send</button></div>
-<div class="msg" id="fbMsg" role="status" aria-live="polite"></div>
+<h3>Report a problem or idea</h3>
+<p>Tell Jamie what went wrong or what would help, with the problem report attached. Also on the <b>Report</b> button at the top of the page.</p>
+<div class="row"><button class="p" id="fbOpenSet">Report a problem or idea</button></div>
 <h3>Problem report</h3>
-<p>If something goes wrong, download a problem report straight away and send it with a description of what happened. It lists what the app has done recently on this device (such as manifest photos and PDFs read, and any errors), with the LPNs, file names and the start of the text read from photos, plus your browser and screen size. It is kept on this device, and is only sent if you attach it to a report above.</p>
+<p>If something goes wrong, download a problem report straight away and send it with a description of what happened. It lists what the app has done recently on this device (such as manifest photos and PDFs read, and any errors), with the LPNs, file names and the start of the text read from photos, plus your browser and screen size. It is kept on this device, and is only sent if you attach it to a report.</p>
 <div class="row"><button id="diagDl">Download problem report</button><button class="d" id="diagClear">Clear</button></div>
 <div class="msg" id="diagMsg" role="status" aria-live="polite"></div>`;
 /* ---- saved deliveries ---- */
@@ -386,7 +379,27 @@ async function fbShrink(f){
   let d=c.toDataURL("image/jpeg",.8);if(d.length>1900000)d=c.toDataURL("image/jpeg",.6);
   c.width=c.height=0;return d;
 }
+/* The report form is a box in the middle of the screen, opened from the Report button at the top, Settings or the
+   Guide. It can open over a panel: the panel is set aside while it's open, and focus goes back where it came from. */
+let fbOpener=null;
+function openFeedback(){
+  if(!$("fbBox").hidden)return;
+  fbOpener=document.activeElement;
+  $("fbShade").hidden=false;$("fbBox").hidden=false;
+  pageInert(true);if($("panel"))$("panel").inert=true;if($("instBox"))$("instBox").inert=true;
+  const waiting=fbQueue().length;$("fbMsg").textContent=waiting?waiting+" report"+(waiting===1?" is":"s are")+" waiting to be sent when you’re back online.":"";
+  setTimeout(()=>$("fbText").focus(),0);
+}
+function closeFeedback(){
+  if($("fbBox").hidden)return;
+  $("fbShade").hidden=true;$("fbBox").hidden=true;
+  if($("panel"))$("panel").inert=false;if($("instBox"))$("instBox").inert=false;
+  if($("panel").hidden&&$("instBox").hidden)pageInert(false);
+  const o=fbOpener;fbOpener=null;if(o&&o.focus&&document.contains(o))o.focus();
+}
 function initFeedback(){
+  $("btnReport").onclick=openFeedback;$("fbClose").onclick=closeFeedback;$("fbShade").onclick=closeFeedback;
+  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("fbBox").hidden){e.stopImmediatePropagation();closeFeedback()}},true);
   const msg=t=>{$("fbMsg").textContent=t};
   const showPhoto=name=>{$("fbPhotoName").textContent=name||"";$("fbPhotoRm").hidden=!name;$("fbPhotoBtn").textContent=name?"Change photo":"Add a photo"};
   showPhoto(fbPhotoData?"Photo added":"");
@@ -394,7 +407,6 @@ function initFeedback(){
   $("fbPhotoRm").onclick=()=>{fbPhotoData=null;showPhoto("")};
   $("fbPhoto").onchange=async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;
     try{fbPhotoData=await fbShrink(f);showPhoto("Photo added ("+Math.round(fbPhotoData.length*0.75/1024)+" KB)")}catch(err){fbPhotoData=null;showPhoto("");msg("That photo couldn’t be read.")}};
-  const waiting=fbQueue().length;if(waiting)msg(waiting+" report"+(waiting===1?" is":"s are")+" waiting to be sent when you’re back online.");
   $("fbSend").onclick=async()=>{
     const text=$("fbText").value.trim();
     if(!text){msg("Write what happened first.");$("fbText").focus();return}
@@ -404,7 +416,7 @@ function initFeedback(){
     const item={kind,text,app,report:$("fbInc").checked?await reportText():"",photo:fbPhotoData||undefined};
     $("fbSend").disabled=true;msg("Sending…");
     const done=()=>{$("fbText").value="";fbPhotoData=null;showPhoto("")};
-    try{const j=await fbPost(item);done();diag("feedback","Sent a "+kind+" report (issue "+j.issue+")");msg("Sent. Thank you!")}
+    try{const j=await fbPost(item);done();diag("feedback","Sent a "+kind+" report (issue "+j.issue+")");msg("Sent. Thank you!");setTimeout(()=>{if($("fbMsg").textContent==="Sent. Thank you!")closeFeedback()},1500)}
     catch(e){
       if(e.retry){
         const q=fbQueue();let note="";
@@ -418,6 +430,7 @@ function initFeedback(){
     }finally{$("fbSend").disabled=false}
   };
 }
+initFeedback();
 function showBackupNote(){
   const el=$("bkNote");if(!el)return;
   let t="";try{t=localStorage.getItem("lpnbackup")||""}catch(e){}
@@ -493,7 +506,6 @@ function initSettings(){
   applyTheme();
   $("bkDl").onclick=()=>backupNow("bkMsg");
   $("diagDl").onclick=downloadReport;
-  initFeedback();
   $("diagClear").onclick=()=>{try{localStorage.removeItem("lpndiag")}catch(e){}$("diagMsg").textContent="Problem log cleared."};
   $("bkUp").onclick=()=>{$("bkFile").value="";$("bkFile").click()};
   let pendingBk=null;
@@ -583,7 +595,7 @@ $("instNow").onclick=async()=>{
 };
 $("instClose").onclick=closeInstall;$("instShade").onclick=closeInstall;
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeInstall()});
-$("panelBody").addEventListener("click",e=>{if(e.target&&e.target.id==="fbGuide"){openHelp("settings","Settings");const h=$("fbHead");if(h)h.scrollIntoView({block:"start"});setTimeout(()=>{if($("fbText"))$("fbText").focus()},0);return}if(e.target&&e.target.id==="showInstall"){closeHelp();openInstall()}const a=e.target&&e.target.closest&&e.target.closest("a[data-g]");if(a){e.preventDefault();const t=document.getElementById(a.dataset.g);if(t)t.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"})}});
+$("panelBody").addEventListener("click",e=>{if(e.target&&(e.target.id==="fbGuide"||e.target.id==="fbOpenSet")){openFeedback();return}if(e.target&&e.target.id==="showInstall"){closeHelp();openInstall()}const a=e.target&&e.target.closest&&e.target.closest("a[data-g]");if(a){e.preventDefault();const t=document.getElementById(a.dataset.g);if(t)t.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"})}});
 (function(){
   const installed=(window.matchMedia&&window.matchMedia("(display-mode: standalone)").matches)||navigator.standalone;
   let seen=false;try{seen=!!localStorage.getItem("lpninstallshown")}catch(e){}
