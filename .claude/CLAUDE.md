@@ -30,6 +30,7 @@ For export changes, also use `export-reviewer` and the `live-export-check` skill
 |---|---|---|
 | Session start | `hooks/session_start.py` | Tracks every GitHub branch, fetches, gives the branch an upstream, sets `NODE_PATH`, and prints a status line (ahead/behind, build here vs live, docs lag) |
 | Syntax check | `hooks/syntax-check.sh` | `node --check` after editing any `.js` file |
+| Config check | `hooks/config_check.js` | After editing `config.js`: checks it runs and uses only known feature names with true or false (the same rules as the GitHub check). Settings changes on request use the `lpn-site-settings` skill |
 | Git guard | `hooks/lpn_git_guard.py` | Before `git commit`: blocks app changes without a cache bump, and `docs/` files on main. Before `git push`: runs the tests and blocks on failure (docs-branch pushes skip the tests). Blocks merging or pushing docs into main. |
 | Docs reminder | `hooks/docs_reminder.py` | At the end of a turn, reminds once per main commit if the docs branch is behind |
 | Download copy reminder | `hooks/outputs_reminder.py` | At the end of a turn, reminds once per main commit if the outputs folder or `lpn-site.zip` doesn't match main |
