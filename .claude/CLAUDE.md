@@ -42,6 +42,10 @@ For export changes, also use `export-reviewer` and the `live-export-check` skill
 
 `.github/workflows/test.yml` runs the tests on every push, including the real ExcelJS, jsPDF and pdf.js round trips (their versions are pinned in `package.json` to match the CDN copies the app loads; change both together). `.github/workflows/health.yml` checks the live site and the CDN libraries every week, including `tests/advisories.js`: it asks osv.dev about the four pinned library versions and fails on a new high or critical advisory. Advisories checked and found not to affect the app are listed with reasons in `tests/advisories-accepted.json`; keep those reasons true when the code changes. The same advisory check runs on every push without blocking it.
 
+## Site settings
+
+`config.js` (loaded before `core.js`) switches features on or off for everyone and can mark any of them as "in testing", which adds a note to that feature. Keys are listed in `FEATURES` in `core.js`; a check (`tests/groups/19-site-config.js`) fails on GitHub if config.js has a mistake or an unknown name. The app loads its files network-first, so a config edit on GitHub reaches phones the next time they open the app online, without a cache bump. When adding a feature that people may want to switch off, add its key to `FEATURES` and `config.js`, hide it with `feat("key")`, mark its Guide lines with `data-f="key"`, and give it a `testNote("key", …)`.
+
 ## Things the user decided
 
 - Exports are mainly printed and used on desktop. Phones opening sheets zoomed in is fine, and there should be no saved zoom level.

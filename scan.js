@@ -23,10 +23,13 @@ function loadZX(){
     document.head.appendChild(s);
   });
 }
+/* Shows the "in testing" note (config.js) for the scan in use, if there is one. */
+function scanNote(k){document.querySelectorAll('#scanbox .testnote[data-test="liveScan"],#scanbox .testnote[data-test="scanByPhoto"]').forEach(n=>{n.hidden=n.dataset.test!==k})}
 async function startScan(){
   if(scanning)return;
   const v=$("video");
   $("scanbox").hidden=false;$("smsg").textContent="Starting camera…";
+  scanNote("liveScan");
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
     $("smsg").textContent="Camera isn't available here. You can still type or use a handheld scanner in the LPN box.";return;
   }
@@ -58,8 +61,9 @@ async function startScan(){
 let torchTrack=null,torchOn=false;
 function torchSetup(s){
   const b=$("torch");torchTrack=null;torchOn=false;b.hidden=true;b.setAttribute("aria-pressed","false");b.classList.remove("on");
-  try{const t=s&&s.getVideoTracks&&s.getVideoTracks()[0],c=t&&t.getCapabilities&&t.getCapabilities();if(c&&c.torch){torchTrack=t;b.hidden=false}}catch(e){}
+  try{const t=s&&s.getVideoTracks&&s.getVideoTracks()[0],c=t&&t.getCapabilities&&t.getCapabilities();if(c&&c.torch&&feat("torch")){torchTrack=t;b.hidden=false}}catch(e){}
   $("scanbox").classList.toggle("hastorch",!b.hidden); // the camera view is a little shorter so both buttons stay on screen
+  const tn=document.querySelector('#scanbox .testnote[data-test="torch"]');if(tn)tn.hidden=b.hidden;
 }
 $("torch").onclick=async()=>{
   if(!torchTrack)return;const want=!torchOn;
@@ -78,6 +82,7 @@ function stopScan(keepMsg){
 }
 async function decodePhoto(file){
   const sm=$("smsg");$("scanbox").hidden=false;$("video").hidden=true;
+  scanNote("scanByPhoto");
   sm.textContent="Reading barcode…";
   try{
     let text="";

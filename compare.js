@@ -3,7 +3,8 @@ let mergeLog=true;try{if(localStorage.getItem("lpnmergelog")==="0")mergeLog=fals
 let logLpns=null,logSrc=null,logPdfSrc=null,logSheets=null,cmpTrailer="";
 const norm=v=>String(v).toUpperCase().replace(/[^A-Z0-9]/g,"");
 const cmpMsg=t=>{$("cmpMsg").textContent=t};
-function getPfx(){return [...new Set(($("cmpPfx").value||"").toUpperCase().split(/[^A-Z]+/).filter(Boolean))]}
+// Prefixes only matter for photo reading's tidy-up and PDFs; with photos switched off the hidden list is ignored.
+function getPfx(){if(!feat("manifestPhotos"))return [];return [...new Set(($("cmpPfx").value||"").toUpperCase().split(/[^A-Z]+/).filter(Boolean))]}
 function okPfx(t){
   const pf=getPfx();if(!pf.length)return true;
   const u=String(t).toUpperCase().replace(/\s+/g,"");
@@ -466,7 +467,7 @@ $("cmpPhotoFile").onchange=async e=>{
     ocrSay=null;
   }
   cmpLastNote=notes.join(" ")+" Check the numbers below are correct, then compare."+oddNote("cmpNums");cmpMsg(cmpLastNote);
-  $("cmpReport").hidden=!cmpLastPhotos.length;showPfxAdd();
+  $("cmpReport").hidden=!cmpLastPhotos.length||!feat("report");showPfxAdd();
 };
 // Opens the report box with the photo that read worst (couldn't be read, fewest numbers, or most corrected).
 $("cmpReport").onclick=()=>{
@@ -542,9 +543,11 @@ function renderCmp(C){
   const {res,cnt,man,kind}=C;
   $("cmpSum").innerHTML="<span>On manifest: <b>"+man.length+"</b></span><span>✓ Matched: <b>"+cnt.ok+"</b></span><span>✗ Missing (report): <b>"+cnt.missing+"</b></span><span>⚠ On log only (book in): <b>"+cnt.book+"</b></span>";
   const box=$("cmpRes");box.hidden=false;box.innerHTML="";
+  if(feat("shareMissing")){
   const sh=document.createElement("div");sh.className="row";sh.style.margin="0 0 8px";
   const sb=document.createElement("button");sb.type="button";sb.id="cmpShare";sb.textContent="Share missing list";
-  sb.onclick=()=>shareCmp(C);sh.appendChild(sb);box.appendChild(sh);
+  sb.onclick=()=>shareCmp(C);sh.appendChild(sb);box.appendChild(sh);testNote("shareMissing",box);
+  }
   const mk=(title,cls,items,src,hint)=>{
     const h=document.createElement("h3");h.className=cls;h.textContent=title+" ("+items.length+")";box.appendChild(h);
     const note=document.createElement("div");note.className="note";note.style.margin="0 0 4px";note.textContent=items.length?hint:"None";box.appendChild(note);
@@ -817,7 +820,8 @@ $("cmpToggle").onclick=()=>{
 /* ---- live manifest tracking in the Pallet log ---- */
 function manState(){
   const mp=new Map();
-  $("cmpNums").value.split(/\r?\n/).forEach(s=>{s=s.trim();const k=norm(s);if(k&&!mp.has(k))mp.set(k,s)});
+  // With the Manifest check switched off (config.js), old manifest numbers are ignored: no tracking or warnings.
+  if(feat("manifestCheck"))$("cmpNums").value.split(/\r?\n/).forEach(s=>{s=s.trim();const k=norm(s);if(k&&!mp.has(k))mp.set(k,s)});
   const logged=new Set(rows.map(r=>norm(r.lpn)));
   let found=0;const missing=[];
   mp.forEach((v,k)=>{if(logged.has(k))found++;else missing.push(v)});
