@@ -2,13 +2,14 @@
 
 ```
 .
+├── config.js                site settings (build 53): `window.LPN_CONFIG` with `features` (switch a feature off for everyone) and `testing` (add an "in testing" note); loaded before core.js, in the offline shell
 ├── index.html               page markup: header, Delivery, Add a pallet, Pallet log, Manifest check, panels, report box, install box, banners
 ├── styles.css               all CSS: theme tokens, components, phone/tablet/desktop layouts, print rules
-├── core.js                  state, persistence, tidying of saved data, table, validation, add flow, undo, library loader and fingerprints (SRI), helpers
+├── core.js                  site settings (`FEATURES`, `SITE`, `feat()`, `testNote()`, `siteHtml()`), state, persistence, tidying of saved data, table, validation, add flow, undo, library loader and fingerprints (SRI), helpers
 ├── scan.js                  live and photo barcode scanning, wake lock, input wiring
 ├── export.js                Excel/PDF builders, print, delivery (download/share/mailto), logo
 ├── compare.js               manifest check, file readers, OCR, presets, live tracking
-├── panels.js                guide, changelog, settings, report a problem or idea (with its offline queue), saved deliveries, backups, install, update banner
+├── panels.js                guide, changelog, settings, `applySite()` (hides switched-off features), report a problem or idea (with its offline queue), saved deliveries, backups, install, update banner
 ├── sw.js                    service worker (offline shell + library cache)
 ├── manifest.webmanifest     install metadata (name, colours, icons)
 ├── icon-192.png, icon-512.png, apple-touch-icon.png
@@ -35,7 +36,7 @@
 │   ├── groups/              the checks, one self-contained file per area (since build 52)
 │   │   ├── 01-layout.js … 06-real-export.js     layout; phone flows and Settings; Excel export; version note, PDF safety and spreadsheet import; saved data from outside and fingerprints; real export libraries and library versions
 │   │   ├── 07-security-policy.js … 12-report.js security policy; demo video; manifest photos and problem report; accessibility; feedback Worker; Report a problem or idea
-│   │   └── 13-photo-notes.js … 19-offline.js    photo notes; Find an LPN and turned photos; damaged pallets and Share this app; welcome card; offline store; real photo reading (GitHub only); offline
+│   │   └── 13-photo-notes.js … 20-offline.js    photo notes; Find an LPN and turned photos; damaged pallets and Share this app; welcome card; offline store; real photo reading (GitHub only); site settings (config.js, build 53); offline
 │   ├── advisories.js        asks osv.dev about security advisories for the pinned libraries
 │   ├── advisories-accepted.json  advisories checked and found not to affect the app, with reasons
 │   └── sri.js               checks the library fingerprints in core.js against the CDNs
@@ -65,7 +66,7 @@
 │   ├── feedback-worker.yml  deploys tools/feedback-worker to Cloudflare (by hand, or when it changes on main; skips until its secrets exist)
 │   └── health.yml           weekly health check of the live site, the live demo video, the report system, CDN libraries, advisories, fingerprints, checks and the live site's photo reading
 └── .claude/                 Claude Code automations (development only)
-    ├── CLAUDE.md            working notes: branches, release steps, user decisions
+    ├── CLAUDE.md            working notes: branches, release steps, site settings (how to give a new feature a switch), user decisions
     ├── settings.json        registers the hooks below
     ├── hooks/
     │   ├── session_start.py fetches every branch, sets the upstream and NODE_PATH, prints a status line (including the updates branch and page or style changes since the demo video); the docs lag counts main commits that touch the app files, `tests/run.js`, `tests/lib.js` or `tests/groups/`
@@ -80,6 +81,7 @@
 
 | Area | Put here | Keep out |
 |---|---|---|
+| `config.js` | Only `window.LPN_CONFIG = { features: {…}, testing: {…} }` with the names in `FEATURES` (core.js) and `true`/`false` values; edited by the site owner (see [installation](installation.md#site-settings-configjs)) | Any code or other settings (the check in `tests/groups/19-site-config.js` fails on unknown names, non-boolean values or `__proto__`/`constructor`/`prototype`) |
 | `index.html` | Static markup and element ids | Inline logic (all behaviour is in the scripts) |
 | `styles.css` | All styling; colours via the CSS variables set by `applyTheme()` | Hard-coded colours for themed surfaces |
 | `core.js` | Anything other scripts need at load time: state, `save`/`render`, the `clean*` helpers for saved data, the `SRI` map, helpers | Library loading for exports or OCR |
@@ -92,9 +94,10 @@
 
 ## Load order and dependencies
 
-`index.html` loads `core.js → scan.js → export.js → compare.js → panels.js` as classic scripts. They share one global scope, so:
+`index.html` loads `config.js → core.js → scan.js → export.js → compare.js → panels.js` as classic scripts. They share one global scope, so:
 
 - top-level `const`/`let` names must be unique across files;
+- `config.js` only sets `window.LPN_CONFIG`; `core.js` reads it once into `SITE` when it loads, so every later file can call `feat()` and `testNote()`;
 - a file may call functions from earlier files at load time, and from any file inside event handlers;
 - `panels.js` runs last, so it is where startup steps that need everything (initial `updateDel()`, `checkDate()`, service worker registration) live.
 

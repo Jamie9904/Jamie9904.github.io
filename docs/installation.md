@@ -29,7 +29,7 @@ Open `http://localhost:8000/`. `localhost` counts as a secure origin, so the ser
 
 ## Publishing an update
 
-1. If any app file changed, increase the cache name at the top of `sw.js`:
+1. If any app file changed (a change to only `config.js` doesn't need this, see [Site settings](#site-settings-configjs)), increase the cache name at the top of `sw.js`:
 
    ```js
    const CACHE="lpn-log-v23";   // → "lpn-log-v24"
@@ -120,7 +120,7 @@ The last line reads the photos with the app at that address (here the live site)
 
 - **Session start:** `.claude/hooks/session_start.py` (`SessionStart`, 90-second limit) finds the repository, either the project folder itself or one folder below it (cloud sessions start in `/home/claude`). If there is an `origin` remote, it sets `remote.origin.fetch` to `+refs/heads/*:refs/remotes/origin/*` so every GitHub branch is tracked, and runs `git fetch --prune` without ever asking for a password. If the current branch has no upstream but GitHub has a branch of the same name, it sets that as the upstream. It adds the global npm folder to `NODE_PATH` for the session (through `CLAUDE_ENV_FILE`) so `npm test` finds a globally installed Playwright. Then it prints one status line: commits ahead and behind GitHub, uncommitted files, the build number here and on the live site (`origin/main:sw.js`, with a reminder to bump on a feature branch that isn't ahead of it), and how many app commits the `docs` branch is behind `main`. When GitHub has an `updates` branch, the line also says so if the session is on any branch other than `updates` or `docs`, and if `updates` is behind `main` (with the `git merge --ff-only origin/main` to run). When `media/demo.mp4` exists, it counts the commits since the video was last committed that changed `index.html` or `styles.css` (script changes are not counted, as they rarely show in the video), and if there are any it says "page or styles changed N time(s) since the demo video: npm test says if the screens differ". The real comparison is the screen fingerprint in `npm test` (see [Re-recording the Guide demo video](#re-recording-the-guide-demo-video)). It never blocks the session; problems such as a failed fetch only appear in the status line.
 - **Syntax check:** after a `.js` file is edited or written, `node --check` runs on it and a syntax error is reported straight away.
-- **Cache bump:** a `git commit` is blocked if any app file (`index.html`, `styles.css`, the five scripts, `manifest.webmanifest`, the icons or `fonts/`) changed and the `CACHE` number in `sw.js` is neither changed in this commit nor higher than the one on the live site (`origin/main`). So once a branch has bumped it, later commits before publishing don't need another bump.
+- **Cache bump:** a `git commit` is blocked if any app file (`index.html`, `styles.css`, the five scripts, `manifest.webmanifest`, the icons or `fonts/`; not `config.js`) changed and the `CACHE` number in `sw.js` is neither changed in this commit nor higher than the one on the live site (`origin/main`). So once a branch has bumped it, later commits before publishing don't need another bump.
 - **One working branch:** when GitHub has an `updates` branch, a `git commit` on `main` is blocked, and so is creating a new branch (`git checkout -b`/`-B`, `git switch -c`/`-C`/`--create`, or `git branch <name>`; listing, deleting and setting an upstream with `git branch -…` are still allowed). See [Working branches](#working-branches).
 - **Only real git commands count:** the guard reacts to `git commit`, `git push`, `git merge … docs` and the new-branch commands above (also with `git -C <path>`), not to other commands that happen to contain those words, such as `git stash push` or an `echo`.
 - **Docs stay off `main`:** a `git commit` on `main` is blocked if it would include files in `docs/`, and merging `docs` into `main` or pushing `docs` to `main` is blocked. The documentation is updated on the `docs` branch instead.
@@ -161,6 +161,69 @@ The procedures Claude Code follows (for example `release-lpn`, `lpn-write-check`
 
 **Keeping it working:** since build 45's release, the weekly health check tests the report system: the Worker answers, `FEEDBACK_GITHUB_TOKEN` can still read `lpn-feedback`, the token doesn't run out within 30 days, and the Worker code on `main` hasn't changed since the last successful deploy (see [testing.md](testing.md#weekly-health-check)). When it says the token doesn't work or runs out soon, make a new token (step 2), update `FEEDBACK_GITHUB_TOKEN` and run **Deploy feedback Worker**; when it warns the code changed, run **Deploy feedback Worker**.
 
+## Site settings (`config.js`)
+
+`config.js` at the root of `main` (build 53) switches features on or off for everyone who uses this copy of the app, and can mark a feature as "in testing", which puts a note next to it. It is the only file the site owner needs to edit for this; no other change and no cache bump is needed.
+
+### What the file looks like
+
+```js
+window.LPN_CONFIG = {
+  features: {
+    report: true,          // Report button, and the report links in Settings, the Guide and the Manifest check
+    manifestCheck: true,   // the whole Manifest check section
+    manifestPhotos: true,  // reading manifests and printed logs from photos (PDFs and typing still work)
+    liveScan: true,        // Live scan with the camera
+    scanByPhoto: true,     // Scan by photo
+    torch: true,           // Torch button in Live scan (only on phones that allow it)
+    damage: true,          // marking a pallet as damaged
+    shareMissing: true,    // Share missing list in the Manifest check results
+    findLpn: true,         // Find an LPN in Saved deliveries
+    shareApp: true,        // Share this app (QR code) in Settings
+    welcome: true,         // the welcome card on someone's first visit
+    whatsNew: true         // the card after an update saying what's new
+  },
+  testing: {
+    report: false, manifestCheck: false, manifestPhotos: false, liveScan: false, scanByPhoto: false,
+    torch: false, damage: false, shareMissing: false, findLpn: false, shareApp: false
+  }
+};
+```
+
+(In the repository each `testing` entry is on its own line.) `welcome` and `whatsNew` have no `testing` entry, because the cards carry no note.
+
+### How to change it
+
+1. On GitHub, open `config.js` on the `main` branch (or on `updates` and release it as usual) and tap the pencil to edit.
+2. Change only the `true`/`false` values. Keep the names, quotes, commas and braces as they are.
+   - `features: { liveScan: false, … }` hides Live scan for everyone.
+   - `testing: { liveScan: true, … }` keeps it on and adds the note "In testing: Live scan may not always work yet, so check what it gives you, and use Report if something goes wrong." (without the Report part when `report` is off). The note for `report` itself says reports may not always arrive yet and points to **Download problem report** in Settings. A `testing` value only counts while the feature is on.
+3. Commit. GitHub runs the checks (`tests/groups/19-site-config.js`): the first check fails if the file doesn't run, if `features` or `testing` isn't a plain `{ … }` list, if a name isn't in `FEATURES` in `core.js`, if a value isn't exactly `true` or `false`, if a `features` name is missing, or if the file (outside comments) contains `__proto__`, `constructor` or `prototype`.
+4. Pages publishes the change in about a minute. The service worker loads the app's own files network-first, so phones pick it up the next time they open the app online; a phone that is offline keeps the copy it last saved (`config.js` is in the `SHELL` list in `sw.js`).
+
+### What each switch does
+
+| Name | When `false` |
+|---|---|
+| `report` | No **Report** button, report box, or report links in Settings, the Guide and the Manifest check (**Report a problem with these photos**); reports already waiting on a phone are not sent. The Guide's privacy section says there's no Report button in this copy, so nothing leaves the phone. **Download problem report** stays. |
+| `manifestCheck` | The Manifest check card is hidden, and manifest numbers already saved on a phone are ignored: no live tracking or "not on the manifest" warnings in the Pallet log. |
+| `manifestPhotos` | The photo buttons for manifests and printed logs and the prefix presets are hidden; the step is labelled "2. Manifest PDFs". PDFs and typed numbers still work, and the prefix list is ignored (no numbers are left out because of their prefix). |
+| `liveScan` / `scanByPhoto` | That scan button is hidden; with both off the **Scan** button is hidden too. |
+| `torch` | No **Torch** button in Live scan. |
+| `damage` | No damage choices when an LPN is tapped (it can still be edited). Damage already noted on pallets stays and still goes on the exports. |
+| `shareMissing` | No **Share missing list** button in the check results. |
+| `findLpn` | No **Find an LPN** box in Saved deliveries. |
+| `shareApp` | No **Share this app** section in Settings. |
+| `welcome` / `whatsNew` | The welcome card on a first visit, or the what's new card after an update, isn't shown. |
+
+The Guide and Settings leave out the lines for switched-off features, and the Guide's numbered sections are renumbered so there are no gaps (with everything off it has 9 sections).
+
+If `config.js` is missing or has a mistake (for example a stray comma), the browser reports a script error for it and the app opens with every feature on and no notes.
+
+### Adding a switch for a new feature
+
+`.claude/CLAUDE.md` (section "Site settings") gives the steps: add the name to `FEATURES` in `core.js` and to `config.js`, hide the feature's controls with `feat("name")` (in `applySite()` in `panels.js` or where the control is made), mark its Guide and Settings lines with `data-f="name"` (or `data-nf="name"` for wording used only when it is off), and add its note with `testNote("name", element)`, with a wording for it in `testNote()`.
+
 ## Optional files
 
 - `logo.png`: used as the default logo in the header and on exports. Users can override it per device in **Settings → Logo**.
@@ -173,7 +236,7 @@ The procedures Claude Code follows (for example `release-lpn`, `lpn-write-check`
 ## Verify it works
 
 1. The page loads and the footer shows the version (for example `LPN Pallet Log v4.0`).
-2. Add a pallet, then **Export → Download (Excel)** produces `LPN-log-<date>.xlsx`. The line under its tables and its page footer should name the version and the build you just published, for example "LPN Pallet Log v4.0 (build 52)".
+2. Add a pallet, then **Export → Download (Excel)** produces `LPN-log-<date>.xlsx`. The line under its tables and its page footer should name the version and the build you just published, for example "LPN Pallet Log v4.0 (build 53)".
 3. In DevTools → Application, a service worker is active and caches named `lpn-log-v…` and (once a library has been used) `lpn-libs-v2` exist. `lpn-libs-v1` should no longer be there.
 4. On a phone, the browser offers to install the app.
 5. Optionally run the automatic checks: see [testing.md](testing.md).

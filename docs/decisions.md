@@ -682,9 +682,35 @@ The Guide was cut from about 1,630 to about 1,180 words and then edited into pla
 
 ## Checks split into one file per area (build 52)
 
-`tests/run.js` was one file of about 1,400 lines. It is now a short runner; shared helpers are in `tests/lib.js` and the checks in `tests/groups/01-layout.js` … `19-offline.js`, run in name order (see [testing](testing.md#how-the-checks-are-laid-out)).
+`tests/run.js` was one file of about 1,400 lines. It is now a short runner; shared helpers are in `tests/lib.js` and the checks in `tests/groups/01-layout.js` … `19-offline.js` (now `20-offline.js`, since build 53 added `19-site-config.js`), run in name order (see [testing](testing.md#how-the-checks-are-laid-out)).
 
 - **Why:** a change to one area means reading and editing one file of 13 to 190 lines instead of finding the right place in a long one, and reviewers and the `lpn-write-check` skill can point at a single file.
 - **Why each file self-contained:** a group takes only what it needs from `../lib` and keeps its own variables, so a group can be moved, renumbered or run on its own without breaking another.
 - **Why numbered names and no list of groups:** the runner picks up every `NN-name.js` file, so adding a group can't be forgotten in a second place, and the number keeps the old order (the offline check still runs last).
 - **Kept the same:** every check, its name and the output, so the counts (248 locally, 273 on GitHub) and the GitHub "Checks" notice are unchanged; `npm test` and the git guard still run `node tests/run.js`.
+
+## Clear trailer, seals and notes keeps the rest (build 53)
+
+A button under Delivery notes empties the trailer number, both seals and the notes, and nothing else.
+
+- **Why these four:** they belong to one trailer, while the date, who received it and the expected pallets can stay the same for the next trailer on the same day (the code comment: "for the next trailer on the same day, keeping the date, name and expected count").
+- **Why separate from Start new delivery:** that saves the delivery and clears the pallets; this button touches neither the pallets nor Saved deliveries.
+- **Why Undo instead of a question:** like removing a pallet or Clear all, it acts straight away and offers **Undo** (20 seconds), so a slip costs one tap and the common case costs none.
+- **Why greyed out when empty:** pressing it would do nothing, and a disabled button says so. `syncClear()` also runs from `setDel()`, so the state is right after loading a saved delivery or undoing a new delivery.
+- **Why focus goes to the trailer box:** the next thing to do is type the new trailer number.
+
+## Site settings in a script file, `config.js` (build 53)
+
+Features can be switched off for everyone, or marked as in testing, by editing `config.js` in the repository.
+
+- **Why a script that sets `window.LPN_CONFIG`, loaded before `core.js`:** the settings are there before any other script runs, with no extra request to wait for, so `feat()` gives the same answer everywhere from the first line. The file is in `SHELL`, so it works offline like the rest of the app.
+- **Why no cache bump:** app files are fetched network-first, so the next online load gets the new file. The site owner can change a switch on GitHub without touching `sw.js`; a phone that is offline keeps the last copy until it is next online.
+- **Why a mistake leaves everything on (fails open):** a broken settings file should never take features away from staff mid-shift. Only a value of exactly `false` hides a feature, and only exactly `true` adds a testing note. The check in `tests/groups/19-site-config.js` makes a mistake visible on GitHub instead (unknown names, values that aren't `true` or `false`, missing names, anything that isn't a plain `{ … }` list).
+- **Why only the file's own keys are read, and `__proto__`, `constructor` and `prototype` are refused by the check:** names inherited from `Object.prototype` must not count as settings, so a file can't switch anything through them.
+- **Why switching off hides rather than deletes:** data already on phones is kept. Damage notes stay on pallets and on exports; manifest numbers stay in `lpncmpman` but `manState()` ignores them, so nobody gets warnings from a hidden section; queued reports stay in `lpnfeedq` but aren't sent. Switching the feature back on brings them back.
+- **Why photos off also ignores the prefix list:** the prefix presets are hidden with the photo buttons, so a list saved earlier would otherwise leave out PDF numbers with no visible reason. `getPfx()` returns an empty list instead.
+- **Why the Guide and Settings text is filtered, and the Guide renumbered:** staff shouldn't read about a button they can't find. `data-f`/`data-nf` marks the lines in the help HTML, `siteHtml()` removes them before the panel is shown, and the numbers are redone so the contents bar has no gaps. `data-nf` gives a different sentence where a plain removal would read wrong (the privacy line with no Report button).
+- **Why the testing note mentions Report, except for Report itself:** the point of marking a feature as in testing is to hear when it goes wrong. When Report is the feature being tested, the note points to **Download problem report**, which doesn't depend on it; when Report is switched off, the other notes don't mention it.
+- **Why the scan and torch notes wait in the camera box:** the camera box is shared by Live scan and Scan by photo, so `scanNote()` shows only the note for the one in use, and the torch note only shows with the Torch button (which many iPhones never show).
+- **Trade-off:** the settings apply to everyone using this copy of the site; there is no per-phone switch. Adding a new switch means touching `FEATURES`, `config.js`, the code that shows the feature, its help lines and `testNote()` (the steps are in `.claude/CLAUDE.md`).
+- **Why the offline checks were renumbered:** `19-site-config.js` took number 19 and `19-offline.js` became `20-offline.js`, because the offline group takes the page offline and must stay last.

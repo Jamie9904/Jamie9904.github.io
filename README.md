@@ -23,8 +23,10 @@ It also checks a delivery against the supplier's manifest. Manifest numbers can 
 - Built for a phone in one hand on a loading bay: big touch targets, a pallet table that scrolls with the page, a docked entry bar with a counter and undo-last button (it slides aside while the Manifest check is in use) and the Undo bar just above it, sound and vibration feedback, and a Torch button in Live scan on phones that allow it. A scan made while a warning is open is kept rather than lost, edges and accent text keep readable contrast in any colour theme, the side panels work as dialogs, and LPNs in the log can be edited from the keyboard.
 - A problem report in Settings: a plain text file with the version, device, current state and the last 300 events (manifest reads, errors) kept on the device, for users to send when something goes wrong.
 - **Report a problem or idea** from the **Report** button at the top of the page (also in Settings and the Guide), in a box in the middle of the screen: Problem or Idea, a description, an optional name and photo, and the problem report, sent through a small Cloudflare Worker (`tools/feedback-worker`) that makes an issue in a private GitHub repo. The Worker is online at `lpn-feedback.jamie9904.workers.dev` (at most 10 reports an hour from one address, 50 reports and 20 photos a day in total), and the security policy allows that one address only. Reports wait on the phone without signal. The Guide's **Your data and privacy** section says exactly what stays on the phone and what a report sends.
-- Current version: **v4.0** (build 52). The Changelog starts with a short v4.0 summary, and the built-in Guide is a short plain-language walk-through in ten sections, starting with a 47-second narrated demo video.
+- Current version: **v4.0** (build 53). The Changelog starts with a short v4.0 summary, and the built-in Guide is a short plain-language walk-through in ten sections, starting with a 47-second narrated demo video.
 - **Share this app** in Settings: a QR code a colleague can scan to open the app, and **Send the link**. A card at the top of the page offers the demo video on the first visit and shows the newest Changelog line after an update.
+- **Clear trailer, seals and notes** (build 53) under Delivery notes: for the next trailer on the same day, it empties those four boxes, keeps the date, name and expected pallets, and can be undone.
+- **Site settings** (build 53): `config.js` in the repo can switch features off for everyone (Report, Manifest check, manifest photos, Live scan, Scan by photo, Torch, damage, Share missing list, Find an LPN, Share this app, the welcome and what's new cards) or mark them as "in testing", which adds a note to them. Phones pick up an edit the next time they open the app online; a broken file leaves every feature on. How to edit it: [docs/installation.md](docs/installation.md#site-settings-configjs).
 - Guards against common slips: duplicate and malformed LPN warnings, an expected-count check, a note when seal in and seal out are the same or of different lengths, and a reminder before starting a new delivery that hasn't been exported.
 - Careful with files from outside: backups are checked and shown before restoring (with a copy of the current data downloaded first), saved data is tidied when read, files loaded back in only give plain text to exports, every library file loaded by a script tag is checked against its fingerprint, and a security policy in the page only lets it run code from its own site and the three library CDNs.
 
@@ -68,12 +70,13 @@ Details, including how to publish updates: [docs/installation.md](docs/installat
 
 ## Architecture (summary)
 
-A single page (`index.html`) loads five classic scripts in a fixed order that share globals: `core.js` (state, log, rendering), `scan.js` (barcodes), `export.js` (Excel/PDF/print), `compare.js` (manifest check, OCR, live tracking) and `panels.js` (guide with a demo video, settings, saved deliveries, install, update banner). State lives in memory and is mirrored to `localStorage` on every change. A network-first service worker keeps the app usable offline and caches CDN libraries on first use (only complete downloads, in `lpn-libs-v2`); the Guide's demo video is left to the browser and needs internet. See [docs/architecture.md](docs/architecture.md).
+A single page (`index.html`) loads the site settings (`config.js`) and then five classic scripts in a fixed order that share globals: `core.js` (site settings,  (state, log, rendering), `scan.js` (barcodes), `export.js` (Excel/PDF/print), `compare.js` (manifest check, OCR, live tracking) and `panels.js` (guide with a demo video, settings, saved deliveries, install, update banner). State lives in memory and is mirrored to `localStorage` on every change. A network-first service worker keeps the app usable offline and caches CDN libraries on first use (only complete downloads, in `lpn-libs-v2`); the Guide's demo video is left to the browser and needs internet. See [docs/architecture.md](docs/architecture.md).
 
 ## Project structure
 
 ```
 .
+├── config.js           site settings: switch features off or mark them as in testing (build 53)
 ├── index.html          page layout
 ├── styles.css          all styling and theme tokens
 ├── core.js             state, logging, table, warnings, undo
@@ -88,7 +91,7 @@ A single page (`index.html`) loads five classic scripts in a fixed order that sh
 ├── logo.png            default logo (optional)
 ├── presets.json        shared LPN prefix presets (optional)
 ├── DESIGN.md           design system notes
-├── tests/              run.js (runs the automatic checks), lib.js (shared helpers), groups/ (the checks, one file per area: 01-layout.js … 19-offline.js), advisories.js + advisories-accepted.json (security advisories), sri.js (library fingerprints)
+├── tests/              run.js (runs the automatic checks), lib.js (shared helpers), groups/ (the checks, one file per area: 01-layout.js … 20-offline.js), advisories.js + advisories-accepted.json (security advisories), sri.js (library fingerprints)
 ├── tools/demo-video/   recorder that re-makes the Guide demo video from the current app (sh tools/demo-video/make.sh)
 ├── tools/ocr-check/    photo reading check on the user's real manifest photos (node tools/ocr-check/check.js)
 ├── tools/feedback-worker/  Cloudflare Worker for Report a problem or idea (set-up in its README.md)
