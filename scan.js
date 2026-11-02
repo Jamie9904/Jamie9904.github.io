@@ -62,8 +62,8 @@ let torchTrack=null,torchOn=false;
 function torchSetup(s){
   const b=$("torch");torchTrack=null;torchOn=false;b.hidden=true;b.setAttribute("aria-pressed","false");b.classList.remove("on");
   try{const t=s&&s.getVideoTracks&&s.getVideoTracks()[0],c=t&&t.getCapabilities&&t.getCapabilities();if(c&&c.torch&&feat("torch")){torchTrack=t;b.hidden=false}}catch(e){}
-  $("scanbox").classList.toggle("hastorch",!b.hidden);
-  const tn=document.querySelector('#scanbox .testnote[data-test="torch"]');if(tn)tn.hidden=b.hidden; // the camera view is a little shorter so both buttons stay on screen
+  $("scanbox").classList.toggle("hastorch",!b.hidden); // the camera view is a little shorter so both buttons stay on screen
+  const tn=document.querySelector('#scanbox .testnote[data-test="torch"]');if(tn)tn.hidden=b.hidden;
 }
 $("torch").onclick=async()=>{
   if(!torchTrack)return;const want=!torchOn;

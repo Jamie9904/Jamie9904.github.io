@@ -21,7 +21,7 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <p data-f="damage"><b>Damaged pallet:</b> tap the LPN, then choose Crushed, Wet or Other (type what’s wrong). It shows in red and goes on the exports. Choose None to remove the damage.</p>
 <p>Use search and the filters to find pallets. The totals always count the whole log, with FSDUs counted separately.</p>
 <h3>4. Scanning barcodes</h3>
-<p>On a phone, tap <b>Scan</b> next to Add.</p>
+<p data-f="liveScan|scanByPhoto">On a phone, tap <b>Scan</b> next to Add.</p>
 <ul>
 <li data-f="liveScan"><b>Live scan:</b> the camera adds each barcode it sees.<span data-f="torch"> In a dark trailer, tap <b>Torch</b> (on phones that allow it; most iPhones don’t).</span></li>
 <li data-f="scanByPhoto"><b>Scan by photo:</b> use a clear photo of the barcode<span data-f="liveScan"> if Live scan doesn’t work</span>.</li>
@@ -49,7 +49,7 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <li><b>Android (Chrome):</b> tap the ⋮ menu, then <b>Install app</b> or <b>Add to Home screen</b>.</li>
 <li><b>iPhone (Safari):</b> tap <b>Share</b>, then <b>Add to Home Screen</b>.</li>
 <li><button id="showInstall">Show the install pop-up again</button></li>
-<li>The app works offline once you’ve opened it online. Use Download (Excel), Email PDF and the Manifest check once while online so they work offline too. When an update is ready, tap <b>Refresh</b> on the banner.</li>
+<li>The app works offline once you’ve opened it online. Use Download (Excel)<span data-nf="manifestCheck"> and Email PDF</span><span data-f="manifestCheck">, Email PDF and the Manifest check</span> once while online so they work offline too. When an update is ready, tap <b>Refresh</b> on the banner.</li>
 </ul>
 <h3>9. Settings and good to know</h3>
 <ul>
@@ -60,7 +60,7 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <h3>10. Your data and privacy</h3>
 <ul>
 <li>Everything you enter stays in this browser on this phone. There’s no account, and nothing you enter is sent anywhere<span data-f="report"> unless you send a report</span>.</li>
-<li>Manifest photos and PDFs are read on the phone and aren’t saved. Only a short note of what was read goes in the problem log on this phone.</li>
+<li data-f="manifestCheck">Manifest photos and PDFs are read on the phone and aren’t saved. Only a short note of what was read goes in the problem log on this phone.</li>
 <li data-f="report">The only thing that leaves the phone is a report you choose to send with <b>Report</b>: your message, your name if you add it, a photo if you add one and, if ticked, the problem report. The problem report includes the numbers in the Manifest check, the delivery date and pallet counts, recent app activity and errors (with the LPNs, file names and start of the text read from photos they mention), the prefix list, and your browser, screen size and time zone. Reports go through a Cloudflare server to a private GitHub project that only Jamie, who made the app, can see. Cloudflare sees your internet address, which is kept for up to a day to stop spam.</li>
 <li data-nf="report">There’s no Report button in this copy of the app, so nothing you enter leaves the phone.</li>
 <li>The Excel, PDF and photo reading tools are downloaded from public code servers the first time they’re needed. Your data isn’t sent to them. Like any website, they see your internet address.</li>
@@ -383,7 +383,7 @@ async function fbPost(item){
 }
 let fbBusy=false;
 async function fbFlush(){
-  if(!FEEDBACK_URL||fbBusy||!navigator.onLine)return 0;
+  if(!FEEDBACK_URL||fbBusy||!navigator.onLine||!feat("report"))return 0; // Report switched off: nothing is sent
   fbBusy=true;let sent=0;
   // The list is read again before each change, so a report saved meanwhile (from Send) is never lost.
   const drop=id=>fbSave(fbQueue().filter(x=>x.id!==id));
@@ -682,8 +682,6 @@ $("panelBody").addEventListener("click",e=>{if(e.target&&(e.target.id==="fbGuide
   try{localStorage.setItem("lpninstallshown","1")}catch(e){}
   setTimeout(openInstall,700);
 })();
-/* A card at the top of the page: on the first visit, an offer of the demo video; after an update, what's new.
-   lpnseenbuild remembers the build last opened on this phone; lpnwelcome that the welcome was answered. */
 /* Switched-off features are hidden and "in testing" notes added, from config.js (see core.js). */
 function applySite(){
   const hide=id=>{const e=$(id);if(e)e.hidden=true};
@@ -704,6 +702,8 @@ function applySite(){
   const tn=testNote("torch",$("scanbox"));if(tn)tn.hidden=true;
 }
 applySite();
+/* A card at the top of the page: on the first visit, an offer of the demo video; after an update, what's new.
+   lpnseenbuild remembers the build last opened on this phone; lpnwelcome that the welcome was answered. */
 async function hello(){
   const box=$("hello"),txt=$("helloTxt"),btns=$("helloBtns");
   let b="";try{b=await appBuildP}catch(e){}

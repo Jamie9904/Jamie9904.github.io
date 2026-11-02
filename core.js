@@ -5,7 +5,8 @@ const FIRST_OPEN=(()=>{try{for(let i=0;i<localStorage.length;i++){if(/^lpn/.test
 const FEATURES=["report","manifestCheck","manifestPhotos","liveScan","scanByPhoto","torch","damage","shareMissing","findLpn","shareApp","welcome","whatsNew"];
 const SITE=(()=>{
   const c=window.LPN_CONFIG&&typeof window.LPN_CONFIG==="object"?window.LPN_CONFIG:{},f=c.features||{},t=c.testing||{},on={},test={};
-  FEATURES.forEach(k=>{on[k]=f[k]!==false;test[k]=on[k]&&t[k]===true});
+  const own=(o,k)=>o&&typeof o==="object"&&Object.prototype.hasOwnProperty.call(o,k)?o[k]:undefined; // only the file's own settings
+  FEATURES.forEach(k=>{on[k]=own(f,k)!==false;test[k]=on[k]&&own(t,k)===true});
   return {on,test};
 })();
 const feat=k=>SITE.on[k]!==false;
@@ -22,7 +23,8 @@ function testNote(k,el,where){
    when x is on. Numbered headings ("1. …") are renumbered so the Guide has no gaps. */
 function siteHtml(html){
   const t=document.createElement("template");t.innerHTML=html;
-  t.content.querySelectorAll("[data-f]").forEach(e=>{if(!feat(e.dataset.f))e.remove()});
+  // data-f="a|b": kept while either feature is on.
+  t.content.querySelectorAll("[data-f]").forEach(e=>{if(!e.dataset.f.split("|").some(feat))e.remove()});
   t.content.querySelectorAll("[data-nf]").forEach(e=>{if(feat(e.dataset.nf))e.remove()});
   t.content.querySelectorAll("[data-f],[data-nf]").forEach(e=>{e.removeAttribute("data-f");e.removeAttribute("data-nf")});
   let n=0;t.content.querySelectorAll("h3").forEach(h=>{const m=h.textContent.match(/^\d+\. (.*)$/);if(m)h.textContent=(++n)+". "+m[1]});

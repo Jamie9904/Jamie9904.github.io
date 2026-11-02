@@ -8,11 +8,16 @@ module.exports = async ({ browser, URL0 }) => {
   const src = fs.readFileSync(path.join(ROOT, "config.js"), "utf8");
   const known = JSON.parse(fs.readFileSync(path.join(ROOT, "core.js"), "utf8").match(/const FEATURES=(\[[^\]]*\])/)[1]);
   let cfg = null, err = "";
-  try { const box = { window: {} }; vm.runInNewContext(src, box); cfg = box.window.LPN_CONFIG; } catch (e) { err = e.message; }
+  let OP = Object.prototype;
+  try { const ctx = vm.createContext({ window: {} }); vm.runInContext(src, ctx); cfg = ctx.window.LPN_CONFIG; OP = vm.runInContext("Object.prototype", ctx); } catch (e) { err = e.message; }
   const bad = [];
   if (cfg) {
+    for (const part of ["features", "testing"]) { const o = cfg[part]; if (o !== undefined && (typeof o !== "object" || o === null || Array.isArray(o) || Object.getPrototypeOf(o) !== OP)) bad.push(part + " must be a plain { … } list"); }
+    if (/__proto__|constructor|prototype/.test(src.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, ""))) bad.push("config.js may only contain the feature names");
+  }
+  if (cfg && !bad.length) {
     for (const part of ["features", "testing"]) for (const [k, v] of Object.entries(cfg[part] || {})) { if (!known.includes(k)) bad.push(part + "." + k + " isn't a known feature"); if (typeof v !== "boolean") bad.push(part + "." + k + " must be true or false"); }
-    for (const k of known) if (!(k in (cfg.features || {}))) bad.push("features." + k + " is missing");
+    for (const k of known) if (!Object.prototype.hasOwnProperty.call(cfg.features || {}, k)) bad.push("features." + k + " is missing");
   }
   check("config.js runs and only uses known feature names with true or false", cfg && !bad.length, err || bad);
 
@@ -33,14 +38,19 @@ module.exports = async ({ browser, URL0 }) => {
     rows = [{ lpn: "VLT004040265", type: "BB", fsdu: false }]; save(); render();
     document.querySelector("#body .lpnedit").click(); await new Promise(r => setTimeout(r, 100));
     out.dmg = !!document.querySelector(".dmgrow"); document.activeElement.blur(); await new Promise(r => setTimeout(r, 50));
+    // Old manifest numbers and queued reports do nothing while those features are off.
+    document.getElementById("cmpNums").value = "VLT004040265\nRBY006292169"; manLive(); out.track = !document.getElementById("manLive").hidden;
+    fbSave([{ id: "q", kind: "idea", text: "x" }]); let sent = 0; const rf = window.fetch; window.fetch = async () => { sent++; return new Response("{}"); };
+    out.flushed = await fbFlush(); window.fetch = rf; out.sent = sent; fbSave([]);
+    out.pfx = (document.getElementById("cmpPfx").value = "VLT", getPfx().length);
     openHelp("guide", "How to use this app"); const g = document.getElementById("panelBody");
     out.heads = [...g.querySelectorAll("h3")].map(h => h.textContent); out.toc = g.querySelectorAll(".guidetoc a").length;
     out.guideText = g.textContent; closeHelp();
     openHelp("settings", "Settings"); out.setText = document.getElementById("panelBody").textContent; closeHelp();
     openHelp("history", "Saved deliveries"); out.find = !!document.getElementById("histFind"); closeHelp();
     return out; });
-  check("with every feature off: no Report button or box, Manifest check, Scan button, damage choices or welcome card", !s.report && !s.fb && !s.cmp && !s.scanBtn && !s.dmg && !s.welcome, s);
-  check("with every feature off the Guide leaves out those parts and is numbered 1 to 9 with no gaps", s.heads.length === 9 && s.heads.every((h, i) => h.startsWith((i + 1) + ". ")) && s.toc === 9 && !/Check against the manifest|Damaged pallet|Torch|Live scan|Find an LPN|Share this app|Report a problem/.test(s.guideText) && /no Report button in this copy/.test(s.guideText), { heads: s.heads, toc: s.toc });
+  check("with every feature off: no Report button or box, Manifest check (or its tracking), Scan button, damage choices, welcome card, prefix filter or queued reports sent", !s.report && !s.fb && !s.cmp && !s.scanBtn && !s.dmg && !s.welcome && !s.track && s.flushed === 0 && s.sent === 0 && s.pfx === 0, s);
+  check("with every feature off the Guide leaves out those parts and is numbered 1 to 9 with no gaps", s.heads.length === 9 && s.heads.every((h, i) => h.startsWith((i + 1) + ". ")) && s.toc === 9 && !/Check against the manifest|Damaged pallet|Torch|Live scan|Find an LPN|Share this app|Report a problem|tap Scan|Manifest photos and PDFs|the Manifest check once/.test(s.guideText) && /no Report button in this copy/.test(s.guideText), { heads: s.heads, toc: s.toc });
   check("with every feature off Settings has no Share this app or Report sections, and Saved deliveries no Find box", !/Share this app|Report a problem or idea/.test(s.setText) && !s.find, s.setText.slice(0, 80));
   check("no script errors", p.errors.length === 0, p.errors);
   await p.ctx.close();

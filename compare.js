@@ -3,7 +3,8 @@ let mergeLog=true;try{if(localStorage.getItem("lpnmergelog")==="0")mergeLog=fals
 let logLpns=null,logSrc=null,logPdfSrc=null,logSheets=null,cmpTrailer="";
 const norm=v=>String(v).toUpperCase().replace(/[^A-Z0-9]/g,"");
 const cmpMsg=t=>{$("cmpMsg").textContent=t};
-function getPfx(){return [...new Set(($("cmpPfx").value||"").toUpperCase().split(/[^A-Z]+/).filter(Boolean))]}
+// Prefixes only matter for photo reading's tidy-up and PDFs; with photos switched off the hidden list is ignored.
+function getPfx(){if(!feat("manifestPhotos"))return [];return [...new Set(($("cmpPfx").value||"").toUpperCase().split(/[^A-Z]+/).filter(Boolean))]}
 function okPfx(t){
   const pf=getPfx();if(!pf.length)return true;
   const u=String(t).toUpperCase().replace(/\s+/g,"");
@@ -819,7 +820,8 @@ $("cmpToggle").onclick=()=>{
 /* ---- live manifest tracking in the Pallet log ---- */
 function manState(){
   const mp=new Map();
-  $("cmpNums").value.split(/\r?\n/).forEach(s=>{s=s.trim();const k=norm(s);if(k&&!mp.has(k))mp.set(k,s)});
+  // With the Manifest check switched off (config.js), old manifest numbers are ignored: no tracking or warnings.
+  if(feat("manifestCheck"))$("cmpNums").value.split(/\r?\n/).forEach(s=>{s=s.trim();const k=norm(s);if(k&&!mp.has(k))mp.set(k,s)});
   const logged=new Set(rows.map(r=>norm(r.lpn)));
   let found=0;const missing=[];
   mp.forEach((v,k)=>{if(logged.has(k))found++;else missing.push(v)});
