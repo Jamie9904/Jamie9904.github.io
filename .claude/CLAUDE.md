@@ -14,11 +14,11 @@ A static goods-in web app published by GitHub Pages from `main` of `Jamie9904/Ja
 
 Follow the `release-lpn` skill. In short:
 1. Syntax check.
-2. Bump `CACHE` in `sw.js`.
+2. Bump `CACHE` in `sw.js` (`sh tools/release/bump.sh`, run on its own before the commit).
 3. Add a changelog bullet, and update the Guide if needed.
 4. Add or update checks (`lpn-write-check` skill) and run `npm test`. The real-library export checks are skipped here and run on GitHub: push the branch (branch pushes are fine) and read the "Checks" notice through the annotations API, as `release-lpn` shows.
 5. Check the layout with the `phone-layout-checker` agent.
-6. Have `release-reviewer` look at the diff.
+6. Have `release-reviewer` look at the diff, and `guide-checker` check the Guide, Settings and privacy text against the code when behaviour changed.
 7. Push when asked: `sh tools/release/ship.sh` (fast-forwards `main` to `updates` after GitHub's Checks passed on it, waits for Checks and Pages, runs the health check on the live site, and syncs the outputs folder and zip). Check the live site in the built-in browser too when it is connected.
 8. Run `docs-updater`.
 
@@ -38,7 +38,7 @@ For export changes, also use `export-reviewer` and the `live-export-check` skill
 | Photo check | `../tools/ocr-check/` | Runs the app's photo reading on the user's real manifest photos (address boxes cut off) and scores them against `expected.json`: `node tools/ocr-check/check.js [folder] [--prefix=VLT]`. Not part of the site zip. On GitHub the checks read the same photos with the real phone reader and fail if any LPN is wrong, missing or extra; `health.yml` also reads them with the live site every week (`--url=`) |
 | Release | `../tools/release/ship.sh` | Puts `updates` live and checks it (see step 7). Only when the user asks to push. Reruns a GitHub run that was cancelled once. Not part of the site zip |
 | Report system | `../tools/feedback-worker/` | Cloudflare Worker that turns Report-button reports into issues in `Jamie9904/lpn-feedback`; deployed by `.github/workflows/feedback-worker.yml` (run by hand, tick "test report" to check end to end). `health.yml` checks every week that it answers and that its GitHub token works, and warns 30 days before the token runs out |
-| Agents | `agents/*.md` | `export-reviewer`, `phone-layout-checker`, `docs-updater`, `release-reviewer`, `security-reviewer`, `ocr-reviewer`, `a11y-reviewer` |
+| Agents | `agents/*.md` | `export-reviewer`, `phone-layout-checker`, `docs-updater` (one at a time, using the lock file `/home/claude/lpn-docs-wt.lock`), `release-reviewer`, `guide-checker`, `security-reviewer`, `ocr-reviewer`, `a11y-reviewer` |
 
 `.github/workflows/test.yml` runs the tests on every push, including the real ExcelJS, jsPDF and pdf.js round trips (their versions are pinned in `package.json` to match the CDN copies the app loads; change both together). `.github/workflows/health.yml` checks the live site and the CDN libraries every week, including `tests/advisories.js`: it asks osv.dev about the four pinned library versions and fails on a new high or critical advisory. Advisories checked and found not to affect the app are listed with reasons in `tests/advisories-accepted.json`; keep those reasons true when the code changes. The same advisory check runs on every push without blocking it.
 

@@ -14,6 +14,7 @@ You keep the documentation on the `docs` branch of `Jamie9904/Jamie9904.github.i
 
 ## Steps
 
+0. Make sure you are the only docs writer. Lock file: `L=/home/claude/lpn-docs-wt.lock`. If it exists and is less than 30 minutes old, another docs-updater is running: stop at once and report "another docs update is running (since <time in the file>)", changing nothing. Otherwise write the current time into it (`date -u +%FT%TZ > $L`), and remove it when you finish, whether or not the update worked (`rm -f $L`). An older lock is left over from a run that stopped: replace it.
 1. Set up the worktree. `R=/home/claude/jamie9904.github.io; W=/home/claude/lpn-docs-wt`. Run `git -C $R fetch -q origin main docs`. If `$W` doesn't exist, run `git -C $R worktree add $W docs`; otherwise run `git -C $W checkout docs && git -C $W pull -q origin docs`.
 2. Bring the branch up to date: `git -C $W merge --no-edit origin/main`. Resolve any conflicts in favour of `main` for app files and `docs` for `README.md` and `docs/`.
 3. Find out what changed: `git -C $W log --oneline <last docs commit>..origin/main` and `git -C $W diff <range> -- '*.js' index.html styles.css`. Read the changelog entry in `panels.js` (`HELP.log`) and the Guide (`HELP.guide`) for the user-facing wording.
