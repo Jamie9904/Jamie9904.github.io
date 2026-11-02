@@ -26,7 +26,7 @@ window.LPN_CONFIG = {
   },
   testing: {
     report: false,
-    manifestCheck: false,
+    manifestCheck: true,
     manifestPhotos: false,
     liveScan: false,
     scanByPhoto: false,
