@@ -103,9 +103,15 @@ def main():
             live = cache_of(run(["git", "show", "origin/main:sw.js"], top).stdout)
             sw = run(["git", "diff", "HEAD", "--", "sw.js"], top).stdout
             bumped = (now is not None and live is not None and now > live) or re.search(r'^\+const CACHE="lpn-log-v\d+"', sw, re.M)
+            # The same command bumps the cache before committing (tools/release/bump.sh, or a sed on sw.js's
+            # lpn-log-vN placed before the commit): this check runs before the command, so trust that step.
+            pre = cmd[:is_commit.start()]
+            if not bumped and (re.search(r"tools/release/bump\.sh", pre) or re.search(r"\bsed\b[^;&|\n]*lpn-log-v[^;&|\n]*\bsw\.js\b", pre)):
+                bumped = True
             if not bumped:
                 print("Cache-bump guard: these app files changed but the cache name in sw.js did not: "
-                      + ", ".join(app) + ". Increase CACHE in sw.js (lpn-log-vN -> vN+1) so phones pick up the update, then commit again.",
+                      + ", ".join(app) + ". Increase CACHE in sw.js (lpn-log-vN -> vN+1) so phones pick up the update, then commit again "
+                      "(sh tools/release/bump.sh does it, and can go in the same command before git commit).",
                       file=sys.stderr)
                 return 2
 
