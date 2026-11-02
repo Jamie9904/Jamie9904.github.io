@@ -184,13 +184,13 @@ window.LPN_CONFIG = {
     whatsNew: true         // the card after an update saying what's new
   },
   testing: {
-    report: false, manifestCheck: false, manifestPhotos: false, liveScan: false, scanByPhoto: false,
+    report: false, manifestCheck: true, manifestPhotos: false, liveScan: false, scanByPhoto: false,
     torch: false, damage: false, shareMissing: false, findLpn: false, shareApp: false
   }
 };
 ```
 
-(In the repository each `testing` entry is on its own line.) `welcome` and `whatsNew` have no `testing` entry, because the cards carry no note.
+(In the repository each `testing` entry is on its own line.) These are the current values: every feature is on, and the Manifest check is currently marked as in testing (`testing.manifestCheck: true`, set by the site owner on 2 Nov 2026), so everyone sees its "In testing" note. `welcome` and `whatsNew` have no `testing` entry, because the cards carry no note.
 
 ### How to change it
 
