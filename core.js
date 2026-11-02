@@ -1,5 +1,33 @@
 /* First time on this phone: nothing of the app's is stored yet (checked before anything is saved). */
 const FIRST_OPEN=(()=>{try{for(let i=0;i<localStorage.length;i++){if(/^lpn/.test(localStorage.key(i)))return false}return true}catch(e){return false}})();
+/* Site settings from config.js (loaded before this file): which features are shown, and which carry a note that
+   they are still being tested. A missing or broken config.js means every feature on and no notes. */
+const FEATURES=["report","manifestCheck","manifestPhotos","liveScan","scanByPhoto","torch","damage","shareMissing","findLpn","shareApp","welcome","whatsNew"];
+const SITE=(()=>{
+  const c=window.LPN_CONFIG&&typeof window.LPN_CONFIG==="object"?window.LPN_CONFIG:{},f=c.features||{},t=c.testing||{},on={},test={};
+  FEATURES.forEach(k=>{on[k]=f[k]!==false;test[k]=on[k]&&t[k]===true});
+  return {on,test};
+})();
+const feat=k=>SITE.on[k]!==false;
+/* The "in testing" note for feature k, put into el (where: an insertAdjacentElement position). Returns it, or null. */
+function testNote(k,el,where){
+  if(!SITE.test[k]||!el)return null;
+  const n=document.createElement("p");n.className="note testnote";n.dataset.test=k;
+  const what={manifestCheck:"The Manifest check",manifestPhotos:"Reading photos",liveScan:"Live scan",scanByPhoto:"Scan by photo",torch:"The torch",damage:"Marking damage",shareMissing:"Share missing list",findLpn:"Find an LPN",shareApp:"Share this app"}[k];
+  n.textContent=k==="report"?"In testing: reports may not always arrive yet, so for anything urgent also use Download problem report in Settings."
+    :"In testing: "+what+" may not always work yet, so check what it gives you"+(feat("report")?", and use Report if something goes wrong.":".");
+  el.insertAdjacentElement(where||"beforeend",n);return n;
+}
+/* Help text with the parts for switched-off features taken out: data-f="x" is removed when x is off, data-nf="x"
+   when x is on. Numbered headings ("1. …") are renumbered so the Guide has no gaps. */
+function siteHtml(html){
+  const t=document.createElement("template");t.innerHTML=html;
+  t.content.querySelectorAll("[data-f]").forEach(e=>{if(!feat(e.dataset.f))e.remove()});
+  t.content.querySelectorAll("[data-nf]").forEach(e=>{if(feat(e.dataset.nf))e.remove()});
+  t.content.querySelectorAll("[data-f],[data-nf]").forEach(e=>{e.removeAttribute("data-f");e.removeAttribute("data-nf")});
+  let n=0;t.content.querySelectorAll("h3").forEach(h=>{const m=h.textContent.match(/^\d+\. (.*)$/);if(m)h.textContent=(++n)+". "+m[1]});
+  return t.innerHTML;
+}
 /* Problem log: the last 300 notable events (manifest reads, script errors) kept on this device, so a problem
    report can be downloaded from Settings and sent for troubleshooting. It only leaves the device when attached to a report the user sends (Settings > Report a problem or idea). */
 function diag(kind,msg){
@@ -91,7 +119,7 @@ function render(){
     const n=document.createElement("td");n.textContent=i+1;
     // The LPN is a button, so it can be edited with the keyboard and screen readers too, not only by tapping.
     const l=document.createElement("td");l.className="l";
-    const eb=document.createElement("button");eb.type="button";eb.className="lpnedit";eb.textContent=r.lpn;eb.title="Tap to edit or mark damage";eb.setAttribute("aria-label","Edit LPN "+r.lpn+(r.dmg?", damaged: "+r.dmg:"")+", or mark damage");eb.dataset.i=i;l.appendChild(eb);
+    const eb=document.createElement("button");eb.type="button";eb.className="lpnedit";eb.textContent=r.lpn;eb.title=feat("damage")?"Tap to edit or mark damage":"Tap to edit";eb.setAttribute("aria-label","Edit LPN "+r.lpn+(r.dmg?", damaged: "+r.dmg:"")+(feat("damage")?", or mark damage":""));eb.dataset.i=i;l.appendChild(eb);
     if(r.dmg){tr.classList.add("dmg");const dt=document.createElement("span");dt.className="dmgtag";dt.textContent="Damaged: "+r.dmg;l.appendChild(dt)}
     l.onclick=()=>{
       if(l.querySelector("input"))return;
@@ -99,7 +127,8 @@ function render(){
       l.textContent="";l.appendChild(inp);
       // Damage choices in a row under the pallet while it is being edited. Taps on them don't take focus from the
       // LPN box (phones would otherwise close the edit before the tap lands).
-      const dr=dmgRow(r,(g,key)=>{dmgPick=g;finish(true,key)});tr.after(dr);
+      // (with damage switched off in config.js, an empty row stands in, so the rest works the same)
+      const dr=feat("damage")?dmgRow(r,(g,key)=>{dmgPick=g;finish(true,key)}):document.createElement("tr");if(feat("damage"))tr.after(dr);
       inp.focus();inp.select();
       // Keep the choices clear of the entry bar on phones (the page keeps room for it when scrolling).
       try{dr.scrollIntoView({block:"nearest"})}catch(e){}
@@ -130,8 +159,8 @@ function render(){
       dr.addEventListener("keydown",e=>{if(e.key==="Escape"){e.preventDefault();finish(false,true)}});
       inp.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();finish(true,true)}else if(e.key==="Escape"){finish(false,true)}
         // Tab goes on to the damage choices (they come after the rest of the row on the page).
-        else if(e.key==="Tab"&&!e.shiftKey){e.preventDefault();dr.querySelector("button").focus()}};
-      dr.querySelector("button").addEventListener("keydown",e=>{if(e.key==="Tab"&&e.shiftKey){e.preventDefault();inp.focus()}});
+        else if(e.key==="Tab"&&!e.shiftKey&&dr.querySelector("button")){e.preventDefault();dr.querySelector("button").focus()}};
+      if(dr.querySelector("button"))dr.querySelector("button").addEventListener("keydown",e=>{if(e.key==="Tab"&&e.shiftKey){e.preventDefault();inp.focus()}});
     };
     const t=document.createElement("td");
     const s=document.createElement("select");
@@ -174,6 +203,7 @@ function dmgRow(r,pick){
   ok.onclick=e=>go(e.detail===0);oi.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();go(true)}};
   ow.append(oi,ok);box.appendChild(ow);
   oth.onclick=()=>{ow.hidden=false;if(cur&&DMG_REASONS.indexOf(cur)<0)oi.value=cur;oi.focus()};
+  const tn=testNote("damage",td);if(tn)tn.style.margin="0 0 6px";
   return tr;
 }
 function extras(){const o=[];const e=parseInt($("expect").value,10);if(e>=0)o.push(["Expected pallets",String(e)]);[["trailer","Trailer number"],["sealIn","Seal in"],["sealOut","Seal out"]].forEach(f=>{const v=($(f[0]).value||"").trim();if(v)o.push([f[1],v])});const n=($("notes").value||"").trim();if(n)o.push(["Notes",n]);rows.forEach(r=>{if(r.dmg)o.push(["Damaged pallet",r.lpn+": "+r.dmg])});return o}

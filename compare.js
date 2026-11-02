@@ -466,7 +466,7 @@ $("cmpPhotoFile").onchange=async e=>{
     ocrSay=null;
   }
   cmpLastNote=notes.join(" ")+" Check the numbers below are correct, then compare."+oddNote("cmpNums");cmpMsg(cmpLastNote);
-  $("cmpReport").hidden=!cmpLastPhotos.length;showPfxAdd();
+  $("cmpReport").hidden=!cmpLastPhotos.length||!feat("report");showPfxAdd();
 };
 // Opens the report box with the photo that read worst (couldn't be read, fewest numbers, or most corrected).
 $("cmpReport").onclick=()=>{
@@ -542,9 +542,11 @@ function renderCmp(C){
   const {res,cnt,man,kind}=C;
   $("cmpSum").innerHTML="<span>On manifest: <b>"+man.length+"</b></span><span>✓ Matched: <b>"+cnt.ok+"</b></span><span>✗ Missing (report): <b>"+cnt.missing+"</b></span><span>⚠ On log only (book in): <b>"+cnt.book+"</b></span>";
   const box=$("cmpRes");box.hidden=false;box.innerHTML="";
+  if(feat("shareMissing")){
   const sh=document.createElement("div");sh.className="row";sh.style.margin="0 0 8px";
   const sb=document.createElement("button");sb.type="button";sb.id="cmpShare";sb.textContent="Share missing list";
-  sb.onclick=()=>shareCmp(C);sh.appendChild(sb);box.appendChild(sh);
+  sb.onclick=()=>shareCmp(C);sh.appendChild(sb);box.appendChild(sh);testNote("shareMissing",box);
+  }
   const mk=(title,cls,items,src,hint)=>{
     const h=document.createElement("h3");h.className=cls;h.textContent=title+" ("+items.length+")";box.appendChild(h);
     const note=document.createElement("div");note.className="note";note.style.margin="0 0 4px";note.textContent=items.length?hint:"None";box.appendChild(note);

@@ -416,3 +416,6 @@ tr.dmg td.l{box-shadow:inset 3px 0 0 var(--dg)}
 .dc-clear{margin-top:8px}
 .dc-clear button{min-height:44px}
 .dc-clear button:disabled{opacity:.55;cursor:default}
+/* "In testing" notes from config.js. */
+.testnote{color:var(--wn);font-weight:700;margin:6px 0}
+.btnrow .testnote{flex-basis:100%;margin:2px 0 0}

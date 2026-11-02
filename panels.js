@@ -2,7 +2,7 @@
 const HELP={guide:`<h3>1. Quick start</h3>
 <ol>
 <li><b>Delivery:</b> fill in the date and who received it.</li>
-<li><b>Manifest</b> (optional): add it in Manifest check, so pallets are ticked off as you scan.</li>
+<li data-f="manifestCheck"><b>Manifest</b> (optional): add it in Manifest check, so pallets are ticked off as you scan.</li>
 <li><b>Pallets:</b> pick the type, tick FSDU if needed, then scan or type the LPN and tap Add.</li>
 <li><b>Export:</b> Download (Excel), Email PDF or Print.</li>
 <li><b>Start new delivery:</b> saves this one and clears the page.</li>
@@ -18,31 +18,31 @@ const HELP={guide:`<h3>1. Quick start</h3>
 </ol>
 <p>An “Added” message confirms each pallet. Tap ↶ to remove the last one. A repeated or odd-looking LPN shows a warning with <b>Skip</b> or <b>Add anyway</b>. You can turn warnings off in Settings.</p>
 <p><b>Changing the log:</b> tap an LPN to correct it, change its type or FSDU in the table, or remove it with ✕. An <b>Undo</b> bar appears after you remove a pallet, edit an LPN or use Clear all.</p>
-<p><b>Damaged pallet:</b> tap the LPN, then choose Crushed, Wet or Other (type what’s wrong). It shows in red and goes on the exports. Choose None to remove the damage.</p>
+<p data-f="damage"><b>Damaged pallet:</b> tap the LPN, then choose Crushed, Wet or Other (type what’s wrong). It shows in red and goes on the exports. Choose None to remove the damage.</p>
 <p>Use search and the filters to find pallets. The totals always count the whole log, with FSDUs counted separately.</p>
 <h3>4. Scanning barcodes</h3>
 <p>On a phone, tap <b>Scan</b> next to Add.</p>
 <ul>
-<li><b>Live scan:</b> the camera adds each barcode it sees. In a dark trailer, tap <b>Torch</b> (on phones that allow it; most iPhones don’t).</li>
-<li><b>Scan by photo:</b> use a clear photo of the barcode if Live scan doesn’t work.</li>
+<li data-f="liveScan"><b>Live scan:</b> the camera adds each barcode it sees.<span data-f="torch"> In a dark trailer, tap <b>Torch</b> (on phones that allow it; most iPhones don’t).</span></li>
+<li data-f="scanByPhoto"><b>Scan by photo:</b> use a clear photo of the barcode<span data-f="liveScan"> if Live scan doesn’t work</span>.</li>
 <li><b>Handheld or Bluetooth scanner:</b> tap the LPN box and scan. This hasn’t been tested yet, so it may not work.</li>
 </ul>
 <p>In Settings, you can choose to confirm each scan before it’s logged.</p>
-<h3>5. Check against the manifest</h3>
-<p>Tap the <b>Manifest check</b> heading to open it.</p>
-<ul>
-<li><b>Add the manifest:</b> add photos or PDFs (several at once), or type or paste the numbers. Always check numbers read from photos. Reading photos needs iOS 16 or newer on an iPhone.</li>
+<h3 data-f="manifestCheck">5. Check against the manifest</h3>
+<p data-f="manifestCheck">Tap the <b>Manifest check</b> heading to open it.</p>
+<ul data-f="manifestCheck">
+<li><b>Add the manifest:</b> add <span data-f="manifestPhotos">photos or </span>PDFs (several at once), or type or paste the numbers.<span data-f="manifestPhotos"> Always check numbers read from photos. Reading photos needs iOS 16 or newer on an iPhone.</span></li>
 <li><b>While you scan</b>, the log shows how many manifest pallets are found and warns about pallets not on the manifest. <b>Show missing</b> lists the manifest pallets not found yet. <b>Use n as expected</b> copies the manifest count into Expected pallets.</li>
-<li><b>The log:</b> choose <b>Use current log</b>, a saved delivery, an exported file, or a photo of a printed log.</li>
-<li><b>Check results:</b> Missing (report it), On the log only (book it in) and Matched. <b>Fix</b> corrects a misread number. <b>Share missing list</b> sends the list as a message.</li>
+<li><b>The log:</b> choose <b>Use current log</b>, a saved delivery, an exported file<span data-f="manifestPhotos">, or a photo of a printed log</span>.</li>
+<li><b>Check results:</b> Missing (report it), On the log only (book it in) and Matched. <b>Fix</b> corrects a misread number.<span data-f="shareMissing"> <b>Share missing list</b> sends the list as a message.</span></li>
 <li><b>Export</b> gives the comparison as Excel, Email PDF or Print. If <b>Include a copy of the log</b> is on in Settings, a copy of the log is added.</li>
 </ul>
-<p><b>Prefix presets</b> (in the Manifest check) limit which numbers are picked up from photos. If a photo finds numbers with a prefix that isn’t listed, you can add it with one tap. Start new delivery clears the manifest numbers.</p>
+<p data-f="manifestCheck"><span data-f="manifestPhotos"><b>Prefix presets</b> (in the Manifest check) limit which numbers are picked up from photos. If a photo finds numbers with a prefix that isn’t listed, you can add it with one tap. </span>Start new delivery clears the manifest numbers.</p>
 <h3>6. Export</h3>
 <p>The <b>Export</b> menu has <b>Download (Excel)</b>, <b>Email PDF</b> and <b>Print</b>. Files show your logo, the delivery details, the numbered pallet list and the totals. They fit A4 and are named with the date and trailer number. If the total doesn’t match the expected pallets, you get a reminder first.</p>
 <p><b>Email PDF</b> opens your phone’s share menu with the PDF attached. If you see a message that the file is ready, tap <b>Tap to share</b>. If the share menu can’t open, the file is saved for you to attach.</p>
 <h3>7. Saved deliveries and backups</h3>
-<p><b>Start new delivery</b> saves the log and clears the page. If you haven’t exported, it asks you to do that first. <b>Saved deliveries</b> keeps this week and last week (weeks start on Sunday). Older ones are removed automatically. There you can open, export, email or delete a delivery, import an exported file, or use <b>Find an LPN</b> to see which delivery holds it.</p>
+<p><b>Start new delivery</b> saves the log and clears the page. If you haven’t exported, it asks you to do that first. <b>Saved deliveries</b> keeps this week and last week (weeks start on Sunday). Older ones are removed automatically. There you can open, export, email or delete a delivery<span data-nf="findLpn"> or import an exported file</span><span data-f="findLpn">, import an exported file, or use <b>Find an LPN</b> to see which delivery holds it</span>.</p>
 <p>Everything is stored on this phone only, so tap <b>Back up now</b> (in Saved deliveries or Settings) from time to time. <b>Restore backup</b> in Settings shows what a backup holds and saves a copy of your current data first.</p>
 <h3>8. Install it on your phone</h3>
 <ul>
@@ -53,20 +53,21 @@ const HELP={guide:`<h3>1. Quick start</h3>
 </ul>
 <h3>9. Settings and good to know</h3>
 <ul>
-<li><b>Settings</b> has colours (or follow the phone’s light or dark mode), text size, date format, default pallet type, warnings, sound, vibration and <b>Share this app</b>.</li>
+<li><b>Settings</b> has colours (or follow the phone’s light or dark mode), text size, date format, default pallet type, warnings, sound<span data-nf="shareApp"> and vibration</span><span data-f="shareApp">, vibration and <b>Share this app</b></span>.</li>
 <li>LPNs are a letter prefix then digits: usually 3 letters and 9 or 10 digits. IM numbers (full pallet picks) have 2 letters and 10 or 11 digits.</li>
-<li><b>Something not working, or an idea?</b> <button type="button" class="linkbtn" id="fbGuide">Report a problem or idea</button> (also the <b>Report</b> button at the top).</li>
+<li data-f="report"><b>Something not working, or an idea?</b> <button type="button" class="linkbtn" id="fbGuide">Report a problem or idea</button> (also the <b>Report</b> button at the top).</li>
 </ul>
 <h3>10. Your data and privacy</h3>
 <ul>
-<li>Everything you enter stays in this browser on this phone. There’s no account, and nothing you enter is sent anywhere unless you send a report.</li>
+<li>Everything you enter stays in this browser on this phone. There’s no account, and nothing you enter is sent anywhere<span data-f="report"> unless you send a report</span>.</li>
 <li>Manifest photos and PDFs are read on the phone and aren’t saved. Only a short note of what was read goes in the problem log on this phone.</li>
-<li>The only thing that leaves the phone is a report you choose to send with <b>Report</b>: your message, your name if you add it, a photo if you add one and, if ticked, the problem report. The problem report includes the numbers in the Manifest check, the delivery date and pallet counts, recent app activity and errors (with the LPNs, file names and start of the text read from photos they mention), the prefix list, and your browser, screen size and time zone. Reports go through a Cloudflare server to a private GitHub project that only Jamie, who made the app, can see. Cloudflare sees your internet address, which is kept for up to a day to stop spam.</li>
+<li data-f="report">The only thing that leaves the phone is a report you choose to send with <b>Report</b>: your message, your name if you add it, a photo if you add one and, if ticked, the problem report. The problem report includes the numbers in the Manifest check, the delivery date and pallet counts, recent app activity and errors (with the LPNs, file names and start of the text read from photos they mention), the prefix list, and your browser, screen size and time zone. Reports go through a Cloudflare server to a private GitHub project that only Jamie, who made the app, can see. Cloudflare sees your internet address, which is kept for up to a day to stop spam.</li>
+<li data-nf="report">There’s no Report button in this copy of the app, so nothing you enter leaves the phone.</li>
 <li>The Excel, PDF and photo reading tools are downloaded from public code servers the first time they’re needed. Your data isn’t sent to them. Like any website, they see your internet address.</li>
 <li>Clearing this site’s data deletes your log and saved deliveries. On an iPhone, if the app isn’t on the home screen, its data can be cleared after a few weeks without use. So install the app and back up.</li>
 </ul>
 `,log:`<h3>v4.0 <span class="ver">Current</span></h3>
-<ul><li>Delivery has a <b>Clear trailer, seals and notes</b> button for the next trailer on the same day. It keeps the date, name and expected pallets, and can be undone.</li><li>Version 4.0, ready to share with colleagues: <b>Share this app</b> in Settings has a QR code to scan, the Guide is shorter and has a <b>Your data and privacy</b> section, and new users get a welcome card with the demo video.</li><li>Damaged pallets: tap an LPN to mark it Crushed, Wet or in your own words. It shows on the exports.</li><li>Manifest check: <b>Share missing list</b> sends the missing and extra LPNs as a message, sideways or upside-down photos are turned and read again, and one tap adds a missing prefix.</li><li>Saved deliveries: <b>Find an LPN</b> shows which delivery holds a pallet. Exported file names include the trailer number.</li><li>Live scan has a <b>Torch</b> button on phones that allow it, and a note asks you to check seal numbers that look wrong.</li><li>Colours can follow the phone’s light or dark mode, reports can include your name, and after an update a card says what’s new.</li></ul>
+<ul><li>Delivery has a <b>Clear trailer, seals and notes</b> button for the next trailer on the same day. It keeps the date, name and expected pallets, and can be undone.</li><li>A site settings file (<b>config.js</b> in the repo) can switch features off for everyone, or add a note that a feature is still being tested.</li><li>Version 4.0, ready to share with colleagues: <b>Share this app</b> in Settings has a QR code to scan, the Guide is shorter and has a <b>Your data and privacy</b> section, and new users get a welcome card with the demo video.</li><li>Damaged pallets: tap an LPN to mark it Crushed, Wet or in your own words. It shows on the exports.</li><li>Manifest check: <b>Share missing list</b> sends the missing and extra LPNs as a message, sideways or upside-down photos are turned and read again, and one tap adds a missing prefix.</li><li>Saved deliveries: <b>Find an LPN</b> shows which delivery holds a pallet. Exported file names include the trailer number.</li><li>Live scan has a <b>Torch</b> button on phones that allow it, and a note asks you to check seal numbers that look wrong.</li><li>Colours can follow the phone’s light or dark mode, reports can include your name, and after an update a card says what’s new.</li></ul>
 <h3>v3.30</h3>
 <ul><li>Faster photo reading: one photo reader is used for a whole batch of photos instead of starting a new one for each. Live scan fits small phones: the camera view is shorter so the “Added” line and Stop scanning stay on screen.</li><li>Manifest photos: the note names any number the app corrected to match the page, so you can check it against the paper, and <b>Report a problem with these photos</b> sends a report with the photo attached. On desktop the seal boxes fit longer seal numbers, and with the Manifest check open on a phone, Undo shows at the top.</li><li>Report a problem or idea with the <b>Report</b> button at the top of the page (also in Settings and the Guide). It opens in the middle of the screen: choose Problem or Idea, say what happened, add a photo if it helps, and send. The problem report is attached unless you untick it. With no signal it waits on the phone and sends when you’re back online.</li><li>More accessibility fixes: on phones the Undo bar shows just above the entry bar and stays 20 seconds; LPNs in the log can be edited with the keyboard; Escape closes the Export menus; clearer labels for screen readers on saved deliveries and the log table; Guide links don’t animate when reduced motion is on.</li><li>Easier to use with gloves and in poor light: a scan made while a warning is showing is kept in the box instead of being lost (Escape skips the warning), stronger edges on boxes and buttons, accent-coloured text always readable, bigger FSDU tick box and scan buttons, the warning shows above the camera, and the Guide and Settings panels move focus in and back out for keyboard and screen reader users.</li><li>Manifest photos are read much better: shade across the page and paper grain no longer turn into junk, every number on a page with ruled lines is found, and a number read slightly wrong (VL1… for VLT…, or an extra 0) is matched to the others on the same page. Specks on the paper that look like a code are left out. IM numbers (full pallet picks, 10 or 11 digits) are always kept and not called unusual.</li><li>Manifest check: each photo or PDF now says how many LPNs it found, how many were new and how many were already listed, and names any left out because their prefix isn’t in the prefix list. One photo that can’t be read no longer stops the rest.</li><li>Problem report in Settings: if something goes wrong, download it and send it with what happened. It lists recent manifest reads and errors on this device.</li><li>Exports: long delivery notes and longer LPNs no longer get cut off in the spreadsheets, and every export notes the app version it was made with (at the bottom of the sheet and in the page footer).</li><li>Importing an exported log and loading one in the Manifest check now read spreadsheets the same way, so the version line at the bottom is always skipped.</li><li>Safer PDFs: a PDF opened in the app (a supplier manifest or an exported log) can no longer run hidden code, and the PDF reader is updated to the latest version.</li><li>Safer backups and files: a damaged backup can no longer stop the app opening, restoring asks first and saves a copy of your current data, and files from outside can’t add links, formulas or scripts to your exports.</li><li>A security policy now only lets the app run code from its own site and its three library sources, as a second line of defence.</li><li>A demo video at the top of the Guide shows the app in action, with narration and subtitles, including picking the pallet type before scanning. It starts at half volume.</li><li>Easier to use: the pallet table scrolls with the page on phones, progress only turns red when something is wrong, one count line when the manifest sets the expected number, the Manifest check starts with its steps (prefix presets tucked away), the logo moved to Settings, the entry bar steps aside in the Manifest check, and bigger tick boxes and header buttons.</li><li>Undo last pallet button on the phone entry bar, “Use n as expected” from the manifest count, an “Exported at” note with a warning before starting a new delivery that hasn’t been exported, and a “Start a new delivery?” prompt after exporting.</li><li>Trailer number, Seal in and Seal out in Delivery, shown on exports and saved deliveries.</li><li>Live manifest tracking: add the manifest numbers first and the Pallet log counts them off as you scan, shows which are still missing and warns about pallets not on the manifest.</li><li>Phone layout: a pallet counter on the entry bar, an “Added” confirmation after each pallet, Delivery folds into one line once you start logging, neater top buttons and a clearer ✕ on each row.</li><li>Smaller tweaks: a reminder when the log is dated before today, tap-to-fill “Received by” names, a check when the total differs from the expected pallets, an FSDU filter, Excel and Email PDF buttons on saved deliveries, a last-backed-up note, and an offline notice.</li><li>Exports: a title band, numbered rows, clearer grid lines, page numbers, gridlines hidden on screen, roomier headers, the logo kept in proportion and much smaller PDFs. The manifest check has the same Export menu as the log.</li><li>Date format setting (dd/mm/yyyy by default), used in exports, lists and the date box.</li><li>Fonts are now part of the app, updates show up straight away, and the tablet layout and field alignment are fixed.</li></ul>
 <h3>v3.20</h3>
@@ -105,7 +106,7 @@ function dlgOpen(focusEl){if(!dlgOpener)dlgOpener=document.activeElement;pageIne
 function dlgClose(){if(!$("panel").hidden||!$("instBox").hidden)return; // the other dialog is still open
   pageInert(false);const o=dlgOpener;dlgOpener=null;if(o&&o.focus&&document.contains(o))o.focus()}
 function openHelp(k,t){
-  $("panelTitle").textContent=t;$("panelBody").innerHTML=k==="guide"?DEMO_HTML+guideToc(HELP.guide):HELP[k];
+  $("panelTitle").textContent=t;$("panelBody").innerHTML=k==="guide"?DEMO_HTML+guideToc(siteHtml(HELP.guide)):siteHtml(HELP[k]);
   $("panel").hidden=false;$("shade").hidden=false;$("panel").scrollTop=0;if(k==="settings")initSettings();if(k==="history")initHistory();if(k==="guide")initDemo();
   dlgOpen($("panelClose"));
 }
@@ -188,12 +189,12 @@ HELP.settings=`<h3>Colours</h3>
 <label for="setDate">Date format</label>
 <select id="setDate"><option value="uk">dd/mm/yyyy (UK)</option><option value="us">mm/dd/yyyy (US)</option><option value="iso">yyyy-mm-dd</option></select>
 <p class="note">Used in spreadsheets, PDFs and the saved deliveries lists.</p>
-<h3>Share this app</h3>
-<p>A colleague can scan this code with their phone camera to open the app, then install it from there. Or send them the link.</p>
-<img class="shareqr" src="media/share-qr.svg" width="180" height="180" alt="QR code that opens jamie9904.github.io">
-<p class="shareurl" id="shareUrl">https://jamie9904.github.io/</p>
-<div class="row"><button id="shareApp">Send the link</button></div>
-<div class="msg" id="shareMsg" role="status" aria-live="polite"></div>
+<h3 data-f="shareApp">Share this app</h3>
+<p data-f="shareApp">A colleague can scan this code with their phone camera to open the app, then install it from there. Or send them the link.</p>
+<img data-f="shareApp" class="shareqr" src="media/share-qr.svg" width="180" height="180" alt="QR code that opens jamie9904.github.io">
+<p data-f="shareApp" class="shareurl" id="shareUrl">https://jamie9904.github.io/</p>
+<div data-f="shareApp" class="row"><button id="shareApp">Send the link</button></div>
+<div data-f="shareApp" class="msg" id="shareMsg" role="status" aria-live="polite"></div>
 <h3>Install</h3>
 <p>Add this page to your home screen so it opens like an app.</p>
 <div class="row"><button id="showInstall">Show the install pop-up</button></div>
@@ -203,9 +204,9 @@ HELP.settings=`<h3>Colours</h3>
 <div class="msg" id="bkMsg" role="status" aria-live="polite"></div>
 <div class="row" id="bkAsk" style="margin-top:10px" hidden><button id="bkGo">Replace my data with this backup</button><button id="bkNo">Cancel</button></div>
 <div class="row" id="bkDone" style="margin-top:10px" hidden><button id="bkReload">Reload the app</button></div>
-<h3>Report a problem or idea</h3>
-<p>Tell Jamie what went wrong or what would help, with the problem report attached. Also on the <b>Report</b> button at the top of the page. What a report includes is in the Guide, under <b>Your data and privacy</b>.</p>
-<div class="row"><button class="p" id="fbOpenSet">Report a problem or idea</button></div>
+<h3 data-f="report">Report a problem or idea</h3>
+<p data-f="report">Tell Jamie what went wrong or what would help, with the problem report attached. Also on the <b>Report</b> button at the top of the page. What a report includes is in the Guide, under <b>Your data and privacy</b>.</p>
+<div data-f="report" class="row"><button class="p" id="fbOpenSet">Report a problem or idea</button></div>
 <h3>Problem report</h3>
 <p>If something goes wrong, download a problem report straight away and send it with a description of what happened. It lists what the app has done recently on this device (such as manifest photos and PDFs read, and any errors), with the LPNs, file names and the start of the text read from photos, plus your browser and screen size. It is kept on this device, and is only sent if you attach it to a report.</p>
 <div class="row"><button id="diagDl">Download problem report</button><button class="d" id="diagClear">Clear</button></div>
@@ -295,8 +296,8 @@ HELP.history=`<p>Deliveries you save are kept in this browser on this device. We
 <div class="row" style="margin:10px 0"><button id="histImport">Import an exported log</button><input type="file" id="histFile" accept=".xlsx,.csv,.xls,.pdf,application/pdf" hidden></div>
 <div class="bkinfo"><span id="bkNote"></span><button id="histBk">Back up now</button></div>
 <div class="msg" id="histMsg" role="status" aria-live="polite"></div>
-<div class="histfind"><label for="histFind">Find an LPN</label><input type="search" id="histFind" autocomplete="off" spellcheck="false" enterkeyhint="search" placeholder="Type or paste part of an LPN"></div>
-<div class="msg" id="histFindMsg" role="status" aria-live="polite"></div>
+<div class="histfind" data-f="findLpn"><label for="histFind">Find an LPN</label><input type="search" id="histFind" autocomplete="off" spellcheck="false" enterkeyhint="search" placeholder="Type or paste part of an LPN"></div>
+<div class="msg" id="histFindMsg" role="status" aria-live="polite" data-f="findLpn"></div>
 <div id="histRoot"></div>`;
 async function histExport(h,mail){
   const msg=$("histMsg"),sv=Object.assign({rows:rows},getDel());
@@ -408,6 +409,7 @@ async function fbShrink(f){
    Guide. It can open over a panel: the panel is set aside while it's open, and focus goes back where it came from. */
 let fbOpener=null,fbPhotoJob=0;
 function openFeedback(opts){
+  if(!feat("report"))return;
   if(!$("fbBox").hidden)return;
   opts=opts||{};
   if(opts.kind){const r=document.querySelector('input[name="fbKind"][value="'+(opts.kind==="idea"?"idea":"problem")+'"]');if(r)r.checked=true}
@@ -518,7 +520,7 @@ function initHistory(){
     const fm=document.createElement("div");fm.className="sb hitl";fm.hidden=true;
     r.append(o,xl,em,x);d.append(hd,tt,sb,fm,r);d._h=h;root.appendChild(d);
   });
-  $("histFind").oninput=histFilter;histFilter();
+  if($("histFind")){$("histFind").oninput=histFilter;histFilter();testNote("findLpn",document.querySelector(".histfind"),"afterend")}
   $("histImport").onclick=()=>{$("histFile").value="";$("histFile").click()};
   $("histFile").onchange=async e=>{
     const f=e.target.files&&e.target.files[0];if(!f)return;
@@ -570,7 +572,7 @@ async function shareApp(){
   m.textContent="Sharing isn’t available here. Send them this link: "+url;
 }
 function initSettings(){
-  $("shareApp").onclick=shareApp;
+  if($("shareApp")){$("shareApp").onclick=shareApp;testNote("shareApp",$("shareApp").parentElement,"afterend")}
   $("setLogo").onclick=()=>$("logoBtn").click();$("setLogoRm").onclick=()=>$("logoRm").click();showLogo();
   applyTheme();
   $("bkDl").onclick=()=>backupNow("bkMsg");
@@ -682,6 +684,26 @@ $("panelBody").addEventListener("click",e=>{if(e.target&&(e.target.id==="fbGuide
 })();
 /* A card at the top of the page: on the first visit, an offer of the demo video; after an update, what's new.
    lpnseenbuild remembers the build last opened on this phone; lpnwelcome that the welcome was answered. */
+/* Switched-off features are hidden and "in testing" notes added, from config.js (see core.js). */
+function applySite(){
+  const hide=id=>{const e=$(id);if(e)e.hidden=true};
+  if(!feat("report"))hide("btnReport");
+  if(!feat("manifestCheck"))hide("cmpCard");
+  if(!feat("manifestPhotos")){
+    const g=$("cmpPhotoBtn").closest(".grow"),l=g&&g.querySelector("label");if(l)l.textContent="2. Manifest PDFs";
+    ["cmpPhotoBtn","cmpLogPhotoBtn","pfxBox"].forEach(hide);
+  }
+  if(!feat("liveScan"))hide("scan");
+  if(!feat("scanByPhoto"))hide("photo");
+  if(!feat("liveScan")&&!feat("scanByPhoto")){hide("scanBtn");hide("btnrow")}
+  testNote("report",$("fbBox").querySelector("p"),"afterend");
+  testNote("manifestCheck",$("cmpBody"),"afterbegin");
+  testNote("manifestPhotos",$("cmpPhotoBtn").closest(".grow"),"beforeend");
+  // Live scan and Scan by photo notes sit in the camera box, shown by scan.js for the one in use.
+  [testNote("liveScan",$("scanbox"),"afterbegin"),testNote("scanByPhoto",$("scanbox"),"afterbegin")].forEach(n=>{if(n)n.hidden=true});
+  const tn=testNote("torch",$("scanbox"));if(tn)tn.hidden=true;
+}
+applySite();
 async function hello(){
   const box=$("hello"),txt=$("helloTxt"),btns=$("helloBtns");
   let b="";try{b=await appBuildP}catch(e){}
@@ -689,13 +711,13 @@ async function hello(){
   let seen="",welcome="";try{seen=localStorage.getItem("lpnseenbuild")||"";welcome=localStorage.getItem("lpnwelcome")||"";if(FIRST_OPEN&&!welcome){welcome="ask";localStorage.setItem("lpnwelcome","ask")}}catch(e){}
   const close=()=>{box.hidden=true;btns.innerHTML=""};
   const btn=(t,cls,fn)=>{const x=document.createElement("button");x.type="button";x.textContent=t;if(cls)x.className=cls;x.onclick=()=>{$("btnGuide").focus();close();fn&&fn()};/* focus moves somewhere that stays before the card goes */btns.appendChild(x);return x};
-  if(welcome==="ask"){
+  if(welcome==="ask"&&feat("welcome")){
     txt.textContent="New here? The 47-second demo video shows how the app works.";
     const done=()=>{try{localStorage.setItem("lpnwelcome","1")}catch(e){}};
     btn("Watch the demo","p",()=>{done();openHelp("guide","How to use this app");setTimeout(()=>{const p=$("demoPlay");if(p)p.click()},100)});
     btn("No thanks","",done);
     box.hidden=false;
-  }else if(b&&seen&&+seen<+b){
+  }else if(b&&seen&&+seen<+b&&feat("whatsNew")){
     // The newest changelog line, as plain text.
     const d=document.createElement("div");d.innerHTML=(HELP.log.match(/<li>([\s\S]*?)<\/li>/)||[])[1]||"";
     let t=d.textContent.replace(/\s+/g," ").trim();if(t.length>170)t=t.slice(0,170).replace(/\s+\S*$/,"")+"…";
