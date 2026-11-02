@@ -25,7 +25,9 @@ function fileTag(tr){
   return t?"-"+t:"";
 }
 function getDel(){const o={};DEL_F.forEach(k=>{o[k]=$(k).value});o.exp=exported;return o}
-function setDel(o){o=o||{};DEL_F.forEach(k=>{$(k).value=k==="date"?(o.date||localToday()):(o[k]||"")});exported=o.exp||null;sealHint()}
+function setDel(o){o=o||{};DEL_F.forEach(k=>{$(k).value=k==="date"?(o.date||localToday()):(o[k]||"")});exported=o.exp||null;sealHint();syncClear()}
+/* The Clear trailer, seals and notes button is only active when one of them has something in it. */
+function syncClear(){const b=$("delClear");if(b)b.disabled=!["trailer","sealIn","sealOut","notes"].some(k=>($(k).value||"").trim())}
 const $=id=>document.getElementById(id);
 function syncType(){const v=$("type").value;$("type").dataset.t=v;document.querySelectorAll("#tyb button").forEach(b=>{const on=b.dataset.t===v;b.classList.toggle("on",on);b.setAttribute("aria-pressed",on)})}
 let cfg={defType:"BB",check:true,sound:true,size:"1",keepType:true,vibrate:true,confirmScan:false,dateFmt:"uk"};
@@ -334,6 +336,16 @@ function localToday(){const n=new Date();return n.getFullYear()+"-"+String(n.get
   el.addEventListener("click",()=>{try{el.showPicker&&el.showPicker()}catch(e){}});
   ["recv","expect"].forEach(id=>$(id).addEventListener("input",updateDel));
   ["trailer","sealIn","sealOut"].forEach(id=>$(id).addEventListener("input",()=>{save();updateDel();sealHint(true)}));
+  ["trailer","sealIn","sealOut","notes"].forEach(id=>$(id).addEventListener("input",syncClear));
+  syncClear();
+  // Clear trailer, seals and notes: for the next trailer on the same day, keeping the date, name and expected count.
+  $("delClear").onclick=()=>{
+    const ids=["trailer","sealIn","sealOut","notes"],was={};ids.forEach(k=>was[k]=$(k).value);
+    if(!ids.some(k=>was[k].trim()))return;
+    ids.forEach(k=>$(k).value="");save();updateDel();sealHint();syncClear();
+    showUndo("Cleared the trailer, seals and notes",()=>{ids.forEach(k=>$(k).value=was[k]);save();updateDel();sealHint();syncClear()});
+    $("trailer").focus();
+  };
   ["sealIn","sealOut"].forEach(id=>$(id).addEventListener("change",()=>sealHint()));
   $("delSum").onclick=()=>{delCollapsed=!delCollapsed;updateDel()};
   showDate();

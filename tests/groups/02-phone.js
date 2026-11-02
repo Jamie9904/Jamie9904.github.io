@@ -106,4 +106,25 @@ module.exports = async ({ browser, URL0 }) => {
   await p.evaluate(() => closeHelp());
   check("no script errors", p.errors.length === 0, p.errors);
   await p.ctx.close();
+
+  console.log("Clear trailer, seals and notes");
+  for (const [w, h] of [[360, 740], [800, 900], [1300, 900]]) {
+    p = await page(browser, w);
+    await p.setViewportSize({ width: w, height: h });
+    await p.goto(URL0); await p.waitForTimeout(300);
+    s = await p.evaluate(() => { const b = document.getElementById("delClear"), r = b.getBoundingClientRect(); return { off: b.disabled, right: Math.round(r.right), vw: innerWidth, h: Math.round(r.height), page: document.documentElement.scrollWidth <= innerWidth }; });
+    check("at " + w + " px the Clear trailer, seals and notes button fits and is off while they're empty", s.off && s.right <= s.vw && s.h >= 44 && s.page, s);
+    if (w !== 360) { await p.ctx.close(); continue; }
+    await p.fill("#recv", "Jamie"); await p.fill("#expect", "12");
+    await p.fill("#trailer", "TR4471"); await p.fill("#sealIn", "SL123456"); await p.fill("#sealOut", "SL654321"); await p.fill("#notes", "Driver waited");
+    s = await p.evaluate(() => !document.getElementById("delClear").disabled);
+    await p.click("#delClear"); await p.waitForTimeout(100);
+    const after = await p.evaluate(() => ({ vals: ["trailer", "sealIn", "sealOut", "notes", "recv", "expect"].map(k => document.getElementById(k).value), saved: JSON.parse(localStorage.getItem("lpnlog")), undo: document.getElementById("undoTxt").textContent, off: document.getElementById("delClear").disabled, focus: document.activeElement.id }));
+    check("it clears the trailer, seals and notes, keeps the name and expected pallets, saves, and offers Undo", s && JSON.stringify(after.vals) === '["","","","","Jamie","12"]' && after.saved.trailer === "" && after.saved.notes === "" && after.saved.recv === "Jamie" && /Cleared the trailer, seals and notes/.test(after.undo) && after.off && after.focus === "trailer", after);
+    await p.click("#undoBtn"); await p.waitForTimeout(100);
+    s = await p.evaluate(() => ({ vals: ["trailer", "sealIn", "sealOut", "notes"].map(k => document.getElementById(k).value), saved: JSON.parse(localStorage.getItem("lpnlog")).sealOut }));
+    check("Undo puts the trailer, seals and notes back", JSON.stringify(s.vals) === '["TR4471","SL123456","SL654321","Driver waited"]' && s.saved === "SL654321", s);
+    check("no script errors", p.errors.length === 0, p.errors);
+    await p.ctx.close();
+  }
 };
