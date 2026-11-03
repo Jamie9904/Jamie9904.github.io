@@ -171,7 +171,7 @@ module.exports = async ({ browser, URL0 }) => {
         return { zoomIn: !document.getElementById("zoomRow").hidden && zr.top >= vr.top && zr.bottom <= vr.bottom + 1 && zr.right <= innerWidth && b("zoomIn").height >= 44 && b("zoomIn").width >= 44 && zr.width * zr.height <= vr.width * vr.height * 0.45, stop: Math.round(b("stopscan").bottom), msg: Math.round(b("smsg").bottom), torch: Math.round(b("torch").bottom), torchR: Math.round(b("torch").right), vw: innerWidth, vh: innerHeight, text: document.getElementById("smsg").textContent }; });
       check("Live scan at " + w + "×" + h + (big ? " with Extra large text" : "") + ": the Added line, Torch and Stop scanning are on screen", /^Added: VLT004040265/.test(s.text) && s.stop <= s.vh && s.msg <= s.vh && s.torch <= s.vh && s.torchR <= s.vw && s.zoomIn, s);
       if (w === 360 && !big) {
-        // A sharper picture with continuous focus is asked for, and the zoom slider sets the camera's zoom and is remembered.
+        // A sharper picture with continuous focus is asked for, and the zoom buttons set the camera's zoom and it is remembered.
         let zm = await q.evaluate(async () => { const zin = document.getElementById("zoomIn"), out0 = document.getElementById("zoomOut").disabled;
           for (let i = 0; i < 3; i++) { zin.click(); await new Promise(r => setTimeout(r, 30)); }
           return { ask: window.__camAsk.video, calls: window.__zoom.slice(), saved: localStorage.getItem("lpnzoom"), label: document.getElementById("zoomVal").textContent, out0, name: document.getElementById("zoomRow").getAttribute("aria-label"), inName: zin.getAttribute("aria-label"), last: window.__applies[window.__applies.length - 1] }; });
@@ -191,7 +191,7 @@ module.exports = async ({ browser, URL0 }) => {
         await q.evaluate(() => { const g = navigator.mediaDevices.getUserMedia; navigator.mediaDevices.getUserMedia = async () => { const st = await g(); st.getVideoTracks()[0].getCapabilities = () => ({}); return st; }; document.getElementById("scan").click(); });
         await q.waitForTimeout(400);
         t = await q.evaluate(() => ({ hidden: document.getElementById("torch").hidden, zoom: document.getElementById("zoomRow").hidden, msg: document.getElementById("smsg").textContent }));
-        check("with no torch or zoom on the camera (most iPhones), the Torch button and Zoom slider aren't shown", t.hidden && t.zoom && /Point the camera|Added/.test(t.msg), t);
+        check("with no torch or zoom on the camera (most iPhones), the Torch button and zoom buttons aren't shown", t.hidden && t.zoom && /Point the camera|Added/.test(t.msg), t);
         check("no script errors", q.errors.length === 0, q.errors);
       }
       await q.ctx.close();
