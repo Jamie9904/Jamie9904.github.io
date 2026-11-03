@@ -111,8 +111,15 @@ def main():
                     differ = []
                     for p in present:
                         n = "lpn-site/" + p
+                        if n not in names:
+                            differ.append(p); continue
+                        # Pictures, video and SVGs get metadata added by the storage after saving, so their bytes can
+                        # differ while showing the same thing; the folder copies are already compared with main by
+                        # picture above, so here they only need to be in the zip.
+                        if re.search(r"\.(mp4|webm|jpe?g|png|svg)$", p, re.I):
+                            continue
                         with open(os.path.join(SITE, p), "rb") as f:
-                            if n not in names or z.read(n) != f.read():
+                            if z.read(n) != f.read():
                                 differ.append(p)
                     if differ:
                         zip_note = "lpn-site.zip doesn't match the folder (%s)." % ", ".join(differ[:5])
