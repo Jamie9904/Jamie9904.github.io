@@ -6,7 +6,7 @@
 ├── index.html               page markup: header, Delivery, Add a pallet, Pallet log, Manifest check, panels, report box, install box, banners
 ├── styles.css               all CSS: theme tokens, components, phone/tablet/desktop layouts, print rules
 ├── core.js                  site settings (`FEATURES`, `SITE`, `feat()`, `testNote()`, `siteHtml()`), state, persistence, tidying of saved data, table, validation, add flow, undo, library loader and fingerprints (SRI), helpers
-├── scan.js                  live and photo barcode scanning, wake lock, input wiring
+├── scan.js                  live and photo barcode scanning, camera request (resolution, focus), Torch and Zoom buttons, wake lock, input wiring
 ├── export.js                Excel/PDF builders, print, delivery (download/share/mailto), logo
 ├── compare.js               manifest check, file readers, OCR, presets, live tracking
 ├── panels.js                guide, changelog, settings, `applySite()` (hides switched-off features), report a problem or idea (with its offline queue), saved deliveries, backups, install, update banner
@@ -60,7 +60,8 @@
 │   ├── wrangler.toml        Worker name, repo, allowed origin, Durable Object binding
 │   └── README.md            one-time set-up steps
 ├── tools/release/
-│   └── ship.sh              puts updates live and checks it: Checks, Pages, health check, download copy (development only)
+│   ├── ship.sh              puts updates live and checks it: Checks, Pages, health check, download copy (development only)
+│   └── bump.sh              raises CACHE in sw.js to the live number plus one, only if it isn't already higher (development only)
 ├── .github/workflows/
 │   ├── test.yml             runs the checks on every push and pull request (advisories and fingerprints without blocking)
 │   ├── feedback-worker.yml  deploys tools/feedback-worker to Cloudflare (by hand, or when it changes on main; skips until its secrets exist)
@@ -69,12 +70,13 @@
     ├── CLAUDE.md            working notes: branches, release steps, site settings (how to give a new feature a switch), user decisions
     ├── settings.json        registers the hooks below
     ├── hooks/
-    │   ├── session_start.py fetches every branch, sets the upstream and NODE_PATH, prints a status line (including the updates branch and page or style changes since the demo video); the docs lag counts main commits that touch the app files, `tests/run.js`, `tests/lib.js` or `tests/groups/`
+    │   ├── session_start.py fetches every branch, sets the upstream and NODE_PATH, prints a status line (including the updates branch and page or style changes since the demo video); the docs lag counts main commits that touch the app files, `config.js`, `tests/run.js`, `tests/lib.js` or `tests/groups/`
     │   ├── syntax-check.sh  `node --check` after a `.js` file is edited
-    │   ├── lpn_git_guard.py commit and push guard (cache bump, docs on main, no commits on main or new branches, tests before push)
-    │   ├── docs_reminder.py reminds when the docs branch is behind main (counting main commits that touch the app files, `tests/run.js`, `tests/lib.js` or `tests/groups/`)
-    │   └── outputs_reminder.py reminds when the download copy (outputs folder and zip) doesn't match main
-    └── agents/              export-reviewer, phone-layout-checker, docs-updater, release-reviewer, security-reviewer, ocr-reviewer, a11y-reviewer
+    │   ├── config_check.js  checks config.js right after it is edited, with the same rules as tests/groups/19-site-config.js
+    │   ├── lpn_git_guard.py commit and push guard (cache bump, also accepted when the same command runs bump.sh first; docs on main, no commits on main or new branches, tests before push)
+    │   ├── docs_reminder.py reminds when the docs branch is behind main (counting main commits that touch the app files, `config.js`, `tests/run.js`, `tests/lib.js` or `tests/groups/`)
+    │   └── outputs_reminder.py reminds when the download copy (outputs folder, and the zip compared by content) doesn't match main
+    └── agents/              export-reviewer, phone-layout-checker, docs-updater (one at a time, lock file /home/claude/lpn-docs-wt.lock), release-reviewer, guide-checker, security-reviewer, ocr-reviewer, a11y-reviewer
 ```
 
 ## What goes where
@@ -109,6 +111,6 @@
 - `tools/demo-video/` only reads the app files; its output goes to `media/demo.mp4` and `media/demo-poster.jpg`, which the app does use, and to `tools/demo-video/screens.json`, which only `tests/groups/08-demo-video.js` reads.
 - `tools/ocr-check/` only reads the app files and its own photos; `tests/groups/18-real-photo.js` loads `check.js` to read the photos on GitHub, and `health.yml` runs it with `--url=` against the live site.
 - `tools/feedback-worker/` runs on Cloudflare, not on GitHub Pages; the app only talks to it through `FEEDBACK_URL` in `panels.js` (`https://lpn-feedback.jamie9904.workers.dev/report` since build 43). `tests/groups/11-feedback-worker.js` imports `worker.mjs` to check it.
-- `tools/release/ship.sh` only runs git and `gh` commands and copies files to the download folder; nothing in the app or the checks uses it.
+- `tools/release/ship.sh` only runs git and `gh` commands and copies files to the download folder; `tools/release/bump.sh` only changes the `CACHE` line in `sw.js`. Nothing in the app or the checks uses either.
 - `.github/`, `.claude/` and `.mcp.json` are on `main` but not published: Jekyll, which GitHub Pages uses to build the site, leaves out files and folders whose names start with a dot.
 - `docs/`, and the version of `README.md` that goes with it, live only on the `docs` branch (`main` has its own `README.md`). Pages publishes from `main`, so they are not on the site. The git guard in `.claude/hooks/lpn_git_guard.py` blocks committing `docs/` files on `main` and merging or pushing `docs` into `main`.
