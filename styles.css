@@ -418,3 +418,12 @@ tr.dmg td.l{box-shadow:inset 3px 0 0 var(--dg)}
 .dc-clear button:disabled{opacity:.55;cursor:default}
 /* "In testing" notes from config.js. */
 .testnote{color:var(--wn);font-weight:700;margin:6px 0}
+/* Zoom buttons in the top-right corner of the camera picture: they add no height and cover only a corner. */
+.vidwrap{position:relative}
+.zoomrow{position:absolute;top:6px;right:6px;display:flex;align-items:center;gap:4px;padding:2px;border-radius:var(--r);background:rgba(0,0,0,.7);color:#fff;font-weight:700}
+.zoomrow[hidden]{display:none}
+.zoomrow button{min-width:44px;min-height:44px;padding:0;font-size:1.4rem;line-height:1;color:#fff;background:transparent;border:2px solid rgba(255,255,255,.75)}
+.zoomrow button:disabled{opacity:.4}
+.zoomrow button:focus-visible{outline:3px solid #fff;outline-offset:1px}
+.zoomrow span{min-width:3.2ch;text-align:center}
+.vidwrap #video{display:block}

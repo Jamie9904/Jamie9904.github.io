@@ -98,13 +98,24 @@ def main():
 
     zip_note = ""
     try:
-        newest = max(os.path.getmtime(os.path.join(SITE, p)) for p in present) if present else 0
-        if not os.path.isfile(ZIP) or os.path.getmtime(ZIP) + 1 < newest:
-            zip_note = "lpn-site.zip is older than the folder."
+        # The zip is compared with the folder by content, not by date: the outputs storage rewrites pictures' and
+        # video's metadata (and so their dates) after they're saved, which made a good zip look older.
+        if not os.path.isfile(ZIP):
+            zip_note = "lpn-site.zip is missing."
         else:
             with zipfile.ZipFile(ZIP) as z:
-                if any(n.startswith("lpn-site/docs/") or n.startswith("lpn-site/.claude/") or n.endswith(".mcp.json") for n in z.namelist()):
+                names = set(z.namelist())
+                if any(n.startswith("lpn-site/docs/") or n.startswith("lpn-site/.claude/") or n.endswith(".mcp.json") for n in names):
                     zip_note = "lpn-site.zip contains docs or Claude settings, which must stay out of it."
+                else:
+                    differ = []
+                    for p in present:
+                        n = "lpn-site/" + p
+                        with open(os.path.join(SITE, p), "rb") as f:
+                            if n not in names or z.read(n) != f.read():
+                                differ.append(p)
+                    if differ:
+                        zip_note = "lpn-site.zip doesn't match the folder (%s)." % ", ".join(differ[:5])
     except Exception as e:
         zip_note = "couldn't check lpn-site.zip (%s)." % e
 

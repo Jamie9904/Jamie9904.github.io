@@ -25,6 +25,20 @@ function loadZX(){
 }
 /* Shows the "in testing" note (config.js) for the scan in use, if there is one. */
 function scanNote(k){document.querySelectorAll('#scanbox .testnote[data-test="liveScan"],#scanbox .testnote[data-test="scanByPhoto"]').forEach(n=>{n.hidden=n.dataset.test!==k})}
+/* The camera is asked for a sharp picture (up to 1920×1080) with continuous focus, so small barcodes can be read
+   from further away; browsers that can't give that use the nearest they have. The slower ZXing reader (iPhones,
+   Firefox) reads every pixel itself, so it asks for 1280×720. */
+const camAsk=(w,h)=>({video:{facingMode:{ideal:"environment"},width:{ideal:w},height:{ideal:h},advanced:[{focusMode:"continuous"}]},audio:false});
+let CAM=camAsk(1920,1080);
+/* Changes a camera setting (torch or zoom) without dropping the others: each setting is its own "advanced" set, so a
+   camera that can't do one still takes the rest. The changed setting goes first. */
+function camApply(t,first){
+  const adv=[first];
+  if(!("zoom" in first)&&zoomTrack&&zoomNow!==zoomMin)adv.push({zoom:zoomNow});
+  if(!("torch" in first)&&torchOn)adv.push({torch:true});
+  adv.push({focusMode:"continuous"});
+  return t.applyConstraints({width:CAM.video.width,height:CAM.video.height,advanced:adv});
+}
 async function startScan(){
   if(scanning)return;
   const v=$("video");
@@ -36,19 +50,25 @@ async function startScan(){
   scanning=true;
   try{
     if("BarcodeDetector" in window){
-      stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}},audio:false});
+      CAM=camAsk(1920,1080);
+      stream=await navigator.mediaDevices.getUserMedia(CAM);
       v.srcObject=stream;await v.play();
       const det=new BarcodeDetector();
+      // One read at a time: on a slow phone a read of a sharp picture can take longer than 250 ms.
+      let busy=false;
       timer=setInterval(async()=>{
-        try{const r=await det.detect(v);if(r.length)onCode(r[0].rawValue)}catch(e){}
+        if(busy)return;busy=true;
+        try{const r=await det.detect(v);if(r.length)onCode(r[0].rawValue)}catch(e){}finally{busy=false}
       },250);
     }else{
       await loadZX();
       zxReader=new ZXing.BrowserMultiFormatReader();
-      await zxReader.decodeFromConstraints({video:{facingMode:{ideal:"environment"}},audio:false},v,(res)=>{if(res)onCode(res.getText())});
+      CAM=camAsk(1280,720);
+      await zxReader.decodeFromConstraints(CAM,v,(res)=>{if(res)onCode(res.getText())});
     }
     keepAwake(true);
-    torchSetup(v.srcObject);
+    torchSetup(v.srcObject);zoomSetup(v.srcObject);
+    try{const st=v.srcObject.getVideoTracks()[0].getSettings();diag("scan","Live scan camera "+st.width+"×"+st.height+(st.zoom?", zoom "+st.zoom:""))}catch(e){}
     $("smsg").textContent="Point the camera at a pallet barcode.";
   }catch(e){
     stopScan(true);
@@ -67,13 +87,37 @@ function torchSetup(s){
 }
 $("torch").onclick=async()=>{
   if(!torchTrack)return;const want=!torchOn;
-  try{await torchTrack.applyConstraints({advanced:[{torch:want}]});torchOn=want}
+  try{await camApply(torchTrack,{torch:want});torchOn=want}
   catch(e){diag("scan","Torch couldn't be switched: "+((e&&e.message)||"error"));$("smsg").textContent=want?"The torch couldn't be switched on. Try more light, or Scan by photo.":"The torch couldn't be switched off. Stop scanning to turn it off.";return}
   const b=$("torch");b.setAttribute("aria-pressed",String(torchOn));b.classList.toggle("on",torchOn);
 };
+/* Zoom: − and + buttons in a corner of the camera picture on phones that let a web page zoom (most Android
+   phones), for reading barcodes from further away without losing focus. Steps are 1×, 1.5×, 2×, 3×, 4×, 5× (as far as
+   the camera goes). The last zoom used is remembered on this phone. */
+let zoomTrack=null,zoomNow=1,zoomMin=1,zoomMax=1;
+const ZOOM_STEPS=[1,1.5,2,3,4,5];
+function zoomSetup(s){
+  const row=$("zoomRow");zoomTrack=null;row.hidden=true;
+  try{
+    const t=s&&s.getVideoTracks&&s.getVideoTracks()[0],c=t&&t.getCapabilities&&t.getCapabilities();
+    if(!c||!c.zoom||!(c.zoom.max>c.zoom.min))return;
+    zoomTrack=t;zoomMin=+c.zoom.min;zoomMax=Math.min(+c.zoom.max,5);zoomNow=zoomMin;
+    let want=zoomMin;try{const k=parseFloat(localStorage.getItem("lpnzoom"));if(k>=zoomMin&&k<=zoomMax)want=k}catch(e){}
+    row.hidden=false;showZoom(zoomMin);if(want!==zoomMin)setZoom(want);
+  }catch(e){}
+}
+function showZoom(v){zoomNow=v;$("zoomVal").textContent=(Math.round(v*10)/10)+"×";$("zoomOut").disabled=v<=zoomMin;$("zoomIn").disabled=v>=zoomMax}
+async function setZoom(v){
+  if(!zoomTrack)return;
+  v=Math.max(zoomMin,Math.min(zoomMax,v));
+  try{await camApply(zoomTrack,{zoom:v});showZoom(v);try{localStorage.setItem("lpnzoom",String(v))}catch(e){}}
+  catch(e){diag("scan","Zoom couldn't be set: "+((e&&e.message)||"error"))}
+}
+$("zoomIn").onclick=()=>{const n=ZOOM_STEPS.find(x=>x>zoomNow+0.01);setZoom(n===undefined?zoomMax:n)};
+$("zoomOut").onclick=()=>{const n=ZOOM_STEPS.slice().reverse().find(x=>x<zoomNow-0.01);setZoom(n===undefined?zoomMin:n)};
 function stopScan(keepMsg){
   scanning=false;keepAwake(false);
-  torchSetup(null);
+  torchSetup(null);zoomSetup(null);
   if(timer){clearInterval(timer);timer=null}
   if(zxReader){try{zxReader.reset()}catch(e){}zxReader=null}
   if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
