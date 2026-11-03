@@ -156,7 +156,7 @@ module.exports = async ({ browser, URL0 }) => {
       setInterval(() => { g.fillStyle = "#777"; g.fillRect(0, 0, 640, 480); }, 50); const st = cv.captureStream(20);
       // A camera with a torch and zoom, as on most Android phones; the calls to switch them are recorded.
       const tr = st.getVideoTracks()[0]; window.__torch = []; window.__zoom = []; tr.getCapabilities = () => ({ torch: true, zoom: { min: 1, max: 5, step: 0.1 } });
-      tr.applyConstraints = async c => { const a = c.advanced[0]; if ("torch" in a) window.__torch.push(a.torch); if ("zoom" in a) window.__zoom.push(a.zoom); };
+      tr.applyConstraints = async c => { (window.__applies = window.__applies || []).push(c); const a = c.advanced[0]; if ("torch" in a) window.__torch.push(a.torch); if ("zoom" in a) window.__zoom.push(a.zoom); };
       if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = async c => { window.__camAsk = c; return st; };
       window.BarcodeDetector = class { async detect() { return window.__code ? [{ rawValue: window.__code }] : []; } }; };
     for (const [w, h, big] of [[360, 640], [375, 667], [390, 844], [360, 640, 1], [375, 667, 1]]) {
@@ -168,16 +168,18 @@ module.exports = async ({ browser, URL0 }) => {
       await q.waitForTimeout(500); await q.evaluate(() => { window.__code = "VLT004040265"; }); await q.waitForTimeout(700);
       const s = await q.evaluate(() => { const b = id => document.getElementById(id).getBoundingClientRect();
         const zr = b("zoomRow"), vr = b("video");
-        return { zoomIn: !document.getElementById("zoomRow").hidden && zr.top >= vr.top && zr.bottom <= vr.bottom + 1 && zr.right <= innerWidth, stop: Math.round(b("stopscan").bottom), msg: Math.round(b("smsg").bottom), torch: Math.round(b("torch").bottom), torchR: Math.round(b("torch").right), vw: innerWidth, vh: innerHeight, text: document.getElementById("smsg").textContent }; });
+        return { zoomIn: !document.getElementById("zoomRow").hidden && zr.top >= vr.top && zr.bottom <= vr.bottom + 1 && zr.right <= innerWidth && b("zoomIn").height >= 44 && b("zoomIn").width >= 44 && zr.width * zr.height <= vr.width * vr.height * 0.45, stop: Math.round(b("stopscan").bottom), msg: Math.round(b("smsg").bottom), torch: Math.round(b("torch").bottom), torchR: Math.round(b("torch").right), vw: innerWidth, vh: innerHeight, text: document.getElementById("smsg").textContent }; });
       check("Live scan at " + w + "×" + h + (big ? " with Extra large text" : "") + ": the Added line, Torch and Stop scanning are on screen", /^Added: VLT004040265/.test(s.text) && s.stop <= s.vh && s.msg <= s.vh && s.torch <= s.vh && s.torchR <= s.vw && s.zoomIn, s);
       if (w === 360 && !big) {
         // A sharper picture with continuous focus is asked for, and the zoom slider sets the camera's zoom and is remembered.
-        let zm = await q.evaluate(async () => { const z = document.getElementById("zoom"); z.value = "3"; z.dispatchEvent(new Event("input")); await new Promise(r => setTimeout(r, 50));
-          return { ask: window.__camAsk.video, calls: window.__zoom.slice(), saved: localStorage.getItem("lpnzoom"), label: document.getElementById("zoomVal").textContent, text: z.getAttribute("aria-valuetext"), name: z.labels[0].textContent }; });
+        let zm = await q.evaluate(async () => { const zin = document.getElementById("zoomIn"), out0 = document.getElementById("zoomOut").disabled;
+          for (let i = 0; i < 3; i++) { zin.click(); await new Promise(r => setTimeout(r, 30)); }
+          return { ask: window.__camAsk.video, calls: window.__zoom.slice(), saved: localStorage.getItem("lpnzoom"), label: document.getElementById("zoomVal").textContent, out0, name: document.getElementById("zoomRow").getAttribute("aria-label"), inName: zin.getAttribute("aria-label"), last: window.__applies[window.__applies.length - 1] }; });
         check("Live scan asks for a sharp picture (1920×1080) with continuous focus", zm.ask.width.ideal === 1920 && zm.ask.height.ideal === 1080 && zm.ask.advanced[0].focusMode === "continuous", zm.ask);
         await q.evaluate(async () => { document.getElementById("stopscan").click(); window.__zoom = []; document.getElementById("scan").click(); await new Promise(r => setTimeout(r, 400)); });
-        zm.again = await q.evaluate(() => ({ calls: window.__zoom.slice(), value: document.getElementById("zoom").value }));
-        check("the Zoom slider zooms the camera, says how much, and the zoom is used again next time", JSON.stringify(zm.calls) === "[3]" && zm.saved === "3" && zm.label === "3×" && zm.text === "3×" && zm.name === "Zoom" && JSON.stringify(zm.again.calls) === "[3]" && zm.again.value === "3", zm);
+        zm.again = await q.evaluate(() => ({ calls: window.__zoom.slice(), value: document.getElementById("zoomVal").textContent }));
+        check("Zoom in steps the camera's zoom (1.5×, 2×, 3×), says how much, and the zoom is used again next time", JSON.stringify(zm.calls) === "[1.5,2,3]" && zm.saved === "3" && zm.label === "3×" && zm.out0 === true && zm.name === "Zoom" && zm.inName === "Zoom in" && JSON.stringify(zm.again.calls) === "[3]" && zm.again.value === "3×", zm);
+        check("changing the zoom keeps the sharp picture and continuous focus", zm.last.width.ideal === 1920 && zm.last.height.ideal === 1080 && zm.last.advanced.some(a => a.focusMode === "continuous"), zm.last);
         await q.evaluate(() => document.getElementById("torch").click()); await q.waitForTimeout(50);
         let t = await q.evaluate(() => ({ calls: window.__torch.slice(), pressed: document.getElementById("torch").getAttribute("aria-pressed") }));
         await q.evaluate(() => document.getElementById("torch").click()); await q.waitForTimeout(50);
