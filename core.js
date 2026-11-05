@@ -144,13 +144,19 @@ function render(){
       // (with damage switched off in config.js, an empty row stands in, so the rest works the same)
       // (with damage switched off in config.js and no description to edit, an empty row stands in, so the rest works the same)
       const wantDesc=noL||!!r.desc||(r.type==="FPP"&&feat("fppDesc")),useRow=feat("damage")||wantDesc;
-      const dr=useRow?dmgRow(r,(g,key)=>{dmgPick=g;finish(true,key)},{damage:feat("damage"),desc:wantDesc,save:key=>finish(true,key)}):document.createElement("tr");if(useRow)tr.after(dr);
+      const dr=useRow?dmgRow(r,(g,key)=>{dmgPick=g;finish(true,key)},{damage:feat("damage"),desc:wantDesc,auto:fromAdd,save:key=>finish(true,key)}):document.createElement("tr");if(useRow)tr.after(dr);
       if(focusDesc&&dr._desc){focusDesc=false;dr._desc.focus()}else{focusDesc=false;inp.focus();inp.select()}
       // Keep the choices clear of the entry bar on phones (the page keeps room for it when scrolling).
       try{dr.scrollIntoView({block:"nearest"})}catch(e){}
+      // A box that opened by itself (and its damage choices) must not sit under the "Added" note: scroll it clear, or if the
+      // page can't scroll that far, take the note away early unless it is a warning.
+      if(fromAdd&&dr._desc){const fl=$("flash");if(fl&&!fl.hidden){const a=dr.getBoundingClientRect(),f=fl.getBoundingClientRect();
+        if(f.top<a.bottom&&f.bottom>a.top){window.scrollBy(0,a.bottom-f.top+8);const a2=dr.getBoundingClientRect();if(f.top<a2.bottom&&f.bottom>a2.top&&!fl.classList.contains("warn"))fl.hidden=true}}}
       let done=false,dmgPick;
       const finish=(ok,key)=>{
         if(done)return;done=true;dr.remove();
+        // Escape drops a description that was typed: say so, so it isn't lost without anyone knowing.
+        if(!ok&&dr._desc&&dr._desc.value.trim()&&dr._desc.value.trim()!==(r.desc||""))$("msg").textContent="Description not saved for "+r.lpn+".";
         // Everything changed in this edit goes back with one Undo.
         const said=[],backs=[],name=r.lpn;
         if(ok&&dr._desc){
@@ -220,13 +226,24 @@ function dmgRow(r,pick,opt){
     const id="desc"+Math.random().toString(36).slice(2,8),lb=document.createElement("label");lb.htmlFor=id;lb.textContent="Description";
     const di=document.createElement("input");di.id=id;di.maxLength=60;di.value=r.desc||"";const fpp=r.type==="FPP"&&!isNoLpn(r.lpn);di.placeholder=fpp?"What’s on it, e.g. kitchen roll":"Optional: wrap, labels, PO number";
     di.setAttribute("aria-label","Description for "+r.lpn);
-    // A handheld scanner can type the next pallet's LPN here (the box opens by itself after No LPN or an FPP pallet): if a fresh
-    // description is just one LPN-shaped word, it is logged as the next pallet instead.
-    di.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();const v=di.value.trim().toUpperCase().replace(/\s+/g,"");
-      if(!r.desc&&/^[A-Z]{1,3}\d{8,12}$/.test(v)){di.value="";opt.save&&opt.save(false);$("lpn").value=v;add();return}
+    // A handheld scanner can type the next pallet's code here (the box opens by itself after No LPN or an FPP pallet). If a
+    // fresh description is one word with digits typed at scanner speed (under 35 ms a character; people take 100 ms or
+    // more), it goes to the LPN box as the next pallet, so the usual checks and warnings apply. Anything typed by hand,
+    // even if it looks like an LPN (a PO number such as PO12345678), stays as the description.
+    let t0=0;di.addEventListener("input",()=>{if(di.value.length<=1)t0=performance.now();if(!di.value)t0=0});
+    di.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();const raw=di.value.trim();
+      const fast=t0&&raw.length>=6&&performance.now()-t0<raw.length*35+100;
+      if(!r.desc&&fast&&!/\s/.test(raw)&&/\d{4}/.test(raw)){di.value="";opt.save&&opt.save(false);$("lpn").value=raw;add();return}
       opt.save&&opt.save(true)}};
     dl.append(lb,di);td.appendChild(dl);tr._desc=di;
-    if(isNoLpn(r.lpn))testNote("noLpn",td);else if(fpp&&feat("fppDesc"))testNote("fppDesc",td);
+    const tn=isNoLpn(r.lpn)?testNote("noLpn",td):fpp&&feat("fppDesc")?testNote("fppDesc",td):null;
+    // Screen readers hear why focus moved here (the "Added" message can be cut off by the move) and how to carry on.
+    const say=[];
+    if(opt.auto){const h=document.createElement("span");h.className="srhint";h.id=id+"h";
+      h.textContent=($("flash").hidden?"Added "+r.lpn:$("flash").textContent)+". Optional: "+(fpp?"type what’s on it":"describe the pallet")+", or press Enter to skip and scan the next one.";
+      dl.appendChild(h);say.push(h.id)}
+    if(tn){tn.id=id+"t";say.push(tn.id)}
+    if(say.length)di.setAttribute("aria-describedby",say.join(" "));
   }
   if(opt.damage===false)return tr;
   const box=document.createElement("div");box.className="dmgbox";box.setAttribute("role","group");box.setAttribute("aria-label","Damage for "+r.lpn);td.appendChild(box);

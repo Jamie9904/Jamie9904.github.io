@@ -116,6 +116,7 @@ td input[type=checkbox]{width:26px;height:26px;accent-color:var(--ac)}
 .empty{color:var(--mu);text-align:center;padding:30px 12px}
 td.l{cursor:text}
 td.l input{width:100%;min-width:9ch;min-height:38px;font:600 .98rem "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;padding:4px 8px}
+@media (max-width:359px){td.l input{min-width:0}}
 .flt{display:flex;gap:8px;margin:0 0 10px}
 .flt input{flex:1;min-width:0}
 .flt select{flex:0 0 auto}
@@ -389,7 +390,7 @@ details.opts>summary .note{min-width:0;overflow:hidden;text-overflow:ellipsis;wh
 /* Damaged pallets: a note under the LPN, and the choices shown while a pallet is edited. */
 .dmgtag{display:block;color:var(--dg);font:700 .85rem/1.3 "Atkinson Hyperlegible",system-ui,sans-serif;margin-top:2px;word-break:normal;white-space:normal;overflow-wrap:anywhere}
 tr.dmg td.l{box-shadow:inset 3px 0 0 var(--dg)}
-.dmgrow td{padding-top:0}
+.dmgrow td{padding-top:0;white-space:normal}
 .dmgbox{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 0}
 .dmgbox .dmglab{font-weight:700;margin-right:2px}
 .dmgbox button{min-height:44px;padding:4px 10px}
@@ -432,5 +433,6 @@ tr.dmg td.l{box-shadow:inset 3px 0 0 var(--dg)}
 .desctag{display:block;color:var(--ink);font:600 .85rem/1.3 "Atkinson Hyperlegible",system-ui,sans-serif;margin-top:2px;white-space:normal;overflow-wrap:anywhere;word-break:normal}
 .descline{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:6px 0 0}
 .descline label{margin:0;font-weight:700}
+.srhint{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .descline input{flex:1 1 200px;min-width:0}
 @media (max-width:300px){.entry .btnrow{flex-wrap:wrap}.entry .btnrow button{min-width:6em}}

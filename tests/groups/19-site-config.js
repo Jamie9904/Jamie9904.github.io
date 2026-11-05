@@ -76,7 +76,7 @@ module.exports = async ({ browser, URL0 }) => {
     out.dmg = !!document.querySelector(".dmgrow .testnote"); document.activeElement.blur(); await new Promise(r => setTimeout(r, 50));
     rows = [{ lpn: "VLT004040273", type: "FPP", fsdu: false }]; save(); render();
     document.querySelector("#body .lpnedit").click(); await new Promise(r => setTimeout(r, 100));
-    out.fpp = !!document.querySelector('.dmgrow .testnote[data-test="fppDesc"]'); document.activeElement.blur(); await new Promise(r => setTimeout(r, 50));
+    out.fpp = (() => { const n = document.querySelector('.dmgrow .testnote[data-test="fppDesc"]'), d = document.querySelector(".descline input"); return !!n && !!d && (d.getAttribute("aria-describedby") || "").split(" ").includes(n.id); })(); document.activeElement.blur(); await new Promise(r => setTimeout(r, 50));
     document.getElementById("cmpLogNums").value = "VLT004040265"; document.getElementById("cmpNums").value = "VLT004040265\nRBY006292169";
     document.getElementById("cmpCheck").click(); await new Promise(r => setTimeout(r, 100));
     out.share = !!document.querySelector('#cmpRes .testnote[data-test="shareMissing"]');
