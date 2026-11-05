@@ -222,7 +222,7 @@ async function buildCmpPdf(res,cnt,manCount,d,logCopy){
   doc.autoTable(Object.assign({},PDF_BASE,PDF_PLAIN,{
     startY:y0,margin:{left:RX,right:10,top:12,bottom:16},tableWidth:RW,
     head:[["Summary","Count"]],
-    body:[["On manifest",manCount],["Matched",cnt.ok],["Missing",cnt.missing],["Log only",cnt.book]].concat(cnt.noLpn?[["No LPN (check by hand)",cnt.noLpn]]:[]),
+    body:[["On manifest",manCount],["Matched",cnt.ok],["Missing",cnt.missing],["Log only",cnt.book]].concat(cnt.noLpn?[["No LPN pallets",cnt.noLpn]]:[]),
     columnStyles:{1:{halign:"center",cellWidth:22}}
   }));
   doc.autoTable(Object.assign({},PDF_BASE,PDF_PLAIN,{

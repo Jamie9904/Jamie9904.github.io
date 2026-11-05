@@ -334,7 +334,7 @@ $("cmpLogBtn").onclick=()=>{$("cmpLogFile").value="";$("cmpLogFile").click()};
 $("cmpLogFile").onchange=async e=>{
   const f=e.target.files&&e.target.files[0];if(!f)return;
   cmpMsg("Reading log…");
-  try{const l=await readLog(f);$("cmpLogNums").value=l.join("\n");$("cmpLogName").textContent=f.name+": "+l.length+" LPNs found"+(logSrc&&mergeLog?". The comparison will be added to this file as a new tab.":"");cmpMsg(/\.pdf$/i.test(f.name)?"Read from PDF. Check the log numbers are correct, then compare."+oddNote("cmpLogNums"):"")}
+  try{const l=await readLog(f);$("cmpLogNums").value=l.join("\n");$("cmpLogName").textContent=f.name+": "+l.filter(x=>!isNoLpn(x)).length+" LPNs found"+(l.some(isNoLpn)?" and "+l.filter(isNoLpn).length+" with no LPN":"")+(logSrc&&mergeLog?". The comparison will be added to this file as a new tab.":"");cmpMsg(/\.pdf$/i.test(f.name)?"Read from PDF. Check the log numbers are correct, then compare."+oddNote("cmpLogNums"):"")}
   catch(err){$("cmpLogName").textContent="";cmpMsg(err.message||"Couldn't read that file.")}
 };
 $("cmpLogPhotoBtn").onclick=()=>{$("cmpLogPhotoFile").value="";$("cmpLogPhotoFile").click()};
@@ -634,7 +634,7 @@ $("cmpGo").onclick=async()=>{
       {v:["✓ Matched",cnt.ok]},
       {v:["✗ Missing",cnt.missing]},
       {v:["⚠ Log only",cnt.book]},
-      ...(cnt.noLpn?[{v:["No LPN (check by hand)",cnt.noLpn]}]:[]),
+      ...(cnt.noLpn?[{v:["No LPN pallets",cnt.noLpn]}]:[]),
       null,
       {v:["Delivery Details",""],h:1,merge:1},
       {v:["Date",ukDate(d)],l:1}
@@ -663,7 +663,7 @@ $("cmpGo").onclick=async()=>{
         put(8,right.v[1],{bold:hd,fill:hd?HD:null,center:typeof right.v[1]==="number",box:bx(8)});
         if(right.merge)ws.mergeCells(r.number,7,r.number,8);
       }
-      r.height=(head||(right&&right.h))?32:Math.max(24,x?xlLpnLines(x.n,lpnW)*18+6:0);
+      r.height=(head||(right&&right.h))?32:Math.max(24,x?xlLpnLines(x.n,lpnW)*18+6:0,right&&typeof right.v[0]==="string"?xlLines(right.v[0],25)*18+6:0);
     }
     xlMadeWith(ws,H+n+2,8);
     xlPrint(ws,H);
