@@ -36,7 +36,8 @@
 │   ├── groups/              the checks, one self-contained file per area (since build 52)
 │   │   ├── 01-layout.js … 06-real-export.js     layout; phone flows and Settings; Excel export; version note, PDF safety and spreadsheet import; saved data from outside and fingerprints; real export libraries and library versions
 │   │   ├── 07-security-policy.js … 12-report.js security policy; demo video; manifest photos and problem report; accessibility; feedback Worker; Report a problem or idea
-│   │   └── 13-photo-notes.js … 21-offline.js    photo notes; Find an LPN and turned photos; damaged pallets and Share this app; welcome card; offline store; real photo reading (GitHub only); site settings (config.js, build 53); pallets with no LPN (20-no-lpn.js, build 55); offline
+│   │   └── 13-photo-notes.js … 22-offline.js    photo notes; Find an LPN and turned photos; damaged pallets and Share this app; welcome card; offline store; real photo reading (GitHub only); site settings (config.js, build 53); pallets with no LPN (20-no-lpn.js, build 55); data saved by older builds (21-old-data.js, after build 55); offline
+│   ├── fixtures/old/build-N/  files saved by builds 19, 30, 46, 49 and 54 with their own code: storage.json, backup.json, cells.json, keywords.txt, log.xlsx, log.pdf, expect.json (read by groups/21-old-data.js)
 │   ├── advisories.js        asks osv.dev about security advisories for the pinned libraries
 │   ├── advisories-accepted.json  advisories checked and found not to affect the app, with reasons
 │   └── sri.js               checks the library fingerprints in core.js against the CDNs
@@ -55,13 +56,17 @@
 │   ├── check.js             runs the app's photo code on the photos and scores the LPNs (also used by tests/groups/18-real-photo.js on GitHub)
 │   ├── expected.json        the LPNs printed on each photo (23)
 │   └── photos/              the user's four manifest photos, address boxes cut off (qub, rby, run, vlt .jpg), run-sideways.jpg (run.jpg turned, build 46) and rby-upside-down.jpg (rby.jpg turned 180°, build 47)
+├── tools/old-data/          makes tests/fixtures/old from older builds (development only, after build 55)
+│   ├── make.js              runs each build in BUILDS from git history with stand-in ExcelJS and jsPDF and records its storage, backup, Excel cells and PDF hidden data
+│   └── files.py             turns the recorded cells and hidden data into log.xlsx (openpyxl) and log.pdf (reportlab)
 ├── tools/feedback-worker/   Cloudflare Worker that turns Report a problem or idea into issues in a private repo (not part of the site)
 │   ├── worker.mjs           POST /report: checks, limits (Limits Durable Object), GitHub issue and photo
 │   ├── wrangler.toml        Worker name, repo, allowed origin, Durable Object binding
 │   └── README.md            one-time set-up steps
 ├── tools/release/
 │   ├── ship.sh              puts updates live and checks it: Checks, Pages, health check, download copy (development only)
-│   └── bump.sh              raises CACHE in sw.js to the live number plus one, only if it isn't already higher (development only)
+│   ├── bump.sh              raises CACHE in sw.js to the live number plus one, only if it isn't already higher (development only)
+│   └── photo-ok.sh          confirms manifest photos in tools/ocr-check/photos/ were checked for addresses, names and phone numbers, so the git guard lets them be committed (records their git hash in .git/lpn-photos-ok)
 ├── .github/workflows/
 │   ├── test.yml             runs the checks on every push and pull request (advisories and fingerprints without blocking)
 │   ├── feedback-worker.yml  deploys tools/feedback-worker to Cloudflare (by hand, or when it changes on main; skips until its secrets exist)
@@ -73,10 +78,11 @@
     │   ├── session_start.py fetches every branch, sets the upstream and NODE_PATH, prints a status line (including the updates branch and page or style changes since the demo video); the docs lag counts main commits that touch the app files, `config.js`, `tests/run.js`, `tests/lib.js` or `tests/groups/`
     │   ├── syntax-check.sh  `node --check` after a `.js` file is edited
     │   ├── config_check.js  checks config.js right after it is edited, with the same rules as tests/groups/19-site-config.js
-    │   ├── lpn_git_guard.py commit and push guard (cache bump, also accepted when the same command runs bump.sh first; docs on main, no commits on main or new branches, tests before push)
+    │   ├── lpn_git_guard.py commit and push guard (cache bump, also accepted when the same command runs bump.sh first; docs on main, no commits on main or new branches, unconfirmed manifest photos, tests before push)
+    │   ├── uk_spelling.js   flags US spellings in text people see after index.html or an app script is edited (`--all` checks every app file)
     │   ├── docs_reminder.py reminds when the docs branch is behind main (counting main commits that touch the app files, `config.js`, `tests/run.js`, `tests/lib.js` or `tests/groups/`)
     │   └── outputs_reminder.py reminds when the download copy (outputs folder, and the zip compared by content; pictures, video and SVGs only need to be in the zip) doesn't match main
-    └── agents/              export-reviewer, phone-layout-checker, docs-updater (one at a time, lock file /home/claude/lpn-docs-wt.lock), release-reviewer, guide-checker, security-reviewer, ocr-reviewer, a11y-reviewer
+    └── agents/              export-reviewer, phone-layout-checker, docs-updater (one at a time, lock file /home/claude/lpn-docs-wt.lock), release-reviewer (with a never-build list), old-data-checker, guide-checker, security-reviewer, ocr-reviewer, a11y-reviewer
 ```
 
 ## What goes where
@@ -110,7 +116,8 @@
 - `tests/`, `tools/`, `package.json`, `DESIGN.md` and `README.md` are on `main`, so GitHub Pages publishes them alongside the app. `tools/` is kept out of the site zip and the download copy (`outputs_reminder.py` doesn't count it as a site file).
 - `tools/demo-video/` only reads the app files; its output goes to `media/demo.mp4` and `media/demo-poster.jpg`, which the app does use, and to `tools/demo-video/screens.json`, which only `tests/groups/08-demo-video.js` reads.
 - `tools/ocr-check/` only reads the app files and its own photos; `tests/groups/18-real-photo.js` loads `check.js` to read the photos on GitHub, and `health.yml` runs it with `--url=` against the live site.
+- `tools/old-data/` reads older builds from git history and writes only into `tests/fixtures/old/`, which only `tests/groups/21-old-data.js` reads.
 - `tools/feedback-worker/` runs on Cloudflare, not on GitHub Pages; the app only talks to it through `FEEDBACK_URL` in `panels.js` (`https://lpn-feedback.jamie9904.workers.dev/report` since build 43). `tests/groups/11-feedback-worker.js` imports `worker.mjs` to check it.
-- `tools/release/ship.sh` only runs git and `gh` commands and copies files to the download folder; `tools/release/bump.sh` only changes the `CACHE` line in `sw.js`. Nothing in the app or the checks uses either.
+- `tools/release/ship.sh` only runs git and `gh` commands and copies files to the download folder; `tools/release/bump.sh` only changes the `CACHE` line in `sw.js`; `tools/release/photo-ok.sh` only adds lines to `.git/lpn-photos-ok`. Nothing in the app or the checks uses them.
 - `.github/`, `.claude/` and `.mcp.json` are on `main` but not published: Jekyll, which GitHub Pages uses to build the site, leaves out files and folders whose names start with a dot.
 - `docs/`, and the version of `README.md` that goes with it, live only on the `docs` branch (`main` has its own `README.md`). Pages publishes from `main`, so they are not on the site. The git guard in `.claude/hooks/lpn_git_guard.py` blocks committing `docs/` files on `main` and merging or pushing `docs` into `main`.

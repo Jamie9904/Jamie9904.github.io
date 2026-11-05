@@ -58,7 +58,7 @@ Then: fill in the delivery details → type `RUN000000001` into the LPN box → 
 | Storage | `localStorage` (keys prefixed `lpn`) |
 | Fonts | Atkinson Hyperlegible, IBM Plex Mono (self-hosted, SIL OFL) |
 | Hosting | GitHub Pages; Cloudflare Workers (free plan) with a Durable Object for the feedback Worker only |
-| Checks | Node.js + Playwright, with the real ExcelJS, jsPDF, pdf.js, pdf-lib, Tesseract.js and ZXing at the app's versions (every flow also checked under the security policy); split into one file per area in `tests/groups/` and run by `tests/run.js`; run by GitHub Actions on every push and in a weekly health check, which also checks the libraries for security advisories (osv.dev) and their fingerprints, and that the live demo video plays (and, from the next release, that the report Worker answers and its GitHub token works and isn't about to run out); the checks on GitHub also read four real manifest photos with the real Tesseract.js and fail on any wrong LPN, and the weekly health check reads them with the live site |
+| Checks | Node.js + Playwright, with the real ExcelJS, jsPDF, pdf.js, pdf-lib, Tesseract.js and ZXing at the app's versions (every flow also checked under the security policy); split into one file per area in `tests/groups/` and run by `tests/run.js`; run by GitHub Actions on every push and in a weekly health check, which also checks the libraries for security advisories (osv.dev) and their fingerprints, and that the live demo video plays (and, from the next release, that the report Worker answers and its GitHub token works and isn't about to run out); the checks also open data saved by five older builds (browser storage, backups, Excel and PDF exports, made by each build's own code); the checks on GitHub also read four real manifest photos with the real Tesseract.js and fail on any wrong LPN, and the weekly health check reads them with the live site |
 
 Libraries load only when a feature first needs them: from cdnjs with jsDelivr as fallback, except pdf.js, which loads as a module from jsDelivr with unpkg as fallback. Script-tag libraries carry an integrity hash (`SRI` in `core.js`), so the browser refuses a changed file. A Content Security Policy in `index.html` limits scripts to the site, cdnjs, jsDelivr and unpkg (reading photos needs iOS 16+ on an iPhone because of it).
 
@@ -93,11 +93,12 @@ A single page (`index.html`) loads the site settings (`config.js`) and then five
 ├── logo.png            default logo (optional)
 ├── presets.json        shared LPN prefix presets (optional)
 ├── DESIGN.md           design system notes
-├── tests/              run.js (runs the automatic checks), lib.js (shared helpers), groups/ (the checks, one file per area: 01-layout.js … 21-offline.js), advisories.js + advisories-accepted.json (security advisories), sri.js (library fingerprints)
+├── tests/              run.js (runs the automatic checks), lib.js (shared helpers), groups/ (the checks, one file per area: 01-layout.js … 22-offline.js, including 21-old-data.js for data saved by older builds), fixtures/old/ (files saved by builds 19 to 54), advisories.js + advisories-accepted.json (security advisories), sri.js (library fingerprints)
 ├── tools/demo-video/   recorder that re-makes the Guide demo video from the current app (sh tools/demo-video/make.sh)
 ├── tools/ocr-check/    photo reading check on the user's real manifest photos (node tools/ocr-check/check.js)
+├── tools/old-data/     makes the old-build files in tests/fixtures/old from each build's own code (make.js, then files.py)
 ├── tools/feedback-worker/  Cloudflare Worker for Report a problem or idea (set-up in its README.md)
-├── tools/release/      ship.sh: puts updates live, waits for Checks, Pages and the health check, syncs the download copy; bump.sh: raises the cache number in sw.js
+├── tools/release/      ship.sh: puts updates live, waits for Checks, Pages and the health check, syncs the download copy; bump.sh: raises the cache number in sw.js; photo-ok.sh: confirms manifest photos were checked for personal details before they are committed
 ├── package.json        test dependencies only (Playwright and the export libraries)
 ├── .github/workflows/  test.yml (checks on every push), health.yml (weekly health check), feedback-worker.yml (deploys the feedback Worker)
 ├── .mcp.json           Context7 library documentation for Claude Code
