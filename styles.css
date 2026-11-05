@@ -115,8 +115,9 @@ td input[type=checkbox]{width:26px;height:26px;accent-color:var(--ac)}
 #video{width:100%;max-height:200px;background:#000;border-radius:var(--r);object-fit:cover}
 .empty{color:var(--mu);text-align:center;padding:30px 12px}
 td.l{cursor:text}
-td.l input{width:100%;min-width:9ch;min-height:38px;font:600 .98rem "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;padding:4px 8px}
-@media (max-width:359px){td.l input{min-width:0}}
+td.l input{width:100%;min-width:9ch;min-height:44px;font:600 .98rem "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;padding:4px 8px}
+@media (max-width:359px){td.l input{min-width:0}
+}
 .flt{display:flex;gap:8px;margin:0 0 10px}
 .flt input{flex:1;min-width:0}
 .flt select{flex:0 0 auto}
@@ -331,6 +332,8 @@ button.tgl .chev .chv{margin:0;width:18px;height:18px}
   .addgrid>div:nth-child(2){min-width:0}
   .dockcnt{min-width:0;flex:0 1 auto;white-space:nowrap}
 }
+/* Very narrow phones: a little less space between the FSDU box, the count and Undo, so the count has room. */
+@media (max-width:359px){.addgrid>div:nth-child(2){gap:5px}.undolast:not([hidden]){margin-left:0}}
 
 /* review fixes */
 .expinfo.prog{color:var(--ink)}
@@ -431,6 +434,8 @@ tr.dmg td.l{box-shadow:inset 3px 0 0 var(--dg)}
 /* Pallets with no LPN: shown in the body font, and a description line under the LPN. */
 .lpnedit.nolpn{font-family:"Atkinson Hyperlegible",system-ui,sans-serif;font-style:italic}
 .desctag{display:block;color:var(--ink);font:600 .85rem/1.3 "Atkinson Hyperlegible",system-ui,sans-serif;margin-top:2px;white-space:normal;overflow-wrap:anywhere;word-break:normal}
+/* Narrow phones: a long description shows two lines under the LPN (all of it when the LPN is tapped, and on the exports). */
+@media (max-width:359px){td.l .desctag{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}}
 .descline{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:6px 0 0}
 .descline label{margin:0;font-weight:700}
 .srhint{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}

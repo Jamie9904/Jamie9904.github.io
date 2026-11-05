@@ -83,7 +83,7 @@ const okLogo=v=>typeof v==="string"&&/^data:image\/(png|jpeg);base64,[A-Za-z0-9+
 try{const c=JSON.parse(localStorage.getItem("lpncfg")||"null");cfg=Object.assign(cfg,cleanCfg(c))}catch(e){}
 if(!TYPES.includes(cfg.defType))cfg.defType="BB";
 const saveCfg=()=>{try{localStorage.setItem("lpncfg",JSON.stringify(cfg))}catch(e){}};
-const applyCfg=()=>{document.documentElement.style.setProperty("--ts",cfg.size||"1")};
+const applyCfg=()=>{document.documentElement.style.setProperty("--ts",cfg.size||"1");const dc=document.getElementById("dockCnt");if(dc&&dc.dataset.opts)try{fitDock(dc,JSON.parse(dc.dataset.opts))}catch(e){}};
 applyCfg();
 let actx=null;
 function sfx(kind){
@@ -271,10 +271,11 @@ function summary(){
    if(exported&&rows.length){const t=new Date(exported.at),hm=String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0");en.hidden=false;en.textContent=fresh?"Exported at "+hm+".":"Changed since it was exported at "+hm+".";en.classList.toggle("stale",!fresh)}else en.hidden=true;
    if(!fresh)$("nextBar").hidden=true;}
   const ms=typeof manLive==="function"?manLive():null;
-  updateDel();{const ex=parseInt($("expect").value,10),nar=innerWidth<400,dc=$("dockCnt");
+  updateDel();{const ex=parseInt($("expect").value,10),dc=$("dockCnt");
     const full=ms?ms.found+" of "+ms.total+" on manifest":rows.length?rows.length+(ex>=0?" of "+ex:"")+" logged":"";
-    dc.textContent=!rows.length&&!ms?"":ms?(nar?ms.found+"/"+ms.total:ms.found+"/"+ms.total+" on manifest"):(ex>=0?(nar?rows.length+"/"+ex:rows.length+" of "+ex+" logged"):rows.length+" logged");
-    dc.title=full;dc.setAttribute("aria-label",full);}
+    // The longest wording that fits the entry bar (narrow phones and Extra large text get the short one), never cut off.
+    const n=rows.length,opts=!n&&!ms?[""]:ms?[ms.found+"/"+ms.total+" on manifest",ms.found+"/"+ms.total,String(ms.found)]:ex>=0?[n+" of "+ex+" logged",n+"/"+ex+" logged",n+"/"+ex,String(n)]:[n+" logged",String(n)];
+    fitDock(dc,opts);dc.title=full;dc.setAttribute("aria-label",full);}
   const ei=$("expInfo"),ex=parseInt($("expect").value,10);
   if(ex>=0&&ms&&ms.total===ex)ei.hidden=true;
   else if(ex>=0){const d=rows.length-ex;ei.hidden=false;ei.className="expinfo "+(d===0?"ok":d<0?"prog":"bad");ei.textContent=rows.length+" of "+ex+" expected"+(d===0?" ✓ all accounted for":d<0?" ("+(-d)+" to go)":" ("+d+" more than expected)")}else ei.hidden=true;
@@ -341,6 +342,10 @@ function addValue(v,o){
   // Not during Live scan: the phone's keyboard would cover the camera. Those are tapped afterwards.
   if(o.type==="FPP"&&!isNoLpn(v)&&feat("fppDesc")&&!(typeof scanning!=="undefined"&&scanning))openDesc(rows.length-1);
 }
+/* Puts the first wording that fits in the entry bar's pallet count (the last one if none does). */
+function fitDock(dc,opts){dc.dataset.opts=JSON.stringify(opts);for(let i=0;i<opts.length;i++){dc.textContent=opts[i];if(i===opts.length-1||!dc.clientWidth||dc.scrollWidth<=dc.clientWidth)return}}
+// Rotating the phone or changing the text size changes the room, so the wording is chosen again.
+addEventListener("resize",()=>{const dc=$("dockCnt");if(dc&&dc.dataset.opts)try{fitDock(dc,JSON.parse(dc.dataset.opts))}catch(e){}});
 /* Opens pallet i for editing with its description box focused. */
 function openDesc(i){setTimeout(()=>{const b=document.querySelector('#body .lpnedit[data-i="'+i+'"]');if(b){focusDesc=true;b.click()}},0)}
 /* No LPN button: logs a pallet with no LPN as the next "No LPN n", with the type and FSDU chosen, then opens it so a
