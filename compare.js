@@ -586,7 +586,7 @@ function setLogFrom(list,rowsArr,d,recv,label,trailer){
 }
 $("cmpUseLog").onclick=()=>{
   if(!rows.length){cmpMsg("The log is empty. Add some pallets first, or upload a log.");return}
-  setLogFrom(rows.map(r=>r.lpn),rows,$("date").value,$("recv").value,"Current log: "+rows.length+" LPNs",$("trailer").value);
+  setLogFrom(rows.map(r=>r.lpn),rows,$("date").value,$("recv").value,"Current log: "+rows.length+(rows.length===1?" pallet":" pallets"),$("trailer").value);
 };
 function fillCmpHist(){
   try{pruneHist()}catch(e){}
@@ -596,7 +596,7 @@ function fillCmpHist(){
 $("cmpHist").addEventListener("pointerdown",fillCmpHist);$("cmpHist").addEventListener("focus",fillCmpHist);
 $("cmpHist").onchange=()=>{
   const h=hist.find(x=>x.id===$("cmpHist").value);if(!h)return;
-  setLogFrom(h.rows.map(r=>r.lpn),h.rows,h.date,h.recv,"Saved delivery: "+(ukDate(h.date)||"No date")+", "+h.rows.length+" LPNs",h.trailer);
+  setLogFrom(h.rows.map(r=>r.lpn),h.rows,h.date,h.recv,"Saved delivery: "+(ukDate(h.date)||"No date")+", "+h.rows.length+(h.rows.length===1?" pallet":" pallets"),h.trailer);
   $("cmpHist").value="";
 };
 $("cmpCheck").onclick=()=>{

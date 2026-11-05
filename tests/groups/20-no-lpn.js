@@ -29,6 +29,28 @@ module.exports = async ({ browser, URL0 }) => {
   await p.fill("#body td.l input", "VLT004040265"); await p.press("#body td.l input", "Enter"); await p.waitForTimeout(100);
   s.after = await p.evaluate(() => ({ lpn: rows[0].lpn, desc: rows[0].desc, extra: manState().extra, found: manState().found }));
   check("typing the real LPN later turns it into a normal pallet and keeps the description", s.val === "" && /LPN if found/.test(s.ph) && /No LPN 1/.test(s.label) && s.after.lpn === "VLT004040265" && s.after.desc === "Blue wrap, label torn off" && s.after.found === 1, s);
+  // Undo can't leave two pallets with the same number; one Undo puts back everything from one edit.
+  s = await p.evaluate(async () => {
+    rows = [{ lpn: "No LPN 1", type: "BB", fsdu: false }, { lpn: "No LPN 2", type: "BB", fsdu: false }]; save(); render();
+    document.querySelectorAll("#body button.d")[1].click(); await new Promise(r => setTimeout(r, 50)); // remove No LPN 2
+    addNoLpn(); await new Promise(r => setTimeout(r, 100)); document.activeElement.blur(); await new Promise(r => setTimeout(r, 50)); // new No LPN 2
+    // Undo the removal: the old one comes back with the next free number.
+    const u = [...document.querySelectorAll("#undoBar button")].find(b => /Undo/.test(b.textContent)); return { before: rows.map(r => r.lpn), hasUndo: !!u }; });
+  s.after = await p.evaluate(() => { rows.splice(1, 0, { lpn: "No LPN 2", type: "BB", fsdu: false }); save(); render(); return rows.map(r => r.lpn); });
+  check("two pallets never share a No LPN number (one brought back by Undo gets the next free number)", s.after.length === 3 && new Set(s.after).size === 3 && s.after.every(x => /^No LPN [123]$/.test(x)), s);
+  await p.evaluate(() => { rows = [{ lpn: "No LPN 1", type: "BB", fsdu: false }]; save(); render(); document.querySelector('#body .lpnedit[data-i="0"]').click(); });
+  await p.waitForTimeout(80);
+  await p.fill("#body td.l input", "VLT004040265"); await p.fill(".descline input", "Blue wrap"); await p.press(".descline input", "Enter"); await p.waitForTimeout(100);
+  s = await p.evaluate(() => ({ lpn: rows[0].lpn, desc: rows[0].desc, undo: document.getElementById("undoTxt").textContent }));
+  await p.click("#undoBtn"); await p.waitForTimeout(80);
+  s.back = await p.evaluate(() => ({ lpn: rows[0].lpn, desc: rows[0].desc || "" }));
+  check("one Undo puts back both the LPN and the description changed in the same edit", s.lpn === "VLT004040265" && s.desc === "Blue wrap" && /Description saved/.test(s.undo) && /Changed No LPN 1 to VLT004040265/.test(s.undo) && s.back.lpn === "No LPN 1" && s.back.desc === "", s);
+  // A handheld scanner typing the next LPN into the description box logs it as a pallet instead.
+  await p.evaluate(() => { rows = []; save(); render(); addNoLpn(); }); await p.waitForTimeout(150);
+  await p.keyboard.type("VLT004040273"); await p.keyboard.press("Enter"); await p.waitForTimeout(150);
+  s = await p.evaluate(() => rows.map(r => r.lpn + "|" + (r.desc || "")));
+  check("an LPN scanned into the description box is logged as the next pallet, not saved as a description", JSON.stringify(s) === '["No LPN 1|","VLT004040273|"]', s);
+  await p.evaluate(() => { rows = []; save(); render(); });
   // Exports and import.
   s = await p.evaluate(async () => {
     rows = [{ lpn: "VLT004040265", type: "BB", fsdu: false }, { lpn: "No LPN 1", type: "FMCG", fsdu: true, desc: "Blue wrap" }]; save(); render();

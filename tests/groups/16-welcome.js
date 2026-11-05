@@ -25,7 +25,7 @@ module.exports = async ({ browser, URL0 }) => {
     // After an update: the newest changelog line, once.
     q = await page(browser, 375, { init: () => { if (!sessionStorage.getItem("again")) { localStorage.setItem("lpnseenbuild", "1"); localStorage.setItem("lpnlog", JSON.stringify({ rows: [] })); sessionStorage.setItem("again", "1"); } } });
     await q.goto(URL0); await q.waitForTimeout(600);
-    s = await q.evaluate(() => { const h = document.getElementById("hello"), first = (HELP.log.match(/<li>([\s\S]*?)<\/li>/) || [])[1].replace(/<[^>]+>/g, "").slice(0, 30); return { shown: !h.hidden, text: document.getElementById("helloTxt").textContent, first, seen: localStorage.getItem("lpnseenbuild") }; });
+    s = await q.evaluate(() => { const h = document.getElementById("hello"), first = (siteHtml(HELP.log).match(/<li>([\s\S]*?)<\/li>/) || [])[1].replace(/<[^>]+>/g, "").slice(0, 30); return { shown: !h.hidden, text: document.getElementById("helloTxt").textContent, first, seen: localStorage.getItem("lpnseenbuild") }; });
     const build = await q.evaluate(() => appBuildP);
     check("after an update, a card shows the newest changelog line, and the build is remembered", s.shown && s.text.startsWith("Updated. " + s.first) && s.seen === build && +build > 1, { s, build });
     await q.evaluate(() => [...document.querySelectorAll("#helloBtns button")].find(b => /See what/.test(b.textContent)).click()); await q.waitForTimeout(200);

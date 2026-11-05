@@ -104,7 +104,14 @@ function load(){
   }catch(e){}
   if(!$("date").value)$("date").value=localToday();
 }
+/* Keeps "No LPN n" numbers unique in the log: Undo or an import can bring back a number that has been used again
+   since, so a repeat gets the next free number. */
+function fixNoLpn(){
+  const used=new Set();let max=0;rows.forEach(r=>{const m=/^No LPN (\d+)$/i.exec(String(r.lpn).trim());if(m)max=Math.max(max,+m[1])});
+  rows.forEach(r=>{const m=/^No LPN (\d+)$/i.exec(String(r.lpn).trim());if(!m)return;if(used.has(+m[1]))r.lpn="No LPN "+(++max);else used.add(+m[1])});
+}
 function save(){
+  fixNoLpn();
   try{localStorage.setItem("lpnlog",JSON.stringify(Object.assign({rows:rows},getDel())))}catch(e){}
 }
 function render(){
@@ -144,23 +151,26 @@ function render(){
       let done=false,dmgPick;
       const finish=(ok,key)=>{
         if(done)return;done=true;dr.remove();
+        // Everything changed in this edit goes back with one Undo.
+        const said=[],backs=[],name=r.lpn;
         if(ok&&dr._desc){
           const d=dr._desc.value.replace(/\s+/g," ").trim().slice(0,60),wasD=r.desc||"";
-          if(d!==wasD){if(d)r.desc=d;else delete r.desc;save();showUndo(d?"Description saved for "+r.lpn:"Description removed from "+r.lpn,()=>{if(wasD)r.desc=wasD;else delete r.desc;save();render()})}
+          if(d!==wasD){if(d)r.desc=d;else delete r.desc;said.push(d?"Description saved for "+name:"Description removed from "+name);backs.push(()=>{if(wasD)r.desc=wasD;else delete r.desc})}
         }
         if(ok&&dmgPick!==undefined&&dmgPick!==(r.dmg||"")){
-          const was=r.dmg||"";if(dmgPick)r.dmg=dmgPick;else delete r.dmg;save();
-          showUndo(dmgPick?"Marked "+r.lpn+" as damaged ("+dmgPick+")":"Damage note removed from "+r.lpn,()=>{if(was)r.dmg=was;else delete r.dmg;save();render()});
+          const was=r.dmg||"";if(dmgPick)r.dmg=dmgPick;else delete r.dmg;
+          said.push(dmgPick?"Marked "+name+" as damaged ("+dmgPick+")":"Damage note removed from "+name);backs.push(()=>{if(was)r.dmg=was;else delete r.dmg});
         }
         const v=inp.value.trim();
         if(ok&&v&&v!==r.lpn){
           const u=v.toUpperCase().replace(/\s+/g,"");
           const dup=rows.some((z,k)=>k!==i&&z.lpn.toUpperCase().replace(/\s+/g,"")===u);
-          const old=r.lpn;r.lpn=v;save();
+          const old=r.lpn;r.lpn=v;
           $("msg").textContent=dup?"Note: "+v+" is already in the log.":"";
           if(dup)sfx("warn");
-          showUndo("Changed "+old+" to "+v,()=>{r.lpn=old;save();render()});
+          said.push("Changed "+old+" to "+v);backs.push(()=>{r.lpn=old});
         }
+        if(said.length){save();showUndo(said.join(". "),()=>{backs.forEach(f=>f());save();render()})}
         render();
         // Back on the edited LPN, so keyboard users don't lose their place.
         // (also when focus was on a part of the table that has just been redrawn)
@@ -206,8 +216,13 @@ function dmgRow(r,pick,opt){
   if(opt.desc){
     const dl=document.createElement("div");dl.className="descline";
     const id="desc"+Math.random().toString(36).slice(2,8),lb=document.createElement("label");lb.htmlFor=id;lb.textContent="Description";
-    const di=document.createElement("input");di.id=id;di.maxLength=60;di.value=r.desc||"";di.placeholder="Optional: wrap, labels, supplier or PO number";
-    di.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();opt.save&&opt.save(true)}};
+    const di=document.createElement("input");di.id=id;di.maxLength=60;di.value=r.desc||"";di.placeholder="Optional: wrap, labels, PO number";
+    di.setAttribute("aria-label","Description for "+r.lpn);
+    // A handheld scanner can type the next pallet's LPN here (the box opens by itself after No LPN): if a fresh
+    // description is just one LPN-shaped word, it is logged as the next pallet instead.
+    di.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();const v=di.value.trim().toUpperCase().replace(/\s+/g,"");
+      if(!r.desc&&/^[A-Z]{1,3}\d{8,12}$/.test(v)){di.value="";opt.save&&opt.save(false);$("lpn").value=v;add();return}
+      opt.save&&opt.save(true)}};
     dl.append(lb,di);td.appendChild(dl);tr._desc=di;
     if(isNoLpn(r.lpn))testNote("noLpn",td);
   }
