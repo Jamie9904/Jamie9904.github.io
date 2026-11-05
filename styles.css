@@ -427,3 +427,10 @@ tr.dmg td.l{box-shadow:inset 3px 0 0 var(--dg)}
 .zoomrow button:focus-visible{outline:3px solid #fff;outline-offset:1px}
 .zoomrow span{min-width:3.2ch;text-align:center}
 .vidwrap #video{display:block}
+/* Pallets with no LPN: shown in the body font, and a description line under the LPN. */
+.lpnedit.nolpn{font-family:"Atkinson Hyperlegible",system-ui,sans-serif;font-style:italic}
+.desctag{display:block;color:var(--ink);font:600 .85rem/1.3 "Atkinson Hyperlegible",system-ui,sans-serif;margin-top:2px;white-space:normal;overflow-wrap:anywhere;word-break:normal}
+.descline{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:6px 0 0}
+.descline label{margin:0;font-weight:700}
+.descline input{flex:1 1 200px;min-width:0}
+@media (max-width:300px){.entry .btnrow{flex-wrap:wrap}.entry .btnrow button{min-width:6em}}

@@ -148,6 +148,7 @@ async function decodePhoto(file){
 }
 $("scan").onclick=()=>{$("video").hidden=false;startScan()};
 $("photo").onclick=()=>{$("file").value="";$("file").click()};
+$("noLpn").onclick=()=>addNoLpn();
 $("file").onchange=e=>{const f=e.target.files&&e.target.files[0];if(f)decodePhoto(f)};
 
 $("stopscan").onclick=()=>stopScan();
