@@ -18,6 +18,7 @@ window.LPN_CONFIG = {
     scanByPhoto: true,     // Scan by photo
     torch: true,           // Torch button in Live scan (only on phones that allow it)
     damage: true,          // marking a pallet as damaged
+    noLpn: true,           // No LPN button, for pallets that arrive without an LPN
     shareMissing: true,    // Share missing list in the Manifest check results
     findLpn: true,         // Find an LPN in Saved deliveries
     shareApp: true,        // Share this app (QR code) in Settings
@@ -32,6 +33,7 @@ window.LPN_CONFIG = {
     scanByPhoto: false,
     torch: false,
     damage: false,
+    noLpn: false,
     shareMissing: false,
     findLpn: false,
     shareApp: false

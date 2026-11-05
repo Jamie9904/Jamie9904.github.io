@@ -2,7 +2,9 @@
 const FIRST_OPEN=(()=>{try{for(let i=0;i<localStorage.length;i++){if(/^lpn/.test(localStorage.key(i)))return false}return true}catch(e){return false}})();
 /* Site settings from config.js (loaded before this file): which features are shown, and which carry a note that
    they are still being tested. A missing or broken config.js means every feature on and no notes. */
-const FEATURES=["report","manifestCheck","manifestPhotos","liveScan","scanByPhoto","torch","damage","shareMissing","findLpn","shareApp","welcome","whatsNew"];
+const FEATURES=["report","manifestCheck","manifestPhotos","liveScan","scanByPhoto","torch","damage","noLpn","shareMissing","findLpn","shareApp","welcome","whatsNew"];
+/* Pallets that arrived without an LPN are logged as "No LPN 1", "No LPN 2", … (numbered within the delivery). */
+const isNoLpn=v=>/^No LPN \d+$/i.test(String(v==null?"":v).trim());
 const SITE=(()=>{
   const c=window.LPN_CONFIG&&typeof window.LPN_CONFIG==="object"?window.LPN_CONFIG:{},f=c.features||{},t=c.testing||{},on={},test={};
   const own=(o,k)=>o&&typeof o==="object"&&Object.prototype.hasOwnProperty.call(o,k)?o[k]:undefined; // only the file's own settings
@@ -14,7 +16,7 @@ const feat=k=>SITE.on[k]!==false;
 function testNote(k,el,where){
   if(!SITE.test[k]||!el)return null;
   const n=document.createElement("p");n.className="note testnote";n.dataset.test=k;
-  const what={manifestCheck:"The Manifest check",manifestPhotos:"Reading photos",liveScan:"Live scan",scanByPhoto:"Scan by photo",torch:"The torch",damage:"Marking damage",shareMissing:"Share missing list",findLpn:"Find an LPN",shareApp:"Share this app"}[k];
+  const what={noLpn:"Logging pallets with no LPN",manifestCheck:"The Manifest check",manifestPhotos:"Reading photos",liveScan:"Live scan",scanByPhoto:"Scan by photo",torch:"The torch",damage:"Marking damage",shareMissing:"Share missing list",findLpn:"Find an LPN",shareApp:"Share this app"}[k];
   n.textContent=k==="report"?"In testing: reports may not always arrive yet, so for anything urgent also use Download problem report in Settings."
     :"In testing: "+what+" may not always work yet, so check what it gives you"+(feat("report")?", and use Report if something goes wrong.":".");
   el.insertAdjacentElement(where||"beforeend",n);return n;
@@ -47,7 +49,7 @@ let rows=[];
 let delCollapsed=false;
 const DEL_F=["date","recv","notes","expect","trailer","sealIn","sealOut"];
 let exported=null;
-function logSig(){let h=0;const s=rows.map(r=>r.lpn+"|"+r.type+"|"+(r.fsdu?1:0)+(r.dmg?"|"+r.dmg:"")).join(",");for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return rows.length+":"+h}
+function logSig(){let h=0;const s=rows.map(r=>r.lpn+"|"+r.type+"|"+(r.fsdu?1:0)+(r.dmg?"|"+r.dmg:"")+(r.desc?"|d:"+r.desc:"")).join(",");for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return rows.length+":"+h}
 /* "-TR4471" for file names: from the trailer box, or from the trailer given (the Manifest check passes the trailer of
    the delivery it checked, or "" when that isn't known). */
 function fileTag(tr){
@@ -67,7 +69,7 @@ const isTxt=v=>typeof v==="string"||typeof v==="number";
 const CFG_OK={size:["1","1.12","1.25"],dateFmt:["uk","us","iso"],defType:TYPES};
 function cleanCfg(c){const out={};if(c&&typeof c==="object"&&!Array.isArray(c))Object.keys(cfg).forEach(k=>{if(typeof c[k]===typeof cfg[k]&&(!CFG_OK[k]||CFG_OK[k].indexOf(c[k])>=0))out[k]=c[k]});return out}
 const isoTime=v=>typeof v==="string"&&/^\d{4}-\d{2}-\d{2}T[\d:.]+Z?$/.test(v)&&!isNaN(new Date(v));
-function cleanRows(a){return (Array.isArray(a)?a:[]).filter(r=>r&&typeof r==="object"&&isTxt(r.lpn)&&String(r.lpn).trim()).map(r=>{const o={lpn:String(r.lpn).trim().slice(0,100),type:TYPES.indexOf(r.type)>=0?r.type:"Mixed",fsdu:!!r.fsdu};const g=isTxt(r.dmg)?String(r.dmg).replace(/\s+/g," ").trim().slice(0,60):"";if(g)o.dmg=g;return o})}
+function cleanRows(a){return (Array.isArray(a)?a:[]).filter(r=>r&&typeof r==="object"&&isTxt(r.lpn)&&String(r.lpn).trim()).map(r=>{const o={lpn:String(r.lpn).trim().slice(0,100),type:TYPES.indexOf(r.type)>=0?r.type:"Mixed",fsdu:!!r.fsdu};const g=isTxt(r.dmg)?String(r.dmg).replace(/\s+/g," ").trim().slice(0,60):"";if(g)o.dmg=g;const d=isTxt(r.desc)?String(r.desc).replace(/\s+/g," ").trim().slice(0,60):"";if(d)o.desc=d;return o})}
 function cleanDel(o){
   o=o&&typeof o==="object"?o:{};const out={};
   DEL_F.forEach(k=>{out[k]=isTxt(o[k])?String(o[k]).slice(0,2000):""});
@@ -123,20 +125,29 @@ function render(){
     const l=document.createElement("td");l.className="l";
     const eb=document.createElement("button");eb.type="button";eb.className="lpnedit";eb.textContent=r.lpn;eb.title=feat("damage")?"Tap to edit or mark damage":"Tap to edit";eb.setAttribute("aria-label","Edit LPN "+r.lpn+(r.dmg?", damaged: "+r.dmg:"")+(feat("damage")?", or mark damage":""));eb.dataset.i=i;l.appendChild(eb);
     if(r.dmg){tr.classList.add("dmg");const dt=document.createElement("span");dt.className="dmgtag";dt.textContent="Damaged: "+r.dmg;l.appendChild(dt)}
+    if(isNoLpn(r.lpn))eb.classList.add("nolpn");
+    if(r.desc){const dd=document.createElement("span");dd.className="desctag";dd.textContent=r.desc;l.appendChild(dd)}
     l.onclick=()=>{
       if(l.querySelector("input"))return;
-      const inp=document.createElement("input");inp.value=r.lpn;inp.setAttribute("autocapitalize","characters");inp.setAttribute("aria-label","Edit LPN");
+      const noL=isNoLpn(r.lpn);
+      const inp=document.createElement("input");inp.value=noL?"":r.lpn;inp.setAttribute("autocapitalize","characters");inp.setAttribute("aria-label",noL?"LPN for "+r.lpn+", if you find one":"Edit LPN");if(noL)inp.placeholder="LPN if found";
       l.textContent="";l.appendChild(inp);
       // Damage choices in a row under the pallet while it is being edited. Taps on them don't take focus from the
       // LPN box (phones would otherwise close the edit before the tap lands).
       // (with damage switched off in config.js, an empty row stands in, so the rest works the same)
-      const dr=feat("damage")?dmgRow(r,(g,key)=>{dmgPick=g;finish(true,key)}):document.createElement("tr");if(feat("damage"))tr.after(dr);
-      inp.focus();inp.select();
+      // (with damage switched off in config.js and no description to edit, an empty row stands in, so the rest works the same)
+      const wantDesc=noL||!!r.desc,useRow=feat("damage")||wantDesc;
+      const dr=useRow?dmgRow(r,(g,key)=>{dmgPick=g;finish(true,key)},{damage:feat("damage"),desc:wantDesc,save:key=>finish(true,key)}):document.createElement("tr");if(useRow)tr.after(dr);
+      if(focusDesc&&dr._desc){focusDesc=false;dr._desc.focus()}else{focusDesc=false;inp.focus();inp.select()}
       // Keep the choices clear of the entry bar on phones (the page keeps room for it when scrolling).
       try{dr.scrollIntoView({block:"nearest"})}catch(e){}
       let done=false,dmgPick;
       const finish=(ok,key)=>{
         if(done)return;done=true;dr.remove();
+        if(ok&&dr._desc){
+          const d=dr._desc.value.replace(/\s+/g," ").trim().slice(0,60),wasD=r.desc||"";
+          if(d!==wasD){if(d)r.desc=d;else delete r.desc;save();showUndo(d?"Description saved for "+r.lpn:"Description removed from "+r.lpn,()=>{if(wasD)r.desc=wasD;else delete r.desc;save();render()})}
+        }
         if(ok&&dmgPick!==undefined&&dmgPick!==(r.dmg||"")){
           const was=r.dmg||"";if(dmgPick)r.dmg=dmgPick;else delete r.dmg;save();
           showUndo(dmgPick?"Marked "+r.lpn+" as damaged ("+dmgPick+")":"Damage note removed from "+r.lpn,()=>{if(was)r.dmg=was;else delete r.dmg;save();render()});
@@ -161,8 +172,8 @@ function render(){
       dr.addEventListener("keydown",e=>{if(e.key==="Escape"){e.preventDefault();finish(false,true)}});
       inp.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();finish(true,true)}else if(e.key==="Escape"){finish(false,true)}
         // Tab goes on to the damage choices (they come after the rest of the row on the page).
-        else if(e.key==="Tab"&&!e.shiftKey&&dr.querySelector("button")){e.preventDefault();dr.querySelector("button").focus()}};
-      if(dr.querySelector("button"))dr.querySelector("button").addEventListener("keydown",e=>{if(e.key==="Tab"&&e.shiftKey){e.preventDefault();inp.focus()}});
+        else if(e.key==="Tab"&&!e.shiftKey&&dr.querySelector("input,button")){e.preventDefault();dr.querySelector("input,button").focus()}};
+      if(dr.querySelector("input,button"))dr.querySelector("input,button").addEventListener("keydown",e=>{if(e.key==="Tab"&&e.shiftKey){e.preventDefault();inp.focus()}});
     };
     const t=document.createElement("td");
     const s=document.createElement("select");
@@ -187,9 +198,20 @@ function render(){
 }
 /* The damage choices shown under a pallet while it is edited. pick(reason or "", fromKeyboard). */
 const DMG_REASONS=["Crushed","Wet"];
-function dmgRow(r,pick){
+function dmgRow(r,pick,opt){
+  opt=opt||{damage:true};
   const tr=document.createElement("tr");tr.className="dmgrow";
   const td=document.createElement("td");td.colSpan=5;tr.appendChild(td);
+  // Description (for pallets with no LPN, or any pallet that already has one): saved when the edit closes.
+  if(opt.desc){
+    const dl=document.createElement("div");dl.className="descline";
+    const id="desc"+Math.random().toString(36).slice(2,8),lb=document.createElement("label");lb.htmlFor=id;lb.textContent="Description";
+    const di=document.createElement("input");di.id=id;di.maxLength=60;di.value=r.desc||"";di.placeholder="Optional: wrap, labels, supplier or PO number";
+    di.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();opt.save&&opt.save(true)}};
+    dl.append(lb,di);td.appendChild(dl);tr._desc=di;
+    if(isNoLpn(r.lpn))testNote("noLpn",td);
+  }
+  if(opt.damage===false)return tr;
   const box=document.createElement("div");box.className="dmgbox";box.setAttribute("role","group");box.setAttribute("aria-label","Damage for "+r.lpn);td.appendChild(box);
   const lab=document.createElement("span");lab.className="dmglab";lab.textContent="Damage:";box.appendChild(lab);
   const cur=r.dmg||"",keep=e=>e.preventDefault();
@@ -208,7 +230,7 @@ function dmgRow(r,pick){
   const tn=testNote("damage",td);if(tn)tn.style.margin="0 0 6px";
   return tr;
 }
-function extras(){const o=[];const e=parseInt($("expect").value,10);if(e>=0)o.push(["Expected pallets",String(e)]);[["trailer","Trailer number"],["sealIn","Seal in"],["sealOut","Seal out"]].forEach(f=>{const v=($(f[0]).value||"").trim();if(v)o.push([f[1],v])});const n=($("notes").value||"").trim();if(n)o.push(["Notes",n]);rows.forEach(r=>{if(r.dmg)o.push(["Damaged pallet",r.lpn+": "+r.dmg])});return o}
+function extras(){const o=[];const e=parseInt($("expect").value,10);if(e>=0)o.push(["Expected pallets",String(e)]);[["trailer","Trailer number"],["sealIn","Seal in"],["sealOut","Seal out"]].forEach(f=>{const v=($(f[0]).value||"").trim();if(v)o.push([f[1],v])});const n=($("notes").value||"").trim();if(n)o.push(["Notes",n]);rows.forEach(r=>{if(r.dmg)o.push(["Damaged pallet",r.lpn+": "+r.dmg])});rows.forEach(r=>{if(r.desc)o.push(["Pallet description",r.lpn+": "+r.desc])});return o}
 function summary(){
   $("undoLast").hidden=!rows.length;
   {const en=$("expNote"),fresh=exported&&exported.sig===logSig();
@@ -277,10 +299,20 @@ function addValue(v,o){
   rows.push({lpn:v,type:o.type,fsdu:!!o.fsdu});
   if(o===undefined||!arguments[1])$("fsdu").checked=false;
   if(!cfg.keepType){$("type").value=cfg.defType;$("type").dataset.t=cfg.defType}
-  const off=typeof manState==="function"&&(()=>{const s=manState();return s.total&&!s.has(v)})();
+  const off=!isNoLpn(v)&&typeof manState==="function"&&(()=>{const s=manState();return s.total&&!s.has(v)})();
   save();render();sfx(off?"warn":"ok");
   if(rows.length===1&&($("recv").value||"").trim())delCollapsed=true;
   updateDel();flashAdded(v,o.type,!!o.fsdu);
+}
+/* No LPN button: logs a pallet with no LPN as the next "No LPN n", with the type and FSDU chosen, then opens it so a
+   description (or the real LPN, if found) can be added. */
+let focusDesc=false;
+function addNoLpn(){
+  if(pendingAdd){$("msg").textContent="Answer the check first (Skip or Add anyway), then add the pallet with no LPN.";sfx("warn");return}
+  let n=0;rows.forEach(r=>{const m=/^No LPN (\d+)$/i.exec(String(r.lpn).trim());if(m)n=Math.max(n,+m[1])});
+  addValue("No LPN "+(n+1));
+  const i=rows.length-1;
+  setTimeout(()=>{const b=document.querySelector('#body .lpnedit[data-i="'+i+'"]');if(b){focusDesc=true;b.click()}},0);
 }
 let flashTimer=null;
 function flashAdded(v,t,f){
@@ -288,7 +320,7 @@ function flashAdded(v,t,f){
   // On phones the Undo bar sits in the same place, so the note goes just above it while it shows.
   el.style.bottom=((ph&&en?en.offsetHeight+10:20)+(ph&&ub&&!ub.hidden?ub.offsetHeight+8:0))+"px";
   let man="";
-  if(typeof manState==="function"){const s=manState();if(s.total)man=s.has(v)?" · ✓ on manifest":" · ⚠ NOT on manifest"}
+  if(typeof manState==="function"&&!isNoLpn(v)){const s=manState();if(s.total)man=s.has(v)?" · ✓ on manifest":" · ⚠ NOT on manifest"}
   el.classList.toggle("warn",man.indexOf("NOT")>=0);
   el.textContent="Added #"+rows.length+": "+v+" · "+t+(f?" · FSDU":"")+man;
   clearTimeout(flashTimer);flashTimer=setTimeout(()=>{el.hidden=true},man.indexOf("NOT")>=0?4000:2200);

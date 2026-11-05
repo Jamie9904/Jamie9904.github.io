@@ -304,7 +304,7 @@ async function readPhoto(f){return ocrLpns(f)}
 async function readLogPhoto(f){return ocrLpns(f)}
 async function sendFile(buf,name,mime){return deliver(buf,name,mime)}
 function oddNote(id){
-  const odd=$(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).filter(x=>/^[A-Z]+\d+$/i.test(x.replace(/\s+/g,""))?!lpnDigitsOk(x):(()=>{const m=x.match(/\d+$/),n=m?m[0].length:0;return n!==9&&n!==10})());
+  const odd=$(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).filter(x=>!isNoLpn(x)).filter(x=>/^[A-Z]+\d+$/i.test(x.replace(/\s+/g,""))?!lpnDigitsOk(x):(()=>{const m=x.match(/\d+$/),n=m?m[0].length:0;return n!==9&&n!==10})());
   return odd.length?" These have an unusual number of digits, so check them against the paper copy: "+odd.slice(0,8).join(", ")+(odd.length>8?" and "+(odd.length-8)+" more":"")+".":"";
 }
 function addNums(a,id){
@@ -502,16 +502,17 @@ $("cmpClear").onclick=()=>{cmpForgetPhotos();cmpTrailer="";logSrc=null;logPdfSrc
 function cmpData(){
   const lines=id=>$(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
   const uniq=a=>{const seen=new Set();return a.filter(x=>{const k=norm(x);if(!k||seen.has(k))return false;seen.add(k);return true})};
-  const logList=uniq(lines("cmpLogNums")),man=uniq(lines("cmpNums"));
-  if(!logList.length){cmpMsg("Add the LPN log first: use the current log, a saved delivery, an uploaded file or a photo of the printed copy.");return null}
+  // Pallets logged with no LPN can't be matched to the manifest: they're counted and shown on their own.
+  const allLog=uniq(lines("cmpLogNums")),noLpn=allLog.filter(isNoLpn).length,logList=allLog.filter(x=>!isNoLpn(x)),man=uniq(lines("cmpNums"));
+  if(!logList.length&&!noLpn){cmpMsg("Add the LPN log first: use the current log, a saved delivery, an uploaded file or a photo of the printed copy.");return null}
   if(!man.length){cmpMsg("Add manifest photos or type the manifest numbers first.");return null}
   const ms=new Set(man.map(norm)),ls=new Set(logList.map(norm));
   const res=[];
   man.forEach(n=>res.push({n,man:true,log:ls.has(norm(n))}));
   logList.forEach(n=>{if(!ms.has(norm(n)))res.push({n,man:false,log:true})});
   const kind=x=>x.man&&x.log?"ok":x.man?"missing":"book";
-  const cnt={ok:0,missing:0,book:0};res.forEach(x=>cnt[kind(x)]++);
-  return {logList,man,res,cnt,kind};
+  const cnt={ok:0,missing:0,book:0,noLpn:noLpn};res.forEach(x=>cnt[kind(x)]++);
+  return {logList,man,res,cnt,kind,noLpn};
 }
 function replaceLine(id,old,nv){
   const k=norm(old);
@@ -526,7 +527,7 @@ function cmpShareText(C){
   return ["Manifest check"+(d?" "+ukDate(d):"")+(cmpTrailer?", trailer "+cmpTrailer:""),
     "Missing from the log ("+miss.length+"): "+(miss.join(", ")||"none"),
     "On the log only, to book in ("+book.length+"): "+(book.join(", ")||"none"),
-    "Matched: "+cnt.ok+" of "+man.length+" on the manifest"].join("\n");
+    "Matched: "+cnt.ok+" of "+man.length+" on the manifest"].concat(C.noLpn?["Pallets with no LPN (check by hand): "+C.noLpn]:[]).join("\n");
 }
 async function shareCmp(C){
   const text=cmpShareText(C);
@@ -541,7 +542,7 @@ async function shareCmp(C){
 }
 function renderCmp(C){
   const {res,cnt,man,kind}=C;
-  $("cmpSum").innerHTML="<span>On manifest: <b>"+man.length+"</b></span><span>✓ Matched: <b>"+cnt.ok+"</b></span><span>✗ Missing (report): <b>"+cnt.missing+"</b></span><span>⚠ On log only (book in): <b>"+cnt.book+"</b></span>";
+  $("cmpSum").innerHTML="<span>On manifest: <b>"+man.length+"</b></span><span>✓ Matched: <b>"+cnt.ok+"</b></span><span>✗ Missing (report): <b>"+cnt.missing+"</b></span><span>⚠ On log only (book in): <b>"+cnt.book+"</b></span>"+(C.noLpn?"<span>No LPN (check by hand): <b>"+C.noLpn+"</b></span>":"");
   const box=$("cmpRes");box.hidden=false;box.innerHTML="";
   if(feat("shareMissing")){
   const sh=document.createElement("div");sh.className="row";sh.style.margin="0 0 8px";
@@ -633,6 +634,7 @@ $("cmpGo").onclick=async()=>{
       {v:["✓ Matched",cnt.ok]},
       {v:["✗ Missing",cnt.missing]},
       {v:["⚠ Log only",cnt.book]},
+      ...(cnt.noLpn?[{v:["No LPN (check by hand)",cnt.noLpn]}]:[]),
       null,
       {v:["Delivery Details",""],h:1,merge:1},
       {v:["Date",ukDate(d)],l:1}
@@ -640,8 +642,8 @@ $("cmpGo").onclick=async()=>{
     const ST={ok:{t:"✓ Matched",f:null},missing:{t:"✗ MISSING",f:"FFA6A6A6"},book:{t:"⚠ LOG ONLY",f:"FFD0D0D0"}};
     const HD="FFE6E9ED";
     const n=Math.max(res.length,side.length-1);
-    const H=xlTitle(ws,off,8,"Manifest check","Date: "+ukDate(d)+"     On manifest: "+man.length+"     Matched: "+cnt.ok+"     Missing: "+cnt.missing+"     Log only: "+cnt.book);
-    const lastL=H+res.length,s1=H+4,s2a=H+6,s2b=H+7;
+    const H=xlTitle(ws,off,8,"Manifest check","Date: "+ukDate(d)+"     On manifest: "+man.length+"     Matched: "+cnt.ok+"     Missing: "+cnt.missing+"     Log only: "+cnt.book+(cnt.noLpn?"     No LPN: "+cnt.noLpn:""));
+    const nl=cnt.noLpn?1:0,lastL=H+res.length,s1=H+4+nl,s2a=H+6+nl,s2b=H+7+nl;
     for(let i=-1;i<n;i++){
       const r=ws.getRow(H+i+1);
       const head=i<0,x=head?null:res[i],k0=x?kind(x):null,st=k0?ST[k0]:null;
@@ -656,7 +658,7 @@ $("cmpGo").onclick=async()=>{
       };
       if(left)left.forEach((v,k)=>put(k+1,v,{bold:head||k0!=="ok",mono:!head&&k===1,fill:head?HD:(st.f||(i%2?XL_ZEBRA:null)),center:k!==1&&k!==4,box:xlBox(1,5,H,lastL,k+1,r.number)}));
       if(right){
-        const hd=!!right.h,inB1=i+1<=4,bx=c=>inB1?xlBox(7,8,H,s1,c,r.number):xlBox(7,8,s2a,s2b,c,r.number);
+        const hd=!!right.h,inB1=i+1<=4+nl,bx=c=>inB1?xlBox(7,8,H,s1,c,r.number):xlBox(7,8,s2a,s2b,c,r.number);
         put(7,right.v[0],{bold:hd||!!right.l,fill:(hd||right.l)?HD:null,box:bx(7)});
         put(8,right.v[1],{bold:hd,fill:hd?HD:null,center:typeof right.v[1]==="number",box:bx(8)});
         if(right.merge)ws.mergeCells(r.number,7,r.number,8);
@@ -825,7 +827,7 @@ function manState(){
   const logged=new Set(rows.map(r=>norm(r.lpn)));
   let found=0;const missing=[];
   mp.forEach((v,k)=>{if(logged.has(k))found++;else missing.push(v)});
-  return {total:mp.size,found:found,missing:missing,extra:rows.filter(r=>!mp.has(norm(r.lpn))).length,has:x=>mp.has(norm(x))};
+  return {total:mp.size,found:found,missing:missing,extra:rows.filter(r=>!mp.has(norm(r.lpn))&&!isNoLpn(r.lpn)).length,has:x=>mp.has(norm(x))};
 }
 function manLive(){
   const box=$("manLive");if(!box)return null;
