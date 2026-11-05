@@ -129,7 +129,7 @@ The last line reads the photos with the app at that address (here the live site)
 - **Docs stay off `main`:** a `git commit` on `main` is blocked if it would include files in `docs/`, and merging `docs` into `main` or pushing `docs` to `main` is blocked. The documentation is updated on the `docs` branch instead.
 - **Checks before push:** a `git push` runs `node tests/run.js` (the `npm test` checks) first and is blocked if any fail (see [testing.md](testing.md)). Pushes of only the `docs` branch skip this.
 - **Docs reminder:** at the end of a Claude Code turn, if `origin/main` has app changes that `origin/docs` does not (commits touching the app files, `config.js`, `tests/run.js`, `tests/lib.js` or `tests/groups/`; the session-start status line counts the same files for its docs lag), Claude is reminded once per `main` commit to update the docs branch. Like the session-start hook, it also finds the repository one folder below the project folder.
-- **Download copy reminder:** `.claude/hooks/outputs_reminder.py` (also a `Stop` hook, 60-second limit) compares each site file in `origin/main` (everything except `.claude/`, `docs/`, `tools/` and `.mcp.json`) with the copy in `/mnt/user-data/outputs/lpn-site` by git blob hash. The outputs storage rewrites the metadata of pictures and video after they are saved, so a `.mp4`, `.webm`, `.jpg`, `.jpeg` or `.png` whose bytes differ still counts as matching if `ffmpeg` decodes the same picture from both main's own copy and the outputs copy (an MD5 of the first video stream). Main's copy is taken from git (`git show origin/main:<file>` into a temporary file), not from the working tree, which may hold a newer picture or video that isn't live yet. Since build 51 an `.svg` whose bytes differ also counts as matching if the two are the same once any `<metadata>…</metadata>` block and `xmlns:c2pa="…"` attribute are removed (the outputs storage adds content credentials to SVGs too); main's copy again comes from `git show origin/main:<file>`. It also opens `lpn-site.zip` and compares each site file's bytes with the folder's copy (`lpn-site/<file>` in the zip), naming up to five that differ or are missing; it used to compare dates, which the outputs storage changes when it rewrites picture and video metadata, so a good zip looked out of date. A missing zip, or one holding `docs/`, `.claude/` or `.mcp.json`, is reported too. If they don't match it reminds Claude, once per `main` commit, to sync them. It does nothing where there is no outputs folder, such as on your own computer.
+- **Download copy reminder:** `.claude/hooks/outputs_reminder.py` (also a `Stop` hook, 60-second limit) compares each site file in `origin/main` (everything except `.claude/`, `docs/`, `tools/` and `.mcp.json`) with the copy in `/mnt/user-data/outputs/lpn-site` by git blob hash. The outputs storage rewrites the metadata of pictures and video after they are saved, so a `.mp4`, `.webm`, `.jpg`, `.jpeg` or `.png` whose bytes differ still counts as matching if `ffmpeg` decodes the same picture from both main's own copy and the outputs copy (an MD5 of the first video stream). Main's copy is taken from git (`git show origin/main:<file>` into a temporary file), not from the working tree, which may hold a newer picture or video that isn't live yet. Since build 51 an `.svg` whose bytes differ also counts as matching if the two are the same once any `<metadata>…</metadata>` block and `xmlns:c2pa="…"` attribute are removed (the outputs storage adds content credentials to SVGs too); main's copy again comes from `git show origin/main:<file>`. It also opens `lpn-site.zip` and compares each site file's bytes with the folder's copy (`lpn-site/<file>` in the zip), naming up to five that differ or are missing (since commit `481425b`, after build 54, a `.mp4`, `.webm`, `.jpg`, `.jpeg`, `.png` or `.svg` only has to be in the zip, because the storage adds metadata to those after saving; the folder copies of them are compared with main by picture as above); it used to compare dates, which the outputs storage changes when it rewrites picture and video metadata, so a good zip looked out of date. A missing zip, or one holding `docs/`, `.claude/` or `.mcp.json`, is reported too. If they don't match it reminds Claude, once per `main` commit, to sync them. It does nothing where there is no outputs folder, such as on your own computer.
 
 ### Agents for Claude Code
 
@@ -180,6 +180,7 @@ window.LPN_CONFIG = {
     scanByPhoto: true,     // Scan by photo
     torch: true,           // Torch button in Live scan (only on phones that allow it)
     damage: true,          // marking a pallet as damaged
+    noLpn: true,           // No LPN button, for pallets that arrive without an LPN
     shareMissing: true,    // Share missing list in the Manifest check results
     findLpn: true,         // Find an LPN in Saved deliveries
     shareApp: true,        // Share this app (QR code) in Settings
@@ -188,7 +189,7 @@ window.LPN_CONFIG = {
   },
   testing: {
     report: false, manifestCheck: true, manifestPhotos: false, liveScan: false, scanByPhoto: false,
-    torch: false, damage: false, shareMissing: false, findLpn: false, shareApp: false
+    torch: false, damage: false, noLpn: false, shareMissing: false, findLpn: false, shareApp: false
   }
 };
 ```
@@ -213,9 +214,10 @@ The preferred way, by the user's decision, is to ask Claude to change the settin
 | `report` | No **Report** button, report box, or report links in Settings, the Guide and the Manifest check (**Report a problem with these photos**); reports already waiting on a phone are not sent. The Guide's privacy section says there's no Report button in this copy, so nothing leaves the phone. **Download problem report** stays. |
 | `manifestCheck` | The Manifest check card is hidden, and manifest numbers already saved on a phone are ignored: no live tracking or "not on the manifest" warnings in the Pallet log. |
 | `manifestPhotos` | The photo buttons for manifests and printed logs and the prefix presets are hidden; the step is labelled "2. Manifest PDFs". PDFs and typed numbers still work, and the prefix list is ignored (no numbers are left out because of their prefix). |
-| `liveScan` / `scanByPhoto` | That scan button is hidden; with both off the **Scan** button is hidden too. |
+| `liveScan` / `scanByPhoto` | That scan button is hidden; with both off (and `noLpn` off too, since build 55) the **Scan** button is hidden too. |
 | `torch` | No **Torch** button in Live scan. |
 | `damage` | No damage choices when an LPN is tapped (it can still be edited). Damage already noted on pallets stays and still goes on the exports. |
+| `noLpn` (build 55) | No **No LPN** button, and its Guide lines and changelog bullet are left out. Pallets already logged as "No LPN n" stay, keep their descriptions and still go on the exports. Marked as in testing, the note "In testing: Logging pallets with no LPN may not always work yet…" shows in a No LPN pallet's description row. |
 | `shareMissing` | No **Share missing list** button in the check results. |
 | `findLpn` | No **Find an LPN** box in Saved deliveries. |
 | `shareApp` | No **Share this app** section in Settings. |

@@ -36,7 +36,7 @@
 │   ├── groups/              the checks, one self-contained file per area (since build 52)
 │   │   ├── 01-layout.js … 06-real-export.js     layout; phone flows and Settings; Excel export; version note, PDF safety and spreadsheet import; saved data from outside and fingerprints; real export libraries and library versions
 │   │   ├── 07-security-policy.js … 12-report.js security policy; demo video; manifest photos and problem report; accessibility; feedback Worker; Report a problem or idea
-│   │   └── 13-photo-notes.js … 20-offline.js    photo notes; Find an LPN and turned photos; damaged pallets and Share this app; welcome card; offline store; real photo reading (GitHub only); site settings (config.js, build 53); offline
+│   │   └── 13-photo-notes.js … 21-offline.js    photo notes; Find an LPN and turned photos; damaged pallets and Share this app; welcome card; offline store; real photo reading (GitHub only); site settings (config.js, build 53); pallets with no LPN (20-no-lpn.js, build 55); offline
 │   ├── advisories.js        asks osv.dev about security advisories for the pinned libraries
 │   ├── advisories-accepted.json  advisories checked and found not to affect the app, with reasons
 │   └── sri.js               checks the library fingerprints in core.js against the CDNs
@@ -75,7 +75,7 @@
     │   ├── config_check.js  checks config.js right after it is edited, with the same rules as tests/groups/19-site-config.js
     │   ├── lpn_git_guard.py commit and push guard (cache bump, also accepted when the same command runs bump.sh first; docs on main, no commits on main or new branches, tests before push)
     │   ├── docs_reminder.py reminds when the docs branch is behind main (counting main commits that touch the app files, `config.js`, `tests/run.js`, `tests/lib.js` or `tests/groups/`)
-    │   └── outputs_reminder.py reminds when the download copy (outputs folder, and the zip compared by content) doesn't match main
+    │   └── outputs_reminder.py reminds when the download copy (outputs folder, and the zip compared by content; pictures, video and SVGs only need to be in the zip) doesn't match main
     └── agents/              export-reviewer, phone-layout-checker, docs-updater (one at a time, lock file /home/claude/lpn-docs-wt.lock), release-reviewer, guide-checker, security-reviewer, ocr-reviewer, a11y-reviewer
 ```
 
