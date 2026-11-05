@@ -204,6 +204,7 @@ window.LPN_CONFIG = {
     torch: true,           // Torch button in Live scan (only on phones that allow it)
     damage: true,          // marking a pallet as damaged
     noLpn: true,           // No LPN button, for pallets that arrive without an LPN
+    fppDesc: true,         // description box for FPP pallets, to say what is on them (e.g. kitchen roll)
     shareMissing: true,    // Share missing list in the Manifest check results
     findLpn: true,         // Find an LPN in Saved deliveries
     shareApp: true,        // Share this app (QR code) in Settings
@@ -212,7 +213,7 @@ window.LPN_CONFIG = {
   },
   testing: {
     report: false, manifestCheck: true, manifestPhotos: false, liveScan: false, scanByPhoto: false,
-    torch: false, damage: false, noLpn: false, shareMissing: false, findLpn: false, shareApp: false
+    torch: false, damage: false, noLpn: false, fppDesc: false, shareMissing: false, findLpn: false, shareApp: false
   }
 };
 ```
@@ -241,6 +242,7 @@ The preferred way, by the user's decision, is to ask Claude to change the settin
 | `torch` | No **Torch** button in Live scan. |
 | `damage` | No damage choices when an LPN is tapped (it can still be edited). Damage already noted on pallets stays and still goes on the exports. |
 | `noLpn` (build 55) | No **No LPN** button, and its Guide lines and changelog bullet are left out. Pallets already logged as "No LPN n" stay, keep their descriptions and still go on the exports. Marked as in testing, the note "In testing: Logging pallets with no LPN may not always work yet…" shows in a No LPN pallet's description row. |
+| `fppDesc` (build 56) | Logging an FPP pallet doesn't open its Description box, and tapping an FPP pallet doesn't offer one (a pallet that already has a description still shows it, and descriptions still go on the exports). The Guide's **FPP pallet:** paragraph and its changelog bullet are left out. Marked as in testing, the note "In testing: Descriptions for FPP pallets may not always work yet…" shows in an FPP pallet's description row. |
 | `shareMissing` | No **Share missing list** button in the check results. |
 | `findLpn` | No **Find an LPN** box in Saved deliveries. |
 | `shareApp` | No **Share this app** section in Settings. |

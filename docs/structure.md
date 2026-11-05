@@ -36,7 +36,7 @@
 │   ├── groups/              the checks, one self-contained file per area (since build 52)
 │   │   ├── 01-layout.js … 06-real-export.js     layout; phone flows and Settings; Excel export; version note, PDF safety and spreadsheet import; saved data from outside and fingerprints; real export libraries and library versions
 │   │   ├── 07-security-policy.js … 12-report.js security policy; demo video; manifest photos and problem report; accessibility; feedback Worker; Report a problem or idea
-│   │   └── 13-photo-notes.js … 22-offline.js    photo notes; Find an LPN and turned photos; damaged pallets and Share this app; welcome card; offline store; real photo reading (GitHub only); site settings (config.js, build 53); pallets with no LPN (20-no-lpn.js, build 55); data saved by older builds (21-old-data.js, after build 55); offline
+│   │   └── 13-photo-notes.js … 22-offline.js    photo notes; Find an LPN and turned photos; damaged pallets and Share this app; welcome card; offline store; real photo reading (GitHub only); site settings (config.js, build 53); pallets with no LPN and FPP descriptions (20-no-lpn.js, builds 55 and 56); data saved by older builds (21-old-data.js, after build 55); offline
 │   ├── fixtures/old/build-N/  files saved by builds 19, 30, 46, 49 and 54 with their own code: storage.json, backup.json, cells.json, keywords.txt, log.xlsx, log.pdf, expect.json (read by groups/21-old-data.js)
 │   ├── advisories.js        asks osv.dev about security advisories for the pinned libraries
 │   ├── advisories-accepted.json  advisories checked and found not to affect the app, with reasons
