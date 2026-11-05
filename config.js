@@ -19,6 +19,7 @@ window.LPN_CONFIG = {
     torch: true,           // Torch button in Live scan (only on phones that allow it)
     damage: true,          // marking a pallet as damaged
     noLpn: true,           // No LPN button, for pallets that arrive without an LPN
+    fppDesc: true,         // description box for FPP pallets, to say what is on them (e.g. kitchen roll)
     shareMissing: true,    // Share missing list in the Manifest check results
     findLpn: true,         // Find an LPN in Saved deliveries
     shareApp: true,        // Share this app (QR code) in Settings
@@ -34,6 +35,7 @@ window.LPN_CONFIG = {
     torch: false,
     damage: false,
     noLpn: false,
+    fppDesc: false,
     shareMissing: false,
     findLpn: false,
     shareApp: false

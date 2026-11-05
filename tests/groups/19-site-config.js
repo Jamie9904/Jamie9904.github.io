@@ -38,6 +38,11 @@ module.exports = async ({ browser, URL0 }) => {
     rows = [{ lpn: "VLT004040265", type: "BB", fsdu: false }]; save(); render();
     document.querySelector("#body .lpnedit").click(); await new Promise(r => setTimeout(r, 100));
     out.dmg = !!document.querySelector(".dmgrow"); document.activeElement.blur(); await new Promise(r => setTimeout(r, 50));
+    // An FPP pallet gets no description box, by itself or when tapped (one already typed still shows).
+    rows = []; addValue("VLT004040273", { type: "FPP", fsdu: false }); await new Promise(r => setTimeout(r, 150));
+    out.fppAuto = !!document.querySelector(".descline"); if (document.activeElement) document.activeElement.blur(); await new Promise(r => setTimeout(r, 50));
+    document.querySelector("#body .lpnedit").click(); await new Promise(r => setTimeout(r, 100));
+    out.fppTap = !!document.querySelector(".descline"); document.activeElement.blur(); await new Promise(r => setTimeout(r, 50));
     // Old manifest numbers and queued reports do nothing while those features are off.
     document.getElementById("cmpNums").value = "VLT004040265\nRBY006292169"; manLive(); out.track = !document.getElementById("manLive").hidden;
     fbSave([{ id: "q", kind: "idea", text: "x" }]); let sent = 0; const rf = window.fetch; window.fetch = async () => { sent++; return new Response("{}"); };
@@ -49,8 +54,8 @@ module.exports = async ({ browser, URL0 }) => {
     openHelp("settings", "Settings"); out.setText = document.getElementById("panelBody").textContent; closeHelp();
     openHelp("history", "Saved deliveries"); out.find = !!document.getElementById("histFind"); closeHelp();
     return out; });
-  check("with every feature off: no Report button or box, Manifest check (or its tracking), Scan button, damage choices, welcome card, prefix filter or queued reports sent", !s.report && !s.fb && !s.cmp && !s.scanBtn && !s.dmg && !s.welcome && !s.track && s.flushed === 0 && s.sent === 0 && s.pfx === 0, s);
-  check("with every feature off the Guide leaves out those parts and is numbered 1 to 9 with no gaps", s.heads.length === 9 && s.heads.every((h, i) => h.startsWith((i + 1) + ". ")) && s.toc === 9 && !/Check against the manifest|Damaged pallet|Torch|Live scan|Find an LPN|Share this app|Report a problem|tap Scan|Manifest photos and PDFs|the Manifest check once/.test(s.guideText) && /no Report button in this copy/.test(s.guideText), { heads: s.heads, toc: s.toc });
+  check("with every feature off: no Report button or box, Manifest check (or its tracking), Scan button, damage choices, FPP description box, welcome card, prefix filter or queued reports sent", !s.report && !s.fb && !s.cmp && !s.scanBtn && !s.dmg && !s.fppAuto && !s.fppTap && !s.welcome && !s.track && s.flushed === 0 && s.sent === 0 && s.pfx === 0, s);
+  check("with every feature off the Guide leaves out those parts and is numbered 1 to 9 with no gaps", s.heads.length === 9 && s.heads.every((h, i) => h.startsWith((i + 1) + ". ")) && s.toc === 9 && !/Check against the manifest|Damaged pallet|FPP pallet:|Torch|Live scan|Find an LPN|Share this app|Report a problem|tap Scan|Manifest photos and PDFs|the Manifest check once/.test(s.guideText) && /no Report button in this copy/.test(s.guideText), { heads: s.heads, toc: s.toc });
   check("with every feature off Settings has no Share this app or Report sections, and Saved deliveries no Find box", !/Share this app|Report a problem or idea/.test(s.setText) && !s.find, s.setText.slice(0, 80));
   check("no script errors", p.errors.length === 0, p.errors);
   await p.ctx.close();
@@ -69,6 +74,9 @@ module.exports = async ({ browser, URL0 }) => {
     rows = [{ lpn: "VLT004040265", type: "BB", fsdu: false }]; save(); render();
     document.querySelector("#body .lpnedit").click(); await new Promise(r => setTimeout(r, 100));
     out.dmg = !!document.querySelector(".dmgrow .testnote"); document.activeElement.blur(); await new Promise(r => setTimeout(r, 50));
+    rows = [{ lpn: "VLT004040273", type: "FPP", fsdu: false }]; save(); render();
+    document.querySelector("#body .lpnedit").click(); await new Promise(r => setTimeout(r, 100));
+    out.fpp = !!document.querySelector('.dmgrow .testnote[data-test="fppDesc"]'); document.activeElement.blur(); await new Promise(r => setTimeout(r, 50));
     document.getElementById("cmpLogNums").value = "VLT004040265"; document.getElementById("cmpNums").value = "VLT004040265\nRBY006292169";
     document.getElementById("cmpCheck").click(); await new Promise(r => setTimeout(r, 100));
     out.share = !!document.querySelector('#cmpRes .testnote[data-test="shareMissing"]');
@@ -80,7 +88,7 @@ module.exports = async ({ browser, URL0 }) => {
     out.liveShown = [...document.querySelectorAll('#scanbox .testnote')].filter(n => !n.hidden).map(n => n.dataset.test).join(","); stopScan();
     out.torchHidden = document.querySelector('#scanbox .testnote[data-test="torch"]').hidden;
     return out; });
-  check("marking features as in testing adds the note to each one", ["report", "manifestCheck", "manifestPhotos", "liveScan", "scanByPhoto", "torch"].every(k => s.start.includes(k)) && s.dmg && s.share && s.find && s.shareApp, s);
+  check("marking features as in testing adds the note to each one", ["report", "manifestCheck", "manifestPhotos", "liveScan", "scanByPhoto", "torch"].every(k => s.start.includes(k)) && s.dmg && s.fpp && s.share && s.find && s.shareApp, s);
   check("each testing note names its feature; the report one points to the problem report; scan and torch notes wait in the camera box", /^In testing: reports may not always arrive yet/.test(s.text) && /^In testing: Reading photos may not always work yet, so check what it gives you, and use Report if something goes wrong\.$/.test(s.photoText) && s.torchHidden && s.scanNotes === "scanByPhoto:true,liveScan:true,torch:true" && s.liveShown === "liveScan", s);
   check("no script errors", p.errors.length === 0, p.errors);
   await p.ctx.close();

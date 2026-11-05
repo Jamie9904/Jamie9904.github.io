@@ -1,4 +1,5 @@
-/* Checks: pallets with no LPN (the No LPN button): numbering, description, real LPN later, manifest, exports, layout. */
+/* Checks: pallets with no LPN (the No LPN button): numbering, description, real LPN later, manifest, exports, layout.
+   Also descriptions for FPP pallets (what is on them), which share the same description box. */
 const { check, page } = require("../lib");
 module.exports = async ({ browser, URL0 }) => {
   let p, s;
@@ -98,4 +99,51 @@ module.exports = async ({ browser, URL0 }) => {
     check("no script errors", p.errors.length === 0, p.errors);
     await p.ctx.close();
   }
+
+  // FPP pallets: the description box opens when one is logged, says what's on it, and goes back to the LPN box.
+  console.log("Descriptions for FPP pallets");
+  p = await page(browser, 375, { excel: true });
+  await p.setViewportSize({ width: 375, height: 812 });
+  await p.goto(URL0); await p.waitForTimeout(300);
+  await p.evaluate(() => document.querySelector('#tyb button[data-t="FPP"]').click());
+  await p.fill("#lpn", "VLT004040265"); await p.press("#lpn", "Enter"); await p.waitForTimeout(200);
+  s = await p.evaluate(() => { const a = document.activeElement; return { desc: !!a.closest(".descline"), ph: a.placeholder, label: a.getAttribute("aria-label") }; });
+  check("logging an FPP pallet opens its description box, asking what's on it", s.desc && /What’s on it, e.g. kitchen roll/.test(s.ph) && s.label === "Description for VLT004040265", s);
+  await p.keyboard.type("Full pallet of kitchen roll"); await p.keyboard.press("Enter"); await p.waitForTimeout(150);
+  s = await p.evaluate(() => ({ desc: rows[0].desc, tag: document.querySelector("#body .desctag") && document.querySelector("#body .desctag").textContent, focus: document.activeElement.id, saved: JSON.parse(localStorage.getItem("lpnlog")).rows[0].desc, undo: document.getElementById("undoTxt").textContent }));
+  check("the description is saved and shown under the pallet, and the LPN box is ready for the next pallet", s.desc === "Full pallet of kitchen roll" && s.tag === s.desc && s.saved === s.desc && s.focus === "lpn" && /Description saved for VLT004040265/.test(s.undo), s);
+  // Other types don't open it; Enter on an empty box leaves no description; a scanned LPN in the box is the next pallet.
+  await p.evaluate(() => document.querySelector('#tyb button[data-t="BB"]').click());
+  await p.fill("#lpn", "VLT004040273"); await p.press("#lpn", "Enter"); await p.waitForTimeout(200);
+  s = { bb: await p.evaluate(() => ({ open: !!document.querySelector(".descline"), focus: document.activeElement.id })) };
+  await p.evaluate(() => document.querySelector('#tyb button[data-t="FPP"]').click());
+  await p.fill("#lpn", "VLT004040281"); await p.press("#lpn", "Enter"); await p.waitForTimeout(200);
+  await p.keyboard.press("Enter"); await p.waitForTimeout(150);
+  s.blank = await p.evaluate(() => ({ desc: rows[2].desc, focus: document.activeElement.id }));
+  await p.evaluate(() => document.querySelector('#tyb button[data-t="FPP"]').click());
+  await p.fill("#lpn", "VLT004040299"); await p.press("#lpn", "Enter"); await p.waitForTimeout(200);
+  await p.keyboard.type("VLT004040307"); await p.keyboard.press("Enter"); await p.waitForTimeout(250);
+  s.rows = await p.evaluate(() => rows.map(r => r.lpn + "|" + r.type + "|" + (r.desc || "")));
+  check("other types don't open it, Enter leaves it blank, and an LPN scanned into it is logged as the next pallet", !s.bb.open && s.bb.focus === "lpn" && s.blank.desc === undefined && s.blank.focus === "lpn" && s.rows[3] === "VLT004040299|FPP|" && /^VLT004040307\|/.test(s.rows[4]), s);
+  // Changing a pallet's type to FPP in the table offers the box when it's tapped; during Live scan it doesn't open by itself.
+  s = await p.evaluate(async () => {
+    rows = [{ lpn: "VLT004040265", type: "BB", fsdu: false }]; save(); render();
+    const sel = document.querySelector("#body select"); sel.value = "FPP"; sel.dispatchEvent(new Event("change", { bubbles: true })); await new Promise(r => setTimeout(r, 50));
+    document.querySelector("#body .lpnedit").click(); await new Promise(r => setTimeout(r, 100));
+    const tapped = !!document.querySelector(".descline"); document.activeElement.blur(); await new Promise(r => setTimeout(r, 50));
+    scanning = true; addValue("VLT004040273", { type: "FPP", fsdu: false }); await new Promise(r => setTimeout(r, 150)); scanning = false;
+    return { type: rows[0].type, tapped, live: !!document.querySelector(".descline"), n: rows.length };
+  });
+  check("a pallet changed to FPP offers the box when tapped, and Live scan doesn't open it", s.type === "FPP" && s.tapped && !s.live && s.n === 2, s);
+  // On the exports and back in on import.
+  s = await p.evaluate(async () => {
+    rows = [{ lpn: "VLT004040265", type: "FPP", fsdu: false, desc: "Full pallet of kitchen roll" }]; save(); render();
+    window.saveOnly = async () => {}; await document.getElementById("dl").onclick(); await new Promise(r => setTimeout(r, 200));
+    const vals = [], ws = window.__wb.sheets[0]; Object.keys(ws.rows).forEach(k => Object.keys(ws.rows[k]._c).forEach(j => { const c = ws.rows[k]._c[j]; if (c && c.value != null) vals.push(String(c.value)); }));
+    const imp = await parseExported(new File(["#,LPN,Pallet Type,FSDU\n1,VLT004040265,FPP,No\n\nPallet description,VLT004040265: Full pallet of kitchen roll"], "x.csv"));
+    return { xl: vals.some(v => /VLT004040265: Full pallet of kitchen roll/.test(v)), imp: imp.rows[0] };
+  });
+  check("the FPP description goes on the Excel export and comes back on import", s.xl && s.imp.type === "FPP" && s.imp.desc === "Full pallet of kitchen roll", s);
+  check("no script errors", p.errors.length === 0, p.errors);
+  await p.ctx.close();
 };
