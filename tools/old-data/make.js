@@ -1,4 +1,4 @@
-/* Makes the saved files from older builds that tests/groups/22-old-data.js checks the current app against.
+/* Makes the saved files from older builds that tests/groups/21-old-data.js checks the current app against.
    Run from the site folder:  node tools/old-data/make.js   (then python3 tools/old-data/files.py)
    For each build in BUILDS it takes that build's files from git history, opens it in Chromium with the outside
    libraries replaced by recording stand-ins, logs the same delivery with that build's own code, and keeps:
