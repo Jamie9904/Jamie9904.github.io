@@ -2,7 +2,7 @@
 const FIRST_OPEN=(()=>{try{for(let i=0;i<localStorage.length;i++){if(/^lpn/.test(localStorage.key(i)))return false}return true}catch(e){return false}})();
 /* Site settings from config.js (loaded before this file): which features are shown, and which carry a note that
    they are still being tested. A missing or broken config.js means every feature on and no notes. */
-const FEATURES=["report","manifestCheck","manifestPhotos","liveScan","scanByPhoto","torch","damage","noLpn","shareMissing","findLpn","shareApp","welcome","whatsNew"];
+const FEATURES=["report","manifestCheck","manifestPhotos","liveScan","scanByPhoto","torch","damage","noLpn","fppDesc","shareMissing","findLpn","shareApp","welcome","whatsNew"];
 /* Pallets that arrived without an LPN are logged as "No LPN 1", "No LPN 2", … (numbered within the delivery). */
 const isNoLpn=v=>/^No LPN \d+$/i.test(String(v==null?"":v).trim());
 const SITE=(()=>{
@@ -16,7 +16,7 @@ const feat=k=>SITE.on[k]!==false;
 function testNote(k,el,where){
   if(!SITE.test[k]||!el)return null;
   const n=document.createElement("p");n.className="note testnote";n.dataset.test=k;
-  const what={noLpn:"Logging pallets with no LPN",manifestCheck:"The Manifest check",manifestPhotos:"Reading photos",liveScan:"Live scan",scanByPhoto:"Scan by photo",torch:"The torch",damage:"Marking damage",shareMissing:"Share missing list",findLpn:"Find an LPN",shareApp:"Share this app"}[k];
+  const what={noLpn:"Logging pallets with no LPN",fppDesc:"Descriptions for FPP pallets",manifestCheck:"The Manifest check",manifestPhotos:"Reading photos",liveScan:"Live scan",scanByPhoto:"Scan by photo",torch:"The torch",damage:"Marking damage",shareMissing:"Share missing list",findLpn:"Find an LPN",shareApp:"Share this app"}[k];
   n.textContent=k==="report"?"In testing: reports may not always arrive yet, so for anything urgent also use Download problem report in Settings."
     :"In testing: "+what+" may not always work yet, so check what it gives you"+(feat("report")?", and use Report if something goes wrong.":".");
   el.insertAdjacentElement(where||"beforeend",n);return n;
@@ -83,7 +83,7 @@ const okLogo=v=>typeof v==="string"&&/^data:image\/(png|jpeg);base64,[A-Za-z0-9+
 try{const c=JSON.parse(localStorage.getItem("lpncfg")||"null");cfg=Object.assign(cfg,cleanCfg(c))}catch(e){}
 if(!TYPES.includes(cfg.defType))cfg.defType="BB";
 const saveCfg=()=>{try{localStorage.setItem("lpncfg",JSON.stringify(cfg))}catch(e){}};
-const applyCfg=()=>{document.documentElement.style.setProperty("--ts",cfg.size||"1")};
+const applyCfg=()=>{document.documentElement.style.setProperty("--ts",cfg.size||"1");const dc=document.getElementById("dockCnt");if(dc&&dc.dataset.opts)try{fitDock(dc,JSON.parse(dc.dataset.opts))}catch(e){}};
 applyCfg();
 let actx=null;
 function sfx(kind){
@@ -136,21 +136,27 @@ function render(){
     if(r.desc){const dd=document.createElement("span");dd.className="desctag";dd.textContent=r.desc;l.appendChild(dd)}
     l.onclick=()=>{
       if(l.querySelector("input"))return;
-      const noL=isNoLpn(r.lpn);
+      const noL=isNoLpn(r.lpn),fromAdd=focusDesc; // opened by itself after adding (No LPN or an FPP pallet)
       const inp=document.createElement("input");inp.value=noL?"":r.lpn;inp.setAttribute("autocapitalize","characters");inp.setAttribute("aria-label",noL?"LPN for "+r.lpn+", if you find one":"Edit LPN");if(noL)inp.placeholder="LPN if found";
       l.textContent="";l.appendChild(inp);
       // Damage choices in a row under the pallet while it is being edited. Taps on them don't take focus from the
       // LPN box (phones would otherwise close the edit before the tap lands).
       // (with damage switched off in config.js, an empty row stands in, so the rest works the same)
       // (with damage switched off in config.js and no description to edit, an empty row stands in, so the rest works the same)
-      const wantDesc=noL||!!r.desc,useRow=feat("damage")||wantDesc;
-      const dr=useRow?dmgRow(r,(g,key)=>{dmgPick=g;finish(true,key)},{damage:feat("damage"),desc:wantDesc,save:key=>finish(true,key)}):document.createElement("tr");if(useRow)tr.after(dr);
+      const wantDesc=noL||!!r.desc||(r.type==="FPP"&&feat("fppDesc")),useRow=feat("damage")||wantDesc;
+      const dr=useRow?dmgRow(r,(g,key)=>{dmgPick=g;finish(true,key)},{damage:feat("damage"),desc:wantDesc,auto:fromAdd,save:key=>finish(true,key)}):document.createElement("tr");if(useRow)tr.after(dr);
       if(focusDesc&&dr._desc){focusDesc=false;dr._desc.focus()}else{focusDesc=false;inp.focus();inp.select()}
       // Keep the choices clear of the entry bar on phones (the page keeps room for it when scrolling).
       try{dr.scrollIntoView({block:"nearest"})}catch(e){}
+      // A box that opened by itself (and its damage choices) must not sit under the "Added" note: scroll it clear, or if the
+      // page can't scroll that far, take the note away early unless it is a warning.
+      if(fromAdd&&dr._desc){const fl=$("flash");if(fl&&!fl.hidden){const a=dr.getBoundingClientRect(),f=fl.getBoundingClientRect();
+        if(f.top<a.bottom&&f.bottom>a.top){window.scrollBy(0,a.bottom-f.top+8);const a2=dr.getBoundingClientRect();if(f.top<a2.bottom&&f.bottom>a2.top&&!fl.classList.contains("warn"))fl.hidden=true}}}
       let done=false,dmgPick;
       const finish=(ok,key)=>{
         if(done)return;done=true;dr.remove();
+        // Escape drops a description that was typed: say so, so it isn't lost without anyone knowing.
+        if(!ok&&dr._desc&&dr._desc.value.trim()&&dr._desc.value.trim()!==(r.desc||""))$("msg").textContent="Description not saved for "+r.lpn+".";
         // Everything changed in this edit goes back with one Undo.
         const said=[],backs=[],name=r.lpn;
         if(ok&&dr._desc){
@@ -174,6 +180,8 @@ function render(){
         render();
         // Back on the edited LPN, so keyboard users don't lose their place.
         // (also when focus was on a part of the table that has just been redrawn)
+        // A box that opened by itself after adding goes back to the LPN box, so the next pallet can be scanned.
+        if(fromAdd&&key&&$("lpn")){$("lpn").focus();return}
         if(key||!document.activeElement||document.activeElement===document.body){const back=document.querySelector('#body .lpnedit[data-i="'+i+'"]');if(back)back.focus({preventScroll:!key})}
       };
       // Finish when focus leaves both the LPN box and the damage choices.
@@ -212,19 +220,30 @@ function dmgRow(r,pick,opt){
   opt=opt||{damage:true};
   const tr=document.createElement("tr");tr.className="dmgrow";
   const td=document.createElement("td");td.colSpan=5;tr.appendChild(td);
-  // Description (for pallets with no LPN, or any pallet that already has one): saved when the edit closes.
+  // Description (for pallets with no LPN, FPP pallets, or any pallet that already has one): saved when the edit closes.
   if(opt.desc){
     const dl=document.createElement("div");dl.className="descline";
     const id="desc"+Math.random().toString(36).slice(2,8),lb=document.createElement("label");lb.htmlFor=id;lb.textContent="Description";
-    const di=document.createElement("input");di.id=id;di.maxLength=60;di.value=r.desc||"";di.placeholder="Optional: wrap, labels, PO number";
+    const di=document.createElement("input");di.id=id;di.maxLength=60;di.value=r.desc||"";const fpp=r.type==="FPP"&&!isNoLpn(r.lpn);di.placeholder=fpp?"What’s on it, e.g. kitchen roll":"Optional: wrap, labels, PO number";
     di.setAttribute("aria-label","Description for "+r.lpn);
-    // A handheld scanner can type the next pallet's LPN here (the box opens by itself after No LPN): if a fresh
-    // description is just one LPN-shaped word, it is logged as the next pallet instead.
-    di.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();const v=di.value.trim().toUpperCase().replace(/\s+/g,"");
-      if(!r.desc&&/^[A-Z]{1,3}\d{8,12}$/.test(v)){di.value="";opt.save&&opt.save(false);$("lpn").value=v;add();return}
+    // A handheld scanner can type the next pallet's code here (the box opens by itself after No LPN or an FPP pallet). If a
+    // fresh description is one word with digits typed at scanner speed (under 35 ms a character; people take 100 ms or
+    // more), it goes to the LPN box as the next pallet, so the usual checks and warnings apply. Anything typed by hand,
+    // even if it looks like an LPN (a PO number such as PO12345678), stays as the description.
+    let t0=0;di.addEventListener("input",()=>{if(di.value.length<=1)t0=performance.now();if(!di.value)t0=0});
+    di.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();const raw=di.value.trim();
+      const fast=t0&&raw.length>=6&&performance.now()-t0<raw.length*35+100;
+      if(!r.desc&&fast&&!/\s/.test(raw)&&/\d{4}/.test(raw)){di.value="";opt.save&&opt.save(false);$("lpn").value=raw;add();return}
       opt.save&&opt.save(true)}};
     dl.append(lb,di);td.appendChild(dl);tr._desc=di;
-    if(isNoLpn(r.lpn))testNote("noLpn",td);
+    const tn=isNoLpn(r.lpn)?testNote("noLpn",td):fpp&&feat("fppDesc")?testNote("fppDesc",td):null;
+    // Screen readers hear why focus moved here (the "Added" message can be cut off by the move) and how to carry on.
+    const say=[];
+    if(opt.auto){const h=document.createElement("span");h.className="srhint";h.id=id+"h";
+      h.textContent=($("flash").hidden?"Added "+r.lpn:$("flash").textContent)+". Optional: "+(fpp?"type what’s on it":"describe the pallet")+", or press Enter to skip and scan the next one.";
+      dl.appendChild(h);say.push(h.id)}
+    if(tn){tn.id=id+"t";say.push(tn.id)}
+    if(say.length)di.setAttribute("aria-describedby",say.join(" "));
   }
   if(opt.damage===false)return tr;
   const box=document.createElement("div");box.className="dmgbox";box.setAttribute("role","group");box.setAttribute("aria-label","Damage for "+r.lpn);td.appendChild(box);
@@ -252,10 +271,11 @@ function summary(){
    if(exported&&rows.length){const t=new Date(exported.at),hm=String(t.getHours()).padStart(2,"0")+":"+String(t.getMinutes()).padStart(2,"0");en.hidden=false;en.textContent=fresh?"Exported at "+hm+".":"Changed since it was exported at "+hm+".";en.classList.toggle("stale",!fresh)}else en.hidden=true;
    if(!fresh)$("nextBar").hidden=true;}
   const ms=typeof manLive==="function"?manLive():null;
-  updateDel();{const ex=parseInt($("expect").value,10),nar=innerWidth<400,dc=$("dockCnt");
+  updateDel();{const ex=parseInt($("expect").value,10),dc=$("dockCnt");
     const full=ms?ms.found+" of "+ms.total+" on manifest":rows.length?rows.length+(ex>=0?" of "+ex:"")+" logged":"";
-    dc.textContent=!rows.length&&!ms?"":ms?(nar?ms.found+"/"+ms.total:ms.found+"/"+ms.total+" on manifest"):(ex>=0?(nar?rows.length+"/"+ex:rows.length+" of "+ex+" logged"):rows.length+" logged");
-    dc.title=full;dc.setAttribute("aria-label",full);}
+    // The longest wording that fits the entry bar (narrow phones and Extra large text get the short one), never cut off.
+    const n=rows.length,opts=!n&&!ms?[""]:ms?[ms.found+"/"+ms.total+" on manifest",ms.found+"/"+ms.total,String(ms.found)]:ex>=0?[n+" of "+ex+" logged",n+"/"+ex+" logged",n+"/"+ex,String(n)]:[n+" logged",String(n)];
+    fitDock(dc,opts);dc.title=full;dc.setAttribute("aria-label",full);}
   const ei=$("expInfo"),ex=parseInt($("expect").value,10);
   if(ex>=0&&ms&&ms.total===ex)ei.hidden=true;
   else if(ex>=0){const d=rows.length-ex;ei.hidden=false;ei.className="expinfo "+(d===0?"ok":d<0?"prog":"bad");ei.textContent=rows.length+" of "+ex+" expected"+(d===0?" ✓ all accounted for":d<0?" ("+(-d)+" to go)":" ("+d+" more than expected)")}else ei.hidden=true;
@@ -318,7 +338,16 @@ function addValue(v,o){
   save();render();sfx(off?"warn":"ok");
   if(rows.length===1&&($("recv").value||"").trim())delCollapsed=true;
   updateDel();flashAdded(v,o.type,!!o.fsdu);
+  // An FPP pallet opens its description box, so what's on it (a full pallet of kitchen roll) can be typed in.
+  // Not during Live scan: the phone's keyboard would cover the camera. Those are tapped afterwards.
+  if(o.type==="FPP"&&!isNoLpn(v)&&feat("fppDesc")&&!(typeof scanning!=="undefined"&&scanning))openDesc(rows.length-1);
 }
+/* Puts the first wording that fits in the entry bar's pallet count (the last one if none does). */
+function fitDock(dc,opts){dc.dataset.opts=JSON.stringify(opts);for(let i=0;i<opts.length;i++){dc.textContent=opts[i];if(i===opts.length-1||!dc.clientWidth||dc.scrollWidth<=dc.clientWidth)return}}
+// Rotating the phone or changing the text size changes the room, so the wording is chosen again.
+addEventListener("resize",()=>{const dc=$("dockCnt");if(dc&&dc.dataset.opts)try{fitDock(dc,JSON.parse(dc.dataset.opts))}catch(e){}});
+/* Opens pallet i for editing with its description box focused. */
+function openDesc(i){setTimeout(()=>{const b=document.querySelector('#body .lpnedit[data-i="'+i+'"]');if(b){focusDesc=true;b.click()}},0)}
 /* No LPN button: logs a pallet with no LPN as the next "No LPN n", with the type and FSDU chosen, then opens it so a
    description (or the real LPN, if found) can be added. */
 let focusDesc=false;
@@ -326,8 +355,7 @@ function addNoLpn(){
   if(pendingAdd){$("msg").textContent="Answer the check first (Skip or Add anyway), then add the pallet with no LPN.";sfx("warn");return}
   let n=0;rows.forEach(r=>{const m=/^No LPN (\d+)$/i.exec(String(r.lpn).trim());if(m)n=Math.max(n,+m[1])});
   addValue("No LPN "+(n+1));
-  const i=rows.length-1;
-  setTimeout(()=>{const b=document.querySelector('#body .lpnedit[data-i="'+i+'"]');if(b){focusDesc=true;b.click()}},0);
+  openDesc(rows.length-1);
 }
 let flashTimer=null;
 function flashAdded(v,t,f){

@@ -89,6 +89,22 @@ def main():
     if is_commit:
         changed = set(run(["git", "diff", "HEAD", "--name-only"], top).stdout.split())
         changed |= set(run(["git", "ls-files", "--others", "--exclude-standard"], top).stdout.split())
+        # Photo privacy: manifest photos in the public repo must have the address boxes cut off. A new or changed
+        # photo can only be committed once its exact content has been looked at and confirmed
+        # (sh tools/release/photo-ok.sh <file>, which records its hash in .git/lpn-photos-ok).
+        photos = sorted(f for f in changed if re.match(r"^tools/ocr-check/photos/.+\.(jpe?g|png|webp|heic)$", f, re.I)
+                        and os.path.isfile(os.path.join(top, f)))
+        if photos:
+            try:
+                ok = set(open(os.path.join(top, ".git", "lpn-photos-ok"), encoding="utf8").read().split())
+            except Exception:
+                ok = set()
+            unchecked = [f for f in photos if run(["git", "hash-object", f], top).stdout.strip() not in ok]
+            if unchecked:
+                print("Photo privacy guard: these photos are going into the public repo: " + ", ".join(unchecked)
+                      + ". Open each one (Read tool) and check that no address, name or phone number can be read, cropping it if needed."
+                      " Then confirm it with: sh tools/release/photo-ok.sh " + " ".join(unchecked) + " and commit again.", file=sys.stderr)
+                return 2
         app = sorted(f for f in changed if APP.match(f))
         if app:
             # The cache number only has to be higher than the live site's (origin/main), so a branch

@@ -32,6 +32,14 @@ Read the changed files in full where the diff alone isn't enough.
 8. **Tests.** New behaviour has a check in the matching `tests/groups/NN-*.js` file (`tests/run.js` runs them all; shared helpers are in `tests/lib.js`). Run `NODE_PATH=$(npm root -g) node tests/run.js` (or `npm test`) and report the result.
 9. **Docs separation.** No `docs/` files on main, and no merge of the docs branch.
 10. **Text.** Plain English and UK spelling in the user-facing wording, with no leftover debug code, `console.log` calls or test data.
+11. **Never build.** The user decided against these. Anything in the diff that adds them, even partly or under another name, is a **Blocker**:
+    - Timing deliveries: start or finish times, how long a delivery or pallet took, speed or rate per hour, or anything that would let deliveries be timed. It would be used to rush people and get them in trouble.
+    - A damage reason for short pallets (shortages can't be known without a full breakdown from the DC) or for torn wrap. These were removed on purpose.
+    - Anything built for shared work phones (sign-in per person, switching users, locking data). The company doesn't use shared phones.
+    - The compact Delivery/Manifest layout, which was reverted.
+    - A saved zoom level for exported sheets, or phone-first export layouts. Exports are mainly printed on desktop.
+    - Asking people to type in or paste tokens or keys. Tokens only go into GitHub secrets.
+12. **Old data.** If the diff touches how saved data, backups or exports are read or written, check that `old-data-checker` was run, or say that it should be.
 
 ## Report
 

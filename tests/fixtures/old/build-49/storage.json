@@ -1,0 +1,9 @@
+{
+ "lpnwelcome": "1",
+ "lpninstallshown": "1",
+ "lpncmppfxv": "3",
+ "lpncmpman": "",
+ "lpnhist": "[{\"id\":\"1772445600000325\",\"saved\":\"2026-03-02T10:00:00.000Z\",\"date\":\"2026-03-01\",\"recv\":\"Jamie\",\"notes\":\"\",\"expect\":\"\",\"trailer\":\"TR 1001\",\"sealIn\":\"\",\"sealOut\":\"\",\"exp\":null,\"rows\":[{\"lpn\":\"VLT000000001\",\"type\":\"FMCG\",\"fsdu\":false},{\"lpn\":\"VLT000000002\",\"type\":\"BB\",\"fsdu\":true}]}]",
+ "lpnbackup": "2026-03-02T10:00:00.000Z",
+ "lpnlog": "{\"rows\":[{\"lpn\":\"VLT004040265\",\"type\":\"BB\",\"fsdu\":false},{\"lpn\":\"RUN000123456\",\"type\":\"FMCG\",\"fsdu\":true,\"dmg\":\"Crushed\"},{\"lpn\":\"QUB998877665\",\"type\":\"FPP\",\"fsdu\":false},{\"lpn\":\"RBY000111222\",\"type\":\"Mixed\",\"fsdu\":true,\"dmg\":\"Other: wrap torn\"}],\"date\":\"2026-03-02\",\"recv\":\"Jamie\",\"notes\":\"Old build check, notes with a comma, and \\\"quotes\\\"\",\"expect\":\"4\",\"trailer\":\"TR 4471\",\"sealIn\":\"112233\",\"sealOut\":\"112234\",\"exp\":{\"at\":\"2026-03-02T10:00:00.000Z\",\"sig\":\"4:-1422873308\"}}"
+}

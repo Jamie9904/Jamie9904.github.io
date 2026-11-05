@@ -13,7 +13,7 @@ module.exports = async ({ browser, URL0 }) => {
     saved: JSON.parse(localStorage.getItem("lpnlog")) }));
   check("pallet added", s.rows === 1, s.rows);
   check("added confirmation shown", /Added #1: VLT003977037/.test(s.flash), s.flash);
-  check("entry bar counter (short on narrow phones)", s.dock === "1 of 3 logged" && s.dockShort === "1/3", [s.dock, s.dockShort]);
+  check("entry bar counter (shorter on narrow phones, full wording for screen readers)", s.dock === "1 of 3 logged" && ["1/3 logged", "1/3"].includes(s.dockShort), [s.dock, s.dockShort]);
   check("Delivery folds into one line", s.collapsed && /Tester/.test(s.sum) && /Trailer TR1/.test(s.sum), s.sum);
   check("trailer and seals saved", s.saved.trailer === "TR1" && s.saved.sealIn === "SI1" && s.saved.sealOut === "SO1", s.saved);
   await p.fill("#lpn", "VLT003977037"); await p.press("#lpn", "Enter"); await p.waitForTimeout(100);
@@ -127,4 +127,52 @@ module.exports = async ({ browser, URL0 }) => {
     check("no script errors", p.errors.length === 0, p.errors);
     await p.ctx.close();
   }
+
+  // The pallet count in the entry bar is never cut off: it picks the longest wording that fits (narrow phones, Extra
+  // large text, manifest numbers); the full wording stays for screen readers.
+  console.log("Pallet count, edit box, long descriptions and mid-grey colours");
+  for (const [w, big, man] of [[320, false, false], [320, true, false], [360, true, true], [414, true, true], [414, false, true]]) {
+    p = await page(browser, w);
+    await p.setViewportSize({ width: w, height: 740 });
+    await p.goto(URL0); await p.waitForTimeout(300);
+    s = await p.evaluate(async ([big, man]) => {
+      if (big) { cfg.size = "1.25"; applyCfg(); }
+      document.getElementById("expect").value = "40";
+      if (man) { document.getElementById("cmpNums").value = Array.from({ length: 34 }, (_, i) => "VLT" + String(3977037 + i).padStart(9, "0")).join("\n"); }
+      rows = Array.from({ length: 12 }, (_, i) => ({ lpn: "VLT" + String(3977037 + i).padStart(9, "0"), type: "BB", fsdu: false })); save(); render(); if (man) manLive();
+      await new Promise(r => setTimeout(r, 100));
+      const d = document.getElementById("dockCnt"); return { text: d.textContent, label: d.getAttribute("aria-label"), fits: d.scrollWidth <= d.clientWidth + 1 };
+    }, [big, man]);
+    check(`at ${w} px${big ? " with Extra large text" : ""}${man ? " with manifest numbers" : ""} the pallet count fits without being cut off`, s.fits && s.text.length > 0 && !/…/.test(s.text) && (man ? s.label === "12 of 34 on manifest" : s.label === "12 of 40 logged"), s);
+    // Text size changed afterwards: chosen again.
+    if (w === 320 && !big) { s = await p.evaluate(async () => { cfg.size = "1.25"; applyCfg(); await new Promise(r => setTimeout(r, 50)); const d = document.getElementById("dockCnt"); return { text: d.textContent, fits: d.scrollWidth <= d.clientWidth + 1 }; });
+      check("changing to Extra large text picks a shorter count that fits", s.fits, s); }
+    // The LPN edit box is a full 44 px tap target; a long description is kept to two lines on narrow phones.
+    s = await p.evaluate(async () => {
+      rows[0].desc = "Full pallet of kitchen roll, 2-ply, white, 24 packs per layer"; save(); render();
+      const tag = document.querySelector("#body .desctag"), lh = parseFloat(getComputedStyle(tag).lineHeight), th = tag.getBoundingClientRect().height;
+      document.querySelector("#body .lpnedit").click(); await new Promise(r => setTimeout(r, 100));
+      const h = document.querySelector("#body td.l input").getBoundingClientRect().height; document.activeElement.blur(); await new Promise(r => setTimeout(r, 50));
+      return { h: Math.round(h), lines: Math.round(th / lh), page: document.documentElement.scrollWidth <= innerWidth, w: innerWidth };
+    });
+    check(`at ${w} px${big ? " with Extra large text" : ""} the LPN edit box is 44 px tall and a long description takes ${w < 360 ? "two lines" : "its full length"}`, s.h >= 44 && (w < 360 ? s.lines <= 2 : s.lines >= 1) && s.page, s);
+    check("no script errors", p.errors.length === 0, p.errors);
+    await p.ctx.close();
+  }
+  // Mid-grey background colours: text and grey text (hints, placeholders) stay readable; the quick themes don't change.
+  p = await page(browser, 375);
+  await p.goto(URL0); await p.waitForTimeout(300);
+  s = await p.evaluate(() => {
+    const r = (a, b) => { const x = lumOf(a) + .05, y = lumOf(b) + .05; return Math.max(x, y) / Math.min(x, y); }, out = {};
+    for (const bg of ["#8c8c8c", "#7a7a7a", "#767676", "#5a5a5a", "#a0a0a0", "#6e6e6e"]) {
+      theme = { bg, ac: "#2563eb", follow: false }; applyTheme(); const st = getComputedStyle(document.documentElement), g = k => st.getPropertyValue(k).trim();
+      out[bg] = { mu: +Math.min(r(g("--mu"), g("--paper")), r(g("--mu"), bg)).toFixed(2), ink: +Math.min(r(g("--ink"), g("--paper")), r(g("--ink"), bg)).toFixed(2) };
+    }
+    theme = { bg: "#0c1830", ac: "#ff8a2a", follow: false }; applyTheme(); const st = getComputedStyle(document.documentElement);
+    out.navy = ["--ink", "--mu", "--paper"].map(k => st.getPropertyValue(k).trim()).join(" ");
+    return out;
+  });
+  check("on mid-grey backgrounds grey text is at least 4.5:1 and text at least 4.5:1", Object.keys(s).filter(k => k[0] === "#").every(k => s[k].mu >= 4.5 && s[k].ink >= 4.5), s);
+  check("the navy and orange colours are unchanged", s.navy === "#ecedee #a3a7b0 #1f2a41", s.navy);
+  await p.ctx.close();
 };

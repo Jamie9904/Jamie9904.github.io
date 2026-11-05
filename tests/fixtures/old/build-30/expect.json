@@ -1,0 +1,60 @@
+{
+ "build": 30,
+ "commit": "9e63a49",
+ "delivery": {
+  "date": "2026-03-02",
+  "recv": "Jamie",
+  "notes": "Old build check, notes with a comma, and \"quotes\"",
+  "expect": "4",
+  "trailer": "TR 4471",
+  "sealIn": "112233",
+  "sealOut": "112234"
+ },
+ "rows": [
+  {
+   "lpn": "VLT004040265",
+   "type": "BB",
+   "fsdu": false
+  },
+  {
+   "lpn": "RUN000123456",
+   "type": "FMCG",
+   "fsdu": true
+  },
+  {
+   "lpn": "QUB998877665",
+   "type": "FPP",
+   "fsdu": false
+  },
+  {
+   "lpn": "RBY000111222",
+   "type": "Mixed",
+   "fsdu": true
+  }
+ ],
+ "saved": [
+  {
+   "delivery": {
+    "date": "2026-03-01",
+    "recv": "Jamie",
+    "notes": "",
+    "expect": "",
+    "trailer": "TR 1001",
+    "sealIn": "",
+    "sealOut": ""
+   },
+   "rows": [
+    {
+     "lpn": "VLT000000001",
+     "type": "FMCG",
+     "fsdu": false
+    },
+    {
+     "lpn": "VLT000000002",
+     "type": "BB",
+     "fsdu": true
+    }
+   ]
+  }
+ ]
+}
