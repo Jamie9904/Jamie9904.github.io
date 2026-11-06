@@ -106,7 +106,7 @@ A check in `tests/groups/08-demo-video.js` fails if the video is over 3 MB. Re-r
 
 ### Checking photo reading on real manifest photos
 
-`tools/ocr-check/` scores the app's photo reading on the user's four manifest photos, a sideways copy of `run.jpg` and an upside-down copy of `rby.jpg` (`photos/`, address boxes cut off) against `expected.json` (23 LPNs since build 47; 21 at build 46). It needs Node.js with Playwright, and either the Tesseract 5 command (`cli` engine, offline) or internet access to `cdn.jsdelivr.net` and the tessdata download (`js` engine, the app's real `ocrLpns()`):
+`tools/ocr-check/` scores the app's photo reading on the user's nine manifest photos (four of 31 Oct 2026 and, since build 57, five of 6 Nov 2026), a sideways copy of `run.jpg` and an upside-down copy of `rby.jpg` (`photos/`, address boxes cut off) against `expected.json` (54 LPNs since build 57; 23 at build 47; 21 at build 46). It needs Node.js with Playwright, and either the Tesseract 5 command (`cli` engine, offline) or internet access to `cdn.jsdelivr.net` and the tessdata download (`js` engine, the app's real `ocrLpns()`):
 
 ```bash
 NODE_PATH=$(npm root -g) node tools/ocr-check/check.js
