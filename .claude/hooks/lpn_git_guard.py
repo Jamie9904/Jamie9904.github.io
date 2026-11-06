@@ -135,6 +135,15 @@ def main():
         # Pushing only the docs branch doesn't change the site, so skip the checks.
         if re.search(r"\bpush\b.*\bdocs\b", cmd) and not re.search(r"\bmain\b", cmd):
             return 0
+        # The checks below run on the files on disk, not on what is pushed: an app or check file changed but not
+        # committed would pass here and fail on GitHub (build 58: core.js left out of the commit). Block until it is
+        # committed or put back.
+        st = run(["git", "status", "--porcelain"], top).stdout.splitlines()
+        loose = sorted(l[3:].split(" -> ")[-1] for l in st if l[:2] != "??" and (APP.match(l[3:].split(" -> ")[-1]) or re.match(r"^(config\.js|sw\.js|tests/)", l[3:].split(" -> ")[-1])))
+        if loose:
+            print("Uncommitted-changes guard: these files are changed but not committed, so the push wouldn't include them: "
+                  + ", ".join(loose) + ". Commit them (git add + git commit) or put them back (git checkout -- <file>), then push again.", file=sys.stderr)
+            return 2
         env = dict(os.environ)
         try:
             env["NODE_PATH"] = run(["npm", "root", "-g"], top).stdout.strip() + (":" + env["NODE_PATH"] if env.get("NODE_PATH") else "")

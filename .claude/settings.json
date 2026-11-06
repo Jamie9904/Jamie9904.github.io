@@ -1,4 +1,10 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(gh api -X POST repos/Jamie9904/lpn-feedback/issues/*)",
+      "Bash(gh api -X PATCH repos/Jamie9904/lpn-feedback/issues/*)"
+    ]
+  },
   "hooks": {
     "PostToolUse": [
       {
