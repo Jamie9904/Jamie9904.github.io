@@ -197,4 +197,41 @@ module.exports = async ({ browser, URL0 }) => {
       await q.ctx.close();
     }
   }
+
+  // The user's photos of 6 Nov 2026 (problem report): V0013323651 printed after "LPN:" among VLT numbers was left
+  // out; QUB001911625 was read with a gap (QUB00191 1625) and missed; RUN001840861, alone on its page, was read as
+  // RUN0001840861 with nothing on that page to compare with.
+  {
+    console.log("Manifest photos: labelled numbers, numbers read with a gap, an extra 0 across photos");
+    const q = await page(browser, 390);
+    await q.goto(URL0); await q.waitForTimeout(300);
+    let s = await q.evaluate(() => {
+      const it = (x, lab) => ({ raw: x, first: x, again: null, lab });
+      const page1 = ["VLT004055885", "VLT004055887", "VLT004055889", "VLT004055998", "VLT004056066"];
+      const lab = tidyReads([it("V0013323651", true), ...page1.map(x => it(x, true)), it("HB0182007092", false)]);
+      const nolab = tidyReads([it("V0013323651", false), ...page1.map(x => it(x, false))]);
+      const bb = (x0) => ({ x0, y0: 10, x1: x0 + 50, y1: 30 });
+      const words = [["LPN", 0], ["QUB00191", 60], ["1625", 120], ["LPN:", 0], ["QUB001911630", 60], ["LPN", 0], ["V0013323651", 60], ["VLT004055885", 0], ["2056", 60], ["Trailer", 0], ["2056", 60]].map(([text, x]) => ({ text, bbox: bb(x) }));
+      const c = ocrWordCands(words);
+      return { lab: lab.join(), labIgn: lab.ignored.join(), nolabIgn: nolab.ignored.join(), cands: c.map(x => x.first + (x.lab ? "*" : "")).join(), box: c[0] && c[0].bbox, lpnPfx: extractLpns("LPN 0013323651 LPN VLT004055885", true).join() };
+    });
+    check("a number printed after an LPN label is kept even with a different prefix length (V0013323651 among VLT numbers); without the label it is still left out", /^V0013323651,VLT004055885/.test(s.lab) && s.labIgn === "HB0182007092" && s.nolabIgn === "V0013323651", s);
+    check("a number read with a gap (QUB00191 1625) is read as one LPN, labelled numbers are marked, and other digits aren't joined on", s.cands === "QUB001911625*,QUB001911630*,V0013323651*,VLT004055885" && s.box.x0 === 60 && s.box.x1 === 170, s);
+    check("the LPN label is never read as a prefix (LPN 0013323651)", s.lpnPfx === "VLT004055885", s.lpnPfx);
+    // The batch as the phone read it: photo 3 is the page with one LPN, read with an extra 0.
+    await q.evaluate(() => {
+      document.getElementById("cmpToggle").click(); document.getElementById("cmpPfx").value = "";
+      document.getElementById("cmpNums").value = "RUN0001840999\nRUN001840990";
+      const pages = [["V0013323651", "VLT004055885", "VLT004055887"], ["RUN0001840861"], ["RUN001840795", "RUN001840802", "RUN001840809", "RUN001840811", "RUN001840812", "RUN001840837"], ["RUN0001830763"], ["RUN0001840802"]];
+      let n = 0; window.readPhoto = async () => { const a = pages[n++].slice(); a.skipped = []; a.odd = []; a.mended = []; return a; };
+    });
+    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+    await q.setInputFiles("#cmpPhotoFile", [1, 2, 3, 4, 5].map(i => ({ name: "m" + i + ".jpg", mimeType: "image/jpeg", buffer: png })));
+    await q.waitForFunction(() => !/Reading photo/.test(document.getElementById("cmpMsg").textContent), null, { timeout: 5000 }).catch(() => {});
+    s = await q.evaluate(() => ({ msg: document.getElementById("cmpMsg").textContent, nums: document.getElementById("cmpNums").value.split("\n") }));
+    check("a photo reading with an extra 0 is corrected to match the other photos when it sits among them, and the note says so", s.nums.includes("RUN001840861") && !s.nums.includes("RUN0001840861") && /1 number was corrected to match the other photos \(RUN0001840861 to RUN001840861\): check it against the paper/.test(s.msg), s);
+    check("typed numbers, a number far from the others and one that would become a number already listed are left alone", s.nums.includes("RUN0001840999") && s.nums.includes("RUN0001830763") && s.nums.includes("RUN0001840802") && s.nums.filter(x => x === "RUN001840802").length === 1, s.nums);
+    check("no script errors", q.errors.length === 0, q.errors);
+    await q.ctx.close();
+  }
 };

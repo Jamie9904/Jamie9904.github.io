@@ -62,14 +62,13 @@ async function readCliCanvas(page, prefix) {
 	const png = await page.evaluate(() => window.__cv.toDataURL("image/png").split(",")[1]);
 	const rows = tess(Buffer.from(png, "base64"), 11, true).trim().split("\n").slice(1).map(l => l.split("\t")).filter(r => r.length > 11 && r[11].trim());
 	const items = [], orig = new Set();
-	for (const r of rows) {
-		const found = await page.evaluate(t => extractLpns(t, true), r[11]);
-		if (found.length !== 1) continue;
-		orig.add(found[0]);
-		const bb = { x0: +r[6], y0: +r[7], x1: +r[6] + +r[8], y1: +r[7] + +r[9] };
-		const crop = await page.evaluate(bb => cropScaled(window.__cv, bb).toDataURL("image/png").split(",")[1], bb);
+	// The app's own word handling (labels, numbers read with a gap), so this check and phones agree.
+	const words = rows.map(r => ({ text: r[11], bbox: { x0: +r[6], y0: +r[7], x1: +r[6] + +r[8], y1: +r[7] + +r[9] } }));
+	for (const c of await page.evaluate(w => ocrWordCands(w), words)) {
+		orig.add(c.first);
+		const crop = await page.evaluate(bb => cropScaled(window.__cv, bb).toDataURL("image/png").split(",")[1], c.bbox);
 		const again = await page.evaluate(t => { const a = extractLpns(t, true); return a.length === 1 ? a[0] : null; }, tess(Buffer.from(crop, "base64"), 7).replace(/\s+/g, ""));
-		items.push({ raw: r[11], first: found[0], again });
+		items.push({ raw: c.raw, first: c.first, again, lab: c.lab });
 	}
 	const text = rows.map(r => r[11]).join(" ");
 	return page.evaluate(([items, text, orig, prefix]) => {

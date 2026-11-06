@@ -86,7 +86,8 @@ function extractLpns(text,any){
   const pf=any?[]:getPfx().sort((a,b)=>b.length-a.length);
   const fix=p=>p.replace(/[OD]/g,"0").replace(/[IL]/g,"1").replace(/S/g,"5").replace(/B/g,"8").replace(/Z/g,"2");
   const scan=(alt,dg)=>{const re=new RegExp("\\b("+alt+")[ \\t]?("+(dg||"[0-9ODILSBZ]{8,12}")+")\\b","gi"),o=[];let m;
-    while((m=re.exec(text))){const part=m[2].toUpperCase();if((part.match(/[0-9]/g)||[]).length<6)continue;o.push(m[1].toUpperCase()+fix(part))}
+    // "LPN" is the label printed before each number, never a prefix ("LPN 0013323651" when the V wasn't read).
+    while((m=re.exec(text))){const part=m[2].toUpperCase();if((part.match(/[0-9]/g)||[]).length<6||m[1].toUpperCase()==="LPN")continue;o.push(m[1].toUpperCase()+fix(part))}
     return o};
   const out=scan(pf.length?pf.join("|"):"[A-Z]{1,3}");
   // Only numbers with an LPN's digit count (lpnDigitsOk) count as possibly left out, so PO, phone and reference numbers aren't flagged.
@@ -201,7 +202,9 @@ function tidyReads(items){
   const out=[];out.ignored=[];out.mended=mended;
   // Also left out: a prefix of a different length from every prefix on the page (CO…, RR…, L… among VLT numbers).
   // Known prefixes are always kept, however the rest of the page looks (IM: full pallet picks, two letters).
-  res.forEach(x=>{const s=split(x);if(pats.length&&s&&KNOWN_PFX.indexOf(s.p)<0&&!pats.some(q=>q.p===s.p)&&(!lpnDigitsOk(x)||!pats.some(q=>q.p.length===s.p.length)))out.ignored.push(x);else out.push(x)});
+  // A number printed straight after an "LPN:" label with an LPN's digit count is always kept (V0013323651 among
+  // VLT numbers): the label says what it is.
+  res.forEach((x,i)=>{const s=split(x);if(pats.length&&s&&!(items[i]&&items[i].lab&&lpnDigitsOk(x))&&KNOWN_PFX.indexOf(s.p)<0&&!pats.some(q=>q.p===s.p)&&(!lpnDigitsOk(x)||!pats.some(q=>q.p.length===s.p.length)))out.ignored.push(x);else out.push(x)});
   return out;
 }
 /* Tidies one photo's readings, then keeps those with a prefix in the list; the rest that look like LPNs are
@@ -279,6 +282,23 @@ async function ocrLpnsNow(f){
     cv.width=cv.height=0;if(tc)tc.width=tc.height=0;
   }
 }
+/* The words of a page read that are one LPN each: {raw, first, bbox, lab}. Shared with tools/ocr-check.
+   lab: printed straight after an "LPN:" label (the reader may lose the colon).
+   A number read with a gap in it (QUB00191 1625), the prefix with too few digits then a word of digits only, is
+   joined when together they make an LPN. */
+function ocrWordCands(words){
+  const out=[];
+  for(let k=0;k<words.length;k++){
+    const wd=words[k],lab=k>0&&/^LPN:?$/i.test(String(words[k-1].text||"").trim());
+    let text=String(wd.text||"").trim(),bb=wd.bbox,found=extractLpns(text,true);
+    if(!found.length&&k+1<words.length&&/^[A-Z]{1,3}[0-9]{2,8}$/i.test(text)&&/^[0-9]{1,8}$/.test(String(words[k+1].text||"").trim())){
+      const j=text+String(words[k+1].text).trim(),nb=words[k+1].bbox;
+      if(lpnDigitsOk(j)){text=j;found=extractLpns(j,true);bb={x0:Math.min(bb.x0,nb.x0),y0:Math.min(bb.y0,nb.y0),x1:Math.max(bb.x1,nb.x1),y1:Math.max(bb.y1,nb.y1)};k++}
+    }
+    if(found.length===1)out.push({raw:text,first:found[0],bbox:bb,lab:lab});
+  }
+  return out;
+}
 /* Reads one prepared canvas: the whole page, then a close-up of each number found. */
 async function ocrCanvas(w,cv){
   // Mode 11 (sparse text) finds every number on a manifest page; the default page layout mode skipped whole
@@ -289,13 +309,11 @@ async function ocrCanvas(w,cv){
   // list is applied afterwards.
   const items=[],orig=new Set();
   await w.setParameters({tessedit_pageseg_mode:"7"});
-  for(const wd of (r.words||[])){
-    const found=extractLpns(wd.text,true);
-    if(found.length!==1)continue;
-    orig.add(found[0]);
+  for(const c of ocrWordCands(r.words||[])){
+    orig.add(c.first);
     let again=null;
-    try{const a=extractLpns((await ocrRead(w,cropScaled(cv,wd.bbox))).data.text.replace(/\s+/g,""),true);if(a.length===1)again=a[0]}catch(e){if(e&&e.stuck)throw e}
-    items.push({raw:wd.text,first:found[0],again:again});
+    try{const a=extractLpns((await ocrRead(w,cropScaled(cv,c.bbox))).data.text.replace(/\s+/g,""),true);if(a.length===1)again=a[0]}catch(e){if(e&&e.stuck)throw e}
+    items.push({raw:c.raw,first:c.first,again:again,lab:c.lab});
   }
   extractLpns(r.text,true).forEach(x=>{if(!orig.has(x))items.push({raw:x,first:x,again:null,whole:true})});
   return {out:photoLpns(items),items:items,r:r};
@@ -453,6 +471,29 @@ $("cmpPhotoBtn").onclick=()=>{$("cmpPhotoFile").value="";$("cmpPhotoFile").click
 /* The last batch of manifest photos, kept in memory (not stored) so "Report a problem with these photos" can attach
    the one that read worst. */
 let cmpLastPhotos=[];
+/* Numbers that came from manifest photos (not typed), so only those are ever corrected across photos. */
+const cmpPhotoNums=new Set();
+/* A photo reading with one 0 too many straight after its prefix (RUN0001840861) is corrected when, without it, the
+   number fits the shape most numbers in the list have for that prefix (seen on at least two) and is within 500 of one
+   of them (RUN001840861 among RUN001840795…837). This catches a page with only one LPN on it, which has nothing on
+   its own page to compare with. Never onto a number already in the list; typed numbers are left alone.
+   Returns [[was, now], …]. */
+function mendList(id,from){
+  const lines=$(id).value.split(/\r?\n/),sp=x=>{const m=/^([A-Z]+)([0-9]+)$/.exec(norm(x));return m?{p:m[1],d:m[2]}:null};
+  const cnt={};lines.forEach(l=>{const s=sp(l);if(s){const k=s.p+"#"+s.d.length;cnt[k]=(cnt[k]||0)+1}});
+  const pat=p=>{let best=null;Object.keys(cnt).forEach(k=>{const [q,n]=k.split("#");if(q===p&&cnt[k]>=2&&(!best||cnt[k]>cnt[best]))best=k});return best?+best.split("#")[1]:0};
+  const have=new Set(lines.map(norm)),out=[];
+  lines.forEach((l,i)=>{
+    const s=sp(l);if(!s||!from.has(norm(l)))return;
+    const n=pat(s.p);if(!n||s.d.length!==n+1||s.d[0]!=="0")return;
+    const m=s.p+s.d.slice(1);if(have.has(m))return;
+    const v=+s.d.slice(1);
+    if(!lines.some((o,j)=>{const t=sp(o);return j!==i&&t&&t.p===s.p&&t.d.length===n&&Math.abs(+t.d-v)<=500}))return;
+    lines[i]=m;have.add(m);from.add(m);out.push([norm(l),m]);
+  });
+  if(out.length)$(id).value=lines.join("\n");
+  return out;
+}
 $("cmpPhotoFile").onchange=async e=>{
   const files=[...(e.target.files||[])];if(!files.length)return;
   const notes=[];cmpForgetPhotos();
@@ -462,10 +503,12 @@ $("cmpPhotoFile").onchange=async e=>{
     cmpMsg("Reading photo "+(i+1)+" of "+files.length+"…");
     diag("manifest","photo "+(i+1)+" of "+files.length+": "+(f.type||"?")+", "+Math.round((f.size||0)/1024)+" KB");
     ocrSay=t=>cmpMsg("Photo "+(i+1)+" of "+files.length+": "+t);
-    try{const a=await readPhoto(f),r=addNums(a);notes.push(readNote(tag,a,r,false,true));cmpSkipped.push(...(a.skipped||[]));cmpLastPhotos.push({file:f,tag,found:a.length,odd:((a.skipped||[]).length+(a.odd||[]).length+(a.mended||[]).length)});diag("manifest",tag+": found "+a.length+", added "+r.added+", already listed "+r.dup+(a.skipped&&a.skipped.length?", skipped "+a.skipped.join(" "):"")+(a.odd&&a.odd.length?", left out as unlike the page "+a.odd.join(" "):"")+(a.mended&&a.mended.length?", corrected to match the page "+a.mended.join(" "):""))}
+    try{const a=await readPhoto(f),r=addNums(a);a.forEach(x=>cmpPhotoNums.add(norm(x)));notes.push(readNote(tag,a,r,false,true));cmpSkipped.push(...(a.skipped||[]));cmpLastPhotos.push({file:f,tag,found:a.length,odd:((a.skipped||[]).length+(a.odd||[]).length+(a.mended||[]).length)});diag("manifest",tag+": found "+a.length+", added "+r.added+", already listed "+r.dup+(a.skipped&&a.skipped.length?", skipped "+a.skipped.join(" "):"")+(a.odd&&a.odd.length?", left out as unlike the page "+a.odd.join(" "):"")+(a.mended&&a.mended.length?", corrected to match the page "+a.mended.join(" "):""))}
     catch(err){const m=(err&&err.message)||"error";notes.push(tag+": couldn’t be read ("+m+").");diag("manifest",tag+" failed: "+m);cmpLastPhotos.push({file:f,tag,found:-1,odd:0})}
     ocrSay=null;
   }
+  const fx=mendList("cmpNums",cmpPhotoNums);
+  if(fx.length){notes.push(fx.length+(fx.length===1?" number was":" numbers were")+" corrected to match the other photos ("+fx.map(f=>f[0]+" to "+f[1]).slice(0,4).join(", ")+(fx.length>4?"…":"")+"): check "+(fx.length===1?"it":"them")+" against the paper.");diag("manifest","Corrected across photos: "+fx.map(f=>f[0]+">"+f[1]).join(" "))}
   cmpLastNote=notes.join(" ")+" Check the numbers below are correct, then compare."+oddNote("cmpNums");cmpMsg(cmpLastNote);
   $("cmpReport").hidden=!cmpLastPhotos.length||!feat("report");showPfxAdd();
 };
