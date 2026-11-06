@@ -489,7 +489,7 @@ The audit by the `a11y-reviewer` agent that led to build 41 also suggested chang
 
 ## Report a problem or idea through a Worker into a private repo (build 42)
 
-Staff can send a problem or idea from the **Report** button at the top of the page (since build 44), Settings or the Guide; a Cloudflare Worker (`tools/feedback-worker`) turns it into an issue in the private repo `Jamie9904/lpn-feedback`.
+Staff can send a problem or idea from the **Report a problem** button (labelled **Report** from build 44 to 57) at the top of the page (since build 44), Settings or the Guide; a Cloudflare Worker (`tools/feedback-worker`) turns it into an issue in the private repo `Jamie9904/lpn-feedback`.
 
 - **Why a Worker:** the site is public, so it can't hold a GitHub key. The Worker holds a fine-grained token for that one repo only (Issues and Contents), stored as a Worker secret, and checks every report before using it.
 - **Why a private repo:** reports can include LPNs, manifest numbers and text read from supplier documents. Attaching the problem report can be unticked. (Until build 44 the form also said where reports go and what the problem report contains; see below.) This changes the earlier stance in "Problem log kept on the device, sent by hand": the log still never leaves the device by itself, only when attached to a report the user sends.
@@ -513,7 +513,7 @@ Build 41's header buttons size to their text, so the demo fingerprint check (see
 
 The report form moved out of Settings into a box in the middle of the screen, opened by a **Report** button at the top of the page, by **Settings → Report a problem or idea**, or by the Guide's link.
 
-- **Why a button at the top:** inside Settings the form was several taps away and easy to miss. A labelled button (icon and the word "Report", at least 44px) in the header is always one tap away, on phones at the right of the title row and on desktop before **Guide**.
+- **Why a button at the top:** inside Settings the form was several taps away and easy to miss. A labelled button (icon and the word "Report" until build 58, now "Report a problem"; at least 44px) in the header is always one tap away, on phones at the right of the title row and on desktop before **Guide**.
 - **Why a box over the panel, not a jump to Settings:** opened from the Guide or Settings, the box sits on top and the panel stays where it was. The panel is made `inert` while the box is open, and Escape is caught first so it closes only the box; focus goes back to the button that opened it.
 - **Why it closes by itself:** after "Sent. Thank you!" there is nothing more to do, so the box closes 1.5 seconds later (only if that message is still showing).
 - **Wording (the user's decision):** the note about where reports go was removed from the box, and the tick box says just "Attach the problem report", without the explanation in brackets. The docs still describe what the problem report contains.
@@ -557,7 +557,7 @@ On phones with the Manifest check open, the Undo bar shows at the top of the scr
 
 ## Demo video recorded with a UK browser language (build 45)
 
-The demo video was re-recorded to show the **Report** button. The context's `en-GB` locale wasn't enough for the date box, which follows the browser's own language, so `record.mjs` now also starts Chromium with `--lang=en-GB` and `LANG=en_GB.UTF-8`, `LANGUAGE=en_GB`, and date boxes show day/month/year.
+The demo video was re-recorded to show the **Report** button (as it was labelled then; **Report a problem** since build 58). The context's `en-GB` locale wasn't enough for the date box, which follows the browser's own language, so `record.mjs` now also starts Chromium with `--lang=en-GB` and `LANG=en_GB.UTF-8`, `LANGUAGE=en_GB`, and date boxes show day/month/year.
 
 ## Find an LPN in Saved deliveries (build 46)
 
@@ -730,7 +730,7 @@ Features can be switched off for everyone, or marked as in testing, by editing `
 - **Why switching off hides rather than deletes:** data already on phones is kept. Damage notes stay on pallets and on exports; manifest numbers stay in `lpncmpman` but `manState()` ignores them, so nobody gets warnings from a hidden section; queued reports stay in `lpnfeedq` but aren't sent. Switching the feature back on brings them back.
 - **Why photos off also ignores the prefix list:** the prefix presets are hidden with the photo buttons, so a list saved earlier would otherwise leave out PDF numbers with no visible reason. `getPfx()` returns an empty list instead.
 - **Why the Guide and Settings text is filtered, and the Guide renumbered:** staff shouldn't read about a button they can't find. `data-f`/`data-nf` marks the lines in the help HTML, `siteHtml()` removes them before the panel is shown, and the numbers are redone so the contents bar has no gaps. `data-nf` gives a different sentence where a plain removal would read wrong (the privacy line with no Report button).
-- **Why the testing note mentions Report, except for Report itself:** the point of marking a feature as in testing is to hear when it goes wrong. When Report is the feature being tested, the note points to **Download problem report**, which doesn't depend on it; when Report is switched off, the other notes don't mention it.
+- **Why the testing note mentions Report a problem, except for reporting itself:** the point of marking a feature as in testing is to hear when it goes wrong. When reporting is the feature being tested, the note points to **Download problem report**, which doesn't depend on it; when reporting is switched off, the other notes don't mention it.
 - **Why the scan and torch notes wait in the camera box:** the camera box is shared by Live scan and Scan by photo, so `scanNote()` shows only the note for the one in use, and the torch note only shows with the Torch button (which many iPhones never show).
 - **Trade-off:** the settings apply to everyone using this copy of the site; there is no per-phone switch. Adding a new switch means touching `FEATURES`, `config.js`, the code that shows the feature, its help lines and `testNote()` (the steps are in `.claude/CLAUDE.md`).
 - **Why the offline checks were renumbered:** `19-site-config.js` took number 19 and `19-offline.js` became `20-offline.js`, because the offline group takes the page offline and must stay last.
@@ -810,3 +810,12 @@ The user's photos of 6 Nov 2026 showed three problems on GitHub's real reader: `
 - **Why the word handling is shared (`ocrWordCands()`):** `tools/ocr-check` had its own copy of the word loop, so a fix in the app wasn't tested by the check. One function keeps them the same.
 - **Why the photo check counts "named without its letters" as not a failure:** the local `cli` engine misses the `V` on `vlt-2.jpg`; the app names it in the note, so the tool reports "named in the note without its letters" instead of a missing LPN. GitHub's real reader, which decides, still has to read it in full (54 of 54).
 - **Trade-off:** a real LPN with a one-letter prefix other than `V`, `R` or `Q`, or one whose label wasn't read, among longer prefixes is still left out (named if it has an LPN's digit count). A number split by a gap is only found when it is printed after an "LPN:" label.
+
+## Top button says "Report a problem" (build 58)
+
+The button at the top of the page said just **Report** from build 44. It now says **Report a problem**, and the Guide, Settings, privacy text and the "In testing" notes use the same words.
+
+- **Why the longer label:** "Report" on its own didn't say what is being reported. The changelog line puts it as "so it’s clear it’s for problems with the app or ideas for it". The `aria-label` stays "Report a problem or idea", which starts with the visible words; `12-report.js` checks that it does.
+- **Why two lines and no icon on small phones:** the longer label sits next to the "LPN Pallet Log" name in the title row. Under 480px the label wraps to two lines (`max-width: 5.6em`), and under 360px the icon is hidden as well, so the app name keeps its room (the CSS comment: "so the app name keeps its room"). The button stays at least 44×44px.
+- **Why the switched-off privacy line changed:** with reporting off it said "There’s no Report button", naming a button by its old label. It now says "There’s no button for sending reports in this copy of the app", which doesn't depend on the label.
+- **Trade-off:** on phones under 480px the button is two lines tall and takes more of the title row; under 360px it is text only. The demo video still shows the old **Report** label, because it wasn't re-recorded for this build.
