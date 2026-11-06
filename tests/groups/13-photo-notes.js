@@ -10,7 +10,7 @@ module.exports = async ({ browser, URL0 }) => {
     let s = await q.evaluate(() => { document.getElementById("cmpPfx").value = "";
       const out = photoLpns([["VLT004040265", null], ["VLT004040273", null], ["VLT004040355", "VL1004040355"]].map(([a, b]) => ({ raw: a, first: b || a, again: b })));
       return { mended: out.mended, note: readNote("Photo 1", out, { added: 3, dup: 0 }) }; });
-    check("a number corrected to match the page is named in the note, to check against the paper", JSON.stringify(s.mended) === '["VLT004040355"]' && /1 number was corrected to match the others on the page \(VLT004040355\): check it against the paper/.test(s.note), s);
+    check("a number corrected to match the page is named in the note, to check against the paper", JSON.stringify(s.mended) === '["VLT004040355"]' && /1 number looked misread, so it was corrected \(VLT004040355\): check it against the paper/.test(s.note), s);
     // Report a problem with these photos: shows after a batch and opens the report box with the worst photo attached.
     await q.evaluate(() => { document.getElementById("cmpToggle").click(); let n = 0;
       window.readPhoto = async () => { n++; const a = n === 1 ? ["VLT004040265", "VLT004040273"] : []; a.skipped = []; a.odd = []; a.mended = []; return a; }; });

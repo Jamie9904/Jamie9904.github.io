@@ -138,11 +138,12 @@ def main():
         # The checks below run on the files on disk, not on what is pushed: an app or check file changed but not
         # committed would pass here and fail on GitHub (build 58: core.js left out of the commit). Block until it is
         # committed or put back.
-        st = run(["git", "status", "--porcelain"], top).stdout.splitlines()
-        loose = sorted(l[3:].split(" -> ")[-1] for l in st if l[:2] != "??" and (APP.match(l[3:].split(" -> ")[-1]) or re.match(r"^(config\.js|sw\.js|tests/)", l[3:].split(" -> ")[-1])))
+        # New files that were never added count too (a new app file or check left out of the commit).
+        st = run(["git", "status", "--porcelain", "--untracked-files=all"], top).stdout.splitlines()
+        loose = sorted(l[3:].split(" -> ")[-1] for l in st if APP.match(l[3:].split(" -> ")[-1]) or re.match(r"^(config\.js|sw\.js|tests/|[^/]+\.js$)", l[3:].split(" -> ")[-1]))
         if loose:
-            print("Uncommitted-changes guard: these files are changed but not committed, so the push wouldn't include them: "
-                  + ", ".join(loose) + ". Commit them (git add + git commit) or put them back (git checkout -- <file>), then push again.", file=sys.stderr)
+            print("Uncommitted-changes guard: these files are new or changed but not committed, so the push wouldn't include them: "
+                  + ", ".join(loose) + ". Commit them (git add + git commit), or put changed ones back (git checkout -- <file>) and delete new ones you don't want, then push again.", file=sys.stderr)
             return 2
         env = dict(os.environ)
         try:
