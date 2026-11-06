@@ -198,39 +198,35 @@ module.exports = async ({ browser, URL0 }) => {
     }
   }
 
-  // The user's photos of 6 Nov 2026 (problem report): V0013323651 printed after "LPN:" among VLT numbers was left
-  // out; QUB001911625 was read with a gap (QUB00191 1625) and missed; RUN001840861, alone on its page, was read as
-  // RUN0001840861 with nothing on that page to compare with.
+  // The user's photos of 6 Nov 2026 (problem report #2), with the readings GitHub's real photo reader gave:
+  // V0013323651 among VLT numbers was left out; QUB001911625 was read with a gap (QUB00191 1625); RUN001840861, alone
+  // on its page, came out as RUN0001840861 because the close-up added a 0, with print showing through from the back
+  // of the page read as FI8111010009.
   {
-    console.log("Manifest photos: labelled numbers, numbers read with a gap, an extra 0 across photos");
+    console.log("Manifest photos: single-letter prefixes, numbers read with a gap, a page with one LPN");
     const q = await page(browser, 390);
     await q.goto(URL0); await q.waitForTimeout(300);
-    let s = await q.evaluate(() => {
-      const it = (x, lab) => ({ raw: x, first: x, again: null, lab });
+    const s = await q.evaluate(() => {
+      const it = (x, lab, again) => ({ raw: x, first: x, again: again === undefined ? null : again, lab });
       const page1 = ["VLT004055885", "VLT004055887", "VLT004055889", "VLT004055998", "VLT004056066"];
-      const lab = tidyReads([it("V0013323651", true), ...page1.map(x => it(x, true)), it("HB0182007092", false)]);
-      const nolab = tidyReads([it("V0013323651", false), ...page1.map(x => it(x, false))]);
-      const bb = (x0) => ({ x0, y0: 10, x1: x0 + 50, y1: 30 });
-      const words = [["LPN", 0], ["QUB00191", 60], ["1625", 120], ["LPN:", 0], ["QUB001911630", 60], ["LPN", 0], ["V0013323651", 60], ["VLT004055885", 0], ["2056", 60], ["Trailer", 0], ["2056", 60]].map(([text, x]) => ({ text, bbox: bb(x) }));
-      const c = ocrWordCands(words);
-      return { lab: lab.join(), labIgn: lab.ignored.join(), nolabIgn: nolab.ignored.join(), cands: c.map(x => x.first + (x.lab ? "*" : "")).join(), box: c[0] && c[0].bbox, lpnPfx: extractLpns("LPN 0013323651 LPN VLT004055885", true).join() };
+      const v = tidyReads([it("V0013323651", true), ...page1.map(x => it(x, true)), it("HB0182007092", false), it("L1121100001", true), it("V12345", true)]);
+      const single = tidyReads([it("RUN001840861", true, "RUN0001840861"), it("FI8111010009", false)]);
+      // A real 10-digit number read the same both times, and a close-up that differs in other ways, keep the close-up rule.
+      const ten = tidyReads([it("RUN0001840861", true, "RUN0001840861")]), other = tidyReads([it("RUN001840861", true, "RUN001840867")]);
+      const bb = (x0, y0) => ({ x0, y0, x1: x0 + 50, y1: y0 + 20 });
+      const w = (a) => a.map(([text, x, y]) => ({ text, bbox: bb(x, y === undefined ? 10 : y) }));
+      const c = ocrWordCands(w([["LPN", 0], ["QUB00191", 60], ["1625", 115], ["LPN:", 0], ["QUB001911630", 60], ["LPN", 0], ["V0013323651", 60], ["VLT004055885", 0], ["2056", 60], ["Trailer", 0], ["2056", 60]]));
+      const apart = ocrWordCands(w([["QUB00191", 60], ["1625", 400]])), below = ocrWordCands(w([["QUB001", 60], ["395312", 115, 60]]));
+      const nol = ocrWordCands(w([["LPN:", 0], ["0013323651", 60], ["ITEM", 0], ["014908200", 60]]));
+      return { v: v.join(), vIgn: v.ignored.join(), single: single.join(), singleIgn: single.ignored.join(), ten: ten.join(), other: other.join(),
+        cands: c.map(x => x.first + (x.lab ? "*" : "")).join(), box: c[0] && c[0].bbox, apart: apart.length, below: below.length, nol: nol.noLetters.join(), nolC: nol.length,
+        lpnPfx: extractLpns("LPN 0013323651 LPN VLT004055885", true).join() };
     });
-    check("a number printed after an LPN label is kept even with a different prefix length (V0013323651 among VLT numbers); without the label it is still left out", /^V0013323651,VLT004055885/.test(s.lab) && s.labIgn === "HB0182007092" && s.nolabIgn === "V0013323651", s);
-    check("a number read with a gap (QUB00191 1625) is read as one LPN, labelled numbers are marked, and other digits aren't joined on", s.cands === "QUB001911625*,QUB001911630*,V0013323651*,VLT004055885" && s.box.x0 === 60 && s.box.x1 === 170, s);
-    check("the LPN label is never read as a prefix (LPN 0013323651)", s.lpnPfx === "VLT004055885", s.lpnPfx);
-    // The batch as the phone read it: photo 3 is the page with one LPN, read with an extra 0.
-    await q.evaluate(() => {
-      document.getElementById("cmpToggle").click(); document.getElementById("cmpPfx").value = "";
-      document.getElementById("cmpNums").value = "RUN0001840999\nRUN001840990";
-      const pages = [["V0013323651", "VLT004055885", "VLT004055887"], ["RUN0001840861"], ["RUN001840795", "RUN001840802", "RUN001840809", "RUN001840811", "RUN001840812", "RUN001840837"], ["RUN0001830763"], ["RUN0001840802"]];
-      let n = 0; window.readPhoto = async () => { const a = pages[n++].slice(); a.skipped = []; a.odd = []; a.mended = []; return a; };
-    });
-    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
-    await q.setInputFiles("#cmpPhotoFile", [1, 2, 3, 4, 5].map(i => ({ name: "m" + i + ".jpg", mimeType: "image/jpeg", buffer: png })));
-    await q.waitForFunction(() => !/Reading photo/.test(document.getElementById("cmpMsg").textContent), null, { timeout: 5000 }).catch(() => {});
-    s = await q.evaluate(() => ({ msg: document.getElementById("cmpMsg").textContent, nums: document.getElementById("cmpNums").value.split("\n") }));
-    check("a photo reading with an extra 0 is corrected to match the other photos when it sits among them, and the note says so", s.nums.includes("RUN001840861") && !s.nums.includes("RUN0001840861") && /1 number was corrected to match the other photos \(RUN0001840861 to RUN001840861\): check it against the paper/.test(s.msg), s);
-    check("typed numbers, a number far from the others and one that would become a number already listed are left alone", s.nums.includes("RUN0001840999") && s.nums.includes("RUN0001830763") && s.nums.includes("RUN0001840802") && s.nums.filter(x => x === "RUN001840802").length === 1, s.nums);
+    check("a V, R or Q number with an LPN's digit count is kept among 3-letter prefixes (V0013323651); specks and short ones are still left out", /^V0013323651,VLT004055885/.test(s.v) && s.vIgn === "HB0182007092,L1121100001,V12345", s);
+    check("on a page with one LPN, a close-up that only adds a 0 to a plainly read number is not used (RUN001840861), and print showing through is left out", s.single === "RUN001840861" && s.singleIgn === "FI8111010009" && s.ten === "RUN0001840861" && s.other === "RUN001840867", s);
+    check("a number read with a gap on the same line (QUB00191 1625) is read as one LPN; labelled numbers are marked; other digits aren't joined on", s.cands === "QUB001911625*,QUB001911630*,V0013323651*,VLT004055885" && s.box.x0 === 60 && s.box.x1 === 165, s);
+    check("digits far along the line or on the next line are never joined on", s.apart === 0 && s.below === 0, s);
+    check("an LPN read without its letters is named for the note, not lost; the LPN label is never a prefix", s.nol === "0013323651" && s.nolC === 0 && s.lpnPfx === "VLT004055885", s);
     check("no script errors", q.errors.length === 0, q.errors);
     await q.ctx.close();
   }

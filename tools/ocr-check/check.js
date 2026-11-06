@@ -64,18 +64,19 @@ async function readCliCanvas(page, prefix) {
 	const items = [], orig = new Set();
 	// The app's own word handling (labels, numbers read with a gap), so this check and phones agree.
 	const words = rows.map(r => ({ text: r[11], bbox: { x0: +r[6], y0: +r[7], x1: +r[6] + +r[8], y1: +r[7] + +r[9] } }));
-	for (const c of await page.evaluate(w => ocrWordCands(w), words)) {
+	const wc = await page.evaluate(w => { const c = ocrWordCands(w); return { c: [...c], nl: c.noLetters }; }, words);
+	for (const c of wc.c) {
 		orig.add(c.first);
 		const crop = await page.evaluate(bb => cropScaled(window.__cv, bb).toDataURL("image/png").split(",")[1], c.bbox);
 		const again = await page.evaluate(t => { const a = extractLpns(t, true); return a.length === 1 ? a[0] : null; }, tess(Buffer.from(crop, "base64"), 7).replace(/\s+/g, ""));
 		items.push({ raw: c.raw, first: c.first, again, lab: c.lab });
 	}
 	const text = rows.map(r => r[11]).join(" ");
-	return page.evaluate(([items, text, orig, prefix]) => {
+	return page.evaluate(([items, text, orig, prefix, nl]) => {
 		extractLpns(text, true).forEach(x => { if (!orig.includes(x)) items.push({ raw: x, first: x, again: null, whole: true }); });
 		document.getElementById("cmpPfx").value = prefix; const out = photoLpns(items);
-		return { found: [...out], skipped: out.skipped, ignored: tidyReads(items).ignored, odd: out.odd };
-	}, [items, text, [...orig], prefix]);
+		return { found: [...out], skipped: out.skipped, ignored: tidyReads(items).ignored, odd: [...out.odd, ...nl.map(d => "LPN " + d)] };
+	}, [items, text, [...orig], prefix, wc.nl]);
 }
 
 /** The js engine: the app's real ocrLpns(), as on a phone. */
