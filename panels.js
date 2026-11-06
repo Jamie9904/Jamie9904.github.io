@@ -202,7 +202,7 @@ HELP.settings=`<h3>Colours</h3>
 <p class="note">Used in spreadsheets, PDFs and the saved deliveries lists.</p>
 <h3>Test a handheld scanner</h3>
 <p>Tap the box and scan any barcode with your handheld or Bluetooth scanner. Nothing is added to the log.</p>
-<label for="scanTest">Scan here</label>
+<label for="scanTest">Scan a barcode here</label>
 <input type="text" id="scanTest" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="done">
 <div class="msg" id="scanTestMsg" role="status" aria-live="polite"></div>
 <h3 data-f="shareApp">Share this app</h3>
@@ -228,7 +228,7 @@ HELP.settings=`<h3>Colours</h3>
 <div class="row"><button id="diagDl">Download problem report</button><button class="d" id="diagClear">Clear</button></div>
 <div class="msg" id="diagMsg" role="status" aria-live="polite"></div>`;
 /* Settings > Test a handheld scanner: shows what a scanner typed, whether it sent Enter after it, how fast it came
-   and whether it looks like an LPN. Nothing is logged. A scan with no Enter is judged a moment after the last key. */
+   and whether it looks like an LPN. Nothing is logged. A scan with no Enter is judged 1.5 seconds after the last key, so slow typing isn't cut off. */
 function scanTestSetup(){
   const box=$("scanTest"),msg=$("scanTestMsg");if(!box)return;
   let t0=0,last=0,wait=null;
@@ -239,14 +239,17 @@ function scanTestSetup(){
     const iss=lpnIssues(code).filter(x=>x!=="already logged");
     let t="Read “"+code+"” ("+code.length+" characters"+(code.length>1?", in "+ms+" ms":"")+"). ";
     t+=how==="enter"?"Enter was sent after it, so a scan into the LPN box logs the pallet straight away.":how==="tab"?"Tab was sent after it instead of Enter, so a scan into the LPN box would move to the next box without logging the pallet. Set the scanner to send Enter after each scan (often called a suffix or CR) using the setup barcodes in its manual.":"Nothing was sent after it, so you’d need to tap Add after each scan. Set the scanner to send Enter after each scan (often called a suffix or CR) using the setup barcodes in its manual.";
-    if(code.length>1&&!fast)t+=" It arrived at typing speed, so if that was the scanner it works, but some scanners can be set to send faster.";
-    t+=iss.length?" This barcode "+iss.join(", and ")+": try an LPN label to check.":" It looks like an LPN.";
+    if(code.length>=6&&!fast)t+=" It arrived at typing speed, so if that was the scanner it works, but some scanners can be set to send faster.";
+    const pfx=iss.filter(x=>/^prefix /.test(x)),other=iss.filter(x=>!/^prefix /.test(x));
+    if(other.length)t+=" This barcode "+other.join(", and ")+": try an LPN label to check.";
+    else if(pfx.length)t+=" It looks like an LPN, but its "+pfx[0]+" (add it under Prefix presets if it is one of yours).";
+    else t+=" It looks like an LPN.";
     msg.textContent=t;box.value="";t0=0;
   };
   box.addEventListener("keydown",e=>{
     if(e.key==="Enter"||e.key==="Tab"){if(box.value.trim()){e.preventDefault();judge(e.key==="Enter"?"enter":"tab")}else if(e.key==="Enter"){e.preventDefault();judge("enter")}return}
   });
-  box.addEventListener("input",()=>{const now=performance.now();if(!t0||box.value.length<=1)t0=now;last=now;clearTimeout(wait);if(box.value)wait=setTimeout(()=>judge("none"),800)});
+  box.addEventListener("input",()=>{const now=performance.now();if(!t0||box.value.length<=1)t0=now;last=now;clearTimeout(wait);if(box.value)wait=setTimeout(()=>judge("none"),1500)});
 }
 /* ---- saved deliveries ---- */
 let hist=[];try{hist=cleanHist(JSON.parse(localStorage.getItem("lpnhist")||"[]"))}catch(e){hist=[]}
