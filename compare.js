@@ -152,7 +152,8 @@ async function dropOcrCache(){try{for(const n of await caches.keys()){if(!/^lpn-
 /* LPN prefixes known to be real even though they differ from most: IM is used for a full pallet pick. */
 const KNOWN_PFX=["IM"];
 /* Single-letter prefixes that real LPNs use (V0013323651, in the app's first prefix list as V, R and Q): kept among
-   longer prefixes when they have an LPN's digit count. */
+   longer prefixes when they have an LPN's digit count and were printed after an "LPN:" label (a speck read as
+   R014908200 is not). */
 const KNOWN_ONE=["V","R","Q"];
 const LOOK={"0":"ODQU","1":"ILTJ","2":"Z","5":"S","6":"G","8":"B"};
 function tidyReads(items){
@@ -190,7 +191,7 @@ function tidyReads(items){
     // Nothing on the page to compare with: the close-up wins, except when it only adds a 0 straight after the prefix
     // to a number read plainly from clean text (RUN001840861 printed, close-up RUN0001840861).
     if(!pats.length){const raw=String(it.raw||"").replace(/\s+/g,"").toUpperCase(),a=split(it.again),f=split(it.first);
-      if(a&&f&&!it.whole&&raw===it.first&&a.p===f.p&&a.d==="0"+f.d)return it.first;
+      if(a&&f&&!it.whole&&raw===it.first&&a.p===f.p&&a.d==="0"+f.d){mended.push(it.first);return it.first}
       return it.again||it.first}
     // When both readings fit the page, the first is kept: the close-up is of the black-and-white image.
     const c=[it.first,it.again].filter(Boolean);
@@ -212,8 +213,8 @@ function tidyReads(items){
   // A page with nothing to compare with (one LPN on it): readings printed after an "LPN:" label set the prefixes, and
   // an unlabelled reading with another prefix (print showing through from the back of the page) is left out.
   const labP=new Set();if(!pats.length)res.forEach((x,i)=>{const s=split(x);if(s&&items[i]&&items[i].lab)labP.add(s.p)});
-  const stray=(x,i)=>{const s=split(x);return !pats.length&&labP.size&&s&&!(items[i]&&items[i].lab)&&!labP.has(s.p)&&KNOWN_PFX.indexOf(s.p)<0};
-  res.forEach((x,i)=>{const s=split(x);if(stray(x,i))out.ignored.push(x);else if(pats.length&&s&&!(KNOWN_ONE.indexOf(s.p)>=0&&lpnDigitsOk(x))&&KNOWN_PFX.indexOf(s.p)<0&&!pats.some(q=>q.p===s.p)&&(!lpnDigitsOk(x)||!pats.some(q=>q.p.length===s.p.length)))out.ignored.push(x);else out.push(x)});
+  const stray=(x,i)=>{const s=split(x);return !pats.length&&labP.size&&s&&!(items[i]&&items[i].lab)&&!labP.has(s.p)&&KNOWN_PFX.indexOf(s.p)<0&&!(KNOWN_ONE.indexOf(s.p)>=0&&lpnDigitsOk(x))};
+  res.forEach((x,i)=>{const s=split(x);if(stray(x,i))out.ignored.push(x);else if(pats.length&&s&&!(KNOWN_ONE.indexOf(s.p)>=0&&lpnDigitsOk(x)&&items[i]&&items[i].lab)&&KNOWN_PFX.indexOf(s.p)<0&&!pats.some(q=>q.p===s.p)&&(!lpnDigitsOk(x)||!pats.some(q=>q.p.length===s.p.length)))out.ignored.push(x);else out.push(x)});
   return out;
 }
 /* Tidies one photo's readings, then keeps those with a prefix in the list; the rest that look like LPNs are
@@ -311,7 +312,7 @@ function ocrWordCands(words){
       if(lpnDigitsOk(j)&&ov>=h*0.6&&gap>=-h&&gap<=h){text=j;found=extractLpns(j,true);bb={x0:Math.min(bb.x0,nb.x0),y0:Math.min(bb.y0,nb.y0),x1:Math.max(bb.x1,nb.x1),y1:Math.max(bb.y1,nb.y1)};k++}
     }
     if(found.length===1)out.push({raw:text,first:found[0],bbox:bb,lab:lab});
-    else if(lab&&/^[0-9]{9,11}$/.test(text))nl.push(text);
+    else if(lab&&/^[0-9]{9,10}$/.test(text))nl.push(text);
   }
   out.noLetters=nl;
   return out;
@@ -364,7 +365,8 @@ function readNote(tag,a,r,pdf,tap){
   if(a&&a.turned)t+=a.turned===180?" The photo was upside down, so it was turned to read it.":" The photo was sideways, so it was turned to read it.";
   const md=(a&&a.mended)||[];
   if(md.length)t+=" "+md.length+(md.length===1?" number was":" numbers were")+" corrected to match the others on the page ("+md.slice(0,4).join(", ")+(md.length>4?"…":"")+"): check "+(md.length===1?"it":"them")+" against the paper.";
-  const od=(a&&a.odd)||[];
+  const lost=((a&&a.odd)||[]).filter(x=>/^LPN \d/.test(x)).map(x=>x.slice(4)),od=((a&&a.odd)||[]).filter(x=>!/^LPN \d/.test(x));
+  if(lost.length)t+=" "+(lost.length===1?"A number":lost.length+" numbers")+" after “LPN:” ("+lost.slice(0,4).join(", ")+(lost.length>4?"…":"")+") "+(lost.length===1?"was":"were")+" read without "+(lost.length===1?"its":"their")+" letters: check the paper and type "+(lost.length===1?"it":"them")+" in with the letters at the start.";
   if(od.length)t+=" "+od.length+" other reading"+(od.length===1?"":"s")+" ("+od.slice(0,4).join(", ")+(od.length>4?"…":"")+") didn’t look like the other LPNs on this page, so "+(od.length===1?"it was":"they were")+" left out. If one is a real LPN, type it in the box.";
   return t;
 }

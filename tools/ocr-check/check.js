@@ -131,9 +131,15 @@ if (require.main === module) (async () => {
 		// With a prefix list, only the expected LPNs with a listed prefix should be found; the rest should be reported.
 		const pf = prefix ? prefix.toUpperCase().split(/[^A-Z]+/).filter(Boolean) : [];
 		const want = pf.length ? ph.want.filter(x => pf.some(p => x.startsWith(p))) : ph.want;
-		const notReported = pf.length ? ph.want.filter(x => !want.includes(x) && !(r.skipped || []).includes(x)) : [];
-		const s = score(want, r.found); if (notReported.length) s.missing.push(...notReported.map(x => x + " (not reported as left out)")); right += s.right.length; total += want.length; if (s.missing.length || s.extra.length) bad++;
-		console.log("  " + ph.name + " (" + secs + "): " + s.right.length + " of " + want.length + " right" + (s.missing.length ? " · missing " + s.missing.join(" ") : "") + (s.extra.length ? " · extra " + s.extra.join(" ") : "") + (r.ignored && r.ignored.length ? " · ignored " + r.ignored.join(" ") : "") + (pf.length && r.skipped && r.skipped.length ? " · reported as left out: " + r.skipped.length : ""));
+		const notReported = pf.length ? ph.want.filter(x => !want.includes(x) && !(r.skipped || []).includes(x) && !(r.odd || []).includes("LPN " + x.replace(/^[A-Z]+/, ""))) : [];
+		const s = score(want, r.found);
+		// A number this reader saw without its letters is named in the app's note, not lost: shown, but not a failure
+		// here (GitHub's real phone reader, which decides, must still read it in full).
+		const named = s.missing.filter(x => (r.odd || []).includes("LPN " + x.replace(/^[A-Z]+/, "")));
+		s.missing = s.missing.filter(x => !named.includes(x));
+		if (named.length) s.named = named;
+		if (notReported.length) s.missing.push(...notReported.map(x => x + " (not reported as left out)")); right += s.right.length; total += want.length; if (s.missing.length || s.extra.length) bad++;
+		console.log("  " + ph.name + " (" + secs + "): " + s.right.length + " of " + want.length + " right" + (s.missing.length ? " · missing " + s.missing.join(" ") : "") + (s.extra.length ? " · extra " + s.extra.join(" ") : "") + (s.named ? " · named in the note without its letters: " + s.named.join(" ") : "") + (r.ignored && r.ignored.length ? " · ignored " + r.ignored.join(" ") : "") + (pf.length && r.skipped && r.skipped.length ? " · reported as left out: " + r.skipped.length : ""));
 	}
 	if (total) console.log("Total: " + right + " of " + total + " right" + (bad ? ", " + bad + " photo(s) with problems" : ", nothing extra"));
 	await app.close();

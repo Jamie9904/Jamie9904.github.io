@@ -209,8 +209,11 @@ module.exports = async ({ browser, URL0 }) => {
     const s = await q.evaluate(() => {
       const it = (x, lab, again) => ({ raw: x, first: x, again: again === undefined ? null : again, lab });
       const page1 = ["VLT004055885", "VLT004055887", "VLT004055889", "VLT004055998", "VLT004056066"];
-      const v = tidyReads([it("V0013323651", true), ...page1.map(x => it(x, true)), it("HB0182007092", false), it("L1121100001", true), it("V12345", true)]);
+      const v = tidyReads([it("V0013323651", true), ...page1.map(x => it(x, true)), it("HB0182007092", false), it("L1121100001", true), it("V12345", true), it("R014908200", false)]);
       const single = tidyReads([it("RUN001840861", true, "RUN0001840861"), it("FI8111010009", false)]);
+      // Two prefixes on a page with no pattern: a V number whose label wasn't read is still kept, not taken for show-through.
+      const two = tidyReads([it("VLT004055885", true), it("V0013323651", false)]);
+      const lostNote = readNote("Photo 1", Object.assign(["VLT004055885"], { skipped: [], odd: ["LPN 0013323651"], mended: [] }), { added: 1, dup: 0 });
       // A real 10-digit number read the same both times, and a close-up that differs in other ways, keep the close-up rule.
       const ten = tidyReads([it("RUN0001840861", true, "RUN0001840861")]), other = tidyReads([it("RUN001840861", true, "RUN001840867")]);
       const bb = (x0, y0) => ({ x0, y0, x1: x0 + 50, y1: y0 + 20 });
@@ -220,15 +223,15 @@ module.exports = async ({ browser, URL0 }) => {
       // GitHub's reader on vlt.jpg: specks with no label in front must not be joined into an LPN.
       const speck = ocrWordCands(w([["L044101", 0], ["0054", 55]]));
       const nol = ocrWordCands(w([["LPN:", 0], ["0013323651", 60], ["ITEM", 0], ["014908200", 60]]));
-      return { v: v.join(), vIgn: v.ignored.join(), single: single.join(), singleIgn: single.ignored.join(), ten: ten.join(), other: other.join(),
+      return { v: v.join(), vIgn: v.ignored.join(), single: single.join(), singleIgn: single.ignored.join(), singleMended: single.mended.join(), two: two.join(), lostNote, ten: ten.join(), other: other.join(),
         cands: c.map(x => x.first + (x.lab ? "*" : "")).join(), box: c[0] && c[0].bbox, apart: apart.length, below: below.length, speck: speck.length, nol: nol.noLetters.join(), nolC: nol.length,
         lpnPfx: extractLpns("LPN 0013323651 LPN VLT004055885", true).join() };
     });
-    check("a V, R or Q number with an LPN's digit count is kept among 3-letter prefixes (V0013323651); specks and short ones are still left out", /^V0013323651,VLT004055885/.test(s.v) && s.vIgn === "HB0182007092,L1121100001,V12345", s);
-    check("on a page with one LPN, a close-up that only adds a 0 to a plainly read number is not used (RUN001840861), and print showing through is left out", s.single === "RUN001840861" && s.singleIgn === "FI8111010009" && s.ten === "RUN0001840861" && s.other === "RUN001840867", s);
+    check("a V, R or Q number with an LPN's digit count is kept among 3-letter prefixes (V0013323651); specks and short ones are still left out", /^V0013323651,VLT004055885/.test(s.v) && s.vIgn === "HB0182007092,L1121100001,V12345,R014908200", s);
+    check("on a page with one LPN, a close-up that only adds a 0 to a plainly read number is not used (RUN001840861), and print showing through is left out", s.single === "RUN001840861" && s.singleIgn === "FI8111010009" && s.singleMended === "RUN001840861" && s.two === "VLT004055885,V0013323651" && s.ten === "RUN0001840861" && s.other === "RUN001840867", s);
     check("a number read with a gap on the same line (QUB00191 1625) is read as one LPN; labelled numbers are marked; other digits aren't joined on", s.cands === "QUB001911625*,QUB001911630*,V0013323651*,VLT004055885" && s.box.x0 === 60 && s.box.x1 === 165, s);
     check("digits far along the line, on the next line, or with no LPN label in front are never joined on", s.apart === 0 && s.below === 0 && s.speck === 0, s);
-    check("an LPN read without its letters is named for the note, not lost; the LPN label is never a prefix", s.nol === "0013323651" && s.nolC === 0 && s.lpnPfx === "VLT004055885", s);
+    check("an LPN read without its letters is named in the note with what to do, not lost; the LPN label is never a prefix", s.nol === "0013323651" && s.nolC === 0 && s.lpnPfx === "VLT004055885" && /A number after “LPN:” \(0013323651\) was read without its letters: check the paper and type it in with the letters at the start\./.test(s.lostNote) && !/didn’t look like/.test(s.lostNote), s);
     check("no script errors", q.errors.length === 0, q.errors);
     await q.ctx.close();
   }
