@@ -19,10 +19,10 @@ module.exports = async ({ browser, URL0 }) => {
     check("Escape closes the report box only; the Guide stays open with focus back on its link", !s.box && s.panel && !s.panelInert && s.focus === "fbGuide", s);
     await q.click("#panelClose"); await q.waitForTimeout(50);
     // The Report button on the main page: on screen in the top bar, opens the box in the middle of the screen.
-    for (const [w, h] of [[360, 740], [390, 844], [1300, 900]]) {
-      await q.setViewportSize({ width: w, height: h }); await q.waitForTimeout(100);
-      const r = await q.evaluate(() => { window.scrollTo(0, 0); const b = document.getElementById("btnReport").getBoundingClientRect(); return { inBar: b.top >= 0 && b.right <= innerWidth && b.height >= 44 && b.width >= 44, page: document.documentElement.scrollWidth <= innerWidth }; });
-      check("at " + w + " px the Report button is in the top bar, big enough to tap, and the page doesn't scroll sideways", r.inBar && r.page, r);
+    for (const [w, h, big] of [[320, 640, true], [320, 640], [360, 740], [390, 844], [1300, 900]]) {
+      await q.setViewportSize({ width: w, height: h }); await q.evaluate(big => { cfg.size = big ? "1.25" : "1"; applyCfg(); }, !!big); await q.waitForTimeout(100);
+      const r = await q.evaluate(() => { window.scrollTo(0, 0); const btn = document.getElementById("btnReport"), b = btn.getBoundingClientRect(), t = document.querySelector(".top h1").getBoundingClientRect(), l = btn.querySelector(".lbl"); return { inBar: b.top >= 0 && b.right <= innerWidth && b.height >= 44 && b.width >= 44, page: document.documentElement.scrollWidth <= innerWidth, label: l.textContent, cut: l.scrollWidth > l.clientWidth, overTitle: b.left < t.right - 1 && b.top < t.bottom && b.bottom > t.top || document.querySelector(".top h1").scrollWidth > document.querySelector(".top h1").clientWidth + 1, name: btn.getAttribute("aria-label") }; });
+      check("at " + w + " px" + (big ? " with Extra large text" : "") + " the button says Report a problem in full, is in the top bar, big enough to tap, clear of the app name, and the page doesn't scroll sideways", r.inBar && r.page && r.label === "Report a problem" && !r.cut && !r.overTitle && r.name.startsWith(r.label), r);
     }
     await q.setViewportSize({ width: 390, height: 844 });
     await q.click("#btnReport"); await q.waitForTimeout(80);
