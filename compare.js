@@ -86,7 +86,8 @@ function extractLpns(text,any){
   const pf=any?[]:getPfx().sort((a,b)=>b.length-a.length);
   const fix=p=>p.replace(/[OD]/g,"0").replace(/[IL]/g,"1").replace(/S/g,"5").replace(/B/g,"8").replace(/Z/g,"2");
   const scan=(alt,dg)=>{const re=new RegExp("\\b("+alt+")[ \\t]?("+(dg||"[0-9ODILSBZ]{8,12}")+")\\b","gi"),o=[];let m;
-    while((m=re.exec(text))){const part=m[2].toUpperCase();if((part.match(/[0-9]/g)||[]).length<6)continue;o.push(m[1].toUpperCase()+fix(part))}
+    // "LPN" is the label printed before each number, never a prefix ("LPN 0013323651" when the V wasn't read).
+    while((m=re.exec(text))){const part=m[2].toUpperCase();if((part.match(/[0-9]/g)||[]).length<6||m[1].toUpperCase()==="LPN")continue;o.push(m[1].toUpperCase()+fix(part))}
     return o};
   const out=scan(pf.length?pf.join("|"):"[A-Z]{1,3}");
   // Only numbers with an LPN's digit count (lpnDigitsOk) count as possibly left out, so PO, phone and reference numbers aren't flagged.
@@ -150,6 +151,10 @@ async function dropOcrCache(){try{for(const n of await caches.keys()){if(!/^lpn-
    are kept as read. */
 /* LPN prefixes known to be real even though they differ from most: IM is used for a full pallet pick. */
 const KNOWN_PFX=["IM"];
+/* Single-letter prefixes that real LPNs use (V0013323651, in the app's first prefix list as V, R and Q): kept among
+   longer prefixes when they have an LPN's digit count and were printed after an "LPN:" label (a speck read as
+   R014908200 is not). */
+const KNOWN_ONE=["V","R","Q"];
 const LOOK={"0":"ODQU","1":"ILTJ","2":"Z","5":"S","6":"G","8":"B"};
 function tidyReads(items){
   const split=x=>{const m=/^([A-Z]+)([0-9]+)$/.exec(x||"");return m?{p:m[1],d:m[2]}:null};
@@ -183,7 +188,11 @@ function tidyReads(items){
   };
   const firsts=new Set(items.map(it=>it.first)),mended=[];
   const res=items.map(it=>{
-    if(!pats.length)return it.again||it.first;
+    // Nothing on the page to compare with: the close-up wins, except when it only adds a 0 straight after the prefix
+    // to a number read plainly from clean text (RUN001840861 printed, close-up RUN0001840861).
+    if(!pats.length){const raw=String(it.raw||"").replace(/\s+/g,"").toUpperCase(),a=split(it.again),f=split(it.first);
+      if(a&&f&&!it.whole&&raw===it.first&&a.p===f.p&&a.d==="0"+f.d){mended.push(it.first);return it.first}
+      return it.again||it.first}
     // When both readings fit the page, the first is kept: the close-up is of the black-and-white image.
     const c=[it.first,it.again].filter(Boolean);
     for(const x of c)if(fits(x))return x;
@@ -201,7 +210,11 @@ function tidyReads(items){
   const out=[];out.ignored=[];out.mended=mended;
   // Also left out: a prefix of a different length from every prefix on the page (CO…, RR…, L… among VLT numbers).
   // Known prefixes are always kept, however the rest of the page looks (IM: full pallet picks, two letters).
-  res.forEach(x=>{const s=split(x);if(pats.length&&s&&KNOWN_PFX.indexOf(s.p)<0&&!pats.some(q=>q.p===s.p)&&(!lpnDigitsOk(x)||!pats.some(q=>q.p.length===s.p.length)))out.ignored.push(x);else out.push(x)});
+  // A page with nothing to compare with (one LPN on it): readings printed after an "LPN:" label set the prefixes, and
+  // an unlabelled reading with another prefix (print showing through from the back of the page) is left out.
+  const labP=new Set();if(!pats.length)res.forEach((x,i)=>{const s=split(x);if(s&&items[i]&&items[i].lab)labP.add(s.p)});
+  const stray=(x,i)=>{const s=split(x);return !pats.length&&labP.size&&s&&!(items[i]&&items[i].lab)&&!labP.has(s.p)&&KNOWN_PFX.indexOf(s.p)<0&&!(KNOWN_ONE.indexOf(s.p)>=0&&lpnDigitsOk(x))};
+  res.forEach((x,i)=>{const s=split(x);if(stray(x,i))out.ignored.push(x);else if(pats.length&&s&&!(KNOWN_ONE.indexOf(s.p)>=0&&lpnDigitsOk(x)&&items[i]&&items[i].lab)&&KNOWN_PFX.indexOf(s.p)<0&&!pats.some(q=>q.p===s.p)&&(!lpnDigitsOk(x)||!pats.some(q=>q.p.length===s.p.length)))out.ignored.push(x);else out.push(x)});
   return out;
 }
 /* Tidies one photo's readings, then keeps those with a prefix in the list; the rest that look like LPNs are
@@ -279,6 +292,31 @@ async function ocrLpnsNow(f){
     cv.width=cv.height=0;if(tc)tc.width=tc.height=0;
   }
 }
+/* The words of a page read that are one LPN each: {raw, first, bbox, lab}. Shared with tools/ocr-check.
+   lab: printed straight after an "LPN:" label (the reader may lose the colon).
+   A number read with a gap in it (QUB00191 1625), the prefix with too few digits then a word of digits only, is
+   joined when together they make an LPN.
+   out.noLetters: digits after an "LPN:" label with an LPN's digit count but no letters (the V of V0013323651 not
+   read), so the note can name them instead of losing them. */
+function ocrWordCands(words){
+  const out=[],nl=[];
+  for(let k=0;k<words.length;k++){
+    const wd=words[k],lab=k>0&&/^LPN:?$/i.test(String(words[k-1].text||"").trim());
+    let text=String(wd.text||"").trim(),bb=wd.bbox,found=extractLpns(text,true);
+    // Only straight after an "LPN:" label: specks elsewhere on the page (L044101 0054) must not be joined into an LPN.
+    if(lab&&!found.length&&k+1<words.length&&/^[A-Z]{1,3}[0-9]{2,8}$/i.test(text)&&/^[0-9]{1,8}$/.test(String(words[k+1].text||"").trim())){
+      const j=text+String(words[k+1].text).trim(),nb=words[k+1].bbox;
+      // Only on the same line and close together: the two boxes overlap by most of the word height, and the gap is
+      // under one word height (a short code in the next column or on the next line is never joined on).
+      const h=Math.max(1,Math.min(bb.y1-bb.y0,nb.y1-nb.y0)),ov=Math.min(bb.y1,nb.y1)-Math.max(bb.y0,nb.y0),gap=nb.x0-bb.x1;
+      if(lpnDigitsOk(j)&&ov>=h*0.6&&gap>=-h&&gap<=h){text=j;found=extractLpns(j,true);bb={x0:Math.min(bb.x0,nb.x0),y0:Math.min(bb.y0,nb.y0),x1:Math.max(bb.x1,nb.x1),y1:Math.max(bb.y1,nb.y1)};k++}
+    }
+    if(found.length===1)out.push({raw:text,first:found[0],bbox:bb,lab:lab});
+    else if(lab&&/^[0-9]{9,10}$/.test(text))nl.push(text);
+  }
+  out.noLetters=nl;
+  return out;
+}
 /* Reads one prepared canvas: the whole page, then a close-up of each number found. */
 async function ocrCanvas(w,cv){
   // Mode 11 (sparse text) finds every number on a manifest page; the default page layout mode skipped whole
@@ -289,16 +327,17 @@ async function ocrCanvas(w,cv){
   // list is applied afterwards.
   const items=[],orig=new Set();
   await w.setParameters({tessedit_pageseg_mode:"7"});
-  for(const wd of (r.words||[])){
-    const found=extractLpns(wd.text,true);
-    if(found.length!==1)continue;
-    orig.add(found[0]);
+  const cands=ocrWordCands(r.words||[]);
+  for(const c of cands){
+    orig.add(c.first);
     let again=null;
-    try{const a=extractLpns((await ocrRead(w,cropScaled(cv,wd.bbox))).data.text.replace(/\s+/g,""),true);if(a.length===1)again=a[0]}catch(e){if(e&&e.stuck)throw e}
-    items.push({raw:wd.text,first:found[0],again:again});
+    try{const a=extractLpns((await ocrRead(w,cropScaled(cv,c.bbox))).data.text.replace(/\s+/g,""),true);if(a.length===1)again=a[0]}catch(e){if(e&&e.stuck)throw e}
+    items.push({raw:c.raw,first:c.first,again:again,lab:c.lab});
   }
   extractLpns(r.text,true).forEach(x=>{if(!orig.has(x))items.push({raw:x,first:x,again:null,whole:true})});
-  return {out:photoLpns(items),items:items,r:r};
+  const out=photoLpns(items);
+  if(cands.noLetters.length){out.odd=[...out.odd,...cands.noLetters.map(d=>"LPN "+d)];diag("ocr","Read after LPN: without its letters: "+cands.noLetters.join(" "))}
+  return {out:out,items:items,r:r};
 }
 async function readPhoto(f){return ocrLpns(f)}
 async function readLogPhoto(f){return ocrLpns(f)}
@@ -326,7 +365,8 @@ function readNote(tag,a,r,pdf,tap){
   if(a&&a.turned)t+=a.turned===180?" The photo was upside down, so it was turned to read it.":" The photo was sideways, so it was turned to read it.";
   const md=(a&&a.mended)||[];
   if(md.length)t+=" "+md.length+(md.length===1?" number was":" numbers were")+" corrected to match the others on the page ("+md.slice(0,4).join(", ")+(md.length>4?"…":"")+"): check "+(md.length===1?"it":"them")+" against the paper.";
-  const od=(a&&a.odd)||[];
+  const lost=((a&&a.odd)||[]).filter(x=>/^LPN \d/.test(x)).map(x=>x.slice(4)),od=((a&&a.odd)||[]).filter(x=>!/^LPN \d/.test(x));
+  if(lost.length)t+=" "+(lost.length===1?"A number":lost.length+" numbers")+" after “LPN:” ("+lost.slice(0,4).join(", ")+(lost.length>4?"…":"")+") "+(lost.length===1?"was":"were")+" read without "+(lost.length===1?"its":"their")+" letters: check the paper and type "+(lost.length===1?"it":"them")+" in with the letters at the start.";
   if(od.length)t+=" "+od.length+" other reading"+(od.length===1?"":"s")+" ("+od.slice(0,4).join(", ")+(od.length>4?"…":"")+") didn’t look like the other LPNs on this page, so "+(od.length===1?"it was":"they were")+" left out. If one is a real LPN, type it in the box.";
   return t;
 }

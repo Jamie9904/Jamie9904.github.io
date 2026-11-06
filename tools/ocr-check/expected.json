@@ -1,5 +1,5 @@
 {
- "_about": "Manifest photos sent by the user on 31 Oct 2026 (address boxes cut off) and the LPNs printed on each. Add a photo by putting it in photos/ and its LPNs here. run-sideways.jpg is run.jpg turned on its side, to check sideways photos are turned and read. rby-upside-down.jpg is rby.jpg turned upside down.",
+ "_about": "Manifest photos sent by the user on 31 Oct 2026 and 6 Nov 2026 (the *-2.jpg and run-single.jpg photos, from a problem report: V0013323651 left out, RUN001840861 read with an extra 0 on a page with one LPN, QUB001911625 read with a gap) (address boxes cut off) and the LPNs printed on each. Add a photo by putting it in photos/ and its LPNs here. run-sideways.jpg is run.jpg turned on its side, to check sideways photos are turned and read. rby-upside-down.jpg is rby.jpg turned upside down.",
  "rby.jpg": [
   "RBY006292169",
   "RBY006292211"
@@ -34,5 +34,46 @@
  "rby-upside-down.jpg": [
   "RBY006292169",
   "RBY006292211"
+ ],
+ "vlt-2.jpg": [
+  "V0013323651",
+  "VLT004055885",
+  "VLT004055887",
+  "VLT004055889",
+  "VLT004055998",
+  "VLT004056066"
+ ],
+ "qub-2.jpg": [
+  "QUB001911625",
+  "QUB001911630",
+  "QUB001911635",
+  "QUB001911636",
+  "QUB001911637",
+  "QUB001911653",
+  "QUB001911661",
+  "QUB001911671",
+  "QUB001911677",
+  "QUB001911742"
+ ],
+ "run-single.jpg": [
+  "RUN001840861"
+ ],
+ "run-2.jpg": [
+  "RUN001840795",
+  "RUN001840802",
+  "RUN001840809",
+  "RUN001840811",
+  "RUN001840812",
+  "RUN001840813",
+  "RUN001840823",
+  "RUN001840825",
+  "RUN001840826",
+  "RUN001840836",
+  "RUN001840837"
+ ],
+ "rby-2.jpg": [
+  "RBY006297317",
+  "RBY006297330",
+  "RBY006297363"
  ]
 }

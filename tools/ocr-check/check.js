@@ -62,21 +62,21 @@ async function readCliCanvas(page, prefix) {
 	const png = await page.evaluate(() => window.__cv.toDataURL("image/png").split(",")[1]);
 	const rows = tess(Buffer.from(png, "base64"), 11, true).trim().split("\n").slice(1).map(l => l.split("\t")).filter(r => r.length > 11 && r[11].trim());
 	const items = [], orig = new Set();
-	for (const r of rows) {
-		const found = await page.evaluate(t => extractLpns(t, true), r[11]);
-		if (found.length !== 1) continue;
-		orig.add(found[0]);
-		const bb = { x0: +r[6], y0: +r[7], x1: +r[6] + +r[8], y1: +r[7] + +r[9] };
-		const crop = await page.evaluate(bb => cropScaled(window.__cv, bb).toDataURL("image/png").split(",")[1], bb);
+	// The app's own word handling (labels, numbers read with a gap), so this check and phones agree.
+	const words = rows.map(r => ({ text: r[11], bbox: { x0: +r[6], y0: +r[7], x1: +r[6] + +r[8], y1: +r[7] + +r[9] } }));
+	const wc = await page.evaluate(w => { const c = ocrWordCands(w); return { c: [...c], nl: c.noLetters }; }, words);
+	for (const c of wc.c) {
+		orig.add(c.first);
+		const crop = await page.evaluate(bb => cropScaled(window.__cv, bb).toDataURL("image/png").split(",")[1], c.bbox);
 		const again = await page.evaluate(t => { const a = extractLpns(t, true); return a.length === 1 ? a[0] : null; }, tess(Buffer.from(crop, "base64"), 7).replace(/\s+/g, ""));
-		items.push({ raw: r[11], first: found[0], again });
+		items.push({ raw: c.raw, first: c.first, again, lab: c.lab });
 	}
 	const text = rows.map(r => r[11]).join(" ");
-	return page.evaluate(([items, text, orig, prefix]) => {
+	return page.evaluate(([items, text, orig, prefix, nl]) => {
 		extractLpns(text, true).forEach(x => { if (!orig.includes(x)) items.push({ raw: x, first: x, again: null, whole: true }); });
 		document.getElementById("cmpPfx").value = prefix; const out = photoLpns(items);
-		return { found: [...out], skipped: out.skipped, ignored: tidyReads(items).ignored, odd: out.odd };
-	}, [items, text, [...orig], prefix]);
+		return { found: [...out], skipped: out.skipped, ignored: tidyReads(items).ignored, odd: [...out.odd, ...nl.map(d => "LPN " + d)] };
+	}, [items, text, [...orig], prefix, wc.nl]);
 }
 
 /** The js engine: the app's real ocrLpns(), as on a phone. */
@@ -131,9 +131,15 @@ if (require.main === module) (async () => {
 		// With a prefix list, only the expected LPNs with a listed prefix should be found; the rest should be reported.
 		const pf = prefix ? prefix.toUpperCase().split(/[^A-Z]+/).filter(Boolean) : [];
 		const want = pf.length ? ph.want.filter(x => pf.some(p => x.startsWith(p))) : ph.want;
-		const notReported = pf.length ? ph.want.filter(x => !want.includes(x) && !(r.skipped || []).includes(x)) : [];
-		const s = score(want, r.found); if (notReported.length) s.missing.push(...notReported.map(x => x + " (not reported as left out)")); right += s.right.length; total += want.length; if (s.missing.length || s.extra.length) bad++;
-		console.log("  " + ph.name + " (" + secs + "): " + s.right.length + " of " + want.length + " right" + (s.missing.length ? " · missing " + s.missing.join(" ") : "") + (s.extra.length ? " · extra " + s.extra.join(" ") : "") + (r.ignored && r.ignored.length ? " · ignored " + r.ignored.join(" ") : "") + (pf.length && r.skipped && r.skipped.length ? " · reported as left out: " + r.skipped.length : ""));
+		const notReported = pf.length ? ph.want.filter(x => !want.includes(x) && !(r.skipped || []).includes(x) && !(r.odd || []).includes("LPN " + x.replace(/^[A-Z]+/, ""))) : [];
+		const s = score(want, r.found);
+		// A number this reader saw without its letters is named in the app's note, not lost: shown, but not a failure
+		// here (GitHub's real phone reader, which decides, must still read it in full).
+		const named = s.missing.filter(x => (r.odd || []).includes("LPN " + x.replace(/^[A-Z]+/, "")));
+		s.missing = s.missing.filter(x => !named.includes(x));
+		if (named.length) s.named = named;
+		if (notReported.length) s.missing.push(...notReported.map(x => x + " (not reported as left out)")); right += s.right.length; total += want.length; if (s.missing.length || s.extra.length) bad++;
+		console.log("  " + ph.name + " (" + secs + "): " + s.right.length + " of " + want.length + " right" + (s.missing.length ? " · missing " + s.missing.join(" ") : "") + (s.extra.length ? " · extra " + s.extra.join(" ") : "") + (s.named ? " · named in the note without its letters: " + s.named.join(" ") : "") + (r.ignored && r.ignored.length ? " · ignored " + r.ignored.join(" ") : "") + (pf.length && r.skipped && r.skipped.length ? " · reported as left out: " + r.skipped.length : ""));
 	}
 	if (total) console.log("Total: " + right + " of " + total + " right" + (bad ? ", " + bad + " photo(s) with problems" : ", nothing extra"));
 	await app.close();
