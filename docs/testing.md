@@ -71,7 +71,7 @@ gh api repos/Jamie9904/Jamie9904.github.io/check-runs/<job id>/annotations
 
 ### Before a push (Claude Code hook)
 
-When Claude Code runs a real `git push` (not, for example, `git stash push`) from this repository, the `PreToolUse` hook `.claude/hooks/lpn_git_guard.py` runs `node tests/run.js` first (with `NODE_PATH` pointed at the global npm modules) and stops the push if any check fails, showing the failing lines. A push of only the `docs` branch skips the checks, because it does not change the site. If the checks take longer than 280 seconds, the push is stopped too. This only applies to pushes made through Claude Code; a plain `git push` from a terminal is not checked locally, but `test.yml` still runs on GitHub.
+When Claude Code runs a real `git push` (not, for example, `git stash push`) from this repository, the `PreToolUse` hook `.claude/hooks/lpn_git_guard.py` runs `node tests/run.js` first (with `NODE_PATH` pointed at the global npm modules) and stops the push if any check fails, showing the failing lines. Because the checks run on the files on disk, not on the commits being pushed, the hook first refuses the push (since the commit after build 58) while an app file, `config.js`, `sw.js` or a file under `tests/` is changed but not committed, naming the files; otherwise a file left out of a commit would pass here and fail on GitHub, as build 58's `core.js` did. A push of only the `docs` branch skips the checks, because it does not change the site. If the checks take longer than 280 seconds, the push is stopped too. This only applies to pushes made through Claude Code; a plain `git push` from a terminal is not checked locally, but `test.yml` still runs on GitHub.
 
 ## Security advisories and library fingerprints
 
