@@ -18,7 +18,7 @@ function testNote(k,el,where){
   const n=document.createElement("p");n.className="note testnote";n.dataset.test=k;
   const what={noLpn:"Logging pallets with no LPN",fppDesc:"Descriptions for FPP pallets",manifestCheck:"The Manifest check",manifestPhotos:"Reading photos",liveScan:"Live scan",scanByPhoto:"Scan by photo",torch:"The torch",damage:"Marking damage",shareMissing:"Share missing list",findLpn:"Find an LPN",shareApp:"Share this app"}[k];
   n.textContent=k==="report"?"In testing: reports may not always arrive yet, so for anything urgent also use Download problem report in Settings."
-    :"In testing: "+what+" may not always work yet, so check what it gives you"+(feat("report")?", and use Report if something goes wrong.":".");
+    :"In testing: "+what+" may not always work yet, so check what it gives you"+(feat("report")?", and use Report a problem if something goes wrong.":".");
   el.insertAdjacentElement(where||"beforeend",n);return n;
 }
 /* Help text with the parts for switched-off features taken out: data-f="x" is removed when x is off, data-nf="x"
