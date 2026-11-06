@@ -302,7 +302,8 @@ function ocrWordCands(words){
   for(let k=0;k<words.length;k++){
     const wd=words[k],lab=k>0&&/^LPN:?$/i.test(String(words[k-1].text||"").trim());
     let text=String(wd.text||"").trim(),bb=wd.bbox,found=extractLpns(text,true);
-    if(!found.length&&k+1<words.length&&/^[A-Z]{1,3}[0-9]{2,8}$/i.test(text)&&/^[0-9]{1,8}$/.test(String(words[k+1].text||"").trim())){
+    // Only straight after an "LPN:" label: specks elsewhere on the page (L044101 0054) must not be joined into an LPN.
+    if(lab&&!found.length&&k+1<words.length&&/^[A-Z]{1,3}[0-9]{2,8}$/i.test(text)&&/^[0-9]{1,8}$/.test(String(words[k+1].text||"").trim())){
       const j=text+String(words[k+1].text).trim(),nb=words[k+1].bbox;
       // Only on the same line and close together: the two boxes overlap by most of the word height, and the gap is
       // under one word height (a short code in the next column or on the next line is never joined on).
