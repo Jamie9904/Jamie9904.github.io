@@ -175,4 +175,30 @@ module.exports = async ({ browser, URL0 }) => {
   check("on mid-grey backgrounds grey text is at least 4.5:1 and text at least 4.5:1", Object.keys(s).filter(k => k[0] === "#").every(k => s[k].mu >= 4.5 && s[k].ink >= 4.5), s);
   check("the navy and orange colours are unchanged", s.navy === "#ecedee #a3a7b0 #1f2a41", s.navy);
   await p.ctx.close();
+
+  // Settings > Test a handheld scanner: what came through, Enter or not, speed, LPN or not; nothing is logged.
+  console.log("Test a handheld scanner");
+  p = await page(browser, 375);
+  await p.goto(URL0); await p.waitForTimeout(300);
+  await p.evaluate(() => { rows = [{ lpn: "VLT004040265", type: "BB", fsdu: false }]; save(); render(); openHelp("settings", "Settings"); });
+  await p.waitForTimeout(100);
+  const say = async (keys, after, delay) => { await p.click("#scanTest"); await p.keyboard.type(keys, { delay: delay || 0 }); if (after) await p.keyboard.press(after); else await p.waitForTimeout(1700); await p.waitForTimeout(80);
+    return p.evaluate(() => ({ msg: document.getElementById("scanTestMsg").textContent, box: document.getElementById("scanTest").value, rows: rows.length, focus: document.activeElement.id })); };
+  let r = await say("VLT004040265", "Enter");
+  check("a scan with Enter says what came through, that Enter was sent, and that it looks like an LPN (even one already in the log); nothing is logged", /^Read “VLT004040265” \(12 characters, in \d+ ms\)\. Enter was sent after it/.test(r.msg) && /It looks like an LPN\.$/.test(r.msg) && !/typing speed/.test(r.msg) && r.box === "" && r.rows === 1 && r.focus === "scanTest", r);
+  r = await say("VLT004040273", "Tab");
+  check("a scanner that sends Tab is told to send Enter instead, and focus stays for the next try", /Tab was sent after it instead of Enter/.test(r.msg) && /suffix or CR/.test(r.msg) && r.focus === "scanTest", r);
+  r = await say("RUN001840861", null);
+  check("a scanner that sends nothing after the code is told to send Enter", /^Read “RUN001840861”/.test(r.msg) && /Nothing was sent after it, so you’d need to tap Add/.test(r.msg), r);
+  r = await say("PO12345", "Enter", 150);
+  check("typing by hand is noted as typing speed, and a barcode that isn't an LPN says why", /typing speed/.test(r.msg) && /has 5 digits/.test(r.msg) && r.rows === 1, r);
+  await p.evaluate(() => { document.getElementById("cmpPfx").value = "VLT"; });
+  r = await say("RUN001840861", "Enter");
+  check("an LPN with a prefix not in the list is called an LPN, with where to add the prefix", /It looks like an LPN, but its prefix RUN isn’t in your prefix list \(add it under Prefix presets if it is one of yours\)\./.test(r.msg) && !/try an LPN label/.test(r.msg), r);
+  await p.evaluate(() => { document.getElementById("cmpPfx").value = ""; });
+  r = await say("AB12", "Enter");
+  check("a short code scanned at once isn't called typing speed", !/typing speed/.test(r.msg), r);
+  check("the Guide points handheld scanner users to the test", await p.evaluate(() => { openHelp("guide", "How to use this app"); return /Test a handheld scanner/.test(document.getElementById("panelBody").textContent) && !/hasn’t been tested yet/.test(document.getElementById("panelBody").textContent); }));
+  check("no script errors", p.errors.length === 0, p.errors);
+  await p.ctx.close();
 };

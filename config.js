@@ -11,7 +11,7 @@
 */
 window.LPN_CONFIG = {
   features: {
-    report: true,          // Report button, and the report links in Settings, the Guide and the Manifest check
+    report: true,          // Report a problem button, and the report links in Settings, the Guide and the Manifest check
     manifestCheck: true,   // the whole Manifest check section
     manifestPhotos: true,  // reading manifests and printed logs from photos (PDFs and typing still work)
     liveScan: true,        // Live scan with the camera
