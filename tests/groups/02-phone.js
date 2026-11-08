@@ -201,4 +201,24 @@ module.exports = async ({ browser, URL0 }) => {
   check("the Guide points handheld scanner users to the test", await p.evaluate(() => { openHelp("guide", "How to use this app"); return /Test a handheld scanner/.test(document.getElementById("panelBody").textContent) && !/hasn’t been tested yet/.test(document.getElementById("panelBody").textContent); }));
   check("no script errors", p.errors.length === 0, p.errors);
   await p.ctx.close();
+
+  // A delivery with an old date is kept when it is saved (it used to be removed straight away as older than last week,
+  // and Start new delivery then stopped with an error). Clock fixed on a Sunday, the start of a new week.
+  console.log("Saved deliveries with an old date");
+  p = await page(browser, 375, { excel: true, init: () => localStorage.setItem("lpnlog", JSON.stringify({ rows: [{ lpn: "VLT003977037", type: "BB", fsdu: false }], date: "2026-10-18", recv: "Jamie" })) });
+  await p.clock.setFixedTime(new Date("2026-11-08T13:00:00"));
+  await p.goto(URL0); await p.waitForTimeout(300);
+  s = await p.evaluate(async () => {
+    hist.push({ id: "old1", saved: "2026-10-19T09:00:00.000Z", date: "2026-10-18", recv: "Jamie", rows: [{ lpn: "VLT000000009", type: "BB", fsdu: false }] }); saveHist(); pruneHist();
+    const before = hist.length;
+    let err = "";
+    try { newDelivery(); newDelivery(); } catch (e) { err = e.message; }
+    await new Promise(r => setTimeout(r, 50));
+    return { err, before, rows: rows.length, hist: hist.map(h => h.date + ":" + h.rows.length), msg: document.getElementById("dlmsg").textContent, undo: !document.getElementById("undoBar").hidden };
+  });
+  check("Start new delivery with a delivery dated 3 weeks ago saves it and starts a new one; one saved long ago is still removed", !s.err && s.before === 0 && s.rows === 0 && JSON.stringify(s.hist) === '["2026-10-18:1"]' && /Saved to history/.test(s.msg) && s.undo, s);
+  s = await p.evaluate(async () => { document.querySelector("#undoBtn").click(); await new Promise(r => setTimeout(r, 50)); return { rows: rows.length, hist: hist.length }; });
+  check("and Undo puts it back in the log", s.rows === 1 && s.hist === 0, s);
+  check("no script errors", p.errors.length === 0, p.errors);
+  await p.ctx.close();
 };
