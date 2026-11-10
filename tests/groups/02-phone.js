@@ -219,6 +219,12 @@ module.exports = async ({ browser, URL0 }) => {
   check("Start new delivery with a delivery dated 3 weeks ago saves it and starts a new one; one saved long ago is still removed", !s.err && s.before === 0 && s.rows === 0 && JSON.stringify(s.hist) === '["2026-10-18:1"]' && /Saved to history/.test(s.msg) && s.undo, s);
   s = await p.evaluate(async () => { document.querySelector("#undoBtn").click(); await new Promise(r => setTimeout(r, 50)); return { rows: rows.length, hist: hist.length }; });
   check("and Undo puts it back in the log", s.rows === 1 && s.hist === 0, s);
+  // Importing an exported log dated weeks ago keeps it in Saved deliveries (kept by the day it was imported).
+  await p.evaluate(() => openHelp("history", "Saved deliveries")); await p.waitForTimeout(100);
+  await p.setInputFiles("#histFile", { name: "old.csv", mimeType: "text/csv", buffer: Buffer.from("Date,2026-10-12\n#,LPN,Pallet Type,FSDU\n1,VLT003977099,BB,No\n") });
+  await p.waitForFunction(() => /Imported|older/.test(document.getElementById("histMsg").textContent), null, { timeout: 5000 }).catch(() => {});
+  s = await p.evaluate(() => ({ msg: document.getElementById("histMsg").textContent, kept: hist.some(h => h.rows.some(r => r.lpn === "VLT003977099")), btn: !!document.querySelector("#histMsg button"), guide: (openHelp("guide", "How to use this app"), /keeps what you saved this week and last week/.test(document.getElementById("panelBody").textContent)) }));
+  check("an exported log dated weeks ago is imported and kept, and the Guide says saved deliveries are kept by when they were saved", /^Imported 1 pallet\. Tap Open to use it\.$/.test(s.msg) && s.kept && !s.btn && s.guide, s);
   check("no script errors", p.errors.length === 0, p.errors);
   await p.ctx.close();
 };
