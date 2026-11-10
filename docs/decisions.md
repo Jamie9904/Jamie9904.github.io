@@ -7,7 +7,7 @@ Everything runs in the browser and is stored in `localStorage`.
 - **Why:** the app needs to be free to host (GitHub Pages), work with no signal on a loading bay, and need no accounts or IT involvement.
 - **Trade-off:** data is per device and per browser. There is no sharing between devices and clearing site data loses it. This is mitigated by backup/restore (all `lpn*` keys to a JSON file), a "last backed up" note in Saved deliveries, and by exports being the real record.
 - **Consequence:** because a backup file can be edited or damaged before it is restored, saved data can't be trusted just because the app wrote it (see [Saved data is tidied when read](#saved-data-is-tidied-when-read)).
-- **Trade-off:** history is deliberately short (this week and last week, max 50 entries) to stay well inside `localStorage` limits.
+- **Trade-off:** history is deliberately short (this week and last week, max 50 entries) to stay well inside `localStorage` limits. Since build 60 "this week and last week" is judged by the later of the delivery date and the day it was saved (see [Saved deliveries kept by the later of date and save day](#saved-deliveries-kept-by-the-later-of-date-and-save-day-build-60)).
 
 ## Plain scripts, no framework or build step
 
@@ -839,3 +839,13 @@ The Guide used to say the handheld or Bluetooth scanner "hasn’t been tested ye
 ## Corrected-number photo note wording (build 59)
 
 The photo note for a number the tidy-up changed said "corrected to match the others on the page". Since build 57 the same list (`.mended`) also holds the plain reading kept on a page with one LPN, where the close-up added an extra 0; there is nothing else on that page to match. The sentence now says "1 number looked misread, so it was corrected (…): check it against the paper.", which is true for both cases and still asks for the paper check. The problem log line ("corrected to match the page") was not changed.
+
+## Saved deliveries kept by the later of date and save day (build 60)
+
+`pruneHist()` used to keep a saved delivery only by its delivery date. **Start new delivery** on a log dated before last week saved it, `pushHist()` pruned it in the same call, and `newDelivery()` then stopped with "Cannot read properties of undefined (reading 'id')" reading `hist[0].id`: the delivery was neither in Saved deliveries nor started afresh. It was found when GitHub's checks ran on Sunday 8 November 2026, the start of a new week, when a check's delivery dated 26 October fell out of the window.
+
+- **Fix:** an entry is kept by the later of its delivery date and the day it was saved, and `newDelivery()` uses the id `pushHist()` returns instead of `hist[0]`.
+- **Why the later of the two, not the save day alone:** a delivery saved before last week but dated within it (dated ahead) still counts by its date, as before; and every delivery that was kept before is still kept, so nothing already saved disappears with the update.
+- **Same for imports:** an imported old log is saved with today's save time, so it is now kept in Saved deliveries instead of being removed at once and offered for loading into the log. The "older than last week, so it can’t be kept" branch in the import code is left in place but is not reached.
+- **Trade-off:** a log left open for weeks and then saved stays in Saved deliveries until the end of the following week, so Saved deliveries can hold deliveries dated well before last week. For those, **Find an LPN**'s "Not in any saved delivery from the last two weeks." means saved in the last two weeks, not dated in them. The Guide still says Saved deliveries "keeps this week and last week", which is true for the save day.
+- **Check with a fixed clock:** the new check in `02-phone.js` fixes the clock to Sunday 8 November 2026, so it no longer depends on which day the checks run.
