@@ -16,7 +16,7 @@
 ├── logo.png                 default logo for the header and exports (optional)
 ├── presets.json             shared LPN prefix presets (optional)
 ├── media/
-│   ├── demo.mp4             narrated demo video for the Guide (720×1280, about 47 seconds, about 1.7 MB; re-recorded for v4.0 in build 52; loaded only when tapped, not cached)
+│   ├── demo.mp4             narrated demo video for the Guide (720×1280, about 47 seconds, about 1.7 MB; re-recorded for v4.0 in build 52 and again in build 59 to show the Report a problem button; loaded only when tapped, not cached)
 │   ├── demo-poster.jpg      still picture shown before the video plays
 │   └── share-qr.svg         QR code for Settings → Share this app (opens https://jamie9904.github.io/; in the offline shell, build 50)
 ├── fonts/
@@ -78,7 +78,7 @@
     │   ├── session_start.py fetches every branch, sets the upstream and NODE_PATH, prints a status line (including the updates branch and page or style changes since the demo video); the docs lag counts main commits that touch the app files, `config.js`, `tests/run.js`, `tests/lib.js` or `tests/groups/`
     │   ├── syntax-check.sh  `node --check` after a `.js` file is edited
     │   ├── config_check.js  checks config.js right after it is edited, with the same rules as tests/groups/19-site-config.js
-    │   ├── lpn_git_guard.py commit and push guard (cache bump, also accepted when the same command runs bump.sh first; docs on main, no commits on main or new branches, unconfirmed manifest photos, no push with uncommitted app or check files, tests before push)
+    │   ├── lpn_git_guard.py commit and push guard (cache bump, also accepted when the same command runs bump.sh first; docs on main, no commits on main or new branches, unconfirmed manifest photos, no push with uncommitted or new untracked app or check files, tests before push)
     │   ├── uk_spelling.js   flags US spellings in text people see after index.html or an app script is edited (`--all` checks every app file)
     │   ├── docs_reminder.py reminds when the docs branch is behind main (counting main commits that touch the app files, `config.js`, `tests/run.js`, `tests/lib.js` or `tests/groups/`)
     │   └── outputs_reminder.py reminds when the download copy (outputs folder, and the zip compared by content; pictures, video and SVGs only need to be in the zip) doesn't match main
