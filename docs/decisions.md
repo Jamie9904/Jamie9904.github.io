@@ -846,6 +846,14 @@ The photo note for a number the tidy-up changed said "corrected to match the oth
 
 - **Fix:** an entry is kept by the later of its delivery date and the day it was saved, and `newDelivery()` uses the id `pushHist()` returns instead of `hist[0]`.
 - **Why the later of the two, not the save day alone:** a delivery saved before last week but dated within it (dated ahead) still counts by its date, as before; and every delivery that was kept before is still kept, so nothing already saved disappears with the update.
-- **Same for imports:** an imported old log is saved with today's save time, so it is now kept in Saved deliveries instead of being removed at once and offered for loading into the log. The "older than last week, so it can’t be kept" branch in the import code is left in place but is not reached.
-- **Trade-off:** a log left open for weeks and then saved stays in Saved deliveries until the end of the following week, so Saved deliveries can hold deliveries dated well before last week. For those, **Find an LPN**'s "Not in any saved delivery from the last two weeks." means saved in the last two weeks, not dated in them. The Guide still says Saved deliveries "keeps this week and last week", which is true for the save day.
+- **Same for imports:** an imported old log is saved with today's save time, so it is now kept in Saved deliveries instead of being removed at once and offered for loading into the log. Build 60 left the "older than last week, so it can’t be kept" branch in the import code; build 61 removed it (see below).
+- **Trade-off:** a log left open for weeks and then saved stays in Saved deliveries until the end of the following week, so Saved deliveries can hold deliveries dated well before last week. For those, **Find an LPN**'s "Not in any saved delivery from the last two weeks." means saved in the last two weeks, not dated in them. In build 60 the Guide still said Saved deliveries "keeps this week and last week"; build 61 changed it to "keeps what you saved this week and last week".
 - **Check with a fixed clock:** the new check in `02-phone.js` fixes the clock to Sunday 8 November 2026, so it no longer depends on which day the checks run.
+
+## Imports always kept; unreachable message removed (build 61)
+
+After build 60 an imported log is saved with today's `saved` time, so `pruneHist()` never removes it straight away, and the import code's "…but that is older than last week, so it can’t be kept in Saved deliveries." message with its **Load it into the log** button could not be reached.
+
+- **Removed rather than kept:** the import handler in `initHistory()` no longer checks whether the new entry survived `pushHist()`; it always says "Imported n pallet(s). Tap Open to use it.", with "pallet" for one. Code that can no longer run was taken out rather than left unchecked.
+- **Wording follows the rule:** the Guide (section 7) and the Saved deliveries help now say deliveries are kept by when they were saved or imported (the code still uses the later of that day and the delivery date), so a delivery dated weeks ago showing in the list is expected.
+- **Trade-off:** an imported delivery from long ago now uses one of the 50 places in Saved deliveries until the end of next week.
