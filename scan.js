@@ -59,7 +59,7 @@ function camApply(t,first){
 async function startScan(){
   if(scanning)return;
   const v=$("video");
-  $("scanbox").hidden=false;$("smsg").textContent="Starting camera…";
+  $("scanbox").hidden=false;$("smsg").textContent="Starting camera…";$("readLabel").hidden=true;lastPhoto=null;
   scanNote("liveScan");
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
     $("smsg").textContent="Camera isn't available here. You can still type or use a handheld scanner in the LPN box.";return;
@@ -139,14 +139,18 @@ function stopScan(keepMsg){
   if(zxReader){try{zxReader.reset()}catch(e){}zxReader=null}
   if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
   const v=$("video");v.srcObject=null;
+  $("readLabel").hidden=true;lastPhoto=null;
   if(!keepMsg){$("scanbox").hidden=true;$("smsg").textContent=""}
 }
 /* Scan by photo (camera) reads the barcode only. Upload photo (a photo already taken) also reads the printed LPN. */
+let lastPhoto=null,photoTag="",photoBusy=false;
+/* Reading the printed LPN needs Upload photo and Reading photos switched on, and the photo reader. */
+function canReadLabel(){return feat("photoUpload")&&feat("manifestPhotos")&&typeof ocrLpns==="function"}
 async function decodePhoto(file,upload){
-  const sm=$("smsg");$("scanbox").hidden=false;$("video").hidden=true;
+  const sm=$("smsg");$("scanbox").hidden=false;$("video").hidden=true;$("readLabel").hidden=true;lastPhoto=null;
   scanNote(upload?"photoUpload":"scanByPhoto");
   // set a frame after the box is shown, so screen readers announce it
-  sm.textContent="";requestAnimationFrame(()=>{if(!sm.textContent)sm.textContent="Reading barcode…"});
+  sm.textContent="";requestAnimationFrame(()=>{if(!sm.textContent)sm.textContent=photoTag+"Reading barcode…"});
   try{
     let text="";
     if("BarcodeDetector" in window){
@@ -162,7 +166,9 @@ async function decodePhoto(file,upload){
     if(text){lastCode="";onCode(text);return}
   }catch(e){}
   if(upload){await readLabelText(file);return}
-  sm.textContent="No barcode found. Move closer, hold steady and try again."+(feat("photoUpload")&&feat("manifestPhotos")&&typeof ocrLpns==="function"?" If the barcode is damaged, use Upload photo: it can read the LPN printed on the label.":"");
+  // Scan by photo: offer to read the printed LPN from this same photo, so it needn't be taken again.
+  if(canReadLabel()){lastPhoto=file;$("readLabel").hidden=false;sm.textContent="No barcode found. Try again closer and steadier, or tap Read the printed LPN to read it from this photo."}
+  else sm.textContent="No barcode found. Move closer, hold steady and try again.";
 }
 /* No barcode could be read: the LPN printed on the label is read with the photo reader instead. Text can be misread,
    so the reading is always shown with Add and Skip, to check against the label first.
@@ -173,10 +179,10 @@ async function decodePhoto(file,upload){
    - A number read after "LPN:" without its letters is named, so it can be typed in. */
 async function readLabelText(file){
   const sm=$("smsg"),none="No barcode or LPN found. Try a clearer, closer photo of the label.";
-  if(typeof ocrLpns!=="function"||!feat("photoUpload")||!feat("manifestPhotos")){sm.textContent="No barcode found. Try a clearer, closer photo of the barcode.";return}
+  if(!canReadLabel()){sm.textContent="No barcode found. Try a clearer, closer photo of the barcode.";return}
   if(pendingAdd){sm.textContent="Answer the check above first (Add or Skip), then try the photo again.";return}
-  sm.textContent="No barcode found, so reading the LPN printed on the label. This can take up to a minute…";
-  const mine=t=>{sm.textContent="Reading the printed LPN: "+t};
+  sm.textContent=photoTag+"No barcode found, so reading the LPN printed on the label. This can take up to a minute…";
+  const mine=t=>{sm.textContent=photoTag+"Reading the printed LPN: "+t};
   if(!ocrSay)ocrSay=mine;
   try{
     const r=await ocrLpns(file);
@@ -186,22 +192,38 @@ async function readLabelText(file){
     const rank=x=>(pf.length&&okPfx(x)?0:1)+(lpnDigitsOk(x)?0:2);
     const lpns=all.filter(lpnDigitsOk).sort((a,b)=>rank(a)-rank(b)),others=all.filter(x=>!lpnDigitsOk(x));
     diag("scan","Upload photo: no barcode; LPNs read from the label: "+(lpns.join(" ")||"none")+(others.length?"; other numbers: "+others.length:""));
-    if(!lpns.length){sm.textContent=lost.length?"No barcode found. A number after “LPN:” was read without its letters ("+lost[0]+"): type it in with the letters at the start.":none;return}
+    if(!lpns.length){sm.textContent=photoTag+(lost.length?"No barcode found. A number after “LPN:” was read without its letters ("+lost[0]+"): type it in with the letters at the start."  :none);return}
     if(pendingAdd){sm.textContent="Read "+lpns[0]+" from the printed label, but another check is waiting above. Answer it, then try the photo again.";return}
     const v=lpns[0],more=lpns.slice(1),mended=(r.mended||[]).includes(v);
-    const notListed=pf.length&&!okPfx(v)?" Its prefix isn’t in your prefix list.":"";
+    const notListed=pf.length&&!okPfx(v)&&!cfg.check?" Its prefix isn’t in your prefix list.":"";
     tryAdd(v,true,"Read "+v+" from the printed label (no barcode found"+(mended?", one character corrected":"")+"): check it matches the label."+notListed);
-    sm.textContent="Read "+v+" from the printed label. Check it, then Add or Skip above."+(more.length?" Other LPNs on the photo: "+more.slice(0,3).join(", ")+(more.length>3?"…":"")+" (scan them separately if they’re other pallets).":"")+(others.length?" "+others.length+" other number"+(others.length===1?"":"s")+" on the label "+(others.length===1?"was":"were")+" left out.":"");
+    sm.textContent=photoTag+"Read "+v+" from the printed label. Check it, then Add or Skip above."+(more.length?" Other LPNs on the photo: "+more.slice(0,3).join(", ")+(more.length>3?"…":"")+" (scan them separately if they’re other pallets).":"")+(others.length?" "+others.length+" other number"+(others.length===1?"":"s")+" on the label "+(others.length===1?"was":"were")+" left out.":"");
   }catch(e){sm.textContent=(e&&e.message)||none}
   finally{if(ocrSay===mine)ocrSay=null}
 }
 $("scan").onclick=()=>{$("video").hidden=false;startScan()};
-const pickPhoto=id=>{if(scanning)stopScan();$(id).value="";$(id).click()};
+const pickPhoto=id=>{if(photoBusy){$("smsg").textContent="Still reading your photos. Answer the check above to go on to the next one.";return}if(scanning)stopScan();$(id).value="";$(id).click()};
 $("photo").onclick=()=>pickPhoto("file");
 $("upload").onclick=()=>pickPhoto("upFile");
 $("noLpn").onclick=()=>addNoLpn();
 $("file").onchange=e=>{const f=e.target.files&&e.target.files[0];if(f)decodePhoto(f,false)};
-$("upFile").onchange=e=>{const f=e.target.files&&e.target.files[0];if(f)decodePhoto(f,true)};
+$("upFile").onchange=e=>{const fs=[...(e.target.files||[])];if(fs.length===1)decodePhoto(fs[0],true);else if(fs.length)readPhotos(fs)};
+$("readLabel").onclick=()=>{const f=lastPhoto;$("readLabel").hidden=true;lastPhoto=null;if(f)readLabelText(f)};
+/* Several photos chosen at once: each is read in turn. When one needs an answer (Add or Skip), the next waits for it. */
+async function readPhotos(fs){
+  photoBusy=true;const before=rows.length;let none=0;
+  try{
+    for(let k=0;k<fs.length;k++){
+      photoTag="Photo "+(k+1)+" of "+fs.length+": ";
+      const had=rows.length;
+      await decodePhoto(fs[k],true);
+      if(pendingAdd)await new Promise(res=>{onCheckDone=res});
+      else if(rows.length===had)none++;
+    }
+  }finally{photoTag="";photoBusy=false}
+  const n=rows.length-before;
+  $("smsg").textContent=fs.length+" photos read: "+n+" pallet"+(n===1?"":"s")+" added"+(none?", nothing found on "+none+" photo"+(none===1?"":"s"):"")+".";
+}
 
 $("stopscan").onclick=()=>stopScan();
 syncType();

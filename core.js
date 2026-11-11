@@ -334,7 +334,9 @@ document.addEventListener("keydown",e=>{
   const t=e.target;if(t&&/^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName)&&t.id!=="lpn")return;
   $("chkSkip").click();
 });
-function hideCheck(){pendingAdd=null;$("chkBar").hidden=true}
+/* Called once when the check bar is answered or cleared (Upload photo waits for it before the next photo). */
+let onCheckDone=null;
+function hideCheck(){pendingAdd=null;$("chkBar").hidden=true;const f=onCheckDone;onCheckDone=null;if(f)setTimeout(f,0)}
 /* ask: a reason to always ask before adding (an LPN read from a label's printed text, which can be misread). */
 function tryAdd(v,scan,ask){
   if(pendingAdd)return false;

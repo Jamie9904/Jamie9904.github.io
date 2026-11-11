@@ -16,19 +16,22 @@ const { EXCEL_STUB } = require("../../tests/lib");
 const ROOT = path.resolve(__dirname, "../..");
 const OUT = path.join(ROOT, "tests/fixtures/old");
 // build number: commit that published it. Chosen where saved data or exports changed shape.
-const BUILDS = {
+const ALL_BUILDS = {
   19: "2887748", // first build with trailer and seal fields
   30: "9e63a49", // security tidy-up of everything read from storage and backups
   46: "8b7fb74", // last build before damaged pallets
   49: "ba25fbe", // damaged pallets added (dmg on rows, extra item in the PDF data)
   54: "71b49bf", // last build before pallets with no LPN and descriptions
+  64: "7527d55", // FPP descriptions (desc), refused pallets (ref, an extra item in the PDF data), site name
 };
+// node tools/old-data/make.js 64  makes only the builds named (the others stay as they are).
+const ONLY = process.argv.slice(2), BUILDS = ONLY.length ? Object.fromEntries(Object.entries(ALL_BUILDS).filter(([b]) => ONLY.includes(b))) : ALL_BUILDS;
 const DEL = { date: "2026-03-02", recv: "Jamie", notes: "Old build check, notes with a comma, and \"quotes\"", expect: "4", trailer: "TR 4471", sealIn: "112233", sealOut: "112234" };
 const OLD = { date: "2026-03-01", recv: "Jamie", notes: "", expect: "", trailer: "TR 1001", sealIn: "", sealOut: "" };
 const ROWS = [
-  { lpn: "VLT004040265", type: "BB", fsdu: false },
+  { lpn: "VLT004040265", type: "BB", fsdu: false, ref: true },
   { lpn: "RUN000123456", type: "FMCG", fsdu: true, dmg: "Crushed" },
-  { lpn: "QUB998877665", type: "FPP", fsdu: false },
+  { lpn: "QUB998877665", type: "FPP", fsdu: false, desc: "Kitchen roll, full pallet" },
   { lpn: "RBY000111222", type: "Mixed", fsdu: true, dmg: "Other: wrap torn" },
 ];
 const OLDROWS = [{ lpn: "VLT000000001", type: "FMCG", fsdu: false }, { lpn: "VLT000000002", type: "BB", fsdu: true }];
@@ -77,7 +80,7 @@ function serveDir(dir) {
     await p.addInitScript(EXCEL_STUB); await p.addInitScript(PDF_STUB);
     await p.goto("http://127.0.0.1:" + srv.address().port + "/index.html"); await p.waitForTimeout(500);
     const hasDmg = +build >= 49;
-    const strip = rs => rs.map(r => { const o = { lpn: r.lpn, type: r.type, fsdu: r.fsdu }; if (hasDmg && r.dmg) o.dmg = r.dmg; return o; });
+    const strip = rs => rs.map(r => { const o = { lpn: r.lpn, type: r.type, fsdu: r.fsdu }; if (hasDmg && r.dmg) o.dmg = r.dmg; if (+build >= 64 && r.desc) o.desc = r.desc; if (+build >= 64 && r.ref) o.ref = true; return o; });
     const out = await p.evaluate(async ({ DEL, OLD, ROWS, OLDROWS }) => {
       const wait = ms => new Promise(r => setTimeout(r, ms));
       window.saveOnly = async (buf, name) => { window.__saved = { name, text: new TextDecoder().decode(new Uint8Array(buf)) }; };
