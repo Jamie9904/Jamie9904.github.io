@@ -132,7 +132,7 @@ function render(){
     const n=document.createElement("td");n.textContent=i+1;
     // The LPN is a button, so it can be edited with the keyboard and screen readers too, not only by tapping.
     const l=document.createElement("td");l.className="l";
-    const eb=document.createElement("button");eb.type="button";eb.className="lpnedit";eb.textContent=r.lpn;eb.title=feat("damage")?"Tap to edit or mark damage":"Tap to edit";eb.setAttribute("aria-label","Edit LPN "+r.lpn+(r.dmg?", damaged: "+r.dmg:"")+(feat("damage")?", or mark damage":""));eb.dataset.i=i;l.appendChild(eb);
+    const eb=document.createElement("button");eb.type="button";eb.className="lpnedit";eb.textContent=r.lpn;eb.title=feat("damage")?"Tap to edit or mark damage":"Tap to edit";eb.setAttribute("aria-label","Edit LPN "+r.lpn+(r.ref?", refused, sent back":"")+(r.dmg?", damaged: "+r.dmg:"")+(feat("damage")?", or mark damage":""));eb.dataset.i=i;l.appendChild(eb);
     if(r.ref){tr.classList.add("refused");const rt=document.createElement("span");rt.className="reftag";rt.textContent="Refused: sent back";l.appendChild(rt)}
     if(r.dmg){tr.classList.add("dmg");const dt=document.createElement("span");dt.className="dmgtag";dt.textContent="Damaged: "+r.dmg;l.appendChild(dt)}
     if(isNoLpn(r.lpn))eb.classList.add("nolpn");
@@ -252,18 +252,17 @@ function dmgRow(r,pick,opt){
     if(tn){tn.id=id+"t";say.push(tn.id)}
     if(say.length)di.setAttribute("aria-describedby",say.join(" "));
   }
-  const addRef=()=>{
   // Refused: the pallet came off the trailer but was sent back with the driver. It stays on the log and exports,
-  // marked, and isn't counted as received.
-  if(!opt.refuse)return;{
+  // marked, and isn't counted as received. Added after the damage choices, so Tab reaches them first.
+  const addRef=()=>{
+    if(!opt.refuse)return;
     const rl=document.createElement("div");rl.className="refline";
     const rb=document.createElement("button");rb.type="button";rb.className="refbtn";rb.textContent=r.ref?"Not refused":"Refused (sent back)";
-    rb.setAttribute("aria-pressed",String(!!r.ref));rb.setAttribute("aria-label",(r.ref?"Mark "+r.lpn+" as not refused":"Mark "+r.lpn+" as refused, sent back with the driver"));
+    if(r.ref)rb.classList.add("on");rb.setAttribute("aria-label",(r.ref?"Mark "+r.lpn+" as not refused":"Mark "+r.lpn+" as refused, sent back with the driver"));
     const keep=e=>e.preventDefault();rb.addEventListener("pointerdown",keep);rb.addEventListener("mousedown",keep);
     rb.onclick=e=>opt.refuse(!r.ref,e.detail===0);
     rl.appendChild(rb);td.appendChild(rl);
-    if(!isNoLpn(r.lpn)||!opt.desc)testNote("refused",rl);
-  }
+    testNote("refused",rl);
   };
   if(opt.damage===false){addRef();return tr}
   const box=document.createElement("div");box.className="dmgbox";box.setAttribute("role","group");box.setAttribute("aria-label","Damage for "+r.lpn);td.appendChild(box);
@@ -304,9 +303,10 @@ function summary(){
 }
 /* Pallets received, by type: refused pallets (sent back with the driver) are left out and counted on their own. Used by
    the totals on screen and by every export. */
-function typeCounts(){
-  const c={BB:0,FMCG:0,FPP:0,Mixed:0},got=rows.filter(r=>!r.ref);got.forEach(r=>c[r.type]++);
-  return {c:c,total:got.length,fsdu:got.filter(r=>r.fsdu).length,refused:rows.length-got.length};
+function typeCounts(list){
+  list=list||rows;
+  const c={BB:0,FMCG:0,FPP:0,Mixed:0},got=list.filter(r=>!r.ref);got.forEach(r=>{if(c[r.type]!==undefined)c[r.type]++});
+  return {c:c,total:got.length,fsdu:got.filter(r=>r.fsdu).length,refused:list.length-got.length};
 }
 /* LPN digit counts: 9 or 10 after the letters, except IM (full pallet picks), which has 10 or 11. */
 function lpnDigitsOk(x){const m=String(x).toUpperCase().replace(/\s+/g,"").match(/^([A-Z]+)(\d+)$/);if(!m)return false;const n=m[2].length;return m[1]==="IM"?n===10||n===11:n===9||n===10}
@@ -531,6 +531,7 @@ function localToday(){const n=new Date();return n.getFullYear()+"-"+String(n.get
 })();
 
 function markExported(){
+  if(typeof unexpCheck==="function")setTimeout(unexpCheck,0); // the reminder goes once the delivery is exported
   if(window.__histExporting)return;
   exported={at:new Date().toISOString(),sig:logSig()};save();summary();
   $("nextBar").hidden=false;

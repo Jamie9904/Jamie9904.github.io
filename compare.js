@@ -48,8 +48,9 @@ function trimGrid(g){
   return rows.map(r=>{const o=r.slice(0,nc);while(o.length<nc)o.push("");return o});
 }
 function logGridFrom(rows,d,who){
-  const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>{if(c[r.type]!==undefined)c[r.type]++});
-  const side=[["Pallet Type","Count"],["Brown Box",c.BB],["FMCG",c.FMCG],["FPP",c.FPP],["Mixed",c.Mixed],["Total",rows.length],["FSDU (not in total)",rows.filter(r=>r.fsdu).length],["",""],["Delivery Details",""],["Date",d||""],["Received by",who||""]];
+  // Counted the same way as the log's own export: refused pallets are left out of the total and counted on their own.
+  const t=typeCounts(rows),c=t.c;
+  const side=[["Pallet Type","Count"],["Brown Box",c.BB],["FMCG",c.FMCG],["FPP",c.FPP],["Mixed",c.Mixed],["Total",t.total],["FSDU (not in total)",t.fsdu]].concat(t.refused?[["Refused (not in total)",t.refused]]:[]).concat([["",""],["Delivery Details",""],["Date",d||""],["Received by",who||""]]);
   const n=Math.max(rows.length+1,side.length),g=[];
   for(let i=0;i<n;i++){
     const left=i===0?["LPN","Pallet Type","FSDU"]:rows[i-1]?[rows[i-1].lpn,rows[i-1].type,rows[i-1].fsdu?"Yes":"No"]:["","",""];
@@ -459,7 +460,7 @@ async function readLogPdf(f,say){
         const o=JSON.parse(decodeURIComponent(kw.slice(8)));
         // Read as plain text only: edited hidden data must not become a spreadsheet formula or link.
         const tx=v=>isTxt(v)?String(v).slice(0,2000):"";
-        const rw=(Array.isArray(o.rows)?o.rows:[]).filter(r=>Array.isArray(r)&&isTxt(r[0])&&String(r[0]).trim()).map(r=>({lpn:String(r[0]).trim().slice(0,100),type:tx(r[1]),fsdu:!!r[2]}));
+        const rw=(Array.isArray(o.rows)?o.rows:[]).filter(r=>Array.isArray(r)&&isTxt(r[0])&&String(r[0]).trim()).map(r=>({lpn:String(r[0]).trim().slice(0,100),type:tx(r[1]),fsdu:!!r[2],ref:r[5]===1||r[5]===true}));
         if(rw.length){logSheets=[{name:"Log copy",grid:logGridFrom(rw,tx(o.d),tx(o.r))}];return rw.map(r=>r.lpn)}
       }catch(e){}
     }

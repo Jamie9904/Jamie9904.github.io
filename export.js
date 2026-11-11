@@ -30,7 +30,8 @@ function xlTitle(ws,off,lastCol,title,sub){
   t.height=38;s.height=22;ws.getRow(off+3).height=10;
   ws.mergeCells(off+1,1,off+1,lastCol);ws.mergeCells(off+2,1,off+2,lastCol);
   const a=t.getCell(1),b=s.getCell(1);
-  a.value=title;a.font={name:"Arial",size:22,bold:true};a.alignment={vertical:"middle",horizontal:"left"};
+  // A long title (a site name added) gets a smaller font, so it isn't cut off at the edge of the page.
+  a.value=title;a.font={name:"Arial",size:title.length>34?Math.max(13,Math.floor(22*34/title.length)):22,bold:true};a.alignment={vertical:"middle",horizontal:"left"};
   b.value=sub;b.font={name:"Arial",size:12,color:{argb:"FF404040"}};b.alignment={vertical:"middle",horizontal:"left"};
   return off+4;
 }
@@ -136,7 +137,11 @@ const PDF_HEAD=[230,233,237],PDF_BASE={theme:"grid",styles:{font:"helvetica",fon
 const PDF_PLAIN={alternateRowStyles:{fillColor:[255,255,255]}};
 function pdfTitle(doc,x,y,title,sub){
   if(siteName())title+=" – "+siteName();
-  doc.setFont("helvetica","bold");doc.setFontSize(18);doc.setTextColor(0);doc.text(title,x,y+6);
+  // A long title (a site name added) gets a smaller font, so it fits between the margins.
+  doc.setFont("helvetica","bold");let fs=18;doc.setFontSize(fs);
+  const room=doc.internal.pageSize.getWidth()-x-10;
+  while(fs>11&&doc.getTextWidth(title)>room){fs--;doc.setFontSize(fs)}
+  doc.setTextColor(0);doc.text(title,x,y+6);
   doc.setFont("helvetica","normal");doc.setFontSize(10);doc.setTextColor(60);doc.text(sub,x,y+12);doc.setTextColor(0);
   return y+17;
 }
@@ -362,7 +367,8 @@ $("dl").onclick=async()=>{
     try{off=await xlLogo(wb,ws,Math.round((7+lpnW+22+12)*7.3))}catch(e){off=0}
     const exp=$("expect").value;
     const H=xlTitle(ws,off,7,"Goods-in pallet log","Date: "+ukDate(d)+(who?"     Received by: "+who:"")+(exp?"     Expected pallets: "+exp:"")+(($("trailer").value||"").trim()?"     Trailer: "+$("trailer").value.trim():""));
-    const lastL=H+rows.length,s1=H+6,s2a=H+8,s2b=H+side.length-1;
+    // The Pallet Type box has a Refused row when there are refused pallets, which moves the Delivery Details box down.
+    const rf=tc.refused?1:0,lastL=H+rows.length,s1=H+6+rf,s2a=H+8+rf,s2b=H+side.length-1;
     for(let i=-1;i<n;i++){
       const r=ws.getRow(H+i+1);
       const head=i<0;
@@ -378,7 +384,7 @@ $("dl").onclick=async()=>{
       };
       if(left)left.forEach((v,k)=>put(k+1,v,{bold:head,big:head,mono:!head&&k===1,center:head?k!==1:k!==1,fill:head?XL_HEAD:(i%2?XL_ZEBRA:null),box:xlBox(1,4,H,lastL,k+1,r.number)}));
       if(right){
-        const inB1=i+1<=6,bx=c=>inB1?xlBox(6,7,H,s1,c,r.number):xlBox(6,7,s2a,s2b,c,r.number);
+        const inB1=i+1<=6+rf,bx=c=>inB1?xlBox(6,7,H,s1,c,r.number):xlBox(6,7,s2a,s2b,c,r.number);
         const fl=right.h||right.b||right.l;
         put(6,right.v[0],{bold:fl,big:right.h,fill:fl?XL_HEAD:null,box:bx(6)});
         put(7,right.v[1],{bold:right.h||right.b,big:right.h,center:typeof right.v[1]==="number",fill:(right.h||right.b)?XL_HEAD:null,box:bx(7)});

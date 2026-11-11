@@ -20,9 +20,9 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <p><b>Changing the log:</b> tap an LPN to correct it, change its type or FSDU in the table, or remove it with ✕. An <b>Undo</b> bar appears after you remove a pallet, change one (its LPN, description or damage) or use Clear all. You can undo the last 10 changes, newest first: after the bar has gone, use <b>Undo</b> next to Export (or Ctrl+Z on a computer). A Clear all, Start new delivery or Clear trailer can only be undone until the log or the delivery details change.</p>
 <p data-f="noLpn"><b>Pallet with no LPN:</b> pick the type (and tick FSDU if needed), then tap <b>No LPN</b> (under <b>Scan</b> on a phone). It is logged as No LPN 1, No LPN 2 and so on, and a <b>Description</b> box opens for the wrap, labels, or a supplier or PO number (optional). If the LPN turns up later, tap the pallet and type it in. The description stays.</p>
 <p data-f="fppDesc"><b>FPP pallet:</b> when you log an FPP pallet, a <b>Description</b> box opens so you can say what is on it, such as kitchen roll. You don’t have to fill it in. Type what is on it and press Enter, or press Enter to leave it blank. The LPN box is then ready for the next pallet. If you scan the next pallet while the box is open, it is logged as the next pallet, not as the description. The description shows under the LPN and goes on the exports. During Live scan the box doesn’t open, so tap the LPN afterwards to add a description. To change it later, tap the LPN again.</p>
-<p data-f="refused"><b>Refused pallet:</b> if a pallet is sent back with the driver, tap its LPN and choose <b>Refused (sent back)</b>. It stays on the log and the exports, marked as refused, but isn’t counted in the totals of pallets received. Tap it again and choose <b>Not refused</b> to undo it.</p>
+<p data-f="refused"><b>Refused pallet:</b> if a pallet is sent back with the driver, tap its LPN and choose <b>Refused (sent back)</b>. It stays on the log and the exports, marked as refused, but isn’t counted in the totals of pallets received. It still counts towards the expected pallets, because it came off the trailer. Tap it again and choose <b>Not refused</b> to undo it.</p>
 <p data-f="damage"><b>Damaged pallet:</b> tap the LPN, then choose Crushed, Wet or Other (type what’s wrong). It shows in red and goes on the exports. Choose None to remove the damage.</p>
-<p>Use search and the filters to find pallets. The totals always count the whole log, with FSDUs counted separately.</p>
+<p>Use search and the filters to find pallets. The totals count the whole log. FSDUs<span data-f="refused"> and refused pallets</span> are counted separately and aren’t in the total.</p>
 <h3>4. Scanning barcodes</h3>
 <p data-f="liveScan|scanByPhoto">On a phone, tap <b>Scan</b> next to Add.</p>
 <ul>
@@ -104,7 +104,7 @@ function initDemo(){
 /* The panels and the install box act as dialogs: focus moves in, the page behind can't be reached, and focus goes
    back to the button that opened them. */
 let dlgOpener=null;
-function pageInert(on){["main","header.top","#hello"].forEach(s=>{const e=document.querySelector(s);if(e)e.inert=on})}
+function pageInert(on){["main","header.top","#hello","#unexp"].forEach(s=>{const e=document.querySelector(s);if(e)e.inert=on})}
 function dlgOpen(focusEl){if(!dlgOpener)dlgOpener=document.activeElement;pageInert(true);setTimeout(()=>{if(focusEl)focusEl.focus()},0)}
 function dlgClose(){if(!$("panel").hidden||!$("instBox").hidden)return; // the other dialog is still open
   pageInert(false);const o=dlgOpener;dlgOpener=null;if(o&&o.focus&&document.contains(o))o.focus()}
@@ -156,6 +156,8 @@ function applyTheme(){
     // wouldn't be readable on them (4.6:1).
     {const away=dark?"#000000":"#ffffff",p0=v["--paper"];let pp=p0;for(let i=1;i<=10&&r(pole,pp)<4.6;i++)pp=mixC(p0,away,i/10);v["--paper"]=pp}
     [["--ink",7],["--mu",4.5]].forEach(([k,want])=>{const c0=v[k];let c=c0;for(let i=1;i<=10&&Math.min(r(c,v["--paper"]),r(c,bg))<want;i++)c=mixC(c0,pole,i/10);v[k]=c})}
+  // Warning colour (refused pallets, reminders, notes): moved towards the text colour until it is readable (4.5:1).
+  {const r=(a,b)=>{const x=lumOf(a)+.05,y=lumOf(b)+.05;return Math.max(x,y)/Math.min(x,y)};const w0=v["--wn"];let w=w0;for(let i=1;i<=10&&Math.min(r(w,v["--paper"]),r(w,bg))<4.5;i++)w=mixC(w0,v["--ink"],i/10);v["--wn"]=w}
   // Accent as text (headings, links, focus ring): moved towards the text colour until it is readable (4.5:1).
   {const r=(a,b)=>{const x=lumOf(a)+.05,y=lumOf(b)+.05;return Math.max(x,y)/Math.min(x,y)};let act=ac;for(let i=1;i<=10&&Math.min(r(act,v["--paper"]),r(act,bg))<4.5;i++)act=mixC(ac,v["--ink"],i/10);v["--act"]=act}
   const st=document.documentElement.style;
@@ -201,8 +203,8 @@ HELP.settings=`<h3>Colours</h3>
 <label for="setSize">Text size</label>
 <select id="setSize"><option value="1">Normal</option><option value="1.12">Large</option><option value="1.25">Extra large</option></select>
 <label for="setSite">Site or store name</label>
-<input type="text" id="setSite" maxlength="40" autocomplete="off" placeholder="Optional, for example 323 Wigan">
-<p class="note">Added to the title of every export, so logs from different sites are easy to tell apart.</p>
+<input type="text" id="setSite" maxlength="40" autocomplete="off" placeholder="Optional, for example 323 Wigan" aria-describedby="setSiteNote">
+<p class="note" id="setSiteNote">Added to the title of every export, so logs from different sites are easy to tell apart.</p>
 <label for="setDate">Date format</label>
 <select id="setDate"><option value="uk">dd/mm/yyyy (UK)</option><option value="us">mm/dd/yyyy (US)</option><option value="iso">yyyy-mm-dd</option></select>
 <p class="note">Used in spreadsheets, PDFs and the saved deliveries lists.</p>
@@ -281,13 +283,13 @@ function newDelivery(){
   const id=pushHist(Object.assign({saved:new Date().toISOString()},getDel(),{rows:prev.rows}));
   rows=[];setDel({recv:prev.recv,date:todayStr()});exported=null;$("cmpNums").value="";$("type").value=cfg.defType;$("type").dataset.t=cfg.defType;
   save();render();
-  $("dlmsg").textContent="Saved to history and started a new delivery.";
+  $("dlmsg").textContent="Saved to history and started a new delivery.";unexpCheck();
   showUndo("Saved to history. Started a new delivery.",()=>{hist=hist.filter(h=>h.id!==id);saveHist();rows=prev.rows;setDel(prev);$("cmpNums").value=prev.man||"";save();render();$("dlmsg").textContent=""},true);
 }
 function openHist(id){
   const h=hist.find(x=>x.id===id);if(!h)return;
   if(rows.length)pushHist(Object.assign({saved:new Date().toISOString()},getDel(),{rows:rows.slice()}));
-  hist=hist.filter(x=>x.id!==id);saveHist();undoClear();
+  hist=hist.filter(x=>x.id!==id);saveHist();undoClear();unexpCheck();
   rows=h.rows.map(r=>Object.assign({},r));setDel(h);
   save();render();closeHelp();
   $("dlmsg").textContent="Opened the saved delivery. Your previous log, if it had pallets, was saved to history.";
@@ -341,7 +343,7 @@ async function parseExported(f){
   }));
   return {date:date,recv:recv,notes:notes,expect:expect,trailer:trailer,sealIn:sealIn,sealOut:sealOut,rows:rw,unk:unk};
 }
-HELP.history=`<p>Deliveries you save are kept in this browser on this device. Weeks run Sunday to Saturday, and deliveries you saved or imported this week and last week are kept; older ones are removed automatically. Opening one puts it back in the log so you can change it or export it again. You can also export or email a saved delivery directly, without opening it.</p>
+HELP.history=`<p>Deliveries you save are kept in this browser on this device. Weeks run Sunday to Saturday, and deliveries you saved or imported this week and last week are kept; older ones are removed automatically.<span data-f="refused"> The number of pallets shown for each includes any refused ones.</span> Opening one puts it back in the log so you can change it or export it again. You can also export or email a saved delivery directly, without opening it.</p>
 <div class="row" style="margin:10px 0"><button id="histImport">Import an exported log</button><input type="file" id="histFile" accept=".xlsx,.csv,.xls,.pdf,application/pdf" hidden></div>
 <div class="bkinfo"><span id="bkNote"></span><button id="histBk">Back up now</button></div>
 <div class="msg" id="histMsg" role="status" aria-live="polite"></div>
@@ -545,8 +547,8 @@ function initHistory(){
     const hd=document.createElement("div");hd.className="hd";hd.textContent=(ukDate(h.date)||"No date")+", "+h.rows.length+(h.rows.length===1?" pallet":" pallets");
     const sb=document.createElement("div");sb.className="sb";
     let when="";try{when=new Date(h.saved).toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}catch(e){}
-    const hc={BB:0,FMCG:0,FPP:0,Mixed:0};h.rows.forEach(z=>{if(hc[z.type]!==undefined)hc[z.type]++});
-    const tt=document.createElement("div");tt.className="sb";tt.textContent="BB "+hc.BB+", FMCG "+hc.FMCG+", FPP "+hc.FPP+", Mixed "+hc.Mixed+", FSDU "+h.rows.filter(z=>z.fsdu).length;
+    const ht=typeCounts(h.rows),hc=ht.c;
+    const tt=document.createElement("div");tt.className="sb";tt.textContent="BB "+hc.BB+", FMCG "+hc.FMCG+", FPP "+hc.FPP+", Mixed "+hc.Mixed+", FSDU "+ht.fsdu+(ht.refused?", refused "+ht.refused:"");
     sb.textContent=(h.recv?"Received by "+h.recv+". ":"")+"Saved "+when+".";
     const ts=[h.trailer?"Trailer "+h.trailer:"",h.sealIn?"Seal in "+h.sealIn:"",h.sealOut?"Seal out "+h.sealOut:""].filter(Boolean).join(", ");
     if(ts)sb.textContent+=" "+ts+".";
@@ -784,7 +786,8 @@ function unexpCheck(){
   if(skip===logSig())return;
   $("unexpTxt").textContent="The delivery from "+ukDate(d)+" ("+rows.length+" pallet"+(rows.length===1?"":"s")+") hasn’t been exported or emailed yet.";
   $("unexpGo").onclick=()=>{box.hidden=true;const b=$("expBtn");b.scrollIntoView({block:"center"});b.focus({preventScroll:true});if($("expMenu").hidden)b.click()};
-  $("unexpNo").onclick=()=>{box.hidden=true;try{localStorage.setItem("lpnunexp",logSig())}catch(e){};$("btnGuide").focus()};
+  $("unexpNo").onclick=()=>{box.hidden=true;try{localStorage.setItem("lpnunexp",logSig())}catch(e){};const m=document.querySelector("main");m.setAttribute("tabindex","-1");m.focus({preventScroll:true})};
+  const old=box.querySelector(".testnote");if(old)old.remove();
   testNote("exportReminder",box.querySelector("p"),"afterend");
   box.hidden=false;
 }
@@ -813,7 +816,7 @@ function checkDate(noReset){
   $("dateTxt").textContent="This log is dated "+ukDate(d)+", but today is "+ukDate(t)+".";
   bar.hidden=false;
 }
-$("dateFix").onclick=()=>{$("date").value=localToday();save();$("dateBar").hidden=true};
+$("dateFix").onclick=()=>{$("date").value=localToday();save();$("dateBar").hidden=true;unexpCheck()};
 $("dateKeep").onclick=()=>{dateSkip=$("date").value+"|"+localToday();$("dateBar").hidden=true};
 $("date").addEventListener("change",()=>{dateSkip="";checkDate(true)});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkDate()});
