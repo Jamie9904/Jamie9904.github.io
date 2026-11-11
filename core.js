@@ -361,6 +361,7 @@ function add(){
   $("lpn").value="";$("lpn").focus();
 }
 function addValue(v,o){
+  if(typeof onAdded==="function")onAdded(v);
   o=o||{type:$("type").value,fsdu:$("fsdu").checked};
   $("msg").textContent="";
   rows.push({lpn:v,type:o.type,fsdu:!!o.fsdu});

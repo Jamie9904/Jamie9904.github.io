@@ -280,6 +280,7 @@ function newDelivery(){
     return;
   }
   newAck="";$("nextBar").hidden=true;
+  if(typeof stopPhotos==="function")stopPhotos("log");
   const prev=Object.assign({rows:rows.slice(),man:$("cmpNums").value},getDel());
   const id=pushHist(Object.assign({saved:new Date().toISOString()},getDel(),{rows:prev.rows}));
   rows=[];setDel({recv:prev.recv,date:todayStr()});exported=null;$("cmpNums").value="";$("type").value=cfg.defType;$("type").dataset.t=cfg.defType;
@@ -289,6 +290,7 @@ function newDelivery(){
 }
 function openHist(id){
   const h=hist.find(x=>x.id===id);if(!h)return;
+  if(typeof stopPhotos==="function")stopPhotos("log");
   if(rows.length)pushHist(Object.assign({saved:new Date().toISOString()},getDel(),{rows:rows.slice()}));
   hist=hist.filter(x=>x.id!==id);saveHist();undoClear();unexpCheck();
   rows=h.rows.map(r=>Object.assign({},r));setDel(h);
@@ -352,6 +354,7 @@ HELP.history=`<p>Deliveries you save are kept in this browser on this device. We
 <div class="msg" id="histFindMsg" role="status" aria-live="polite" data-f="findLpn"></div>
 <div id="histRoot"></div>`;
 async function histExport(h,mail){
+  if(typeof stopPhotos==="function")stopPhotos("log");
   const msg=$("histMsg"),sv=Object.assign({rows:rows},getDel());
   msg.textContent="Preparing…";$("dlmsg").textContent="";
   rows=h.rows.map(r=>Object.assign({},r));setDel(h);
@@ -661,7 +664,7 @@ function initSettings(){
   $("setVib").checked=cfg.vibrate;$("setVib").onchange=()=>{cfg.vibrate=$("setVib").checked;saveCfg();if(cfg.vibrate)sfx("ok")};
   $("setConf").checked=cfg.confirmScan;$("setConf").onchange=()=>{cfg.confirmScan=$("setConf").checked;saveCfg()};
   $("setKeep").checked=cfg.keepType;$("setKeep").onchange=()=>{cfg.keepType=$("setKeep").checked;saveCfg()};
-  $("setCheck").checked=cfg.check;$("setCheck").onchange=()=>{cfg.check=$("setCheck").checked;saveCfg();if(!cfg.check)hideCheck()};
+  $("setCheck").checked=cfg.check;$("setCheck").onchange=()=>{cfg.check=$("setCheck").checked;saveCfg();if(!cfg.check){if(typeof stopPhotos==="function")stopPhotos("stopped");hideCheck()}};
   $("setSound").checked=cfg.sound;$("setSound").onchange=()=>{cfg.sound=$("setSound").checked;saveCfg();if(cfg.sound)sfx("ok")};
   $("setDate").value=cfg.dateFmt;$("setDate").onchange=()=>{cfg.dateFmt=$("setDate").value;saveCfg();showDate();updateDel()};
   $("setSize").value=cfg.size;$("setSize").onchange=()=>{cfg.size=$("setSize").value;saveCfg();applyCfg()};

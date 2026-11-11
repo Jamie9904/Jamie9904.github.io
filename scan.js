@@ -164,11 +164,14 @@ async function decodePhoto(file,upload){
       try{const res=await new ZXing.BrowserMultiFormatReader().decodeFromImageUrl(url);text=res.getText()}
       finally{URL.revokeObjectURL(url)}
     }
-    if(text){lastCode="";onCode(text);return}
+    if(text){
+      if(batch){if(batch.cancel)return;if(pendingAdd){photoNote="busy";return}batch.expect.add(text.trim())}
+      else if(pendingAdd){sm.textContent="Answer the check above first (Add or Skip), then try the photo again.";return}
+      lastCode="";onCode(text);return}
   }catch(e){}
   if(upload){await readLabelText(file);return}
   // Scan by photo: offer to read the printed LPN from this same photo, so it needn't be taken again.
-  if(canReadLabel()){lastPhoto=file;$("readLabel").hidden=false;sm.textContent="No barcode found. Try again closer and steadier, or tap Read the printed LPN to read the number printed on the label in this photo."}
+  if(canReadLabel()){lastPhoto=file;$("readLabel").hidden=false;sm.textContent="No barcode found. Try again closer and steadier, or use Read the printed LPN to read the number printed on the label in this photo."}
   else sm.textContent="No barcode found. Move closer, hold steady and try again.";
 }
 /* No barcode could be read: the LPN printed on the label is read with the photo reader instead. Text can be misread,
@@ -181,7 +184,7 @@ async function decodePhoto(file,upload){
 async function readLabelText(file,asked){
   const sm=$("smsg"),none="No barcode or LPN found. Try a clearer, closer photo of the label.";
   if(!canReadLabel()){sm.textContent="No barcode found. Try a clearer, closer photo of the barcode.";return}
-  if(pendingAdd){sm.textContent="Answer the check above first (Add or Skip), then try the photo again.";return}
+  if(pendingAdd){if(batch){photoNote="busy";return}sm.textContent="Answer the check above first (Add or Skip), then try the photo again.";return}
   sm.textContent=photoTag+(asked?"":"No barcode found, so ")+(asked?"Reading":"reading")+" the LPN printed on the label. This can take up to a minute…";
   const mine=t=>{sm.textContent=photoTag+"Reading the printed LPN: "+t};
   if(!ocrSay)ocrSay=mine;
@@ -194,10 +197,12 @@ async function readLabelText(file,asked){
     const lpns=all.filter(lpnDigitsOk).sort((a,b)=>rank(a)-rank(b)),others=all.filter(x=>!lpnDigitsOk(x));
     diag("scan","Printed LPN read: no barcode; LPNs read from the label: "+(lpns.join(" ")||"none")+(others.length?"; other numbers: "+others.length:""));
     if(!lpns.length){if(lost.length)photoNote="a number after “LPN:” was read without its letters ("+lost[0]+"): type it in with the letters at the start";sm.textContent=photoTag+(lost.length?"No barcode found. A number after “LPN:” was read without its letters ("+lost[0]+"): type it in with the letters at the start."  :none);return}
-    if(pendingAdd){sm.textContent="Read "+lpns[0]+" from the printed label, but another check is waiting above. Answer it, then try the photo again.";return}
+    if(batch&&batch.cancel)return;
+    if(pendingAdd){if(batch){photoNote="busy";return}sm.textContent="Read "+lpns[0]+" from the printed label, but another check is waiting above. Answer it, then try the photo again.";return}
     const v=lpns[0],more=lpns.slice(1),mended=(r.mended||[]).includes(v);
     const notListed=pf.length&&!okPfx(v)&&!cfg.check?" Its prefix isn’t in your prefix list.":"";
-    tryAdd(v,true,"Read "+v+" from the printed label (no barcode found"+(mended?", one character corrected":"")+"): check it matches the label."+notListed);
+    if(batch)batch.expect.add(v);
+    tryAdd(v,true,photoTag+"Read "+v+" from the printed label (no barcode found"+(mended?", one character corrected":"")+"): check it matches the label."+notListed);
     sm.textContent=photoTag+"Read "+v+" from the printed label. Check it, then Add or Skip above."+(more.length?" Other LPNs on the photo: "+more.slice(0,3).join(", ")+(more.length>3?"…":"")+" (scan them separately if they’re other pallets).":"")+(others.length?" "+others.length+" other number"+(others.length===1?"":"s")+" on the label "+(others.length===1?"was":"were")+" left out.":"");
   }catch(e){const m=(e&&e.message)||none;photoNote="couldn’t be read: "+m.replace(/\.$/,"");sm.textContent=photoTag+m}
   finally{if(ocrSay===mine)ocrSay=null}
@@ -210,26 +215,46 @@ $("upload").onclick=()=>pickPhoto("upFile");
 $("noLpn").onclick=()=>addNoLpn();
 $("file").onchange=e=>{const f=e.target.files&&e.target.files[0];if(f)decodePhoto(f,false)};
 $("upFile").onchange=e=>{const fs=[...(e.target.files||[])];if(fs.length===1)decodePhoto(fs[0],true);else if(fs.length)readPhotos(fs)};
-$("readLabel").onclick=()=>{const f=lastPhoto;$("readLabel").hidden=true;lastPhoto=null;if(f)readLabelText(f,true)};
+$("readLabel").onclick=async()=>{
+  if(pendingAdd){$("smsg").textContent="Answer the check above first (Add or Skip), then use Read the printed LPN.";return}
+  const f=lastPhoto;$("stopscan").focus();$("readLabel").hidden=true;lastPhoto=null; // focus moves before the button hides
+  if(f){await readLabelText(f,true);if(pendingAdd)$("chkSkip").focus()}};
 /* Several photos chosen at once: each is read in turn. When one needs an answer (Add or Skip), the next waits for it. */
+/* Several photos chosen at once: each is read in turn. When one needs an answer (Add or Skip), the next waits for it.
+   The batch stops when the log is replaced (Clear all, Start new delivery, opening or exporting a saved delivery)
+   or Stop scanning is used, so no photo is added to the wrong delivery. */
+let batch=null;
+function stopPhotos(why){if(!batch)return;batch.cancel=why||"stopped";if(batch.waiting&&pendingAdd)hideCheck()}
+// Called by addValue (core.js): counts pallets added from this batch's photos, not other scans meanwhile.
+function onAdded(v){if(batch&&batch.expect&&batch.expect.has(v))batch.added++}
+const waitCheck=b=>new Promise(res=>{b.waiting=true;onCheckDone=()=>{b.waiting=false;res()}});
 async function readPhotos(fs){
-  photoBusy=true;const before=rows.length,notes=[];let none=0;
+  const b=batch={cancel:"",added:0,skipped:0,none:0,notes:[],expect:null,waiting:false};photoBusy=true;let done=0;
   try{
-    for(let k=0;k<fs.length;k++){
-      photoTag="Photo "+(k+1)+" of "+fs.length+": ";photoNote="";
-      const had=rows.length;
+    for(let k=0;k<fs.length&&!b.cancel;k++){
+      if(pendingAdd){await waitCheck(b);if(b.cancel)break} // another check (a handheld scan) is answered first
+      photoTag="Photo "+(k+1)+" of "+fs.length+": ";photoNote="";b.expect=new Set();
+      const had=b.added;
       await decodePhoto(fs[k],true);
+      if(b.cancel)break;
+      if(photoNote==="busy"){k--;continue} // a check opened while it was being read: read it again after that
+      done++;
       // A number to type in, or a photo that couldn't be read, is kept for the summary (the next photo's messages replace it).
-      if(photoNote)notes.push("Photo "+(k+1)+": "+photoNote+".");
-      if(pendingAdd)await new Promise(res=>{onCheckDone=res});
-      else if(rows.length===had&&!photoNote)none++;
+      if(photoNote)b.notes.push("Photo "+(k+1)+": "+photoNote+".");
+      if(pendingAdd&&b.expect.size){await waitCheck(b);if(b.added===had&&!b.cancel)b.skipped++}
+      else if(b.added===had&&!photoNote)b.none++;
     }
-  }finally{photoTag="";photoNote="";photoBusy=false}
-  const n=rows.length-before;
-  $("smsg").textContent=fs.length+" photos read: "+(n?n+" pallet"+(n===1?"":"s"):"no pallets")+" added"+(none?", nothing found on "+none+" photo"+(none===1?"":"s"):"")+"."+(notes.length?" "+notes.join(" "):"");
+  }finally{photoTag="";photoNote="";photoBusy=false;batch=null}
+  if(b.cancel==="log"&&$("scanbox").hidden)return; // the new or opened delivery says what happened
+  const n=b.added,parts=[(n?n+" pallet"+(n===1?"":"s"):"no pallets")+" added"];
+  if(b.skipped)parts.push(b.skipped+" skipped");
+  if(b.none)parts.push("nothing found on "+b.none+" photo"+(b.none===1?"":"s"));
+  const head=b.cancel?"Stopped reading photos"+(b.cancel==="log"?" because the log changed":"")+" ("+done+" of "+fs.length+" read): ":fs.length+" photos read: ";
+  const msg=head+parts.join(", ")+"."+(b.notes.length?" "+b.notes.join(" "):"");
+  if($("scanbox").hidden)$("msg").textContent=msg;else $("smsg").textContent=msg;
 }
 
-$("stopscan").onclick=()=>stopScan();
+$("stopscan").onclick=()=>{stopPhotos("stopped");stopScan()};
 syncType();
 $("type").addEventListener("change",syncType);
 document.querySelectorAll("#tyb button").forEach(b=>{b.onclick=()=>{$("type").value=b.dataset.t;syncType()}});
@@ -242,7 +267,7 @@ $("notes").oninput=save;
 $("expect").oninput=()=>{save();summary()};
 $("clear").onclick=()=>{
   if(!rows.length)return;
-  const prev=rows;rows=[];save();render();$("msg").textContent="";hideCheck();
+  stopPhotos("log");const prev=rows;rows=[];save();render();$("msg").textContent="";hideCheck();
   showUndo("Cleared "+prev.length+" pallet"+(prev.length===1?"":"s"),()=>{rows=prev;save();render()},true);
 };
 

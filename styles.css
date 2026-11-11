@@ -109,7 +109,8 @@ textarea{font:400 14px/1.5 "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace
 #fsdu{display:block;width:30px;height:30px;margin:0;accent-color:var(--ac);padding:0}
 td input[type=checkbox]{width:26px;height:26px;accent-color:var(--ac)}
 #scanbox{margin-top:10px}
-#scanbox .scanbtns{display:flex;gap:8px;flex:none;margin-left:auto}
+#scanbox .scanbtns{display:flex;gap:8px;flex:0 1 auto;flex-wrap:wrap;justify-content:flex-end;max-width:100%;margin-left:auto}
+#smsg{min-width:200px}
 #torch.on{background:var(--ac);color:var(--onac);border-color:var(--ac)}
 .sealwarn{color:var(--wn);font-weight:700}
 #video{width:100%;max-height:200px;background:#000;border-radius:var(--r);object-fit:cover}
