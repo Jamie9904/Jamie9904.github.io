@@ -155,11 +155,28 @@ async function decodePhoto(file){
       try{const res=await new ZXing.BrowserMultiFormatReader().decodeFromImageUrl(url);text=res.getText()}
       finally{URL.revokeObjectURL(url)}
     }
-    if(text){lastCode="";onCode(text)}
-    else sm.textContent="No barcode found. Move closer, hold steady and try again.";
-  }catch(e){
-    sm.textContent="No barcode found. Move closer, hold steady and try again.";
-  }
+    if(text){lastCode="";onCode(text);return}
+  }catch(e){}
+  await readLabelText(file);
+}
+/* No barcode could be read: the LPN printed on the label is read with the photo reader instead. Text can be misread,
+   so the reading is always shown with Add and Skip, to check against the label first. */
+async function readLabelText(file){
+  const sm=$("smsg"),none="No barcode or LPN found. Move closer, hold steady and try again.";
+  if(typeof ocrLpns!=="function"||!feat("scanByPhoto")){sm.textContent=none;return}
+  if(pendingAdd){sm.textContent="Answer the check above first (Add or Skip), then try the photo again.";return}
+  sm.textContent="No barcode found, so reading the LPN printed on the label…";
+  const say=typeof ocrSay!=="undefined"?ocrSay:null;
+  try{
+    ocrSay=t=>{sm.textContent="Reading the printed LPN: "+t};
+    const got=[...await ocrLpns(file)];
+    diag("scan","Scan by photo: no barcode, label text read: "+(got.join(" ")||"nothing"));
+    if(!got.length){sm.textContent=none;return}
+    const v=got[0],more=got.slice(1);
+    const added=tryAdd(v,true,"Read "+v+" from the printed label (no barcode found): check it matches the label.");
+    sm.textContent=(added?"Added: "+v:"Read "+v+" from the printed label. Check it, then Add or Skip above.")+(more.length?" Also on the photo: "+more.slice(0,3).join(", ")+(more.length>3?"…":"")+" (scan them separately).":"");
+  }catch(e){sm.textContent=none}
+  finally{ocrSay=say}
 }
 $("scan").onclick=()=>{$("video").hidden=false;startScan()};
 $("photo").onclick=()=>{$("file").value="";$("file").click()};

@@ -184,4 +184,27 @@ module.exports = async ({ browser, URL0 }) => {
   check("the site name from Settings (tidied, up to 40 characters) is added to the Excel and PDF titles, and left off when blank", s.shown === "323 Wigan " + "x".repeat(30) && s.title === "Goods-in pallet log – 323 Wigan " + "x".repeat(30) && s.pdfTitle === s.title && s.pdfFit && s.xlSize < 22 && s.plain === "Goods-in pallet log", s);
   check("no script errors", p.errors.length === 0, p.errors);
   await p.ctx.close();
+
+  // Scan by photo: when no barcode can be read, the LPN printed on the label is read and must be confirmed first.
+  console.log("Scan by photo reads the printed LPN");
+  p = await page(browser, 375);
+  await p.goto(URL0); await p.waitForTimeout(300);
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+  const shot = async reads => { await p.evaluate(r => { rows = []; save(); render(); hideCheck(); delete window.BarcodeDetector; window.loadZX = async () => { throw new Error("no reader"); }; window.ocrLpns = async () => { const a = r.slice(); a.skipped = []; a.odd = []; a.mended = []; return a; }; document.querySelector('#tyb button[data-t="FMCG"]').click(); }, reads);
+    await p.setInputFiles("#file", { name: "label.png", mimeType: "image/png", buffer: png }); await p.waitForTimeout(400);
+    return p.evaluate(() => ({ bar: !document.getElementById("chkBar").hidden, chk: document.getElementById("chkTxt").textContent, smsg: document.getElementById("smsg").textContent, rows: rows.length })); };
+  s = await shot(["VLT004040265"]);
+  check("with no barcode, the printed LPN is read and shown to check before it's added", s.bar && /^Read VLT004040265 from the printed label \(no barcode found\): check it matches the label\. Add it as FMCG\?$/.test(s.chk) && s.rows === 0 && /Check it, then Add or Skip/.test(s.smsg), s);
+  await p.click("#chkAdd"); await p.waitForTimeout(100);
+  s = await p.evaluate(() => rows.map(r => r.lpn + "|" + r.type).join());
+  check("Add logs it with the type picked", s === "VLT004040265|FMCG", s);
+  s = await shot(["VLT004040273", "VLT004040278"]);
+  check("other LPNs on the same photo are named, to scan separately", /Also on the photo: VLT004040278/.test(s.smsg) && /VLT004040273/.test(s.chk), s);
+  await p.click("#chkSkip"); await p.waitForTimeout(50);
+  s = await shot([]);
+  check("a photo with neither a barcode nor a readable LPN says so", !s.bar && s.smsg === "No barcode or LPN found. Move closer, hold steady and try again." && s.rows === 0, s);
+  s = await p.evaluate(() => document.getElementById("file").hasAttribute("capture"));
+  check("Scan by photo lets you pick a photo from the gallery, not only take one", s === false, s);
+  check("no script errors", p.errors.length === 0, p.errors);
+  await p.ctx.close();
 };

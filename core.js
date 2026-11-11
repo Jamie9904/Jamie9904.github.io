@@ -332,13 +332,14 @@ document.addEventListener("keydown",e=>{
   $("chkSkip").click();
 });
 function hideCheck(){pendingAdd=null;$("chkBar").hidden=true}
-function tryAdd(v,scan){
+/* ask: a reason to always ask before adding (an LPN read from a label's printed text, which can be misread). */
+function tryAdd(v,scan,ask){
   if(pendingAdd)return false;
   const issues=cfg.check?lpnIssues(v):[];
-  if(!issues.length&&!(scan&&cfg.confirmScan)){addValue(v);return true}
+  if(!issues.length&&!(scan&&cfg.confirmScan)&&!ask){addValue(v);return true}
   pendingAdd={v:v,type:$("type").value,fsdu:$("fsdu").checked};
   $("fsdu").checked=false;
-  $("chkTxt").textContent=issues.length?"Check "+v+": "+issues.join("; ")+".":"Scanned "+v+" as "+pendingAdd.type+". Add it?";
+  $("chkTxt").textContent=(ask?ask+" ":"")+(issues.length?"Check "+v+": "+issues.join("; ")+".":ask?"Add it as "+pendingAdd.type+"?":"Scanned "+v+" as "+pendingAdd.type+". Add it?");
   $("chkAdd").textContent=issues.length?"Add anyway":"Add";
   $("chkBar").hidden=false;
   $("msg").textContent="";
