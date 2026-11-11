@@ -13,7 +13,7 @@ permissions:
   contents: read
 jobs:
   health:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned: on Ubuntu 26.04 (ubuntu-latest from Oct 2026) the test browser install fails
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
