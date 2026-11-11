@@ -396,8 +396,8 @@ let undoTimer=null;
 /* On phones the Undo bar shows just above the entry bar (styles.css), where it can be seen. It stays 20 seconds,
    and doesn't go while it has focus. */
 /* Undo keeps the last 10 changes, newest first. The bar shows the newest for 20 seconds; the Undo button next to
-   Clear all (and Ctrl+Z) reaches the rest after that. Changes that put back the whole log (Start new delivery,
-   Clear all) are "whole" ones: undoing one after the log has changed since would lose that work, so it is refused,
+   Export (and Ctrl+Z) reaches the rest after that. Changes that put back the whole log (Start new delivery,
+   Clear all, Clear trailer) are "whole" ones: undoing one after the log has changed since would lose that work, so it is refused,
    and so is everything older than it (it belonged to the log as it was). */
 const undoStack=[];
 const undoSig=()=>logSig()+"|"+DEL_F.map(k=>$(k).value).join("|");
@@ -419,24 +419,35 @@ function undoBar(){
   undoTimer=setTimeout(hide,20000);
 }
 function undoNow(){
+  // Not while a saved delivery is being exported (its pallets stand in for the log for a moment).
+  if(window.__histExporting)return;
   const e=undoStack.pop();if(!e){syncUndo();return}
+  // Focus on the bar or the Undo button would be lost when they hide: it goes to Export (harmless, and no phone keyboard).
+  const ae=document.activeElement,held=ae&&($("undoBar").contains(ae)||ae===$("undoMore"));
+  const keep=()=>{const a=document.activeElement;if(held&&(!a||a===document.body||a.offsetParent===null))$("expBtn").focus({preventScroll:true})};
   if(e.whole&&e.sig!==undoSig()){
-    const n=undoStack.length;undoStack.length=0;clearTimeout(undoTimer);$("undoBar").hidden=true;syncUndo();
+    const n=undoStack.length;undoStack.length=0;clearTimeout(undoTimer);$("undoBar").hidden=true;syncUndo();keep();
     $("msg").textContent="“"+e.text.replace(/\.$/,"")+"” can’t be undone now, because the log has changed since"+(n?", and nor can the "+n+" earlier change"+(n===1?"":"s"):"")+".";
     return;
   }
   e.fn();
-  if(undoStack.length)undoBar();else{clearTimeout(undoTimer);$("undoBar").hidden=true;syncUndo()}
+  // Said in the status line, so it's clear this was undone (the bar then shows the next change that can be undone).
+  const n=undoStack.length;
+  $("msg").textContent="Undone: "+e.text.replace(/\.$/,"")+"."+(n?" "+n+" more can be undone.":"");
+  if(n)undoBar();else{clearTimeout(undoTimer);$("undoBar").hidden=true;syncUndo()}
+  keep();
 }
 /* Opening a saved delivery or a restored backup changes the whole log without an undo of its own: older undos would
    then act on the wrong delivery, so they are forgotten. */
 function undoClear(){undoStack.length=0;clearTimeout(undoTimer);const b=$("undoBar");if(b)b.hidden=true;syncUndo()}
 if($("undoMore"))$("undoMore").onclick=()=>undoNow();
-function syncUndo(){const b=$("undoMore");if(!b)return;const e=undoStack[undoStack.length-1];b.hidden=!e;if(e){b.textContent="Undo"+(undoStack.length>1?" ("+undoStack.length+")":"");b.setAttribute("aria-label","Undo: "+e.text+(undoStack.length>1?" ("+(undoStack.length-1)+" earlier changes can be undone after it)":""))}}
+function syncUndo(){const b=$("undoMore");if(!b)return;const e=undoStack[undoStack.length-1];b.hidden=!e;if(e){const n=undoStack.length-1;b.textContent="Undo";b.setAttribute("aria-label","Undo: "+e.text+(n?" ("+n+" earlier change"+(n===1?"":"s")+" can be undone after it)":""))}}
 document.addEventListener("keydown",e=>{
   // Ctrl+Z (Cmd+Z on a Mac) undoes the newest change, except while typing in a box, where it undoes the typing.
   if(e.key.toLowerCase()!=="z"||!(e.ctrlKey||e.metaKey)||e.shiftKey||e.altKey)return;
   const t=e.target;if(t&&/^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName))return;
+  // Not while Settings, the Guide or another box is open over the log: the change wouldn't be seen.
+  const main=document.querySelector("main");if(main&&main.inert)return;
   if(!undoStack.length)return;e.preventDefault();undoNow();
 });
 /* Each library file's fingerprint (Subresource Integrity). The browser refuses a file that doesn't match, so a
@@ -485,7 +496,7 @@ function localToday(){const n=new Date();return n.getFullYear()+"-"+String(n.get
     const ids=["trailer","sealIn","sealOut","notes"],was={};ids.forEach(k=>was[k]=$(k).value);
     if(!ids.some(k=>was[k].trim()))return;
     ids.forEach(k=>$(k).value="");save();updateDel();sealHint();syncClear();
-    showUndo("Cleared the trailer, seals and notes",()=>{ids.forEach(k=>$(k).value=was[k]);save();updateDel();sealHint();syncClear()});
+    showUndo("Cleared the trailer, seals and notes",()=>{ids.forEach(k=>$(k).value=was[k]);save();updateDel();sealHint();syncClear()},true);
     $("trailer").focus();
   };
   ["sealIn","sealOut"].forEach(id=>$(id).addEventListener("change",()=>sealHint()));
