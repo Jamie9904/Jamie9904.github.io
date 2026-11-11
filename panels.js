@@ -28,7 +28,7 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <ul>
 <li data-f="liveScan"><b>Live scan:</b> the camera adds each barcode it sees. To scan from further away, tap <b>+</b> in the corner of the camera picture to zoom in (on phones that allow it).<span data-f="torch"> In a dark trailer, tap <b>Torch</b> (on phones that allow it; most iPhones don’t).</span></li>
 <li data-f="scanByPhoto"><b>Scan by photo:</b> take a clear photo of the barcode<span data-f="liveScan"> if Live scan doesn’t work</span>.<span data-f="photoUpload"><span data-f="manifestPhotos"> If the barcode can’t be read, tap <b>Read the printed LPN</b> to read the number printed on the label from the same photo.</span></span></li>
-<li data-f="photoUpload"><b>Upload photo:</b> choose a photo of the label that you’ve already taken, or take a new one, and the app reads the barcode. You can choose several photos at once. They’re read one after another, and if a check appears, the next photo waits until you tap Add or Skip.<span data-f="manifestPhotos"> If the barcode can’t be read, the app reads the LPN printed on the label instead and asks you to check it before it’s added (this can take up to a minute). Reading the printed LPN needs iOS 16 or newer on an iPhone.</span></li>
+<li data-f="photoUpload"><b>Upload photo:</b> choose a photo of the label that you’ve already taken, or take a new one, and the app reads the barcode. You can choose several photos at once. They’re read one after another, and if a check appears, the next photo waits until you tap Add or Skip. Stop scanning stops reading the rest, and so do Clear all and Start new delivery.<span data-f="manifestPhotos"> If the barcode can’t be read, the app reads the LPN printed on the label instead and asks you to check it before it’s added (this can take up to a minute). Reading the printed LPN needs iOS 16 or newer on an iPhone.</span></li>
 <li><b>Handheld or Bluetooth scanner:</b> tap the LPN box and scan. To check your scanner works with the app first, use <b>Test a handheld scanner</b> in Settings. The screen stays on while the app is open, so scans aren’t lost (you can turn this off in Settings).</li>
 </ul>
 <p>In Settings, you can choose to confirm each scan before it’s logged.</p>
@@ -354,7 +354,7 @@ HELP.history=`<p>Deliveries you save are kept in this browser on this device. We
 <div class="msg" id="histFindMsg" role="status" aria-live="polite" data-f="findLpn"></div>
 <div id="histRoot"></div>`;
 async function histExport(h,mail){
-  if(typeof stopPhotos==="function")stopPhotos("log");
+  if(typeof stopPhotos==="function")stopPhotos("stopped");
   const msg=$("histMsg"),sv=Object.assign({rows:rows},getDel());
   msg.textContent="Preparing…";$("dlmsg").textContent="";
   rows=h.rows.map(r=>Object.assign({},r));setDel(h);

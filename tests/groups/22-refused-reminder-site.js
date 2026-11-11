@@ -278,6 +278,35 @@ module.exports = async ({ browser, URL0 }) => {
   await p.evaluate(() => newDelivery()); await p.waitForTimeout(400);
   s = await p.evaluate(() => ({ bar: !document.getElementById("chkBar").hidden, rows: rows.length, busy: photoBusy }));
   check("Start new delivery during a batch ends it, so no photo goes into the new delivery", !s.bar && s.rows === 0 && !s.busy, s);
+  // A slow read: a handheld check that opens meanwhile is answered first, then the photo is read again and offered.
+  await p.evaluate(() => { rows = []; save(); render(); hideCheck(); window.__go = []; window.__ocrN = 0; window.ocrLpns = () => new Promise(res => { window.__ocrN++; window.__go.push(() => { const a = ["VLT004040281"]; a.skipped = []; a.odd = []; a.mended = []; res(a); }); }); });
+  await p.setInputFiles("#upFile", [1, 2].map(k => ({ name: "s" + k + ".png", mimeType: "image/png", buffer: png }))); await p.waitForTimeout(300);
+  await p.evaluate(() => { tryAdd("RUN000000077", true, "Handheld:"); window.__go.shift()(); }); await p.waitForTimeout(200);
+  s = await p.evaluate(() => ({ chk: document.getElementById("chkTxt").textContent, ocr: window.__ocrN }));
+  await p.click("#chkSkip"); await p.waitForTimeout(300);
+  s.after = await p.evaluate(() => ({ ocr: window.__ocrN }));
+  await p.evaluate(() => window.__go.shift()()); await p.waitForTimeout(200);
+  s.chk2 = await p.evaluate(() => document.getElementById("chkTxt").textContent);
+  check("a photo read while another check opened waits, then is read again and offered", /^Handheld:/.test(s.chk) && s.ocr === 1 && s.after.ocr === 2 && /^Photo 1 of 2: Read VLT004040281/.test(s.chk2), s);
+  // Stop scanning during a slow read frees the buttons at once, and the read finishing later adds nothing.
+  await p.click("#stopscan"); await p.waitForTimeout(100);
+  s = await p.evaluate(() => ({ busy: photoBusy, msg: document.getElementById("msg").textContent, bar: !document.getElementById("chkBar").hidden }));
+  check("Stop scanning takes away the batch's question, frees the buttons at once and says what was done", !s.busy && !s.bar && s.msg === "Stopped reading photos (1 of 2 read): no pallets added.", s);
+  // Stop while a handheld scan's question is open (the batch waiting for it): that question stays.
+  await p.evaluate(() => { rows = []; save(); render(); tryAdd("RUN000000078", true, "Handheld:"); });
+  await p.setInputFiles("#upFile", [1, 2].map(k => ({ name: "h" + k + ".png", mimeType: "image/png", buffer: png }))); await p.waitForTimeout(200);
+  await p.evaluate(() => document.getElementById("stopscan").click()); await p.waitForTimeout(100);
+  s = await p.evaluate(() => ({ busy: photoBusy, chk: document.getElementById("chkTxt").textContent, bar: !document.getElementById("chkBar").hidden }));
+  check("Stop scanning keeps a handheld scan's question for an answer", !s.busy && s.bar && /^Handheld:/.test(s.chk), s);
+  await p.click("#chkSkip"); await p.waitForTimeout(50);
+  // A read that finishes after Stop scanning adds and asks nothing.
+  await p.setInputFiles("#upFile", [1, 2].map(k => ({ name: "t" + k + ".png", mimeType: "image/png", buffer: png }))); await p.waitForTimeout(300);
+  await p.evaluate(() => document.getElementById("stopscan").click()); await p.waitForTimeout(50);
+  const busyDuringRead = await p.evaluate(() => photoBusy);
+  check("Stop scanning during a slow read frees the photo buttons at once", busyDuringRead === false, busyDuringRead);
+  await p.evaluate(() => { while (window.__go.length) window.__go.shift()(); }); await p.waitForTimeout(300);
+  s = await p.evaluate(() => ({ busy: photoBusy, bar: !document.getElementById("chkBar").hidden, rows: rows.length }));
+  check("a read that finishes after Stop scanning adds nothing and asks nothing", !s.busy && !s.bar && s.rows === 0, s);
   // Read the printed LPN tapped while another check is open keeps the photo and the button.
   await p.evaluate(() => { rows = []; save(); render(); hideCheck(); window.__ocrN = 0; window.ocrLpns = async () => { window.__ocrN++; const a = ["VLT004040265"]; a.skipped = []; a.odd = []; a.mended = []; return a; }; });
   await p.setInputFiles("#file", { name: "c.png", mimeType: "image/png", buffer: png }); await p.waitForTimeout(300);
