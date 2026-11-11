@@ -13,9 +13,10 @@ window.LPN_CONFIG = {
   features: {
     report: true,          // Report a problem button, and the report links in Settings, the Guide and the Manifest check
     manifestCheck: true,   // the whole Manifest check section
-    manifestPhotos: true,  // reading manifests and printed logs from photos (PDFs and typing still work)
+    manifestPhotos: true,  // reading manifests, printed logs and printed LPNs on labels from photos (PDFs and typing still work)
     liveScan: true,        // Live scan with the camera
-    scanByPhoto: true,     // Scan by photo
+    scanByPhoto: true,     // Scan by photo (opens the camera and reads the barcode)
+    photoUpload: true,     // Upload photo (choose a photo already taken; reads the printed LPN when there is no barcode, if manifestPhotos is on)
     torch: true,           // Torch button in Live scan (only on phones that allow it)
     damage: true,          // marking a pallet as damaged
     refused: true,         // marking a pallet as refused (sent back with the driver)
@@ -34,6 +35,7 @@ window.LPN_CONFIG = {
     manifestPhotos: false,
     liveScan: false,
     scanByPhoto: false,
+    photoUpload: false,
     torch: false,
     damage: false,
     refused: false,

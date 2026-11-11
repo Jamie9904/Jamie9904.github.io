@@ -23,10 +23,16 @@ module.exports = async ({ browser, URL0 }) => {
     const s2 = await q.evaluate(() => ({ dmg: rows[1].dmg, focus: document.activeElement.className, label: document.querySelector('#body .lpnedit[data-i="1"]').getAttribute("aria-label") }));
     check("keyboard: Tab from the LPN box goes to the damage choices; Other takes typed text and focus comes back", s === "None" && s2.dmg === "Torn label" && s2.focus === "lpnedit" && /damaged: Torn label/.test(s2.label), { s, s2 });
     // Tab past the last choice: the change is kept and focus stays on that pallet.
-    await q.focus('#body .lpnedit[data-i="0"]'); await q.keyboard.press("Enter"); await q.waitForTimeout(50);
-    // One Tab per choice in the row (damage choices, then Refused when it is switched on), then one more past the last.
-    const nChoices = await q.evaluate(() => document.querySelectorAll(".dmgrow button").length);
-    for (let k = 0; k < nChoices + 1; k++) await q.keyboard.press("Tab");
+    await q.focus('#body .lpnedit[data-i="0"]'); await q.keyboard.press("Enter");
+    // Wait until the editor is open with the LPN box focused before tabbing (a busy machine can be slower than 50 ms).
+    await q.waitForFunction(() => document.querySelector(".dmgrow button") && document.activeElement && document.activeElement.tagName === "INPUT", null, { timeout: 2000 }).catch(() => {});
+    // Tab until focus leaves the editor, one key at a time (a busy machine can otherwise run the keys together).
+    for (let k = 0; k < 15; k++) {
+      const inEd = await q.evaluate(() => { const a = document.activeElement; window.__was = a; return !!(a && (a.closest(".dmgrow") || a.tagName === "INPUT")); });
+      if (!inEd) break;
+      await q.keyboard.press("Tab");
+      await q.waitForFunction(() => document.activeElement !== window.__was, null, { timeout: 1000 }).catch(() => {});
+    }
     // Wait for the editor to close and focus to come back (slower when the machine is busy), up to 2 seconds.
     await q.waitForFunction(() => !document.querySelector(".dmgrow") && document.activeElement && document.activeElement.className === "lpnedit", null, { timeout: 2000 }).catch(() => {});
     s = await q.evaluate(() => ({ focus: document.activeElement.className, i: document.activeElement.dataset && document.activeElement.dataset.i, open: !!document.querySelector(".dmgrow"), other: null }));

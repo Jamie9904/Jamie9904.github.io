@@ -2,7 +2,7 @@
 const FIRST_OPEN=(()=>{try{for(let i=0;i<localStorage.length;i++){if(/^lpn/.test(localStorage.key(i)))return false}return true}catch(e){return false}})();
 /* Site settings from config.js (loaded before this file): which features are shown, and which carry a note that
    they are still being tested. A missing or broken config.js means every feature on and no notes. */
-const FEATURES=["report","manifestCheck","manifestPhotos","liveScan","scanByPhoto","torch","damage","refused","noLpn","fppDesc","exportReminder","shareMissing","findLpn","shareApp","welcome","whatsNew"];
+const FEATURES=["report","manifestCheck","manifestPhotos","liveScan","scanByPhoto","photoUpload","torch","damage","refused","noLpn","fppDesc","exportReminder","shareMissing","findLpn","shareApp","welcome","whatsNew"];
 /* Pallets that arrived without an LPN are logged as "No LPN 1", "No LPN 2", … (numbered within the delivery). */
 const isNoLpn=v=>/^No LPN \d+$/i.test(String(v==null?"":v).trim());
 const SITE=(()=>{
@@ -16,7 +16,7 @@ const feat=k=>SITE.on[k]!==false;
 function testNote(k,el,where){
   if(!SITE.test[k]||!el)return null;
   const n=document.createElement("p");n.className="note testnote";n.dataset.test=k;
-  const what={noLpn:"Logging pallets with no LPN",refused:"Marking pallets as refused",exportReminder:"The reminder about deliveries not exported",fppDesc:"Descriptions for FPP pallets",manifestCheck:"The Manifest check",manifestPhotos:"Reading photos",liveScan:"Live scan",scanByPhoto:"Scan by photo",torch:"The torch",damage:"Marking damage",shareMissing:"Share missing list",findLpn:"Find an LPN",shareApp:"Share this app"}[k];
+  const what={noLpn:"Logging pallets with no LPN",refused:"Marking pallets as refused",exportReminder:"The reminder about deliveries not exported",fppDesc:"Descriptions for FPP pallets",manifestCheck:"The Manifest check",manifestPhotos:"Reading photos",liveScan:"Live scan",scanByPhoto:"Scan by photo",photoUpload:"Upload photo",torch:"The torch",damage:"Marking damage",shareMissing:"Share missing list",findLpn:"Find an LPN",shareApp:"Share this app"}[k];
   n.textContent=k==="report"?"In testing: reports may not always arrive yet, so for anything urgent also use Download problem report in Settings."
     :"In testing: "+what+" may not always work yet, so check what it gives you"+(feat("report")?", and use Report a problem if something goes wrong.":".");
   el.insertAdjacentElement(where||"beforeend",n);return n;
@@ -184,12 +184,15 @@ function render(){
           said.push("Changed "+old+" to "+v);backs.push(()=>{r.lpn=old});
         }
         if(said.length){save();showUndo(said.join(". "),()=>{backs.forEach(f=>f());save();render()})}
+        // Tab past the last choice can land on another control in this pallet's row (when the browser is slow, before
+        // the redraw): go back to its LPN as well, the same as when focus is lost.
+        const ae=document.activeElement,inRow=!!(ae&&ae!==inp&&tr.contains(ae));
         render();
         // Back on the edited LPN, so keyboard users don't lose their place.
         // (also when focus was on a part of the table that has just been redrawn)
         // A box that opened by itself after adding goes back to the LPN box, so the next pallet can be scanned.
         if(fromAdd&&key&&$("lpn")){$("lpn").focus();return}
-        if(key||!document.activeElement||document.activeElement===document.body){const back=document.querySelector('#body .lpnedit[data-i="'+i+'"]');if(back)back.focus({preventScroll:!key})}
+        if(key||inRow||!document.activeElement||document.activeElement===document.body){const back=document.querySelector('#body .lpnedit[data-i="'+i+'"]');if(back)back.focus({preventScroll:!key})}
       };
       // Finish when focus leaves both the LPN box and the damage choices.
       inp.onblur=()=>setTimeout(()=>{if(!dr.contains(document.activeElement)&&document.activeElement!==inp)finish(true)},0);
