@@ -199,9 +199,10 @@ window.LPN_CONFIG = {
   features: {
     report: true,          // Report a problem button, and the report links in Settings, the Guide and the Manifest check
     manifestCheck: true,   // the whole Manifest check section
-    manifestPhotos: true,  // reading manifests and printed logs from photos (PDFs and typing still work)
+    manifestPhotos: true,  // reading manifests, printed logs and printed LPNs on labels from photos (PDFs and typing still work)
     liveScan: true,        // Live scan with the camera
-    scanByPhoto: true,     // Scan by photo
+    scanByPhoto: true,     // Scan by photo (opens the camera and reads the barcode)
+    photoUpload: true,     // Upload photo (choose a photo already taken; reads the printed LPN when there is no barcode, if manifestPhotos is on)
     torch: true,           // Torch button in Live scan (only on phones that allow it)
     damage: true,          // marking a pallet as damaged
     refused: true,         // marking a pallet as refused (sent back with the driver)
@@ -216,7 +217,7 @@ window.LPN_CONFIG = {
   },
   testing: {
     report: false, manifestCheck: true, manifestPhotos: false, liveScan: false, scanByPhoto: false,
-    torch: false, damage: false, refused: false, noLpn: false, fppDesc: false, shareMissing: false,
+    photoUpload: false, torch: false, damage: false, refused: false, noLpn: false, fppDesc: false, shareMissing: false,
     findLpn: false, shareApp: false, exportReminder: false
   }
 };
@@ -241,8 +242,9 @@ The preferred way, by the user's decision, is to ask Claude to change the settin
 |---|---|
 | `report` | No **Report** button, report box, or report links in Settings, the Guide and the Manifest check (**Report a problem with these photos**); reports already waiting on a phone are not sent. The Guide's privacy section says there's no Report button in this copy, so nothing leaves the phone. **Download problem report** stays. |
 | `manifestCheck` | The Manifest check card is hidden, and manifest numbers already saved on a phone are ignored: no live tracking or "not on the manifest" warnings in the Pallet log. |
-| `manifestPhotos` | The photo buttons for manifests and printed logs and the prefix presets are hidden; the step is labelled "2. Manifest PDFs". PDFs and typed numbers still work, and the prefix list is ignored (no numbers are left out because of their prefix). Since build 63 **Scan by photo** also stops reading the LPN printed on a label when no barcode is found (it just says "No barcode found…"), and the Guide's sentence about it and that part of the changelog bullet are left out. |
-| `liveScan` / `scanByPhoto` | That scan button is hidden; with both off (and `noLpn` off too, since build 55) the **Scan** button is hidden too. With `scanByPhoto` off, its Guide line and the build 63 changelog bullet are left out. |
+| `manifestPhotos` | The photo buttons for manifests and printed logs and the prefix presets are hidden; the step is labelled "2. Manifest PDFs". PDFs and typed numbers still work, and the prefix list is ignored (no numbers are left out because of their prefix). **Upload photo** also stops reading the LPN printed on a label when no barcode is found (it just says "No barcode found…"; in build 63 this applied to **Scan by photo**), Scan by photo's no-barcode message no longer points to Upload photo, and the Guide's sentences about reading the printed LPN and that part of the changelog bullet are left out. |
+| `liveScan` / `scanByPhoto` | That scan button is hidden; with Live scan, Scan by photo and Upload photo all off (and `noLpn` off too, since build 55) the **Scan** button is hidden too. With `liveScan` off, the tip under the buttons is hidden. With `scanByPhoto` off, its Guide line and its part of the build 64 changelog bullet are left out, and the tip and the blocked-camera and torch messages name Upload photo instead (or no photo button). |
+| `photoUpload` (build 64) | No **Upload photo** button, so no reading of the printed LPN on a label (Scan by photo reads barcodes only). Its Guide line, the Scan by photo line's "use **Upload photo** instead" sentence and its part of the changelog bullet are left out, and the tip, Scan by photo's no-barcode message and the blocked-camera and torch messages don't mention it. Marked as in testing, the note "In testing: Upload photo may not always work yet…" shows in the camera box while an uploaded photo is read. |
 | `torch` | No **Torch** button in Live scan. |
 | `damage` | No damage choices when an LPN is tapped (it can still be edited). Damage already noted on pallets stays and still goes on the exports. |
 | `refused` (build 62) | No **Refused (sent back)** button when an LPN is tapped, and its Guide paragraph, the "and refused pallets" words in the Guide's totals sentence, the Saved deliveries help sentence and the changelog bullet are left out. Pallets already marked refused keep the mark, stay out of the totals and still go on the exports as refused. Marked as in testing, the note "In testing: Marking pallets as refused may not always work yet…" shows under the button. |

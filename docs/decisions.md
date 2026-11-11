@@ -733,7 +733,7 @@ Features can be switched off for everyone, or marked as in testing, by editing `
 - **Why photos off also ignores the prefix list:** the prefix presets are hidden with the photo buttons, so a list saved earlier would otherwise leave out PDF numbers with no visible reason. `getPfx()` returns an empty list instead.
 - **Why the Guide and Settings text is filtered, and the Guide renumbered:** staff shouldn't read about a button they can't find. `data-f`/`data-nf` marks the lines in the help HTML, `siteHtml()` removes them before the panel is shown, and the numbers are redone so the contents bar has no gaps. `data-nf` gives a different sentence where a plain removal would read wrong (the privacy line with no Report button).
 - **Why the testing note mentions Report a problem, except for reporting itself:** the point of marking a feature as in testing is to hear when it goes wrong. When reporting is the feature being tested, the note points to **Download problem report**, which doesn't depend on it; when reporting is switched off, the other notes don't mention it.
-- **Why the scan and torch notes wait in the camera box:** the camera box is shared by Live scan and Scan by photo, so `scanNote()` shows only the note for the one in use, and the torch note only shows with the Torch button (which many iPhones never show).
+- **Why the scan and torch notes wait in the camera box:** the camera box is shared by Live scan, Scan by photo and (since build 64) Upload photo, so `scanNote()` shows only the note for the one in use, and the torch note only shows with the Torch button (which many iPhones never show).
 - **Trade-off:** the settings apply to everyone using this copy of the site; there is no per-phone switch. Adding a new switch means touching `FEATURES`, `config.js`, the code that shows the feature, its help lines and `testNote()` (the steps are in `.claude/CLAUDE.md`).
 - **Why the offline checks were renumbered:** `19-site-config.js` took number 19 and `19-offline.js` became `20-offline.js`, because the offline group takes the page offline and must stay last.
 
@@ -921,7 +921,9 @@ Refused tags, the Refused count, the reminder card and testing notes use the war
 
 - **Trade-off:** the pin doesn't follow GitHub's newer images by itself. When GitHub retires 24.04 the pin should be changed; nothing else in the workflows depends on 24.04.
 
-## Scan by photo reads the printed LPN when there is no barcode (build 63)
+## Scan by photo reads the printed LPN when there is no barcode (build 63; moved to Upload photo in build 64)
+
+Since build 64 this reading belongs to **Upload photo**, not **Scan by photo** (see the next section). The points below still hold for Upload photo, except the last three as noted.
 
 A creased, wet or badly printed barcode left **Scan by photo** with nothing but "No barcode found". The LPN is usually printed in large text on the same label, so since build 63 `readLabelText()` in `scan.js` reads it with the photo reader the Manifest check already uses (`ocrLpns()`), instead of a second reader.
 
@@ -930,6 +932,22 @@ A creased, wet or badly printed barcode left **Scan by photo** with nothing but 
 - **The prefix list is only a note here:** in the Manifest check the prefix list keeps a page's other numbers out. A label is one pallet's own, so an LPN with a prefix outside the list is still offered, with "Its prefix isn’t in your prefix list."; a listed prefix only decides which LPN comes first.
 - **Other numbers never offered:** order and PO numbers on the label are only counted, so one can't be logged as a pallet by mistake. Digits read after "LPN:" without their letters are named, so they can be typed in with the letters rather than guessed.
 - **Slow, and said so:** the photo reader can take up to a minute (more the first time, while it downloads), so the message says so up front, the reader's own progress is shown, and its errors (such as being offline) are shown instead of a "try a better photo" message that wouldn't help.
-- **Two switches:** it needs both `scanByPhoto` and `manifestPhotos`. A site that has switched off reading photos gets the old "No barcode found" behaviour, and no new switch was added.
-- **Gallery as well as camera:** `capture="environment"` was removed from the file box, so a photo taken earlier (for example with the camera app's flash or zoom) can be used. The trade-off: phones may now ask whether to take a photo or choose one, instead of opening the camera straight away.
+- **Two switches:** it needed both `scanByPhoto` and `manifestPhotos`. A site that has switched off reading photos gets the old "No barcode found" behaviour, and no new switch was added. (Since build 64: `photoUpload` and `manifestPhotos`.)
+- **Gallery as well as camera (undone in build 64):** `capture="environment"` was removed from the file box, so a photo taken earlier (for example with the camera app's flash or zoom) can be used. The trade-off: phones may now ask whether to take a photo or choose one, instead of opening the camera straight away.
 - **Live scan stops first:** starting **Scan by photo** while Live scan is running stops the camera first.
+
+## Scan by photo and Upload photo as two buttons (build 64)
+
+Build 63 made **Scan by photo** open the phone's picker (take or choose) and read the printed LPN when there was no barcode. Build 64 splits that into two buttons in the scan row: **Scan by photo** (`#photo`, `#file` with `capture="environment"`) and **Upload photo** (`#upload`, `#upFile` with no `capture`).
+
+- **Scan by photo is quick again:** it opens the camera straight away, without the take-or-choose question build 63 brought in, and reads only the barcode, which is fast. With no barcode it says so and, when Upload photo and Reading photos are on, points to **Upload photo**, rather than starting a read that can take up to a minute.
+- **Upload photo takes the slow path on purpose:** a photo already taken (for example with the camera app's flash or zoom) or a new one from the picker is read for its barcode, then for the printed LPN. The picker usually offers the camera too, so a damaged barcode can still be handled on the spot.
+- **Its own switch:** `photoUpload` was added to `FEATURES` and `config.js` (on, not in testing), with its own testing note ("Upload photo"), so a site can hide the slower, less certain reading without losing Scan by photo. Reading the printed LPN now needs `photoUpload` and `manifestPhotos`; `scanByPhoto` no longer affects it.
+- **Messages name only buttons that exist:** the tip under the buttons, the blocked-camera message and the torch message use `photoAlt()` (or, for the tip, `applySite()`), so nobody is sent to a switched-off button. The tip is hidden when Live scan is off, since it is about Live scan not working.
+- **Four buttons on one row:** on phones Live scan, Scan by photo, Upload photo and No LPN stay in one row at least 48px tall (for gloves), with labels allowed to wrap onto two lines (`line-height: 1.15`, less side padding) and smaller text and gaps under 360px, rather than a second row of buttons. The row still wraps under 300px.
+- **Privacy wording widened:** photos from Scan by photo and Upload photo are read on the phone too, so the privacy line now says "Photos and PDFs you scan or add…" and shows when the Manifest check, Scan by photo or Upload photo is on.
+
+## Smaller fixes in build 64
+
+- **"Reading barcode…" set a frame late:** `decodePhoto()` empties the message line and writes "Reading barcode…" in the next animation frame, after the camera box is shown. The code comment gives the reason: so screen readers announce it (text put in at the moment the box appears may be missed).
+- **Tab past the last damage choice:** on a slow browser, focus can move to another control in the pallet's row before the table is redrawn, and the old rule only brought it back to the LPN when focus was lost entirely. `finish()` now also returns focus to the LPN when it was on another control in that row. The check in `15-damaged.js` now presses Tab one key at a time and waits for focus to move after each, because on busy machines the keys could run together and the check failed now and then.

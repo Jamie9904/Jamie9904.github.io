@@ -6,7 +6,7 @@
 ├── index.html               page markup: header, Delivery, Add a pallet, Pallet log, Manifest check, panels, report box, install box, banners
 ├── styles.css               all CSS: theme tokens, components, phone/tablet/desktop layouts, print rules
 ├── core.js                  site settings (`FEATURES`, `SITE`, `feat()`, `testNote()`, `siteHtml()`), state, persistence, tidying of saved data, table, validation, add flow, undo (the last 10 changes since build 62), received-pallet counts (`typeCounts()`, leaving out refused pallets), library loader and fingerprints (SRI), helpers
-├── scan.js                  live and photo barcode scanning (and the printed LPN when a photo has no readable barcode, build 63), camera request (resolution, focus), Torch and Zoom buttons, wake lock (Live scan, and Keep the screen on since build 62), input wiring
+├── scan.js                  live and photo barcode scanning (Scan by photo and, since build 64, Upload photo, which also reads the printed LPN when a photo has no readable barcode), camera request (resolution, focus), Torch and Zoom buttons, wake lock (Live scan, and Keep the screen on since build 62), input wiring
 ├── export.js                Excel/PDF builders (titles with the site name since build 62), print, delivery (download/share/mailto), logo
 ├── compare.js               manifest check, file readers, OCR, presets, live tracking
 ├── panels.js                guide, changelog, settings, `applySite()` (hides switched-off features), report a problem or idea (with its offline queue), saved deliveries, backups, install, update banner, reminder about a delivery not exported (`unexpCheck()`, build 62)
