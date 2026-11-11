@@ -184,4 +184,41 @@ module.exports = async ({ browser, URL0 }) => {
   check("the site name from Settings (tidied, up to 40 characters) is added to the Excel and PDF titles, and left off when blank", s.shown === "323 Wigan " + "x".repeat(30) && s.title === "Goods-in pallet log – 323 Wigan " + "x".repeat(30) && s.pdfTitle === s.title && s.pdfFit && s.xlSize < 22 && s.plain === "Goods-in pallet log", s);
   check("no script errors", p.errors.length === 0, p.errors);
   await p.ctx.close();
+
+  // Scan by photo: when no barcode can be read, the LPN printed on the label is read and must be confirmed first.
+  console.log("Scan by photo reads the printed LPN");
+  p = await page(browser, 375);
+  await p.goto(URL0); await p.waitForTimeout(300);
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+  const shot = async reads => { await p.evaluate(r => { rows = []; save(); render(); hideCheck(); delete window.BarcodeDetector; window.loadZX = async () => { throw new Error("no reader"); }; window.ocrLpns = async () => { if (r.err) throw new Error(r.err); const a = (r.out || r).slice(); a.skipped = r.skipped || []; a.odd = r.odd || []; a.mended = r.mended || []; return a; }; document.querySelector('#tyb button[data-t="FMCG"]').click(); }, reads);
+    await p.setInputFiles("#file", { name: "label.png", mimeType: "image/png", buffer: png }); await p.waitForTimeout(400);
+    return p.evaluate(() => ({ bar: !document.getElementById("chkBar").hidden, chk: document.getElementById("chkTxt").textContent, smsg: document.getElementById("smsg").textContent, rows: rows.length })); };
+  s = await shot(["VLT004040265"]);
+  check("with no barcode, the printed LPN is read and shown to check before it's added", s.bar && /^Read VLT004040265 from the printed label \(no barcode found\): check it matches the label\. Add it as FMCG\?$/.test(s.chk) && s.rows === 0 && /Check it, then Add or Skip/.test(s.smsg), s);
+  await p.click("#chkAdd"); await p.waitForTimeout(100);
+  s = await p.evaluate(() => rows.map(r => r.lpn + "|" + r.type).join());
+  check("Add logs it with the type picked", s === "VLT004040265|FMCG", s);
+  s = await shot(["VLT004040273", "VLT004040278"]);
+  check("other LPNs on the same photo are named, to scan separately", /Other LPNs on the photo: VLT004040278/.test(s.smsg) && /VLT004040273/.test(s.chk), s);
+  await p.click("#chkSkip"); await p.waitForTimeout(50);
+  // The prefix list only adds a note (a label's LPN with another prefix is still offered); the same LPN read twice is
+  // offered once; numbers that aren't LPN-shaped are only counted; one read without its letters is named.
+  await p.evaluate(() => { document.getElementById("cmpPfx").value = "VLT"; });
+  s = await shot({ out: [], skipped: ["RUN001840861", "RUN001840861"], odd: ["SO123456"] });
+  check("an LPN whose prefix isn't in the prefix list is still offered, with a note; a repeat isn't named; other numbers are only counted", /^Read RUN001840861 from the printed label \(no barcode found\): check it matches the label\. Its prefix isn’t in your prefix list\./.test(s.chk) && !/Other LPNs/.test(s.smsg) && /1 other number on the label was left out/.test(s.smsg), s);
+  await p.click("#chkSkip"); await p.waitForTimeout(50);
+  await p.evaluate(() => { document.getElementById("cmpPfx").value = ""; });
+  s = await shot({ out: [], odd: ["LPN 0013323651"] });
+  check("a number read after LPN: without its letters is named, to type in", !s.bar && /\(0013323651\): type it in with the letters at the start/.test(s.smsg), s);
+  s = await shot({ err: "The photo reader couldn’t load. Check you’re online and try again." });
+  check("when the photo reader can't load, it says so instead of asking for a better photo", /couldn’t load/.test(s.smsg) && !/Move closer/.test(s.smsg), s);
+  s = await shot([]);
+  check("a photo with neither a barcode nor a readable LPN says so", !s.bar && s.smsg === "No barcode or LPN found. Move closer, hold steady and try again." && s.rows === 0, s);
+  s = await p.evaluate(() => document.getElementById("file").hasAttribute("capture"));
+  check("Scan by photo lets you pick a photo from the gallery, not only take one", s === false, s);
+  // With Reading photos switched off, a photo with no barcode isn't read for text.
+  s = await p.evaluate(async () => { let called = 0; window.ocrLpns = async () => { called++; return []; }; SITE.on.manifestPhotos = false; await readLabelText(new File(["x"], "x.png")); SITE.on.manifestPhotos = true; return { called, msg: document.getElementById("smsg").textContent }; });
+  check("with Reading photos switched off, a photo's text isn't read", s.called === 0 && /No barcode found/.test(s.msg), s);
+  check("no script errors", p.errors.length === 0, p.errors);
+  await p.ctx.close();
 };

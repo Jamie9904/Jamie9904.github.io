@@ -6,7 +6,7 @@ permissions:
   contents: read
 jobs:
   test:
-    runs-on: ubuntu-24.04 # pinned: on Ubuntu 26.04 (ubuntu-latest from Oct 2026) the test browser install fails
+    runs-on: ubuntu-24.04 # pinned to a known version; on 11 Nov 2026 the test machines briefly could not reach Ubuntu's package servers
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5

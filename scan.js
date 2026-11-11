@@ -147,22 +147,51 @@ async function decodePhoto(file){
     let text="";
     if("BarcodeDetector" in window){
       const bmp=await createImageBitmap(file);
-      const r=await new BarcodeDetector().detect(bmp);
-      if(r.length)text=r[0].rawValue;
+      try{const r=await new BarcodeDetector().detect(bmp);if(r.length)text=r[0].rawValue}
+      finally{if(bmp.close)bmp.close()} // freed before the photo reader makes its own copy
     }else{
       await loadZX();
       const url=URL.createObjectURL(file);
       try{const res=await new ZXing.BrowserMultiFormatReader().decodeFromImageUrl(url);text=res.getText()}
       finally{URL.revokeObjectURL(url)}
     }
-    if(text){lastCode="";onCode(text)}
-    else sm.textContent="No barcode found. Move closer, hold steady and try again.";
-  }catch(e){
-    sm.textContent="No barcode found. Move closer, hold steady and try again.";
-  }
+    if(text){lastCode="";onCode(text);return}
+  }catch(e){}
+  await readLabelText(file);
+}
+/* No barcode could be read: the LPN printed on the label is read with the photo reader instead. Text can be misread,
+   so the reading is always shown with Add and Skip, to check against the label first.
+   - Every LPN-shaped reading is considered, whatever the Manifest check's prefix list says (it's a single pallet's
+     label): one with a listed prefix comes first, then one with an LPN's digit count. The list is only a note.
+   - The same LPN printed twice (large, and again under the barcode) is offered once.
+   - Other numbers (PO, SO, order numbers) are only mentioned, never offered as pallets.
+   - A number read after "LPN:" without its letters is named, so it can be typed in. */
+async function readLabelText(file){
+  const sm=$("smsg"),none="No barcode or LPN found. Move closer, hold steady and try again.";
+  if(typeof ocrLpns!=="function"||!feat("scanByPhoto")||!feat("manifestPhotos")){sm.textContent="No barcode found. Move closer, hold steady and try again.";return}
+  if(pendingAdd){sm.textContent="Answer the check above first (Add or Skip), then try the photo again.";return}
+  sm.textContent="No barcode found, so reading the LPN printed on the label. This can take up to a minute…";
+  const mine=t=>{sm.textContent="Reading the printed LPN: "+t};
+  if(!ocrSay)ocrSay=mine;
+  try{
+    const r=await ocrLpns(file);
+    const seen=new Set(),all=[...r,...(r.skipped||[]),...(r.odd||[]).filter(x=>!/^LPN /.test(x))].map(x=>String(x).toUpperCase().replace(/\s+/g,"")).filter(x=>{if(seen.has(x))return false;seen.add(x);return true});
+    const lost=(r.odd||[]).filter(x=>/^LPN /.test(x)).map(x=>x.slice(4));
+    const pf=typeof getPfx==="function"?getPfx():[];
+    const rank=x=>(pf.length&&okPfx(x)?0:1)+(lpnDigitsOk(x)?0:2);
+    const lpns=all.filter(lpnDigitsOk).sort((a,b)=>rank(a)-rank(b)),others=all.filter(x=>!lpnDigitsOk(x));
+    diag("scan","Scan by photo: no barcode; LPNs read from the label: "+(lpns.join(" ")||"none")+(others.length?"; other numbers: "+others.length:""));
+    if(!lpns.length){sm.textContent=lost.length?"No barcode found. A number after “LPN:” was read without its letters ("+lost[0]+"): type it in with the letters at the start.":none;return}
+    if(pendingAdd){sm.textContent="Read "+lpns[0]+" from the printed label, but another check is waiting above. Answer it, then try the photo again.";return}
+    const v=lpns[0],more=lpns.slice(1),mended=(r.mended||[]).includes(v);
+    const notListed=pf.length&&!okPfx(v)?" Its prefix isn’t in your prefix list.":"";
+    tryAdd(v,true,"Read "+v+" from the printed label (no barcode found"+(mended?", one character corrected":"")+"): check it matches the label."+notListed);
+    sm.textContent="Read "+v+" from the printed label. Check it, then Add or Skip above."+(more.length?" Other LPNs on the photo: "+more.slice(0,3).join(", ")+(more.length>3?"…":"")+" (scan them separately if they’re other pallets).":"")+(others.length?" "+others.length+" other number"+(others.length===1?"":"s")+" on the label "+(others.length===1?"was":"were")+" left out.":"");
+  }catch(e){sm.textContent=(e&&e.message)||none}
+  finally{if(ocrSay===mine)ocrSay=null}
 }
 $("scan").onclick=()=>{$("video").hidden=false;startScan()};
-$("photo").onclick=()=>{$("file").value="";$("file").click()};
+$("photo").onclick=()=>{if(scanning)stopScan();$("file").value="";$("file").click()};
 $("noLpn").onclick=()=>addNoLpn();
 $("file").onchange=e=>{const f=e.target.files&&e.target.files[0];if(f)decodePhoto(f)};
 
