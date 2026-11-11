@@ -917,6 +917,19 @@ Refused tags, the Refused count, the reminder card and testing notes use the war
 
 ## Workflows pinned to ubuntu-24.04 (after build 62, commit `8b1f694`)
 
-`test.yml`, `health.yml` and `feedback-worker.yml` used `runs-on: ubuntu-latest`. On 11 November 2026 installing the test browser with `playwright install --with-deps` failed on GitHub's machines. The workflows now name `ubuntu-24.04`; the comment in each file gives the reason recorded at the time, that ubuntu-latest had moved to Ubuntu 26.04, where the install fails.
+`test.yml`, `health.yml` and `feedback-worker.yml` used `runs-on: ubuntu-latest`. On 11 November 2026 installing the test browser with `playwright install --with-deps` failed on GitHub's machines. The workflows now name `ubuntu-24.04`. The first comment said ubuntu-latest had moved to Ubuntu 26.04, where the install fails; build 63 (`ad26239`) corrected it to the real reason: "pinned to a known version; on 11 Nov 2026 the test machines briefly could not reach Ubuntu's package servers".
 
-- **Trade-off:** the pin doesn't follow GitHub's newer images by itself. When GitHub retires 24.04, or once the browser install is known to work on the newer image, the pin should be changed; nothing else in the workflows depends on 24.04.
+- **Trade-off:** the pin doesn't follow GitHub's newer images by itself. When GitHub retires 24.04 the pin should be changed; nothing else in the workflows depends on 24.04.
+
+## Scan by photo reads the printed LPN when there is no barcode (build 63)
+
+A creased, wet or badly printed barcode left **Scan by photo** with nothing but "No barcode found". The LPN is usually printed in large text on the same label, so since build 63 `readLabelText()` in `scan.js` reads it with the photo reader the Manifest check already uses (`ocrLpns()`), instead of a second reader.
+
+- **Always checked by a person:** text can be misread where a barcode can't, so the reading is never logged straight away. It goes through the existing check bar with **Add** and **Skip** (`tryAdd(v, true, ask)`), whatever the confirm-scans setting, and asks the person to check it matches the label. A corrected character is mentioned, so they look harder at it.
+- **One pallet at a time:** a photo of one label should give one pallet. The first LPN is offered; others on the photo are only named, so they can be scanned separately if they really are other pallets. A repeat (the LPN printed large and again under the barcode) is offered once.
+- **The prefix list is only a note here:** in the Manifest check the prefix list keeps a page's other numbers out. A label is one pallet's own, so an LPN with a prefix outside the list is still offered, with "Its prefix isn’t in your prefix list."; a listed prefix only decides which LPN comes first.
+- **Other numbers never offered:** order and PO numbers on the label are only counted, so one can't be logged as a pallet by mistake. Digits read after "LPN:" without their letters are named, so they can be typed in with the letters rather than guessed.
+- **Slow, and said so:** the photo reader can take up to a minute (more the first time, while it downloads), so the message says so up front, the reader's own progress is shown, and its errors (such as being offline) are shown instead of a "try a better photo" message that wouldn't help.
+- **Two switches:** it needs both `scanByPhoto` and `manifestPhotos`. A site that has switched off reading photos gets the old "No barcode found" behaviour, and no new switch was added.
+- **Gallery as well as camera:** `capture="environment"` was removed from the file box, so a photo taken earlier (for example with the camera app's flash or zoom) can be used. The trade-off: phones may now ask whether to take a photo or choose one, instead of opening the camera straight away.
+- **Live scan stops first:** starting **Scan by photo** while Live scan is running stops the camera first.

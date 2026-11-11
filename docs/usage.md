@@ -109,10 +109,26 @@ It can be switched off for everyone in the site settings (`fppDesc`): the box th
 | Method | When to use |
 |---|---|
 | Live scan | Camera continuously adds each barcode it sees; the screen stays awake while it runs |
-| Scan by photo | Fallback when live scanning is unreliable |
+| Scan by photo | Fallback when live scanning is unreliable. Take a photo or (since build 63) choose one already on the phone; if no barcode can be read, the LPN printed on the label is read instead and shown to check first (build 63, see below) |
 | Hardware scanner | Focus the LPN box; the scanner types and presses Enter. Check a scanner first with **Settings → Test a handheld scanner** (build 59, see below). Since build 62 the screen stays on while the app is open, so scans aren't lost to a screen that has gone off (see below) |
 
 "Ask me to confirm each scanned barcode" in Settings shows each scan for approval first.
+
+**Scan by photo and the printed LPN (build 63).** Tapping **Scan by photo** stops Live scan if it is running, then opens the phone's picker. Since build 63 the picker isn't forced to the camera, so the photo can be taken or chosen from the phone's photos (before, the file box asked for the back camera). The line under the camera box says "Reading barcode…" while the barcode is looked for.
+
+When no barcode can be read from the photo, and both **Scan by photo** and reading **photos** are switched on in the site settings (`scanByPhoto` and `manifestPhotos`), the app reads the LPN printed on the label with the same photo reader as the Manifest check's manifest photos:
+
+- The line says "No barcode found, so reading the LPN printed on the label. This can take up to a minute…", followed by the reader's own progress (for example "Reading the printed LPN: No numbers found, so turning the photo to try again…"). The first use downloads the photo reader, as for manifest photos.
+- **Never added straight away.** Printed text can be misread, so the reading always appears in the check bar with **Skip** and **Add**, even when "Ask me to confirm each scanned barcode" is off: "Read <LPN> from the printed label (no barcode found): check it matches the label. Add it as <type>?" Check it against the label, then tap **Add** (it is logged with the type and FSDU tick that were set when the check appeared) or **Skip**. The line under the camera box says "Read <LPN> from the printed label. Check it, then Add or Skip above."
+- **Notes in the check bar:** ", one character corrected" is added inside the brackets when the photo reader corrected the number; "Its prefix isn’t in your prefix list." is added when a prefix list is set in the Manifest check and the LPN's prefix isn't on it. The LPN is still offered, because it is one pallet's own label. With the usual LPN checks on, any problem (already logged, prefix, digit count) is listed after it as for a typed LPN, and the button says **Add anyway**.
+- **Which LPN is offered:** only readings shaped like an LPN (letters followed by 9 or 10 digits, or IM followed by 10 or 11) are offered, one at a time; one whose prefix is on the prefix list comes first. The same LPN printed twice on the label is offered once. Other LPNs read from the photo are named after it, up to three: "Other LPNs on the photo: … (scan them separately if they’re other pallets)." (with "…" after the third when there are more)
+- **Other numbers** (order or PO numbers and the like) are never offered; they are only counted: "1 other number on the label was left out." or "n other numbers on the label were left out."
+- **A number read without its letters** after "LPN:" on the label, with no LPN found: "No barcode found. A number after “LPN:” was read without its letters (<digits>): type it in with the letters at the start."
+- **Nothing found:** "No barcode or LPN found. Move closer, hold steady and try again."
+- **Reader problems** are shown as they are, for example "The photo reader couldn’t load. Check you’re online and try again, or type the numbers in the box instead. (Reading photos needs iOS 16 or newer on an iPhone.)" when offline before the reader has been downloaded.
+- **A check already waiting:** if the check bar is already showing, the photo isn't read: "Answer the check above first (Add or Skip), then try the photo again." If one appears while the photo is being read: "Read <LPN> from the printed label, but another check is waiting above. Answer it, then try the photo again."
+- With **photos** switched off in the site settings, a photo with no barcode just says "No barcode found. Move closer, hold steady and try again." as before build 63.
+- The problem report gets a `scan` entry listing the LPNs read from the label (or "none") and how many other numbers were read.
 
 **Test a handheld scanner (build 59).** A section in Settings, after **Date format** and before **Share this app**: "Tap the box and scan any barcode with your handheld or Bluetooth scanner. Nothing is added to the log." The box is labelled **Scan a barcode here**. Nothing scanned into it is logged, and the box empties after each result, so the next barcode can be scanned straight away. It has no site switch, so it is always shown. The result line starts "Read “<code>” (<n> characters, in <m> ms)." (no time for a single character; the time runs from the first to the last character), then says what came after the code:
 
@@ -325,7 +341,7 @@ Reports go to Jamie's private GitHub repository through a Cloudflare server. A n
 
 **Settings → Problem report** has **Download problem report** and **Clear**.
 
-The app keeps a short log of what it has done on this device: the last 300 events, each cut to 300 characters. It records manifest photo, manifest PDF and log photo reads (file type and size, how many LPNs were found, added and already listed, numbers left out by the prefix list, readings left out as not looking like the page's LPNs, failures), what the photo reader and PDF reader got from each file (word or page count, LPNs found and the first 150 characters of the text read from a photo), backup restores, and script errors (including failed promises). It is only sent if you attach it to a report from **Report a problem or idea**; nothing is sent by itself.
+The app keeps a short log of what it has done on this device: the last 300 events, each cut to 300 characters. It records manifest photo, manifest PDF and log photo reads, the LPNs read from a label's printed text by **Scan by photo** (build 63) (file type and size, how many LPNs were found, added and already listed, numbers left out by the prefix list, readings left out as not looking like the page's LPNs, failures), what the photo reader and PDF reader got from each file (word or page count, LPNs found and the first 150 characters of the text read from a photo), backup restores, and script errors (including failed promises). It is only sent if you attach it to a report from **Report a problem or idea**; nothing is sent by itself.
 
 **Download problem report** saves a plain text file, `lpn-problem-report-<yyyy-mm-dd>.txt`, with:
 
@@ -432,6 +448,10 @@ Colours (Follow phone, two colours drive the whole theme, with a contrast warnin
 | The scanner test says "Only Enter came through" | The box was empty when Enter arrived: the barcode didn't reach it. Tap the box first so it is selected, then scan. |
 | The scanner test says "This barcode …: try an LPN label to check" | What was scanned isn't shaped like an LPN (wrong digit count, or not 1 to 3 letters then digits), for example a product barcode. Scan an LPN label instead. If it says the prefix isn't in your prefix list, add it under **Prefix presets** if it is one of yours. |
 | Live scan doesn't start | The site must be on HTTPS and camera permission allowed. Use Scan by photo instead. |
+| Scan by photo says "No barcode found, so reading the LPN printed on the label…" and takes a while | The barcode couldn't be read, so the printed LPN is being read with the photo reader, which can take up to a minute (longer the first time, while it downloads). Wait, or take a clearer, closer photo of the barcode. |
+| Scan by photo shows "Read <LPN> from the printed label…" | No barcode could be read, so the number came from the printed text. Check every character against the label before tapping **Add**; tap **Skip** if it is wrong and type it instead. |
+| "A number after “LPN:” was read without its letters" | The photo reader only got the digits. Type the LPN in the box with its letters at the start. |
+| Scan by photo only offers the camera, not my photos | The phone has an older copy of the app (before build 63). Open the app online to update it. |
 | No zoom buttons on the camera picture | The phone or browser doesn't let web pages zoom the camera (most iPhones). Move closer to the label, or use **Scan by photo**. The buttons only appear after the camera has started. |
 | Live scan won't read a label from a distance | Tap **+** to zoom in (where the buttons show) and hold the phone steady for a moment so the camera can focus. On phones with their own barcode reader the app looks at up to four pictures a second, one at a time, so a slow phone may take a moment. |
 | Live scan opens already zoomed in | It uses the zoom from last time on this phone. Tap **−** to zoom out; the new level is remembered. |
