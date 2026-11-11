@@ -25,6 +25,7 @@ function xlLpnWidth(list,base){let m=0;list.forEach(s=>{m=Math.max(m,String(s||"
 /* Lines an LPN needs in a Courier New column (about 0.6 characters a unit). */
 const xlLpnLines=(v,w)=>xlLines(String(v||"").replace(/\s+/g,""),w,0.6);
 function xlTitle(ws,off,lastCol,title,sub){
+  if(siteName())title+=" – "+siteName();
   const t=ws.getRow(off+1),s=ws.getRow(off+2);
   t.height=38;s.height=22;ws.getRow(off+3).height=10;
   ws.mergeCells(off+1,1,off+1,lastCol);ws.mergeCells(off+2,1,off+2,lastCol);
@@ -78,10 +79,10 @@ function saveBlob(data,type,name){
 async function fallbackXls(d){
   const esc=v=>String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   const who=($("recv").value||"").trim();
-  const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
-  const side=[["Pallet Type","Count","h"],["Brown Box",c.BB],["FMCG",c.FMCG],["FPP",c.FPP],["Mixed",c.Mixed],["Total",rows.length,"b"],["FSDU (not in total)",rows.filter(r=>r.fsdu).length],null,["Delivery Details","","h2"],["Date",ukDate(d),"l"],["Received by",who,"l"]].concat(extras().map(e=>[e[0],e[1],"l"]));
+  const tc=typeCounts(),c=tc.c;
+  const side=[["Pallet Type","Count","h"],["Brown Box",c.BB],["FMCG",c.FMCG],["FPP",c.FPP],["Mixed",c.Mixed],["Total",tc.total,"b"],["FSDU (not in total)",tc.fsdu]].concat(tc.refused?[["Refused (not in total)",tc.refused]]:[]).concat([null,["Delivery Details","","h2"],["Date",ukDate(d),"l"],["Received by",who,"l"]]).concat(extras().map(e=>[e[0],e[1],"l"]));
   const n=Math.max(rows.length,side.length-1);
-  let h='<html><head><meta charset="utf-8"><style>td,th{font-family:Arial;font-size:14pt;border:1px solid #000;padding:4px;text-align:left}th{font-size:16pt;background:#e6e9ed}td.c{text-align:center}td.m{font-family:\'Courier New\'}td.t{mso-number-format:"\\@"}</style></head><body><h2 style="font-family:Arial">Goods-in pallet log</h2><table>';
+  let h='<html><head><meta charset="utf-8"><style>td,th{font-family:Arial;font-size:14pt;border:1px solid #000;padding:4px;text-align:left}th{font-size:16pt;background:#e6e9ed}td.c{text-align:center}td.m{font-family:\'Courier New\'}td.t{mso-number-format:"\\@"}</style></head><body><h2 style="font-family:Arial">Goods-in pallet log'+(siteName()?" – "+esc(siteName()):"")+'</h2><table>';
   for(let i=-1;i<n;i++){
     const head=i<0,t=head?"th":"td";
     const l=head?["#","LPN","Pallet Type","FSDU"]:rows[i]?[i+1,rows[i].lpn,rows[i].type,rows[i].fsdu?"Yes":"No"]:null;
@@ -134,6 +135,7 @@ async function loadJsPdf(){
 const PDF_HEAD=[230,233,237],PDF_BASE={theme:"grid",styles:{font:"helvetica",fontSize:11,cellPadding:2.2,textColor:0,lineColor:0,lineWidth:0.25,valign:"middle"},headStyles:{fillColor:PDF_HEAD,textColor:0,fontStyle:"bold",lineColor:0,lineWidth:0.25},alternateRowStyles:{fillColor:[242,242,242]}};
 const PDF_PLAIN={alternateRowStyles:{fillColor:[255,255,255]}};
 function pdfTitle(doc,x,y,title,sub){
+  if(siteName())title+=" – "+siteName();
   doc.setFont("helvetica","bold");doc.setFontSize(18);doc.setTextColor(0);doc.text(title,x,y+6);
   doc.setFont("helvetica","normal");doc.setFontSize(10);doc.setTextColor(60);doc.text(sub,x,y+12);doc.setTextColor(0);
   return y+17;
@@ -180,9 +182,9 @@ const pdfCell=(t,o)=>({content:String(t),styles:Object.assign({},o||{})});
 async function buildLogPdf(d){
   await loadJsPdf();await appVersion();
   const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:"portrait"});
-  doc.setProperties({title:"LPN log "+d,subject:"LPN log",keywords:"LPNLOG2:"+encodeURIComponent(JSON.stringify({app:appVer||appVerTry,d:d,r:($("recv").value||"").trim(),n:($("notes").value||"").trim(),e:$("expect").value||"",t:($("trailer").value||"").trim(),si:($("sealIn").value||"").trim(),so:($("sealOut").value||"").trim(),rows:rows.map(r=>{const a=[r.lpn,r.type,r.fsdu?1:0];if(r.dmg||r.desc)a.push(r.dmg||"");if(r.desc)a.push(r.desc);return a})}))});
+  doc.setProperties({title:"LPN log "+d,subject:"LPN log",keywords:"LPNLOG2:"+encodeURIComponent(JSON.stringify({app:appVer||appVerTry,d:d,r:($("recv").value||"").trim(),n:($("notes").value||"").trim(),e:$("expect").value||"",t:($("trailer").value||"").trim(),si:($("sealIn").value||"").trim(),so:($("sealOut").value||"").trim(),rows:rows.map(r=>{const a=[r.lpn,r.type,r.fsdu?1:0];if(r.dmg||r.desc||r.ref)a.push(r.dmg||"");if(r.desc||r.ref)a.push(r.desc||"");if(r.ref)a.push(1);return a})}))});
   const who=($("recv").value||"").trim();
-  const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
+  const tc=typeCounts(),c=tc.c;
   const L=10,LW=100,RX=L+LW+8,RW=190-LW-8;
   const yb=await pdfBanner(doc,L,LW);
   const exp=$("expect").value;
@@ -192,8 +194,8 @@ async function buildLogPdf(d){
     startY:y0,margin:{left:RX,right:10,top:12,bottom:16},tableWidth:RW,
     head:[["Pallet Type","Count"]],
     body:[["Brown Box",c.BB],["FMCG",c.FMCG],["FPP",c.FPP],["Mixed",c.Mixed],
-      [pdfCell("Total",bold),pdfCell(rows.length,bold)],
-      ["FSDU (not in total)",rows.filter(r=>r.fsdu).length]],
+      [pdfCell("Total",bold),pdfCell(tc.total,bold)],
+      ["FSDU (not in total)",tc.fsdu]].concat(tc.refused?[["Refused (not in total)",tc.refused]]:[]),
     columnStyles:{1:{halign:"center",cellWidth:22}}
   }));
   doc.autoTable(Object.assign({},PDF_BASE,PDF_PLAIN,{
@@ -343,12 +345,13 @@ $("dl").onclick=async()=>{
     const lpnW=xlLpnWidth(rows.map(r=>r.lpn),26);
     ws.columns=[{width:7},{width:lpnW},{width:22},{width:12},{width:3},{width:26},{width:20}];
     const who=($("recv").value||"").trim();
-    const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
+    const tc=typeCounts(),c=tc.c;
     const side=[
       {v:["Pallet Type","Count"],h:1},
       {v:["Brown Box",c.BB]},{v:["FMCG",c.FMCG]},{v:["FPP",c.FPP]},{v:["Mixed",c.Mixed]},
-      {v:["Total",rows.length],b:1},
-      {v:["FSDU (not in total)",rows.filter(r=>r.fsdu).length]},
+      {v:["Total",tc.total],b:1},
+      {v:["FSDU (not in total)",tc.fsdu]},
+      ...(tc.refused?[{v:["Refused (not in total)",tc.refused]}]:[]),
       null,
       {v:["Delivery Details",""],h:1,merge:1},
       {v:["Date",ukDate(d)],l:1},

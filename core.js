@@ -2,7 +2,7 @@
 const FIRST_OPEN=(()=>{try{for(let i=0;i<localStorage.length;i++){if(/^lpn/.test(localStorage.key(i)))return false}return true}catch(e){return false}})();
 /* Site settings from config.js (loaded before this file): which features are shown, and which carry a note that
    they are still being tested. A missing or broken config.js means every feature on and no notes. */
-const FEATURES=["report","manifestCheck","manifestPhotos","liveScan","scanByPhoto","torch","damage","noLpn","fppDesc","shareMissing","findLpn","shareApp","welcome","whatsNew"];
+const FEATURES=["report","manifestCheck","manifestPhotos","liveScan","scanByPhoto","torch","damage","refused","noLpn","fppDesc","exportReminder","shareMissing","findLpn","shareApp","welcome","whatsNew"];
 /* Pallets that arrived without an LPN are logged as "No LPN 1", "No LPN 2", … (numbered within the delivery). */
 const isNoLpn=v=>/^No LPN \d+$/i.test(String(v==null?"":v).trim());
 const SITE=(()=>{
@@ -16,7 +16,7 @@ const feat=k=>SITE.on[k]!==false;
 function testNote(k,el,where){
   if(!SITE.test[k]||!el)return null;
   const n=document.createElement("p");n.className="note testnote";n.dataset.test=k;
-  const what={noLpn:"Logging pallets with no LPN",fppDesc:"Descriptions for FPP pallets",manifestCheck:"The Manifest check",manifestPhotos:"Reading photos",liveScan:"Live scan",scanByPhoto:"Scan by photo",torch:"The torch",damage:"Marking damage",shareMissing:"Share missing list",findLpn:"Find an LPN",shareApp:"Share this app"}[k];
+  const what={noLpn:"Logging pallets with no LPN",refused:"Marking pallets as refused",exportReminder:"The reminder about deliveries not exported",fppDesc:"Descriptions for FPP pallets",manifestCheck:"The Manifest check",manifestPhotos:"Reading photos",liveScan:"Live scan",scanByPhoto:"Scan by photo",torch:"The torch",damage:"Marking damage",shareMissing:"Share missing list",findLpn:"Find an LPN",shareApp:"Share this app"}[k];
   n.textContent=k==="report"?"In testing: reports may not always arrive yet, so for anything urgent also use Download problem report in Settings."
     :"In testing: "+what+" may not always work yet, so check what it gives you"+(feat("report")?", and use Report a problem if something goes wrong.":".");
   el.insertAdjacentElement(where||"beforeend",n);return n;
@@ -49,7 +49,7 @@ let rows=[];
 let delCollapsed=false;
 const DEL_F=["date","recv","notes","expect","trailer","sealIn","sealOut"];
 let exported=null;
-function logSig(){let h=0;const s=rows.map(r=>r.lpn+"|"+r.type+"|"+(r.fsdu?1:0)+(r.dmg?"|"+r.dmg:"")+(r.desc?"|d:"+r.desc:"")).join(",");for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return rows.length+":"+h}
+function logSig(){let h=0;const s=rows.map(r=>r.lpn+"|"+r.type+"|"+(r.fsdu?1:0)+(r.dmg?"|"+r.dmg:"")+(r.desc?"|d:"+r.desc:"")+(r.ref?"|r":"")).join(",");for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return rows.length+":"+h}
 /* "-TR4471" for file names: from the trailer box, or from the trailer given (the Manifest check passes the trailer of
    the delivery it checked, or "" when that isn't known). */
 function fileTag(tr){
@@ -62,14 +62,16 @@ function setDel(o){o=o||{};DEL_F.forEach(k=>{$(k).value=k==="date"?(o.date||loca
 function syncClear(){const b=$("delClear");if(b)b.disabled=!["trailer","sealIn","sealOut","notes"].some(k=>($(k).value||"").trim())}
 const $=id=>document.getElementById(id);
 function syncType(){const v=$("type").value;$("type").dataset.t=v;document.querySelectorAll("#tyb button").forEach(b=>{const on=b.dataset.t===v;b.classList.toggle("on",on);b.setAttribute("aria-pressed",on)})}
-let cfg={defType:"BB",check:true,sound:true,size:"1",keepType:true,vibrate:true,confirmScan:false,dateFmt:"uk",awake:true};
+let cfg={defType:"BB",check:true,sound:true,size:"1",keepType:true,vibrate:true,confirmScan:false,dateFmt:"uk",awake:true,site:""};
 /* Saved data can come back from a backup file, so everything read from storage is checked and tidied before use.
    A damaged or crafted backup then can't stop the app starting or put anything odd into an export. */
 const isTxt=v=>typeof v==="string"||typeof v==="number";
 const CFG_OK={size:["1","1.12","1.25"],dateFmt:["uk","us","iso"],defType:TYPES};
-function cleanCfg(c){const out={};if(c&&typeof c==="object"&&!Array.isArray(c))Object.keys(cfg).forEach(k=>{if(typeof c[k]===typeof cfg[k]&&(!CFG_OK[k]||CFG_OK[k].indexOf(c[k])>=0))out[k]=c[k]});return out}
+function cleanCfg(c){const out={};if(c&&typeof c==="object"&&!Array.isArray(c))Object.keys(cfg).forEach(k=>{if(typeof c[k]===typeof cfg[k]&&(!CFG_OK[k]||CFG_OK[k].indexOf(c[k])>=0))out[k]=c[k]});if(typeof out.site==="string")out.site=out.site.replace(/\s+/g," ").trim().slice(0,40);return out}
+/* The site or store name from Settings, added to every export's title ("" when not set). */
+const siteName=()=>String(cfg.site||"").replace(/\s+/g," ").trim().slice(0,40);
 const isoTime=v=>typeof v==="string"&&/^\d{4}-\d{2}-\d{2}T[\d:.]+Z?$/.test(v)&&!isNaN(new Date(v));
-function cleanRows(a){return (Array.isArray(a)?a:[]).filter(r=>r&&typeof r==="object"&&isTxt(r.lpn)&&String(r.lpn).trim()).map(r=>{const o={lpn:String(r.lpn).trim().slice(0,100),type:TYPES.indexOf(r.type)>=0?r.type:"Mixed",fsdu:!!r.fsdu};const g=isTxt(r.dmg)?String(r.dmg).replace(/\s+/g," ").trim().slice(0,60):"";if(g)o.dmg=g;const d=isTxt(r.desc)?String(r.desc).replace(/\s+/g," ").trim().slice(0,60):"";if(d)o.desc=d;return o})}
+function cleanRows(a){return (Array.isArray(a)?a:[]).filter(r=>r&&typeof r==="object"&&isTxt(r.lpn)&&String(r.lpn).trim()).map(r=>{const o={lpn:String(r.lpn).trim().slice(0,100),type:TYPES.indexOf(r.type)>=0?r.type:"Mixed",fsdu:!!r.fsdu};const g=isTxt(r.dmg)?String(r.dmg).replace(/\s+/g," ").trim().slice(0,60):"";if(g)o.dmg=g;const d=isTxt(r.desc)?String(r.desc).replace(/\s+/g," ").trim().slice(0,60):"";if(d)o.desc=d;if(r.ref===true)o.ref=true;return o})}
 function cleanDel(o){
   o=o&&typeof o==="object"?o:{};const out={};
   DEL_F.forEach(k=>{out[k]=isTxt(o[k])?String(o[k]).slice(0,2000):""});
@@ -131,6 +133,7 @@ function render(){
     // The LPN is a button, so it can be edited with the keyboard and screen readers too, not only by tapping.
     const l=document.createElement("td");l.className="l";
     const eb=document.createElement("button");eb.type="button";eb.className="lpnedit";eb.textContent=r.lpn;eb.title=feat("damage")?"Tap to edit or mark damage":"Tap to edit";eb.setAttribute("aria-label","Edit LPN "+r.lpn+(r.dmg?", damaged: "+r.dmg:"")+(feat("damage")?", or mark damage":""));eb.dataset.i=i;l.appendChild(eb);
+    if(r.ref){tr.classList.add("refused");const rt=document.createElement("span");rt.className="reftag";rt.textContent="Refused: sent back";l.appendChild(rt)}
     if(r.dmg){tr.classList.add("dmg");const dt=document.createElement("span");dt.className="dmgtag";dt.textContent="Damaged: "+r.dmg;l.appendChild(dt)}
     if(isNoLpn(r.lpn))eb.classList.add("nolpn");
     if(r.desc){const dd=document.createElement("span");dd.className="desctag";dd.textContent=r.desc;l.appendChild(dd)}
@@ -143,8 +146,8 @@ function render(){
       // LPN box (phones would otherwise close the edit before the tap lands).
       // (with damage switched off in config.js, an empty row stands in, so the rest works the same)
       // (with damage switched off in config.js and no description to edit, an empty row stands in, so the rest works the same)
-      const wantDesc=noL||!!r.desc||(r.type==="FPP"&&feat("fppDesc")),useRow=feat("damage")||wantDesc;
-      const dr=useRow?dmgRow(r,(g,key)=>{dmgPick=g;finish(true,key)},{damage:feat("damage"),desc:wantDesc,auto:fromAdd,save:key=>finish(true,key)}):document.createElement("tr");if(useRow)tr.after(dr);
+      const wantDesc=noL||!!r.desc||(r.type==="FPP"&&feat("fppDesc")),useRow=feat("damage")||feat("refused")||wantDesc;
+      const dr=useRow?dmgRow(r,(g,key)=>{dmgPick=g;finish(true,key)},{damage:feat("damage"),desc:wantDesc,auto:fromAdd,save:key=>finish(true,key),refuse:feat("refused")?((v,key)=>{refPick=v;finish(true,key)}):null}):document.createElement("tr");if(useRow)tr.after(dr);
       if(focusDesc&&dr._desc){focusDesc=false;dr._desc.focus()}else{focusDesc=false;inp.focus();inp.select()}
       // Keep the choices clear of the entry bar on phones (the page keeps room for it when scrolling).
       try{dr.scrollIntoView({block:"nearest"})}catch(e){}
@@ -152,7 +155,7 @@ function render(){
       // page can't scroll that far, take the note away early unless it is a warning.
       if(fromAdd&&dr._desc){const fl=$("flash");if(fl&&!fl.hidden){const a=dr.getBoundingClientRect(),f=fl.getBoundingClientRect();
         if(f.top<a.bottom&&f.bottom>a.top){window.scrollBy(0,a.bottom-f.top+8);const a2=dr.getBoundingClientRect();if(f.top<a2.bottom&&f.bottom>a2.top&&!fl.classList.contains("warn"))fl.hidden=true}}}
-      let done=false,dmgPick;
+      let done=false,dmgPick,refPick;
       const finish=(ok,key)=>{
         if(done)return;done=true;dr.remove();
         // Escape drops a description that was typed: say so, so it isn't lost without anyone knowing.
@@ -162,6 +165,10 @@ function render(){
         if(ok&&dr._desc){
           const d=dr._desc.value.replace(/\s+/g," ").trim().slice(0,60),wasD=r.desc||"";
           if(d!==wasD){if(d)r.desc=d;else delete r.desc;said.push(d?"Description saved for "+name:"Description removed from "+name);backs.push(()=>{if(wasD)r.desc=wasD;else delete r.desc})}
+        }
+        if(ok&&refPick!==undefined&&refPick!==!!r.ref){
+          const was=!!r.ref;if(refPick)r.ref=true;else delete r.ref;
+          said.push(refPick?"Marked "+name+" as refused (sent back)":name+" is no longer marked as refused");backs.push(()=>{if(was)r.ref=true;else delete r.ref});
         }
         if(ok&&dmgPick!==undefined&&dmgPick!==(r.dmg||"")){
           const was=r.dmg||"";if(dmgPick)r.dmg=dmgPick;else delete r.dmg;
@@ -245,7 +252,20 @@ function dmgRow(r,pick,opt){
     if(tn){tn.id=id+"t";say.push(tn.id)}
     if(say.length)di.setAttribute("aria-describedby",say.join(" "));
   }
-  if(opt.damage===false)return tr;
+  const addRef=()=>{
+  // Refused: the pallet came off the trailer but was sent back with the driver. It stays on the log and exports,
+  // marked, and isn't counted as received.
+  if(!opt.refuse)return;{
+    const rl=document.createElement("div");rl.className="refline";
+    const rb=document.createElement("button");rb.type="button";rb.className="refbtn";rb.textContent=r.ref?"Not refused":"Refused (sent back)";
+    rb.setAttribute("aria-pressed",String(!!r.ref));rb.setAttribute("aria-label",(r.ref?"Mark "+r.lpn+" as not refused":"Mark "+r.lpn+" as refused, sent back with the driver"));
+    const keep=e=>e.preventDefault();rb.addEventListener("pointerdown",keep);rb.addEventListener("mousedown",keep);
+    rb.onclick=e=>opt.refuse(!r.ref,e.detail===0);
+    rl.appendChild(rb);td.appendChild(rl);
+    if(!isNoLpn(r.lpn)||!opt.desc)testNote("refused",rl);
+  }
+  };
+  if(opt.damage===false){addRef();return tr}
   const box=document.createElement("div");box.className="dmgbox";box.setAttribute("role","group");box.setAttribute("aria-label","Damage for "+r.lpn);td.appendChild(box);
   const lab=document.createElement("span");lab.className="dmglab";lab.textContent="Damage:";box.appendChild(lab);
   const cur=r.dmg||"",keep=e=>e.preventDefault();
@@ -262,9 +282,9 @@ function dmgRow(r,pick,opt){
   ow.append(oi,ok);box.appendChild(ow);
   oth.onclick=()=>{ow.hidden=false;if(cur&&DMG_REASONS.indexOf(cur)<0)oi.value=cur;oi.focus()};
   const tn=testNote("damage",td);if(tn)tn.style.margin="0 0 6px";
-  return tr;
+  addRef();return tr;
 }
-function extras(){const o=[];const e=parseInt($("expect").value,10);if(e>=0)o.push(["Expected pallets",String(e)]);[["trailer","Trailer number"],["sealIn","Seal in"],["sealOut","Seal out"]].forEach(f=>{const v=($(f[0]).value||"").trim();if(v)o.push([f[1],v])});const n=($("notes").value||"").trim();if(n)o.push(["Notes",n]);rows.forEach(r=>{if(r.dmg)o.push(["Damaged pallet",r.lpn+": "+r.dmg])});rows.forEach(r=>{if(r.desc)o.push(["Pallet description",r.lpn+": "+r.desc])});return o}
+function extras(){const o=[];const e=parseInt($("expect").value,10);if(e>=0)o.push(["Expected pallets",String(e)]);[["trailer","Trailer number"],["sealIn","Seal in"],["sealOut","Seal out"]].forEach(f=>{const v=($(f[0]).value||"").trim();if(v)o.push([f[1],v])});const n=($("notes").value||"").trim();if(n)o.push(["Notes",n]);rows.forEach(r=>{if(r.ref)o.push(["Refused pallet",r.lpn+": sent back with the driver"])});rows.forEach(r=>{if(r.dmg)o.push(["Damaged pallet",r.lpn+": "+r.dmg])});rows.forEach(r=>{if(r.desc)o.push(["Pallet description",r.lpn+": "+r.desc])});return o}
 function summary(){
   $("undoLast").hidden=!rows.length;
   {const en=$("expNote"),fresh=exported&&exported.sig===logSig();
@@ -279,8 +299,14 @@ function summary(){
   const ei=$("expInfo"),ex=parseInt($("expect").value,10);
   if(ex>=0&&ms&&ms.total===ex)ei.hidden=true;
   else if(ex>=0){const d=rows.length-ex;ei.hidden=false;ei.className="expinfo "+(d===0?"ok":d<0?"prog":"bad");ei.textContent=rows.length+" of "+ex+" expected"+(d===0?" ✓ all accounted for":d<0?" ("+(-d)+" to go)":" ("+d+" more than expected)")}else ei.hidden=true;
-  const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
-  $("sum").innerHTML="<span><b>"+rows.length+"</b>Total</span><span><b>"+c.BB+"</b>BB</span><span><b>"+c.FMCG+"</b>FMCG</span><span><b>"+c.FPP+"</b>FPP</span><span><b>"+c.Mixed+"</b>Mixed</span><span><b>"+rows.filter(r=>r.fsdu).length+"</b>FSDU</span>";
+  const t=typeCounts(),c=t.c;
+  $("sum").innerHTML="<span><b>"+t.total+"</b>Total</span><span><b>"+c.BB+"</b>BB</span><span><b>"+c.FMCG+"</b>FMCG</span><span><b>"+c.FPP+"</b>FPP</span><span><b>"+c.Mixed+"</b>Mixed</span><span><b>"+t.fsdu+"</b>FSDU</span>"+(t.refused?"<span class=\"refsum\"><b>"+t.refused+"</b>Refused</span>":"");
+}
+/* Pallets received, by type: refused pallets (sent back with the driver) are left out and counted on their own. Used by
+   the totals on screen and by every export. */
+function typeCounts(){
+  const c={BB:0,FMCG:0,FPP:0,Mixed:0},got=rows.filter(r=>!r.ref);got.forEach(r=>c[r.type]++);
+  return {c:c,total:got.length,fsdu:got.filter(r=>r.fsdu).length,refused:rows.length-got.length};
 }
 /* LPN digit counts: 9 or 10 after the letters, except IM (full pallet picks), which has 10 or 11. */
 function lpnDigitsOk(x){const m=String(x).toUpperCase().replace(/\s+/g,"").match(/^([A-Z]+)(\d+)$/);if(!m)return false;const n=m[2].length;return m[1]==="IM"?n===10||n===11:n===9||n===10}
