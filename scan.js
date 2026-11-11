@@ -145,7 +145,8 @@ function stopScan(keepMsg){
 async function decodePhoto(file,upload){
   const sm=$("smsg");$("scanbox").hidden=false;$("video").hidden=true;
   scanNote(upload?"photoUpload":"scanByPhoto");
-  sm.textContent="Reading barcode…";
+  // set a frame after the box is shown, so screen readers announce it
+  sm.textContent="";requestAnimationFrame(()=>{if(!sm.textContent)sm.textContent="Reading barcode…"});
   try{
     let text="";
     if("BarcodeDetector" in window){
@@ -161,7 +162,7 @@ async function decodePhoto(file,upload){
     if(text){lastCode="";onCode(text);return}
   }catch(e){}
   if(upload){await readLabelText(file);return}
-  sm.textContent="No barcode found. Move closer, hold steady and try again."+(feat("photoUpload")&&feat("manifestPhotos")&&typeof ocrLpns==="function"?" If the barcode is damaged, tap Upload photo: it can read the LPN printed on the label.":"");
+  sm.textContent="No barcode found. Move closer, hold steady and try again."+(feat("photoUpload")&&feat("manifestPhotos")&&typeof ocrLpns==="function"?" If the barcode is damaged, use Upload photo: it can read the LPN printed on the label.":"");
 }
 /* No barcode could be read: the LPN printed on the label is read with the photo reader instead. Text can be misread,
    so the reading is always shown with Add and Skip, to check against the label first.
