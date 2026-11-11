@@ -27,7 +27,8 @@ module.exports = async ({ browser, URL0 }) => {
     // One Tab per choice in the row (damage choices, then Refused when it is switched on), then one more past the last.
     const nChoices = await q.evaluate(() => document.querySelectorAll(".dmgrow button").length);
     for (let k = 0; k < nChoices + 1; k++) await q.keyboard.press("Tab");
-    await q.waitForTimeout(100);
+    // Wait for the editor to close and focus to come back (slower when the machine is busy), up to 2 seconds.
+    await q.waitForFunction(() => !document.querySelector(".dmgrow") && document.activeElement && document.activeElement.className === "lpnedit", null, { timeout: 2000 }).catch(() => {});
     s = await q.evaluate(() => ({ focus: document.activeElement.className, i: document.activeElement.dataset && document.activeElement.dataset.i, open: !!document.querySelector(".dmgrow"), other: null }));
     check("Tab past the last damage choice closes them and keeps focus on that pallet", s.focus === "lpnedit" && s.i === "0" && !s.open, s);
     // The choices open in view, not under the phone entry bar, even for the last pallet.
