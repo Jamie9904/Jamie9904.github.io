@@ -62,7 +62,7 @@ function setDel(o){o=o||{};DEL_F.forEach(k=>{$(k).value=k==="date"?(o.date||loca
 function syncClear(){const b=$("delClear");if(b)b.disabled=!["trailer","sealIn","sealOut","notes"].some(k=>($(k).value||"").trim())}
 const $=id=>document.getElementById(id);
 function syncType(){const v=$("type").value;$("type").dataset.t=v;document.querySelectorAll("#tyb button").forEach(b=>{const on=b.dataset.t===v;b.classList.toggle("on",on);b.setAttribute("aria-pressed",on)})}
-let cfg={defType:"BB",check:true,sound:true,size:"1",keepType:true,vibrate:true,confirmScan:false,dateFmt:"uk"};
+let cfg={defType:"BB",check:true,sound:true,size:"1",keepType:true,vibrate:true,confirmScan:false,dateFmt:"uk",awake:true};
 /* Saved data can come back from a backup file, so everything read from storage is checked and tidied before use.
    A damaged or crafted backup then can't stop the app starting or put anything odd into an export. */
 const isTxt=v=>typeof v==="string"||typeof v==="number";
@@ -395,15 +395,50 @@ $("chkAdd").onclick=()=>{const p=pendingAdd;hideCheck();if(p)addValue(p.v,{type:
 let undoTimer=null;
 /* On phones the Undo bar shows just above the entry bar (styles.css), where it can be seen. It stays 20 seconds,
    and doesn't go while it has focus. */
-function showUndo(text,fn){
-  const bar=$("undoBar");
-  $("undoTxt").textContent=text;bar.hidden=false;
+/* Undo keeps the last 10 changes, newest first. The bar shows the newest for 20 seconds; the Undo button next to
+   Clear all (and Ctrl+Z) reaches the rest after that. Changes that put back the whole log (Start new delivery,
+   Clear all) are "whole" ones: undoing one after the log has changed since would lose that work, so it is refused,
+   and so is everything older than it (it belonged to the log as it was). */
+const undoStack=[];
+const undoSig=()=>logSig()+"|"+DEL_F.map(k=>$(k).value).join("|");
+function showUndo(text,fn,whole){
+  undoStack.push({text:text,fn:fn,whole:!!whole,sig:whole?undoSig():""});
+  if(undoStack.length>10)undoStack.shift();
+  undoBar();
+}
+function undoBar(){
+  const bar=$("undoBar"),e=undoStack[undoStack.length-1];
+  clearTimeout(undoTimer);syncUndo();
+  if(!e){bar.hidden=true;return}
+  $("undoTxt").textContent=e.text;
+  const n=undoStack.length-1;$("undoN").textContent=n?" ("+n+" earlier)":"";
+  bar.hidden=false;
   const fl=$("flash");if(fl)fl.hidden=true;
-  clearTimeout(undoTimer);
   const hide=()=>{if(bar.contains(document.activeElement)){undoTimer=setTimeout(hide,3000);return}bar.hidden=true};
-  $("undoBtn").onclick=()=>{clearTimeout(undoTimer);bar.hidden=true;fn()};
+  $("undoBtn").onclick=()=>undoNow();
   undoTimer=setTimeout(hide,20000);
 }
+function undoNow(){
+  const e=undoStack.pop();if(!e){syncUndo();return}
+  if(e.whole&&e.sig!==undoSig()){
+    const n=undoStack.length;undoStack.length=0;clearTimeout(undoTimer);$("undoBar").hidden=true;syncUndo();
+    $("msg").textContent="“"+e.text.replace(/\.$/,"")+"” can’t be undone now, because the log has changed since"+(n?", and nor can the "+n+" earlier change"+(n===1?"":"s"):"")+".";
+    return;
+  }
+  e.fn();
+  if(undoStack.length)undoBar();else{clearTimeout(undoTimer);$("undoBar").hidden=true;syncUndo()}
+}
+/* Opening a saved delivery or a restored backup changes the whole log without an undo of its own: older undos would
+   then act on the wrong delivery, so they are forgotten. */
+function undoClear(){undoStack.length=0;clearTimeout(undoTimer);const b=$("undoBar");if(b)b.hidden=true;syncUndo()}
+if($("undoMore"))$("undoMore").onclick=()=>undoNow();
+function syncUndo(){const b=$("undoMore");if(!b)return;const e=undoStack[undoStack.length-1];b.hidden=!e;if(e){b.textContent="Undo"+(undoStack.length>1?" ("+undoStack.length+")":"");b.setAttribute("aria-label","Undo: "+e.text+(undoStack.length>1?" ("+(undoStack.length-1)+" earlier changes can be undone after it)":""))}}
+document.addEventListener("keydown",e=>{
+  // Ctrl+Z (Cmd+Z on a Mac) undoes the newest change, except while typing in a box, where it undoes the typing.
+  if(e.key.toLowerCase()!=="z"||!(e.ctrlKey||e.metaKey)||e.shiftKey||e.altKey)return;
+  const t=e.target;if(t&&/^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName))return;
+  if(!undoStack.length)return;e.preventDefault();undoNow();
+});
 /* Each library file's fingerprint (Subresource Integrity). The browser refuses a file that doesn't match, so a
    changed or tampered copy on a CDN can't run in the app. tests/sri.js checks these against the CDNs every week. */
 const SRI={

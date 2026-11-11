@@ -204,6 +204,7 @@ button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
 .chkbar .row button{flex:1}
 .undo{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--sel);border:1px solid var(--line);border-radius:var(--r);padding:6px 6px 6px 12px;margin-bottom:12px;font-size:.92rem}
 .undo button{min-height:38px}
+.undon{color:var(--mu);font-weight:400}
 .hist{border-top:1px solid var(--line);padding:12px 0}
 .hist .hd{font-weight:700}
 .hist .sb{color:var(--mu);font-size:.88rem}
