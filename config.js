@@ -18,13 +18,15 @@ window.LPN_CONFIG = {
     scanByPhoto: true,     // Scan by photo
     torch: true,           // Torch button in Live scan (only on phones that allow it)
     damage: true,          // marking a pallet as damaged
+    refused: true,         // marking a pallet as refused (sent back with the driver)
     noLpn: true,           // No LPN button, for pallets that arrive without an LPN
     fppDesc: true,         // description box for FPP pallets, to say what is on them (e.g. kitchen roll)
     shareMissing: true,    // Share missing list in the Manifest check results
     findLpn: true,         // Find an LPN in Saved deliveries
     shareApp: true,        // Share this app (QR code) in Settings
     welcome: true,         // the welcome card on someone's first visit
-    whatsNew: true         // the card after an update saying what's new
+    whatsNew: true,        // the card after an update saying what's new
+    exportReminder: true   // reminder when a delivery from an earlier day was never exported
   },
   testing: {
     report: false,
@@ -34,10 +36,12 @@ window.LPN_CONFIG = {
     scanByPhoto: false,
     torch: false,
     damage: false,
+    refused: false,
     noLpn: false,
     fppDesc: false,
     shareMissing: false,
     findLpn: false,
-    shareApp: false
+    shareApp: false,
+    exportReminder: false
   }
 };

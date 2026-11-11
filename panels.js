@@ -17,17 +17,18 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <li>Scan or type the LPN and press <b>Add</b> (or Enter).</li>
 </ol>
 <p>An “Added” message confirms each pallet. Tap ↶ to remove the last one. A repeated or odd-looking LPN shows a warning with <b>Skip</b> or <b>Add anyway</b>. You can turn warnings off in Settings.</p>
-<p><b>Changing the log:</b> tap an LPN to correct it, change its type or FSDU in the table, or remove it with ✕. An <b>Undo</b> bar appears after you remove a pallet, change one (its LPN, description or damage) or use Clear all.</p>
+<p><b>Changing the log:</b> tap an LPN to correct it, change its type or FSDU in the table, or remove it with ✕. An <b>Undo</b> bar appears after you remove a pallet, change one (its LPN, description or damage) or use Clear all. You can undo the last 10 changes, newest first: after the bar has gone, use <b>Undo</b> next to Export (or Ctrl+Z on a computer). A Clear all, Start new delivery or Clear trailer can only be undone until the log or the delivery details change.</p>
 <p data-f="noLpn"><b>Pallet with no LPN:</b> pick the type (and tick FSDU if needed), then tap <b>No LPN</b> (under <b>Scan</b> on a phone). It is logged as No LPN 1, No LPN 2 and so on, and a <b>Description</b> box opens for the wrap, labels, or a supplier or PO number (optional). If the LPN turns up later, tap the pallet and type it in. The description stays.</p>
 <p data-f="fppDesc"><b>FPP pallet:</b> when you log an FPP pallet, a <b>Description</b> box opens so you can say what is on it, such as kitchen roll. You don’t have to fill it in. Type what is on it and press Enter, or press Enter to leave it blank. The LPN box is then ready for the next pallet. If you scan the next pallet while the box is open, it is logged as the next pallet, not as the description. The description shows under the LPN and goes on the exports. During Live scan the box doesn’t open, so tap the LPN afterwards to add a description. To change it later, tap the LPN again.</p>
+<p data-f="refused"><b>Refused pallet:</b> if a pallet is sent back with the driver, tap its LPN and choose <b>Refused (sent back)</b>. It stays on the log and the exports, marked as refused, but isn’t counted in the totals of pallets received. It still counts towards the expected pallets, because it came off the trailer. Tap it again and choose <b>Not refused</b> to undo it.</p>
 <p data-f="damage"><b>Damaged pallet:</b> tap the LPN, then choose Crushed, Wet or Other (type what’s wrong). It shows in red and goes on the exports. Choose None to remove the damage.</p>
-<p>Use search and the filters to find pallets. The totals always count the whole log, with FSDUs counted separately.</p>
+<p>Use search and the filters to find pallets. The totals count the whole log. FSDUs<span data-f="refused"> and refused pallets</span> are counted separately and aren’t in the total.</p>
 <h3>4. Scanning barcodes</h3>
 <p data-f="liveScan|scanByPhoto">On a phone, tap <b>Scan</b> next to Add.</p>
 <ul>
 <li data-f="liveScan"><b>Live scan:</b> the camera adds each barcode it sees. To scan from further away, tap <b>+</b> in the corner of the camera picture to zoom in (on phones that allow it).<span data-f="torch"> In a dark trailer, tap <b>Torch</b> (on phones that allow it; most iPhones don’t).</span></li>
 <li data-f="scanByPhoto"><b>Scan by photo:</b> use a clear photo of the barcode<span data-f="liveScan"> if Live scan doesn’t work</span>.</li>
-<li><b>Handheld or Bluetooth scanner:</b> tap the LPN box and scan. To check your scanner works with the app first, use <b>Test a handheld scanner</b> in Settings.</li>
+<li><b>Handheld or Bluetooth scanner:</b> tap the LPN box and scan. To check your scanner works with the app first, use <b>Test a handheld scanner</b> in Settings. The screen stays on while the app is open, so scans aren’t lost (you can turn this off in Settings).</li>
 </ul>
 <p>In Settings, you can choose to confirm each scan before it’s logged.</p>
 <h3 data-f="manifestCheck">5. Check against the manifest</h3>
@@ -69,7 +70,7 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <li>Clearing this site’s data deletes your log and saved deliveries. On an iPhone, if the app isn’t on the home screen, its data can be cleared after a few weeks without use. So install the app and back up.</li>
 </ul>
 `,log:`<h3>v4.0 <span class="ver">Current</span></h3>
-<ul><li>Importing an exported log from weeks ago now keeps it in <b>Saved deliveries</b>: they are kept by when you saved or imported them.</li><li>Fixed: <b>Start new delivery</b> on a delivery dated more than a week ago now saves it to Saved deliveries and starts the new one, instead of stopping.</li><li>Settings has <b>Test a handheld scanner</b>: scan any barcode to see what your scanner sends and whether it works with the app. Nothing is added to the log.</li><li data-f="report">The button at the top now says <b>Report a problem</b>, so it’s clear it’s for problems with the app or ideas for it.</li><li data-f="manifestPhotos">Manifest photos: LPNs starting with a single V, R or Q (such as V0013323651) are no longer left out, a number read with a gap in it is still found, and a page with only one LPN on it no longer gets an extra 0 or picks up print showing through from the back.</li><li data-f="fppDesc">When you log an FPP pallet, a box opens to say what is on it, such as kitchen roll. The description shows under the LPN and goes on the exports.</li><li>Easier to read and tap: grey text stays readable on mid-grey background colours, the pallet count in the bottom bar is never cut off, the box for editing an LPN is bigger, and long descriptions take two lines on small phones (tap the LPN to see all of it).</li><li data-f="noLpn">The <b>No LPN</b> button logs pallets that arrive without one, with an optional description. They go on the exports and are counted separately in the Manifest check.</li><li>Live scan reads barcodes from further away: the camera now gives a sharper picture and keeps focusing, and phones that allow it have zoom buttons in the corner of the picture.</li><li>Delivery has a <b>Clear trailer, seals and notes</b> button for the next trailer on the same day. It keeps the date, name and expected pallets, and can be undone.</li><li>A site settings file (<b>config.js</b> in the repo) can switch features off for everyone, or add a note that a feature is still being tested.</li><li>Version 4.0, ready to share with colleagues: <b>Share this app</b> in Settings has a QR code to scan, the Guide is shorter and has a <b>Your data and privacy</b> section, and new users get a welcome card with the demo video.</li><li>Damaged pallets: tap an LPN to mark it Crushed, Wet or in your own words. It shows on the exports.</li><li>Manifest check: <b>Share missing list</b> sends the missing and extra LPNs as a message, sideways or upside-down photos are turned and read again, and one tap adds a missing prefix.</li><li>Saved deliveries: <b>Find an LPN</b> shows which delivery holds a pallet. Exported file names include the trailer number.</li><li>Live scan has a <b>Torch</b> button on phones that allow it, and a note asks you to check seal numbers that look wrong.</li><li>Colours can follow the phone’s light or dark mode, reports can include your name, and after an update a card says what’s new.</li></ul>
+<ul><li data-f="refused">A pallet sent back with the driver can be marked <b>Refused (sent back)</b>: it stays on the log and exports but isn’t counted as received.</li><li data-f="exportReminder">If a delivery from an earlier day was never exported, the app reminds you when it opens.</li><li>Add your site or store name in Settings to show it on every export.</li><li><b>Undo</b> now goes back through the last 10 changes, with an Undo button next to Export. The screen stays on while the app is open, so a handheld scanner’s scans aren’t lost (Settings can turn this off).</li><li>Importing an exported log from weeks ago now keeps it in <b>Saved deliveries</b>: they are kept by when you saved or imported them.</li><li>Fixed: <b>Start new delivery</b> on a delivery dated more than a week ago now saves it to Saved deliveries and starts the new one, instead of stopping.</li><li>Settings has <b>Test a handheld scanner</b>: scan any barcode to see what your scanner sends and whether it works with the app. Nothing is added to the log.</li><li data-f="report">The button at the top now says <b>Report a problem</b>, so it’s clear it’s for problems with the app or ideas for it.</li><li data-f="manifestPhotos">Manifest photos: LPNs starting with a single V, R or Q (such as V0013323651) are no longer left out, a number read with a gap in it is still found, and a page with only one LPN on it no longer gets an extra 0 or picks up print showing through from the back.</li><li data-f="fppDesc">When you log an FPP pallet, a box opens to say what is on it, such as kitchen roll. The description shows under the LPN and goes on the exports.</li><li>Easier to read and tap: grey text stays readable on mid-grey background colours, the pallet count in the bottom bar is never cut off, the box for editing an LPN is bigger, and long descriptions take two lines on small phones (tap the LPN to see all of it).</li><li data-f="noLpn">The <b>No LPN</b> button logs pallets that arrive without one, with an optional description. They go on the exports and are counted separately in the Manifest check.</li><li>Live scan reads barcodes from further away: the camera now gives a sharper picture and keeps focusing, and phones that allow it have zoom buttons in the corner of the picture.</li><li>Delivery has a <b>Clear trailer, seals and notes</b> button for the next trailer on the same day. It keeps the date, name and expected pallets, and can be undone.</li><li>A site settings file (<b>config.js</b> in the repo) can switch features off for everyone, or add a note that a feature is still being tested.</li><li>Version 4.0, ready to share with colleagues: <b>Share this app</b> in Settings has a QR code to scan, the Guide is shorter and has a <b>Your data and privacy</b> section, and new users get a welcome card with the demo video.</li><li>Damaged pallets: tap an LPN to mark it Crushed, Wet or in your own words. It shows on the exports.</li><li>Manifest check: <b>Share missing list</b> sends the missing and extra LPNs as a message, sideways or upside-down photos are turned and read again, and one tap adds a missing prefix.</li><li>Saved deliveries: <b>Find an LPN</b> shows which delivery holds a pallet. Exported file names include the trailer number.</li><li>Live scan has a <b>Torch</b> button on phones that allow it, and a note asks you to check seal numbers that look wrong.</li><li>Colours can follow the phone’s light or dark mode, reports can include your name, and after an update a card says what’s new.</li></ul>
 <h3>v3.30</h3>
 <ul><li>Faster photo reading: one photo reader is used for a whole batch of photos instead of starting a new one for each. Live scan fits small phones: the camera view is shorter so the “Added” line and Stop scanning stay on screen.</li><li>Manifest photos: the note names any number the app corrected to match the page, so you can check it against the paper, and <b>Report a problem with these photos</b> sends a report with the photo attached. On desktop the seal boxes fit longer seal numbers, and with the Manifest check open on a phone, Undo shows at the top.</li><li>Report a problem or idea with the <b>Report a problem</b> button at the top of the page (also in Settings and the Guide). It opens in the middle of the screen: choose Problem or Idea, say what happened, add a photo if it helps, and send. The problem report is attached unless you untick it. With no signal it waits on the phone and sends when you’re back online.</li><li>More accessibility fixes: on phones the Undo bar shows just above the entry bar and stays 20 seconds; LPNs in the log can be edited with the keyboard; Escape closes the Export menus; clearer labels for screen readers on saved deliveries and the log table; Guide links don’t animate when reduced motion is on.</li><li>Easier to use with gloves and in poor light: a scan made while a warning is showing is kept in the box instead of being lost (Escape skips the warning), stronger edges on boxes and buttons, accent-coloured text always readable, bigger FSDU tick box and scan buttons, the warning shows above the camera, and the Guide and Settings panels move focus in and back out for keyboard and screen reader users.</li><li>Manifest photos are read much better: shade across the page and paper grain no longer turn into junk, every number on a page with ruled lines is found, and a number read slightly wrong (VL1… for VLT…, or an extra 0) is matched to the others on the same page. Specks on the paper that look like a code are left out. IM numbers (full pallet picks, 10 or 11 digits) are always kept and not called unusual.</li><li>Manifest check: each photo or PDF now says how many LPNs it found, how many were new and how many were already listed, and names any left out because their prefix isn’t in the prefix list. One photo that can’t be read no longer stops the rest.</li><li>Problem report in Settings: if something goes wrong, download it and send it with what happened. It lists recent manifest reads and errors on this device.</li><li>Exports: long delivery notes and longer LPNs no longer get cut off in the spreadsheets, and every export notes the app version it was made with (at the bottom of the sheet and in the page footer).</li><li>Importing an exported log and loading one in the Manifest check now read spreadsheets the same way, so the version line at the bottom is always skipped.</li><li>Safer PDFs: a PDF opened in the app (a supplier manifest or an exported log) can no longer run hidden code, and the PDF reader is updated to the latest version.</li><li>Safer backups and files: a damaged backup can no longer stop the app opening, restoring asks first and saves a copy of your current data, and files from outside can’t add links, formulas or scripts to your exports.</li><li>A security policy now only lets the app run code from its own site and its three library sources, as a second line of defence.</li><li>A demo video at the top of the Guide shows the app in action, with narration and subtitles, including picking the pallet type before scanning. It starts at half volume.</li><li>Easier to use: the pallet table scrolls with the page on phones, progress only turns red when something is wrong, one count line when the manifest sets the expected number, the Manifest check starts with its steps (prefix presets tucked away), the logo moved to Settings, the entry bar steps aside in the Manifest check, and bigger tick boxes and header buttons.</li><li>Undo last pallet button on the phone entry bar, “Use n as expected” from the manifest count, an “Exported at” note with a warning before starting a new delivery that hasn’t been exported, and a “Start a new delivery?” prompt after exporting.</li><li>Trailer number, Seal in and Seal out in Delivery, shown on exports and saved deliveries.</li><li>Live manifest tracking: add the manifest numbers first and the Pallet log counts them off as you scan, shows which are still missing and warns about pallets not on the manifest.</li><li>Phone layout: a pallet counter on the entry bar, an “Added” confirmation after each pallet, Delivery folds into one line once you start logging, neater top buttons and a clearer ✕ on each row.</li><li>Smaller tweaks: a reminder when the log is dated before today, tap-to-fill “Received by” names, a check when the total differs from the expected pallets, an FSDU filter, Excel and Email PDF buttons on saved deliveries, a last-backed-up note, and an offline notice.</li><li>Exports: a title band, numbered rows, clearer grid lines, page numbers, gridlines hidden on screen, roomier headers, the logo kept in proportion and much smaller PDFs. The manifest check has the same Export menu as the log.</li><li>Date format setting (dd/mm/yyyy by default), used in exports, lists and the date box.</li><li>Fonts are now part of the app, updates show up straight away, and the tablet layout and field alignment are fixed.</li></ul>
 <h3>v3.20</h3>
@@ -103,7 +104,7 @@ function initDemo(){
 /* The panels and the install box act as dialogs: focus moves in, the page behind can't be reached, and focus goes
    back to the button that opened them. */
 let dlgOpener=null;
-function pageInert(on){["main","header.top","#hello"].forEach(s=>{const e=document.querySelector(s);if(e)e.inert=on})}
+function pageInert(on){["main","header.top","#hello","#unexp"].forEach(s=>{const e=document.querySelector(s);if(e)e.inert=on})}
 function dlgOpen(focusEl){if(!dlgOpener)dlgOpener=document.activeElement;pageInert(true);setTimeout(()=>{if(focusEl)focusEl.focus()},0)}
 function dlgClose(){if(!$("panel").hidden||!$("instBox").hidden)return; // the other dialog is still open
   pageInert(false);const o=dlgOpener;dlgOpener=null;if(o&&o.focus&&document.contains(o))o.focus()}
@@ -155,6 +156,8 @@ function applyTheme(){
     // wouldn't be readable on them (4.6:1).
     {const away=dark?"#000000":"#ffffff",p0=v["--paper"];let pp=p0;for(let i=1;i<=10&&r(pole,pp)<4.6;i++)pp=mixC(p0,away,i/10);v["--paper"]=pp}
     [["--ink",7],["--mu",4.5]].forEach(([k,want])=>{const c0=v[k];let c=c0;for(let i=1;i<=10&&Math.min(r(c,v["--paper"]),r(c,bg))<want;i++)c=mixC(c0,pole,i/10);v[k]=c})}
+  // Warning colour (refused pallets, reminders, notes): moved towards the text colour until it is readable (4.5:1).
+  {const r=(a,b)=>{const x=lumOf(a)+.05,y=lumOf(b)+.05;return Math.max(x,y)/Math.min(x,y)};const w0=v["--wn"];let w=w0;for(let i=1;i<=10&&Math.min(r(w,v["--paper"]),r(w,bg))<4.5;i++)w=mixC(w0,v["--ink"],i/10);v["--wn"]=w}
   // Accent as text (headings, links, focus ring): moved towards the text colour until it is readable (4.5:1).
   {const r=(a,b)=>{const x=lumOf(a)+.05,y=lumOf(b)+.05;return Math.max(x,y)/Math.min(x,y)};let act=ac;for(let i=1;i<=10&&Math.min(r(act,v["--paper"]),r(act,bg))<4.5;i++)act=mixC(ac,v["--ink"],i/10);v["--act"]=act}
   const st=document.documentElement.style;
@@ -193,10 +196,15 @@ HELP.settings=`<h3>Colours</h3>
 <label class="chk"><input type="checkbox" id="setCheck"><span>Warn me about duplicate or unusual LPNs before adding them</span></label>
 <label class="chk"><input type="checkbox" id="setSound"><span>Play a sound when a pallet is added or a warning shows</span></label>
 <label class="chk"><input type="checkbox" id="setVib"><span>Vibrate when a pallet is added or a warning shows</span></label>
+<label class="chk"><input type="checkbox" id="setAwake"><span>Keep the screen on while the app is open</span></label>
+<p class="note">So a handheld scanner’s scans aren’t lost while the screen is off. The phone won’t lock by itself while the app is open, so lock it before putting it in a pocket. It uses a little more battery, and stops when you switch to another app.</p>
 <label class="chk"><input type="checkbox" id="setConf"><span>Ask me to confirm each scanned barcode before it is added</span></label>
 <h3>Display</h3>
 <label for="setSize">Text size</label>
 <select id="setSize"><option value="1">Normal</option><option value="1.12">Large</option><option value="1.25">Extra large</option></select>
+<label for="setSite">Site or store name</label>
+<input type="text" id="setSite" maxlength="40" autocomplete="off" placeholder="Optional, for example 323 Wigan" aria-describedby="setSiteNote">
+<p class="note" id="setSiteNote">Added to the title of every export, so logs from different sites are easy to tell apart.</p>
 <label for="setDate">Date format</label>
 <select id="setDate"><option value="uk">dd/mm/yyyy (UK)</option><option value="us">mm/dd/yyyy (US)</option><option value="iso">yyyy-mm-dd</option></select>
 <p class="note">Used in spreadsheets, PDFs and the saved deliveries lists.</p>
@@ -275,13 +283,13 @@ function newDelivery(){
   const id=pushHist(Object.assign({saved:new Date().toISOString()},getDel(),{rows:prev.rows}));
   rows=[];setDel({recv:prev.recv,date:todayStr()});exported=null;$("cmpNums").value="";$("type").value=cfg.defType;$("type").dataset.t=cfg.defType;
   save();render();
-  $("dlmsg").textContent="Saved to history and started a new delivery.";
-  showUndo("Saved to history. Started a new delivery.",()=>{hist=hist.filter(h=>h.id!==id);saveHist();rows=prev.rows;setDel(prev);$("cmpNums").value=prev.man||"";save();render();$("dlmsg").textContent=""});
+  $("dlmsg").textContent="Saved to history and started a new delivery.";unexpCheck();
+  showUndo("Saved to history. Started a new delivery.",()=>{hist=hist.filter(h=>h.id!==id);saveHist();rows=prev.rows;setDel(prev);$("cmpNums").value=prev.man||"";save();render();$("dlmsg").textContent=""},true);
 }
 function openHist(id){
   const h=hist.find(x=>x.id===id);if(!h)return;
   if(rows.length)pushHist(Object.assign({saved:new Date().toISOString()},getDel(),{rows:rows.slice()}));
-  hist=hist.filter(x=>x.id!==id);saveHist();
+  hist=hist.filter(x=>x.id!==id);saveHist();undoClear();unexpCheck();
   rows=h.rows.map(r=>Object.assign({},r));setDel(h);
   save();render();closeHelp();
   $("dlmsg").textContent="Opened the saved delivery. Your previous log, if it had pallets, was saved to history.";
@@ -298,7 +306,7 @@ async function parseExported(f){
     // The hidden data could have been edited, so every value is read as plain text (never an object a spreadsheet would treat as a formula or link).
     const tx=v=>isTxt(v)?String(v).slice(0,2000):"";
     return {date:/^\d{4}-\d{2}-\d{2}$/.test(tx(o.d))?tx(o.d):"",recv:tx(o.r),notes:tx(o.n),expect:tx(o.e),trailer:tx(o.t),sealIn:tx(o.si),sealOut:tx(o.so),
-      rows:(Array.isArray(o.rows)?o.rows:[]).filter(r=>Array.isArray(r)&&isTxt(r[0])&&String(r[0]).trim()).map(r=>{const o={lpn:String(r[0]).trim().slice(0,100),type:normT(r[1]),fsdu:!!r[2]};const g=tx(r[3]).replace(/\s+/g," ").trim().slice(0,60);if(g)o.dmg=g;const d=tx(r[4]).replace(/\s+/g," ").trim().slice(0,60);if(d)o.desc=d;return o}),unk:unk};
+      rows:(Array.isArray(o.rows)?o.rows:[]).filter(r=>Array.isArray(r)&&isTxt(r[0])&&String(r[0]).trim()).map(r=>{const o={lpn:String(r[0]).trim().slice(0,100),type:normT(r[1]),fsdu:!!r[2]};const g=tx(r[3]).replace(/\s+/g," ").trim().slice(0,60);if(g)o.dmg=g;const d=tx(r[4]).replace(/\s+/g," ").trim().slice(0,60);if(d)o.desc=d;if(r[5]===1||r[5]===true)o.ref=true;return o}),unk:unk};
   }
   let g;
   if(name.endsWith(".xlsx")){
@@ -328,13 +336,14 @@ async function parseExported(f){
     if(t==="trailer number"&&!trailer)trailer=nx;
     // "Damaged pallet" rows in Delivery Details: "LPN: reason", put back on that pallet.
     if(t==="pallet description"){const m=/^(.+?):\s*(.+)$/.exec(nx);if(m){const p=rw.find(z=>z.lpn===m[1].trim());if(p&&!p.desc)p.desc=m[2].replace(/\s+/g," ").trim().slice(0,60)}}
+    if(t==="refused pallet"){const m=/^(.+?):/.exec(nx);if(m){const p=rw.find(z=>z.lpn===m[1].trim());if(p)p.ref=true}}
     if(t==="damaged pallet"){const m=/^(.+?):\s*(.+)$/.exec(nx);if(m){const p=rw.find(z=>z.lpn===m[1].trim());if(p&&!p.dmg)p.dmg=m[2].replace(/\s+/g," ").trim().slice(0,60)}}
     if(t==="seal in"&&!sealIn)sealIn=nx;
     if(t==="seal out"&&!sealOut)sealOut=nx;
   }));
   return {date:date,recv:recv,notes:notes,expect:expect,trailer:trailer,sealIn:sealIn,sealOut:sealOut,rows:rw,unk:unk};
 }
-HELP.history=`<p>Deliveries you save are kept in this browser on this device. Weeks run Sunday to Saturday, and deliveries you saved or imported this week and last week are kept; older ones are removed automatically. Opening one puts it back in the log so you can change it or export it again. You can also export or email a saved delivery directly, without opening it.</p>
+HELP.history=`<p>Deliveries you save are kept in this browser on this device. Weeks run Sunday to Saturday, and deliveries you saved or imported this week and last week are kept; older ones are removed automatically.<span data-f="refused"> The number of pallets shown for each includes any refused ones.</span> Opening one puts it back in the log so you can change it or export it again. You can also export or email a saved delivery directly, without opening it.</p>
 <div class="row" style="margin:10px 0"><button id="histImport">Import an exported log</button><input type="file" id="histFile" accept=".xlsx,.csv,.xls,.pdf,application/pdf" hidden></div>
 <div class="bkinfo"><span id="bkNote"></span><button id="histBk">Back up now</button></div>
 <div class="msg" id="histMsg" role="status" aria-live="polite"></div>
@@ -538,8 +547,8 @@ function initHistory(){
     const hd=document.createElement("div");hd.className="hd";hd.textContent=(ukDate(h.date)||"No date")+", "+h.rows.length+(h.rows.length===1?" pallet":" pallets");
     const sb=document.createElement("div");sb.className="sb";
     let when="";try{when=new Date(h.saved).toLocaleString("en-GB",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}catch(e){}
-    const hc={BB:0,FMCG:0,FPP:0,Mixed:0};h.rows.forEach(z=>{if(hc[z.type]!==undefined)hc[z.type]++});
-    const tt=document.createElement("div");tt.className="sb";tt.textContent="BB "+hc.BB+", FMCG "+hc.FMCG+", FPP "+hc.FPP+", Mixed "+hc.Mixed+", FSDU "+h.rows.filter(z=>z.fsdu).length;
+    const ht=typeCounts(h.rows),hc=ht.c;
+    const tt=document.createElement("div");tt.className="sb";tt.textContent="BB "+hc.BB+", FMCG "+hc.FMCG+", FPP "+hc.FPP+", Mixed "+hc.Mixed+", FSDU "+ht.fsdu+(ht.refused?", refused "+ht.refused:"");
     sb.textContent=(h.recv?"Received by "+h.recv+". ":"")+"Saved "+when+".";
     const ts=[h.trailer?"Trailer "+h.trailer:"",h.sealIn?"Seal in "+h.sealIn:"",h.sealOut?"Seal out "+h.sealOut:""].filter(Boolean).join(", ");
     if(ts)sb.textContent+=" "+ts+".";
@@ -639,12 +648,15 @@ function initSettings(){
       $("bkMsg").textContent="Couldn’t restore that backup because this browser ran out of storage space, so nothing was changed.";return;
     }
     // No automatic reload: on phones the copy of the old data may still be waiting to be saved (iPhone asks first).
+    undoClear(); // an undo now would write the old data over the restored backup
     $("bkMsg").textContent="Backup restored. Make sure the copy of your previous data has saved, then reload the app to see the restored data.";
     $("bkDone").hidden=false;
   };
   $("bkReload").onclick=()=>location.reload();
   $("setForget").onclick=()=>{names=[];saveNames();drawNames();$("setForget").textContent="Names forgotten"};
   $("setDef").value=cfg.defType;$("setDef").onchange=()=>{cfg.defType=$("setDef").value;saveCfg();$("type").value=cfg.defType;syncType()};
+  $("setSite").value=cfg.site||"";$("setSite").onchange=()=>{cfg.site=$("setSite").value.replace(/\s+/g," ").trim().slice(0,40);$("setSite").value=cfg.site;saveCfg()};
+  $("setAwake").checked=cfg.awake;$("setAwake").onchange=()=>{cfg.awake=$("setAwake").checked;saveCfg();if(typeof syncAwake==="function")syncAwake()};
   $("setVib").checked=cfg.vibrate;$("setVib").onchange=()=>{cfg.vibrate=$("setVib").checked;saveCfg();if(cfg.vibrate)sfx("ok")};
   $("setConf").checked=cfg.confirmScan;$("setConf").onchange=()=>{cfg.confirmScan=$("setConf").checked;saveCfg()};
   $("setKeep").checked=cfg.keepType;$("setKeep").onchange=()=>{cfg.keepType=$("setKeep").checked;saveCfg()};
@@ -764,6 +776,21 @@ async function hello(){
   if(b){try{localStorage.setItem("lpnseenbuild",b)}catch(e){}}
 }
 hello();
+/* A delivery from an earlier day that has pallets but was never exported or emailed: say so when the app opens, so it
+   isn't forgotten at the end of a shift. "Not now" hides it for that delivery until it changes. */
+function unexpCheck(){
+  const box=$("unexp");if(!box)return;box.hidden=true;
+  if(!feat("exportReminder")||!rows.length||(exported&&exported.sig===logSig()))return;
+  const d=$("date").value;if(!d||d>=localToday())return;
+  let skip="";try{skip=localStorage.getItem("lpnunexp")||""}catch(e){}
+  if(skip===logSig())return;
+  $("unexpTxt").textContent="The delivery from "+ukDate(d)+" ("+rows.length+" pallet"+(rows.length===1?"":"s")+") hasn’t been exported or emailed yet.";
+  $("unexpGo").onclick=()=>{box.hidden=true;const b=$("expBtn");b.scrollIntoView({block:"center"});b.focus({preventScroll:true});if($("expMenu").hidden)b.click()};
+  $("unexpNo").onclick=()=>{box.hidden=true;try{localStorage.setItem("lpnunexp",logSig())}catch(e){};const m=document.querySelector("main");m.setAttribute("tabindex","-1");m.focus({preventScroll:true})};
+  const old=box.querySelector(".testnote");if(old)old.remove();
+  testNote("exportReminder",box.querySelector("p"),"afterend");
+  box.hidden=false;
+}
 if("serviceWorker" in navigator){
   const hadSW=!!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener("controllerchange",()=>{if(hadSW)$("updBar").hidden=false});
@@ -775,6 +802,7 @@ if("serviceWorker" in navigator){
 }
 setTimeout(()=>{loadExcel().catch(()=>{});loadJsPdf().catch(()=>{})},2500);
 load();render();$("type").value=cfg.defType;syncType();
+unexpCheck(); // after the saved log has loaded
 
 /* ---- date reminder, remembered names, offline notice ---- */
 let dateSkip="";
@@ -788,7 +816,7 @@ function checkDate(noReset){
   $("dateTxt").textContent="This log is dated "+ukDate(d)+", but today is "+ukDate(t)+".";
   bar.hidden=false;
 }
-$("dateFix").onclick=()=>{$("date").value=localToday();save();$("dateBar").hidden=true};
+$("dateFix").onclick=()=>{$("date").value=localToday();save();$("dateBar").hidden=true;unexpCheck()};
 $("dateKeep").onclick=()=>{dateSkip=$("date").value+"|"+localToday();$("dateBar").hidden=true};
 $("date").addEventListener("change",()=>{dateSkip="";checkDate(true)});
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)checkDate()});

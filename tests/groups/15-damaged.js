@@ -24,8 +24,11 @@ module.exports = async ({ browser, URL0 }) => {
     check("keyboard: Tab from the LPN box goes to the damage choices; Other takes typed text and focus comes back", s === "None" && s2.dmg === "Torn label" && s2.focus === "lpnedit" && /damaged: Torn label/.test(s2.label), { s, s2 });
     // Tab past the last choice: the change is kept and focus stays on that pallet.
     await q.focus('#body .lpnedit[data-i="0"]'); await q.keyboard.press("Enter"); await q.waitForTimeout(50);
-    for (let k = 0; k < 5; k++) await q.keyboard.press("Tab");
-    await q.waitForTimeout(100);
+    // One Tab per choice in the row (damage choices, then Refused when it is switched on), then one more past the last.
+    const nChoices = await q.evaluate(() => document.querySelectorAll(".dmgrow button").length);
+    for (let k = 0; k < nChoices + 1; k++) await q.keyboard.press("Tab");
+    // Wait for the editor to close and focus to come back (slower when the machine is busy), up to 2 seconds.
+    await q.waitForFunction(() => !document.querySelector(".dmgrow") && document.activeElement && document.activeElement.className === "lpnedit", null, { timeout: 2000 }).catch(() => {});
     s = await q.evaluate(() => ({ focus: document.activeElement.className, i: document.activeElement.dataset && document.activeElement.dataset.i, open: !!document.querySelector(".dmgrow"), other: null }));
     check("Tab past the last damage choice closes them and keeps focus on that pallet", s.focus === "lpnedit" && s.i === "0" && !s.open, s);
     // The choices open in view, not under the phone entry bar, even for the last pallet.

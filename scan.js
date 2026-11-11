@@ -1,8 +1,23 @@
 /* ---- barcode scanning ---- */
 let wake=null;
-async function keepAwake(on){try{if(on){if(navigator.wakeLock&&!wake){wake=await navigator.wakeLock.request("screen");wake.addEventListener("release",()=>{wake=null})}}else if(wake){await wake.release();wake=null}}catch(e){wake=null}}
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&scanning)keepAwake(true)});
+/* One request at a time: a second one made while the first is still pending would leave a lock nobody releases. After
+   a request finishes, the wanted state is checked again in case it changed meanwhile. */
+let wakeAsk=null;
+async function keepAwake(on){
+  if(wakeAsk){await wakeAsk.catch(()=>{});if(typeof syncAwake==="function")return syncAwake();}
+  try{
+    if(on){if(navigator.wakeLock&&!wake){wakeAsk=navigator.wakeLock.request("screen");const w=await wakeAsk;wakeAsk=null;wake=w;w.addEventListener("release",()=>{if(wake===w)wake=null})}}
+    else if(wake){const w=wake;wake=null;await w.release()}
+  }catch(e){wakeAsk=null}
+}
+/* The screen stays on during Live scan, and while the app is open when Keep the screen on is ticked in Settings (a
+   handheld scanner's scan is lost while the screen is off). The browser lets go when the app is hidden, so it is asked
+   again when the app comes back, and on the first tap in case asking at start was refused. */
+function syncAwake(){keepAwake(document.visibilityState==="visible"&&(scanning||cfg.awake))}
+document.addEventListener("visibilitychange",syncAwake);
+document.addEventListener("pointerdown",()=>{if(!wake&&cfg.awake)syncAwake()},{passive:true});
 let stream=null,timer=null,zxReader=null,lastCode="",lastAt=0,scanning=false;
+syncAwake();
 function onCode(raw){
   const v=String(raw||"").trim();
   if(!v)return;
@@ -116,7 +131,7 @@ async function setZoom(v){
 $("zoomIn").onclick=()=>{const n=ZOOM_STEPS.find(x=>x>zoomNow+0.01);setZoom(n===undefined?zoomMax:n)};
 $("zoomOut").onclick=()=>{const n=ZOOM_STEPS.slice().reverse().find(x=>x<zoomNow-0.01);setZoom(n===undefined?zoomMin:n)};
 function stopScan(keepMsg){
-  scanning=false;keepAwake(false);
+  scanning=false;syncAwake();
   torchSetup(null);zoomSetup(null);
   if(timer){clearInterval(timer);timer=null}
   if(zxReader){try{zxReader.reset()}catch(e){}zxReader=null}
@@ -165,7 +180,7 @@ $("expect").oninput=()=>{save();summary()};
 $("clear").onclick=()=>{
   if(!rows.length)return;
   const prev=rows;rows=[];save();render();$("msg").textContent="";hideCheck();
-  showUndo("Cleared "+prev.length+" pallets",()=>{rows=prev;save();render()});
+  showUndo("Cleared "+prev.length+" pallet"+(prev.length===1?"":"s"),()=>{rows=prev;save();render()},true);
 };
 
 $("scanBtn").onclick=()=>{const b=$("btnrow"),o=!b.classList.contains("open");b.classList.toggle("open",o);$("scanBtn").setAttribute("aria-expanded",o);};

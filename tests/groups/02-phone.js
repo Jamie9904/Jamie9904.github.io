@@ -227,4 +227,114 @@ module.exports = async ({ browser, URL0 }) => {
   check("an exported log dated weeks ago is imported and kept, and the Guide says saved deliveries are kept by when they were saved", /^Imported 1 pallet\. Tap Open to use it\.$/.test(s.msg) && s.kept && !s.btn && s.guide, s);
   check("no script errors", p.errors.length === 0, p.errors);
   await p.ctx.close();
+
+  // Keep the screen on: asked for when the app opens (on by default), let go when hidden or switched off; Live scan
+  // still keeps it on while scanning with the setting off.
+  console.log("Keep the screen on, and Undo for the last 10 changes");
+  const WAKE = () => { window.__wake = []; Object.defineProperty(navigator, "wakeLock", { configurable: true, value: { request: async t => { const l = new EventTarget(); l.released = false; l.release = async () => { if (!l.released) { l.released = true; window.__wake.push("release"); l.dispatchEvent(new Event("release")); } }; window.__wake.push("request:" + t); return l; } } }); };
+  p = await page(browser, 375, { init: WAKE });
+  await p.goto(URL0); await p.waitForTimeout(300);
+  s = { start: await p.evaluate(() => window.__wake.join()) };
+  s.hidden = await p.evaluate(async () => { Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" }); document.dispatchEvent(new Event("visibilitychange")); await new Promise(r => setTimeout(r, 50)); return window.__wake.join(); });
+  s.back = await p.evaluate(async () => { Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" }); document.dispatchEvent(new Event("visibilitychange")); await new Promise(r => setTimeout(r, 50)); return window.__wake.join(); });
+  s.off = await p.evaluate(async () => { openHelp("settings", "Settings"); const c = document.getElementById("setAwake"); const was = c.checked; c.checked = false; c.dispatchEvent(new Event("change")); await new Promise(r => setTimeout(r, 50)); closeHelp(); return { was, wake: window.__wake.join(), saved: JSON.parse(localStorage.getItem("lpncfg")).awake }; });
+  s.twice = await p.evaluate(async () => { window.__wake.length = 0; cfg.awake = true; syncAwake(); syncAwake(); syncAwake(); await new Promise(r => setTimeout(r, 60)); const asked = window.__wake.join(); cfg.awake = false; syncAwake(); await new Promise(r => setTimeout(r, 60)); return asked + "|" + window.__wake.join(); });
+  s.scan = await p.evaluate(async () => { window.__wake.length = 0; scanning = true; syncAwake(); await new Promise(r => setTimeout(r, 30)); scanning = false; syncAwake(); await new Promise(r => setTimeout(r, 30)); return window.__wake.join(); });
+  check("the screen is kept on while the app is open, let go when it's hidden, asked again when it's back, and Settings can switch it off", s.start === "request:screen" && s.hidden === "request:screen,release" && s.back === "request:screen,release,request:screen" && s.off.was === true && /release$/.test(s.off.wake) && s.off.saved === false && s.scan === "request:screen,release" && s.twice === "request:screen|request:screen,release", s);
+  check("no script errors", p.errors.length === 0, p.errors);
+  await p.ctx.close();
+
+  // Undo for the last 10 changes, newest first, from the bar, the Undo button by Clear all, or Ctrl+Z.
+  p = await page(browser, 1300);
+  await p.goto(URL0); await p.waitForTimeout(300);
+  s = await p.evaluate(async () => {
+    const wait = () => new Promise(r => setTimeout(r, 30));
+    rows = ["VLT000000001", "VLT000000002", "VLT000000003", "VLT000000004"].map(lpn => ({ lpn, type: "BB", fsdu: false })); save(); render();
+    const del = i => document.querySelectorAll("#body button.d")[i].click();
+    del(0); await wait(); del(1); await wait(); // removes 0001, then 0003
+    const bar1 = document.getElementById("undoTxt").textContent + document.getElementById("undoN").textContent, more1 = document.getElementById("undoMore").textContent;
+    document.getElementById("undoBtn").click(); await wait();
+    const msg1 = document.getElementById("msg").textContent, lbl1 = document.getElementById("undoMore").getAttribute("aria-label");
+    const after1 = rows.map(r => r.lpn.slice(-1)).join(""), bar2 = document.getElementById("undoTxt").textContent + "|" + document.getElementById("undoN").textContent;
+    document.getElementById("undoBar").hidden = true; document.getElementById("undoMore").click(); await wait();
+    const after2 = rows.map(r => r.lpn.slice(-1)).join(""), hiddenAfter = document.getElementById("undoMore").hidden && document.getElementById("undoBar").hidden;
+    // Ctrl+Z: undoes outside a box, not while typing in one.
+    del(3); await wait();
+    document.getElementById("lpn").focus(); document.getElementById("lpn").dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true, bubbles: true })); await wait();
+    const inBox = rows.length; document.getElementById("lpn").blur();
+    document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true, bubbles: true })); await wait();
+    const ctrlZ = rows.length;
+    // Only the last 10 are kept.
+    for (let i = 0; i < 12; i++) showUndo("change " + i, () => {});
+    const kept = undoStack.length, top = undoStack[undoStack.length - 1].text, bottom = undoStack[0].text; undoClear();
+    return { bar1, more1, msg1, lbl1, after1, bar2, after2, hiddenAfter, inBox, ctrlZ, kept, top, bottom };
+  });
+  check("each change can be undone in turn, newest first, from the bar or the Undo button by Clear all; the bar says how many earlier ones there are", s.bar1 === "Removed VLT000000003 (1 earlier)" && s.more1 === "Undo" && /^Undone: Removed VLT000000003\. 1 more can be undone\.$/.test(s.msg1) && s.lbl1 === "Undo: Removed VLT000000001" && s.after1 === "234" && s.bar2 === "Removed VLT000000001|" && s.after2 === "1234" && s.hiddenAfter, s);
+  check("Ctrl+Z undoes the newest change, but not while typing in a box, and only the last 10 changes are kept", s.inBox === 3 && s.ctrlZ === 4 && s.kept === 10 && s.top === "change 11" && s.bottom === "change 2", s);
+  // Clear all then a pallet logged since: the clear can't be undone (it would lose the new pallet), nor anything older.
+  s = await p.evaluate(async () => {
+    const wait = () => new Promise(r => setTimeout(r, 30));
+    rows = ["VLT000000001", "VLT000000002"].map(lpn => ({ lpn, type: "BB", fsdu: false })); save(); render();
+    document.querySelectorAll("#body button.d")[0].click(); await wait();
+    document.getElementById("clear").click(); await wait();
+    addValue("VLT000000009", { type: "FMCG", fsdu: false }); await wait();
+    undoNow(); await wait();
+    const refused = { rows: rows.map(r => r.lpn), msg: document.getElementById("msg").textContent, left: undoStack.length };
+    rows = [{ lpn: "VLT000000005", type: "BB", fsdu: false }]; save(); render();
+    document.getElementById("clear").click(); await wait(); undoNow(); await wait();
+    return { refused, clearBack: rows.map(r => r.lpn) };
+  });
+  check("a Clear all can't be undone once a pallet has been logged since, and nor can older changes; straight after, it can", JSON.stringify(s.refused.rows) === '["VLT000000009"]' && /“Cleared 1 pallet” can’t be undone now, because the log has changed since, and nor can the 1 earlier change\./.test(s.refused.msg) && s.refused.left === 0 && JSON.stringify(s.clearBack) === '["VLT000000005"]', s);
+  // Opening a saved delivery forgets older undos (they belong to the other delivery).
+  s = await p.evaluate(async () => {
+    rows = [{ lpn: "VLT000000001", type: "BB", fsdu: false }, { lpn: "VLT000000002", type: "BB", fsdu: false }]; save(); render();
+    document.querySelectorAll("#body button.d")[0].click(); await new Promise(r => setTimeout(r, 30));
+    pushHist({ saved: new Date().toISOString(), date: localToday(), rows: [{ lpn: "QUB000000001", type: "FPP", fsdu: false }] });
+    openHist(hist[0].id); return { left: undoStack.length, more: document.getElementById("undoMore").hidden, rows: rows.map(r => r.lpn) };
+  });
+  check("opening a saved delivery forgets the undos from the log before it", s.left === 0 && s.more && JSON.stringify(s.rows) === '["QUB000000001"]', s);
+  // Keyboard: focus moves to Export when the last undo hides the buttons; Ctrl+Z does nothing while Settings is open.
+  s = await p.evaluate(async () => {
+    const wait = () => new Promise(r => setTimeout(r, 30));
+    rows = [{ lpn: "VLT000000001", type: "BB", fsdu: false }, { lpn: "VLT000000002", type: "BB", fsdu: false }]; save(); render();
+    document.querySelectorAll("#body button.d")[0].click(); await wait();
+    document.getElementById("undoMore").focus(); document.getElementById("undoMore").click(); await wait();
+    const focus = document.activeElement.id, msg = document.getElementById("msg").textContent;
+    document.querySelectorAll("#body button.d")[0].click(); await wait();
+    openHelp("settings", "Settings"); await wait();
+    document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true, bubbles: true })); await wait();
+    const inSettings = rows.length; closeHelp(); undoClear();
+    return { focus, msg, inSettings };
+  });
+  check("after the last undo, keyboard focus goes to Export and the status says what was undone; Ctrl+Z does nothing while Settings is open", s.focus === "expBtn" && /^Undone: Removed VLT000000001\.$/.test(s.msg) && s.inSettings === 1, s);
+  // Start new delivery: undone straight after (log, details and Saved deliveries back as they were), refused once a
+  // pallet has been logged. Clear trailer: refused once a new trailer number has been typed. Nothing during an export
+  // of a saved delivery.
+  s = await p.evaluate(async () => {
+    const wait = () => new Promise(r => setTimeout(r, 30)), sig = () => rows.map(r => r.lpn).join() + "|" + document.getElementById("trailer").value;
+    undoClear(); rows = [{ lpn: "VLT000000001", type: "BB", fsdu: false }]; setDel({ date: localToday(), recv: "Jamie", trailer: "TR1" }); save(); render(); hist = []; saveHist();
+    newDelivery(); newDelivery(); await wait();
+    const started = { rows: rows.length, hist: hist.length }; undoNow(); await wait();
+    const back = { sig: sig(), hist: hist.length };
+    newDelivery(); newDelivery(); await wait(); addValue("VLT000000002", { type: "BB", fsdu: false }); await wait(); undoNow(); await wait();
+    const refused = { sig: sig(), hist: hist.length, msg: document.getElementById("msg").textContent };
+    undoClear(); document.getElementById("trailer").value = "TR2"; save(); syncClear(); document.getElementById("delClear").click(); await wait();
+    document.getElementById("trailer").value = "TR3"; save(); undoNow(); await wait();
+    const trailer = { value: document.getElementById("trailer").value, msg: document.getElementById("msg").textContent };
+    undoClear(); document.querySelectorAll("#body button.d")[0].click(); await wait();
+    window.__histExporting = true; undoNow(); const during = rows.length; window.__histExporting = false; undoClear();
+    return { started, back, refused, trailer, during };
+  });
+  check("Start new delivery can be undone straight after, but not once a pallet is logged; Clear trailer can't be undone once a new trailer is typed; nothing is undone during an export", s.started.rows === 0 && s.started.hist === 1 && s.back.sig === "VLT000000001|TR1" && s.back.hist === 0 && s.refused.sig === "VLT000000002|" && s.refused.hist === 1 && /can’t be undone now/.test(s.refused.msg) && s.trailer.value === "TR3" && /Cleared the trailer, seals and notes” can’t be undone now/.test(s.trailer.msg) && s.during === 0, s);
+  check("no script errors", p.errors.length === 0, p.errors);
+  await p.ctx.close();
+  // On a phone Clear all stays at the bottom, below Undo and Export, so it isn't tapped by mistake.
+  p = await page(browser, 360);
+  await p.setViewportSize({ width: 360, height: 740 });
+  await p.goto(URL0); await p.waitForTimeout(300);
+  s = await p.evaluate(async () => { rows = [{ lpn: "VLT000000001", type: "BB", fsdu: false }, { lpn: "VLT000000002", type: "BB", fsdu: false }]; save(); render();
+    document.querySelectorAll("#body button.d")[0].click(); await new Promise(r => setTimeout(r, 30));
+    const y = id => Math.round(document.getElementById(id).getBoundingClientRect().top); return { undo: y("undoMore"), exp: y("expBtn"), clear: y("clear") }; });
+  check("on a phone Clear all is below Undo and Export", s.undo < s.exp && s.exp < s.clear, s);
+  await p.ctx.close();
 };

@@ -25,11 +25,13 @@ function xlLpnWidth(list,base){let m=0;list.forEach(s=>{m=Math.max(m,String(s||"
 /* Lines an LPN needs in a Courier New column (about 0.6 characters a unit). */
 const xlLpnLines=(v,w)=>xlLines(String(v||"").replace(/\s+/g,""),w,0.6);
 function xlTitle(ws,off,lastCol,title,sub){
+  if(siteName())title+=" – "+siteName();
   const t=ws.getRow(off+1),s=ws.getRow(off+2);
   t.height=38;s.height=22;ws.getRow(off+3).height=10;
   ws.mergeCells(off+1,1,off+1,lastCol);ws.mergeCells(off+2,1,off+2,lastCol);
   const a=t.getCell(1),b=s.getCell(1);
-  a.value=title;a.font={name:"Arial",size:22,bold:true};a.alignment={vertical:"middle",horizontal:"left"};
+  // A long title (a site name added) gets a smaller font, so it isn't cut off at the edge of the page.
+  a.value=title;a.font={name:"Arial",size:title.length>34?Math.max(13,Math.floor(22*34/title.length)):22,bold:true};a.alignment={vertical:"middle",horizontal:"left"};
   b.value=sub;b.font={name:"Arial",size:12,color:{argb:"FF404040"}};b.alignment={vertical:"middle",horizontal:"left"};
   return off+4;
 }
@@ -78,10 +80,10 @@ function saveBlob(data,type,name){
 async function fallbackXls(d){
   const esc=v=>String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   const who=($("recv").value||"").trim();
-  const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
-  const side=[["Pallet Type","Count","h"],["Brown Box",c.BB],["FMCG",c.FMCG],["FPP",c.FPP],["Mixed",c.Mixed],["Total",rows.length,"b"],["FSDU (not in total)",rows.filter(r=>r.fsdu).length],null,["Delivery Details","","h2"],["Date",ukDate(d),"l"],["Received by",who,"l"]].concat(extras().map(e=>[e[0],e[1],"l"]));
+  const tc=typeCounts(),c=tc.c;
+  const side=[["Pallet Type","Count","h"],["Brown Box",c.BB],["FMCG",c.FMCG],["FPP",c.FPP],["Mixed",c.Mixed],["Total",tc.total,"b"],["FSDU (not in total)",tc.fsdu]].concat(tc.refused?[["Refused (not in total)",tc.refused]]:[]).concat([null,["Delivery Details","","h2"],["Date",ukDate(d),"l"],["Received by",who,"l"]]).concat(extras().map(e=>[e[0],e[1],"l"]));
   const n=Math.max(rows.length,side.length-1);
-  let h='<html><head><meta charset="utf-8"><style>td,th{font-family:Arial;font-size:14pt;border:1px solid #000;padding:4px;text-align:left}th{font-size:16pt;background:#e6e9ed}td.c{text-align:center}td.m{font-family:\'Courier New\'}td.t{mso-number-format:"\\@"}</style></head><body><h2 style="font-family:Arial">Goods-in pallet log</h2><table>';
+  let h='<html><head><meta charset="utf-8"><style>td,th{font-family:Arial;font-size:14pt;border:1px solid #000;padding:4px;text-align:left}th{font-size:16pt;background:#e6e9ed}td.c{text-align:center}td.m{font-family:\'Courier New\'}td.t{mso-number-format:"\\@"}</style></head><body><h2 style="font-family:Arial">Goods-in pallet log'+(siteName()?" – "+esc(siteName()):"")+'</h2><table>';
   for(let i=-1;i<n;i++){
     const head=i<0,t=head?"th":"td";
     const l=head?["#","LPN","Pallet Type","FSDU"]:rows[i]?[i+1,rows[i].lpn,rows[i].type,rows[i].fsdu?"Yes":"No"]:null;
@@ -134,7 +136,12 @@ async function loadJsPdf(){
 const PDF_HEAD=[230,233,237],PDF_BASE={theme:"grid",styles:{font:"helvetica",fontSize:11,cellPadding:2.2,textColor:0,lineColor:0,lineWidth:0.25,valign:"middle"},headStyles:{fillColor:PDF_HEAD,textColor:0,fontStyle:"bold",lineColor:0,lineWidth:0.25},alternateRowStyles:{fillColor:[242,242,242]}};
 const PDF_PLAIN={alternateRowStyles:{fillColor:[255,255,255]}};
 function pdfTitle(doc,x,y,title,sub){
-  doc.setFont("helvetica","bold");doc.setFontSize(18);doc.setTextColor(0);doc.text(title,x,y+6);
+  if(siteName())title+=" – "+siteName();
+  // A long title (a site name added) gets a smaller font, so it fits between the margins.
+  doc.setFont("helvetica","bold");let fs=18;doc.setFontSize(fs);
+  const room=doc.internal.pageSize.getWidth()-x-10;
+  while(fs>11&&doc.getTextWidth(title)>room){fs--;doc.setFontSize(fs)}
+  doc.setTextColor(0);doc.text(title,x,y+6);
   doc.setFont("helvetica","normal");doc.setFontSize(10);doc.setTextColor(60);doc.text(sub,x,y+12);doc.setTextColor(0);
   return y+17;
 }
@@ -180,9 +187,9 @@ const pdfCell=(t,o)=>({content:String(t),styles:Object.assign({},o||{})});
 async function buildLogPdf(d){
   await loadJsPdf();await appVersion();
   const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:"portrait"});
-  doc.setProperties({title:"LPN log "+d,subject:"LPN log",keywords:"LPNLOG2:"+encodeURIComponent(JSON.stringify({app:appVer||appVerTry,d:d,r:($("recv").value||"").trim(),n:($("notes").value||"").trim(),e:$("expect").value||"",t:($("trailer").value||"").trim(),si:($("sealIn").value||"").trim(),so:($("sealOut").value||"").trim(),rows:rows.map(r=>{const a=[r.lpn,r.type,r.fsdu?1:0];if(r.dmg||r.desc)a.push(r.dmg||"");if(r.desc)a.push(r.desc);return a})}))});
+  doc.setProperties({title:"LPN log "+d,subject:"LPN log",keywords:"LPNLOG2:"+encodeURIComponent(JSON.stringify({app:appVer||appVerTry,d:d,r:($("recv").value||"").trim(),n:($("notes").value||"").trim(),e:$("expect").value||"",t:($("trailer").value||"").trim(),si:($("sealIn").value||"").trim(),so:($("sealOut").value||"").trim(),rows:rows.map(r=>{const a=[r.lpn,r.type,r.fsdu?1:0];if(r.dmg||r.desc||r.ref)a.push(r.dmg||"");if(r.desc||r.ref)a.push(r.desc||"");if(r.ref)a.push(1);return a})}))});
   const who=($("recv").value||"").trim();
-  const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
+  const tc=typeCounts(),c=tc.c;
   const L=10,LW=100,RX=L+LW+8,RW=190-LW-8;
   const yb=await pdfBanner(doc,L,LW);
   const exp=$("expect").value;
@@ -192,8 +199,8 @@ async function buildLogPdf(d){
     startY:y0,margin:{left:RX,right:10,top:12,bottom:16},tableWidth:RW,
     head:[["Pallet Type","Count"]],
     body:[["Brown Box",c.BB],["FMCG",c.FMCG],["FPP",c.FPP],["Mixed",c.Mixed],
-      [pdfCell("Total",bold),pdfCell(rows.length,bold)],
-      ["FSDU (not in total)",rows.filter(r=>r.fsdu).length]],
+      [pdfCell("Total",bold),pdfCell(tc.total,bold)],
+      ["FSDU (not in total)",tc.fsdu]].concat(tc.refused?[["Refused (not in total)",tc.refused]]:[]),
     columnStyles:{1:{halign:"center",cellWidth:22}}
   }));
   doc.autoTable(Object.assign({},PDF_BASE,PDF_PLAIN,{
@@ -343,12 +350,13 @@ $("dl").onclick=async()=>{
     const lpnW=xlLpnWidth(rows.map(r=>r.lpn),26);
     ws.columns=[{width:7},{width:lpnW},{width:22},{width:12},{width:3},{width:26},{width:20}];
     const who=($("recv").value||"").trim();
-    const c={BB:0,FMCG:0,FPP:0,Mixed:0};rows.forEach(r=>c[r.type]++);
+    const tc=typeCounts(),c=tc.c;
     const side=[
       {v:["Pallet Type","Count"],h:1},
       {v:["Brown Box",c.BB]},{v:["FMCG",c.FMCG]},{v:["FPP",c.FPP]},{v:["Mixed",c.Mixed]},
-      {v:["Total",rows.length],b:1},
-      {v:["FSDU (not in total)",rows.filter(r=>r.fsdu).length]},
+      {v:["Total",tc.total],b:1},
+      {v:["FSDU (not in total)",tc.fsdu]},
+      ...(tc.refused?[{v:["Refused (not in total)",tc.refused]}]:[]),
       null,
       {v:["Delivery Details",""],h:1,merge:1},
       {v:["Date",ukDate(d)],l:1},
@@ -359,7 +367,8 @@ $("dl").onclick=async()=>{
     try{off=await xlLogo(wb,ws,Math.round((7+lpnW+22+12)*7.3))}catch(e){off=0}
     const exp=$("expect").value;
     const H=xlTitle(ws,off,7,"Goods-in pallet log","Date: "+ukDate(d)+(who?"     Received by: "+who:"")+(exp?"     Expected pallets: "+exp:"")+(($("trailer").value||"").trim()?"     Trailer: "+$("trailer").value.trim():""));
-    const lastL=H+rows.length,s1=H+6,s2a=H+8,s2b=H+side.length-1;
+    // The Pallet Type box has a Refused row when there are refused pallets, which moves the Delivery Details box down.
+    const rf=tc.refused?1:0,lastL=H+rows.length,s1=H+6+rf,s2a=H+8+rf,s2b=H+side.length-1;
     for(let i=-1;i<n;i++){
       const r=ws.getRow(H+i+1);
       const head=i<0;
@@ -375,7 +384,7 @@ $("dl").onclick=async()=>{
       };
       if(left)left.forEach((v,k)=>put(k+1,v,{bold:head,big:head,mono:!head&&k===1,center:head?k!==1:k!==1,fill:head?XL_HEAD:(i%2?XL_ZEBRA:null),box:xlBox(1,4,H,lastL,k+1,r.number)}));
       if(right){
-        const inB1=i+1<=6,bx=c=>inB1?xlBox(6,7,H,s1,c,r.number):xlBox(6,7,s2a,s2b,c,r.number);
+        const inB1=i+1<=6+rf,bx=c=>inB1?xlBox(6,7,H,s1,c,r.number):xlBox(6,7,s2a,s2b,c,r.number);
         const fl=right.h||right.b||right.l;
         put(6,right.v[0],{bold:fl,big:right.h,fill:fl?XL_HEAD:null,box:bx(6)});
         put(7,right.v[1],{bold:right.h||right.b,big:right.h,center:typeof right.v[1]==="number",fill:(right.h||right.b)?XL_HEAD:null,box:bx(7)});
