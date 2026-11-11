@@ -857,3 +857,66 @@ After build 60 an imported log is saved with today's `saved` time, so `pruneHist
 - **Removed rather than kept:** the import handler in `initHistory()` no longer checks whether the new entry survived `pushHist()`; it always says "Imported n pallet(s). Tap Open to use it.", with "pallet" for one. Code that can no longer run was taken out rather than left unchecked.
 - **Wording follows the rule:** the Guide (section 7) and the Saved deliveries help now say deliveries are kept by when they were saved or imported (the code still uses the later of that day and the delivery date), so a delivery dated weeks ago showing in the list is expected.
 - **Trade-off:** an imported delivery from long ago now uses one of the 50 places in Saved deliveries until the end of next week.
+
+## Keep the screen on while the app is open (build 62)
+
+A handheld or Bluetooth scanner types into the LPN box like a keyboard. When the phone's screen goes off, the scan has nowhere to go and is lost. Build 62 asks the browser to keep the screen on while the app is open and on screen (`syncAwake()` in `scan.js`, **Settings → Keep the screen on while the app is open**).
+
+- **On by default:** the people it helps are the ones using a scanner, who wouldn't know to look for a setting until scans had already been lost. Turning it off is one tick box.
+- **Trade-off, written in Settings:** the phone won't lock by itself while the app is open, so the note says to lock it before putting it in a pocket, and that it uses a little more battery. The browser lets go of the lock whenever the app is hidden, so it never keeps the screen on behind another app.
+- **Asked again when needed:** it is asked again when the app comes back on screen, and on the first tap, in case asking at start was refused (as the comment on `syncAwake()` says).
+- **One request at a time:** a second request made while the first was still pending could leave a lock nothing would release; the review fixes (`1b02ebe`) made a call that finds one pending wait for it and then check again what is wanted.
+- **Live scan unchanged:** it still keeps the screen on while scanning, whatever the setting.
+- **No site switch:** it is a per-phone choice and changes nothing anyone else sees.
+
+## Undo for the last 10 changes (build 62)
+
+Before build 62 the Undo bar held one change: a second change replaced it, and after 20 seconds it was gone. Build 62 keeps the last 10 (`undoStack` in `core.js`), with an **Undo** button next to Export and Ctrl+Z (Cmd+Z).
+
+- **Only in memory:** the list isn't saved, so after a reload it can never act on a log it no longer matches. Past 10 the oldest drops off.
+- **Whole-log changes can go stale:** Clear all, Start new delivery and Clear trailer put back a copy of what was there. Undoing one after a pallet has been logged or a delivery box changed would throw that work away without warning, so the app compares the log and the delivery details with how they were straight after the change and refuses if they differ. Everything older is forgotten too, because it belonged to the log as it was before. The message names what can't be undone and how many earlier changes go with it. Single-pallet changes (a removal, an edit) don't put back the whole log, so they are always run.
+- **Forgotten on purpose:** opening a saved delivery or restoring a backup replaces the whole log without an undo of its own; older undos would then act on the wrong delivery, or (after a restore) write the old log over the restored data before the reload.
+- **Where the button sits:** next to Export, not next to Clear all, so on phones Clear all stays at the bottom, away from Undo and Export (the first version put it by Clear all; `1b02ebe` moved it).
+- **Ctrl+Z exclusions:** in a text box the browser's own undo of typing is left alone; while a panel or dialog is open the change wouldn't be seen, so nothing happens; and nothing is undone while a saved delivery is being exported, because its pallets stand in for the log for a moment.
+- **Saying what happened:** the status line says "Undone: …" and how many more can be undone, so an undo from the button or keyboard (with no bar showing) is never silent. When the last undo hides the buttons that had focus, focus goes to Export rather than being lost.
+- **Not covered:** Saved deliveries' own "Deleted. Undo" stays separate.
+
+## Refused pallets stay on the log (build 62)
+
+A pallet that comes off the trailer and is sent back with the driver used to be either left on the log (and counted as received) or removed (and then missing against the manifest and the expected count). Build 62 marks it instead (`ref: true` on the row, **Refused (sent back)** in the row editor).
+
+- **Kept, marked, not counted:** it stays in the table and on every export, so there is a record of what was sent back, but the totals of pallets received leave it out and count it on its own ("Refused (not in total)", like FSDUs). One function, `typeCounts()`, does this for the screen, every export, the Manifest check's log copy and Saved deliveries, so the counts can't disagree.
+- **Still counts as arrived:** the expected-pallets progress, the entry-bar count and the Manifest check count every pallet, refused or not, because it did come off the trailer; a refused pallet on the manifest is Matched, not Missing. The Guide says so.
+- **In Delivery Details, not a new column:** the same reasoning as damage notes: the exports are mainly printed on A4, and a column for a rare mark would narrow the LPN column on every page. "Refused pallet | <LPN>: sent back with the driver" rows come before the damage rows.
+- **Read back exactly:** imports read the Delivery Details rows, and the PDF's hidden data gets a sixth item (`1`) on refused rows only, so PDFs without refused pallets are unchanged.
+- **How it looks:** the review fixes (`03ac99c`) replaced a line through the LPN with a bar at the side (a struck-through LPN is hard to read and check), stopped the tag breaking mid-word, and gave the button plain wording ("Refused (sent back)" / "Not refused") instead of a pressed state.
+- **Switch:** `refused` in `config.js`; switching it off only removes the button, and pallets already marked keep their mark and stay out of the totals, so a switched-off feature never changes counts already recorded.
+- **Data shape:** rows can now carry `ref`, and the PDF hidden data a sixth item. `tests/fixtures/old/` has no build-62 set yet; one should be added after the release with the `lpn-old-data-fixtures` skill, so later builds are checked against logs with refused pallets.
+
+## Reminder about a delivery not exported (build 62)
+
+The "Exported at" note and the reminder on Start new delivery only show while someone is working on that log. Build 62 also shows a card when the app opens with a log from an earlier day that has pallets and hasn't been exported since its last change (`unexpCheck()`; its code comment: "so it isn't forgotten at the end of a shift").
+
+- **Only an earlier day:** a delivery dated today is probably still being logged, so a card would be noise.
+- **Not now is remembered by the log's contents:** it stores the log's signature, so the card stays away for that log until a pallet changes, and comes back if it does. Only one log is remembered.
+- **Checked again when things change:** after an export, Use today, Start new delivery and opening a saved delivery, so it never stays up after the delivery is exported, and appears for an old delivery that has just been opened.
+- **Export now opens the Export menu**, so the person picks Excel, Email PDF or Print as usual.
+- **Switch:** `exportReminder`.
+
+## Site or store name on exports (build 62)
+
+Logs from different sites look the same once printed or emailed. **Settings → Site or store name** (up to 40 characters) is added after the title of every Excel and PDF export.
+
+- **Title, not file name:** file names already carry the date and trailer and are cut to fit; the title is what is read on paper.
+- **Shrinks to fit:** a long name would run off the page, so the Excel title font gets smaller past 34 characters (not below 13pt), and the PDF title steps down until it fits between the margins (not below 11pt).
+- **Per phone:** it is a setting on each phone (and in its backups), not in `config.js`.
+
+## Warning colour readable on any background (build 62)
+
+Refused tags, the Refused count, the reminder card and testing notes use the warning colour. On some custom backgrounds it fell below 4.5:1, so `applyTheme()` now moves it towards the text colour until it reaches 4.5:1 against both the background and the cards, the same way as the accent text colour since build 41. A warning colour that already reaches 4.5:1 is left as it is. `22-refused-reminder-site.js` checks five backgrounds, including three mid greys.
+
+## Workflows pinned to ubuntu-24.04 (after build 62, commit `8b1f694`)
+
+`test.yml`, `health.yml` and `feedback-worker.yml` used `runs-on: ubuntu-latest`. On 11 November 2026 installing the test browser with `playwright install --with-deps` failed on GitHub's machines. The workflows now name `ubuntu-24.04`; the comment in each file gives the reason recorded at the time, that ubuntu-latest had moved to Ubuntu 26.04, where the install fails.
+
+- **Trade-off:** the pin doesn't follow GitHub's newer images by itself. When GitHub retires 24.04, or once the browser install is known to work on the newer image, the pin should be changed; nothing else in the workflows depends on 24.04.

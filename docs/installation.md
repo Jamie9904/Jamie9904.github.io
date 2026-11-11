@@ -204,17 +204,20 @@ window.LPN_CONFIG = {
     scanByPhoto: true,     // Scan by photo
     torch: true,           // Torch button in Live scan (only on phones that allow it)
     damage: true,          // marking a pallet as damaged
+    refused: true,         // marking a pallet as refused (sent back with the driver)
     noLpn: true,           // No LPN button, for pallets that arrive without an LPN
     fppDesc: true,         // description box for FPP pallets, to say what is on them (e.g. kitchen roll)
     shareMissing: true,    // Share missing list in the Manifest check results
     findLpn: true,         // Find an LPN in Saved deliveries
     shareApp: true,        // Share this app (QR code) in Settings
     welcome: true,         // the welcome card on someone's first visit
-    whatsNew: true         // the card after an update saying what's new
+    whatsNew: true,        // the card after an update saying what's new
+    exportReminder: true   // reminder when a delivery from an earlier day was never exported
   },
   testing: {
     report: false, manifestCheck: true, manifestPhotos: false, liveScan: false, scanByPhoto: false,
-    torch: false, damage: false, noLpn: false, fppDesc: false, shareMissing: false, findLpn: false, shareApp: false
+    torch: false, damage: false, refused: false, noLpn: false, fppDesc: false, shareMissing: false,
+    findLpn: false, shareApp: false, exportReminder: false
   }
 };
 ```
@@ -242,12 +245,14 @@ The preferred way, by the user's decision, is to ask Claude to change the settin
 | `liveScan` / `scanByPhoto` | That scan button is hidden; with both off (and `noLpn` off too, since build 55) the **Scan** button is hidden too. |
 | `torch` | No **Torch** button in Live scan. |
 | `damage` | No damage choices when an LPN is tapped (it can still be edited). Damage already noted on pallets stays and still goes on the exports. |
+| `refused` (build 62) | No **Refused (sent back)** button when an LPN is tapped, and its Guide paragraph, the "and refused pallets" words in the Guide's totals sentence, the Saved deliveries help sentence and the changelog bullet are left out. Pallets already marked refused keep the mark, stay out of the totals and still go on the exports as refused. Marked as in testing, the note "In testing: Marking pallets as refused may not always work yet…" shows under the button. |
 | `noLpn` (build 55) | No **No LPN** button, and its Guide lines and changelog bullet are left out. Pallets already logged as "No LPN n" stay, keep their descriptions and still go on the exports. Marked as in testing, the note "In testing: Logging pallets with no LPN may not always work yet…" shows in a No LPN pallet's description row. |
 | `fppDesc` (build 56) | Logging an FPP pallet doesn't open its Description box, and tapping an FPP pallet doesn't offer one (a pallet that already has a description still shows it, and descriptions still go on the exports). The Guide's **FPP pallet:** paragraph and its changelog bullet are left out. Marked as in testing, the note "In testing: Descriptions for FPP pallets may not always work yet…" shows in an FPP pallet's description row. |
 | `shareMissing` | No **Share missing list** button in the check results. |
 | `findLpn` | No **Find an LPN** box in Saved deliveries. |
 | `shareApp` | No **Share this app** section in Settings. |
 | `welcome` / `whatsNew` | The welcome card on a first visit, or the what's new card after an update, isn't shown. |
+| `exportReminder` (build 62) | No card when the app opens with a delivery from an earlier day that was never exported, and its changelog bullet is left out. Marked as in testing, the note "In testing: The reminder about deliveries not exported may not always work yet…" shows in the card. |
 
 The Guide and Settings leave out the lines for switched-off features, and the Guide's numbered sections are renumbered so there are no gaps (with everything off it has 9 sections).
 
