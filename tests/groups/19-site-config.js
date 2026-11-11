@@ -55,15 +55,15 @@ module.exports = async ({ browser, URL0 }) => {
     openHelp("history", "Saved deliveries"); out.find = !!document.getElementById("histFind"); closeHelp();
     return out; });
   check("with every feature off: no Report button or box, Manifest check (or its tracking), Scan button, damage choices, FPP description box, welcome card, prefix filter or queued reports sent", !s.report && !s.fb && !s.cmp && !s.scanBtn && !s.dmg && !s.fppAuto && !s.fppTap && !s.welcome && !s.track && s.flushed === 0 && s.sent === 0 && s.pfx === 0, s);
-  check("with every feature off the Guide leaves out those parts and is numbered 1 to 9 with no gaps", s.heads.length === 9 && s.heads.every((h, i) => h.startsWith((i + 1) + ". ")) && s.toc === 9 && !/Check against the manifest|Damaged pallet|FPP pallet:|Torch|Live scan|Find an LPN|Share this app|Report a problem|tap Scan|Manifest photos and PDFs|the Manifest check once/.test(s.guideText) && /no button for sending reports in this copy/.test(s.guideText), { heads: s.heads, toc: s.toc });
+  check("with every feature off the Guide leaves out those parts and is numbered 1 to 9 with no gaps", s.heads.length === 9 && s.heads.every((h, i) => h.startsWith((i + 1) + ". ")) && s.toc === 9 && !/Check against the manifest|Damaged pallet|FPP pallet:|Torch|Live scan|Scan by photo|Upload photo|Find an LPN|Share this app|Report a problem|tap Scan|Manifest photos and PDFs|the Manifest check once/.test(s.guideText) && /no button for sending reports in this copy/.test(s.guideText), { heads: s.heads, toc: s.toc });
   check("with every feature off Settings has no Share this app or Report sections, and Saved deliveries no Find box", !/Share this app|Report a problem or idea/.test(s.setText) && !s.find, s.setText.slice(0, 80));
   check("no script errors", p.errors.length === 0, p.errors);
   await p.ctx.close();
 
   // Only photos off: PDFs and typing stay.
   p = await withConfig(375, "window.LPN_CONFIG=" + JSON.stringify({ features: Object.assign(all(true), { manifestPhotos: false, liveScan: false }), testing: {} }) + ";");
-  s = await p.evaluate(() => { const vis = id => !document.getElementById(id).hidden; return { photo: vis("cmpPhotoBtn"), logPhoto: vis("cmpLogPhotoBtn"), pdf: vis("cmpPdfBtn"), presets: vis("pfxBox"), label: document.getElementById("cmpPdfBtn").closest(".grow").querySelector("label").textContent, live: vis("scan"), byPhoto: vis("photo"), scanBtn: vis("scanBtn") }; });
-  check("with manifest photos off, PDFs stay and the step says Manifest PDFs; with Live scan off, Scan by photo stays", !s.photo && !s.logPhoto && s.pdf && !s.presets && s.label === "2. Manifest PDFs" && !s.live && s.byPhoto && s.scanBtn, s);
+  s = await p.evaluate(() => { const vis = id => !document.getElementById(id).hidden; return { photo: vis("cmpPhotoBtn"), logPhoto: vis("cmpLogPhotoBtn"), pdf: vis("cmpPdfBtn"), presets: vis("pfxBox"), label: document.getElementById("cmpPdfBtn").closest(".grow").querySelector("label").textContent, live: vis("scan"), byPhoto: vis("photo"), upload: vis("upload"), tip: vis("scanTip"), scanBtn: vis("scanBtn") }; });
+  check("with manifest photos off, PDFs stay and the step says Manifest PDFs; with Live scan off, Scan by photo and Upload photo stay and the Live scan tip goes", !s.photo && !s.logPhoto && s.pdf && !s.presets && s.label === "2. Manifest PDFs" && !s.live && s.byPhoto && s.upload && !s.tip && s.scanBtn, s);
   await p.ctx.close();
 
   // Every feature marked as in testing.
@@ -88,8 +88,8 @@ module.exports = async ({ browser, URL0 }) => {
     out.liveShown = [...document.querySelectorAll('#scanbox .testnote')].filter(n => !n.hidden).map(n => n.dataset.test).join(","); stopScan();
     out.torchHidden = document.querySelector('#scanbox .testnote[data-test="torch"]').hidden;
     return out; });
-  check("marking features as in testing adds the note to each one", ["report", "manifestCheck", "manifestPhotos", "liveScan", "scanByPhoto", "torch"].every(k => s.start.includes(k)) && s.dmg && s.fpp && s.share && s.find && s.shareApp, s);
-  check("each testing note names its feature; the report one points to the problem report; scan and torch notes wait in the camera box", /^In testing: reports may not always arrive yet/.test(s.text) && /^In testing: Reading photos may not always work yet, so check what it gives you, and use Report a problem if something goes wrong\.$/.test(s.photoText) && s.torchHidden && s.scanNotes === "scanByPhoto:true,liveScan:true,torch:true" && s.liveShown === "liveScan", s);
+  check("marking features as in testing adds the note to each one", ["report", "manifestCheck", "manifestPhotos", "liveScan", "scanByPhoto", "photoUpload", "torch"].every(k => s.start.includes(k)) && s.dmg && s.fpp && s.share && s.find && s.shareApp, s);
+  check("each testing note names its feature; the report one points to the problem report; scan and torch notes wait in the camera box", /^In testing: reports may not always arrive yet/.test(s.text) && /^In testing: Reading photos may not always work yet, so check what it gives you, and use Report a problem if something goes wrong\.$/.test(s.photoText) && s.torchHidden && s.scanNotes === "photoUpload:true,scanByPhoto:true,liveScan:true,torch:true" && s.liveShown === "liveScan", s);
   check("no script errors", p.errors.length === 0, p.errors);
   await p.ctx.close();
 

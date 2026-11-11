@@ -185,14 +185,14 @@ module.exports = async ({ browser, URL0 }) => {
   check("no script errors", p.errors.length === 0, p.errors);
   await p.ctx.close();
 
-  // Scan by photo: when no barcode can be read, the LPN printed on the label is read and must be confirmed first.
-  console.log("Scan by photo reads the printed LPN");
+  // Upload photo: when no barcode can be read, the LPN printed on the label is read and must be confirmed first.
+  console.log("Upload photo reads the printed LPN; Scan by photo reads barcodes only");
   p = await page(browser, 375);
   await p.goto(URL0); await p.waitForTimeout(300);
   const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
-  const shot = async reads => { await p.evaluate(r => { rows = []; save(); render(); hideCheck(); delete window.BarcodeDetector; window.loadZX = async () => { throw new Error("no reader"); }; window.ocrLpns = async () => { if (r.err) throw new Error(r.err); const a = (r.out || r).slice(); a.skipped = r.skipped || []; a.odd = r.odd || []; a.mended = r.mended || []; return a; }; document.querySelector('#tyb button[data-t="FMCG"]').click(); }, reads);
-    await p.setInputFiles("#file", { name: "label.png", mimeType: "image/png", buffer: png }); await p.waitForTimeout(400);
-    return p.evaluate(() => ({ bar: !document.getElementById("chkBar").hidden, chk: document.getElementById("chkTxt").textContent, smsg: document.getElementById("smsg").textContent, rows: rows.length })); };
+  const shot = async (reads, input) => { await p.evaluate(r => { rows = []; save(); render(); hideCheck(); delete window.BarcodeDetector; window.loadZX = async () => { throw new Error("no reader"); }; window.__ocrN = 0; window.ocrLpns = async () => { window.__ocrN++; if (r.err) throw new Error(r.err); const a = (r.out || r).slice(); a.skipped = r.skipped || []; a.odd = r.odd || []; a.mended = r.mended || []; return a; }; document.querySelector('#tyb button[data-t="FMCG"]').click(); }, reads);
+    await p.setInputFiles(input || "#upFile", { name: "label.png", mimeType: "image/png", buffer: png }); await p.waitForTimeout(400);
+    return p.evaluate(() => ({ bar: !document.getElementById("chkBar").hidden, chk: document.getElementById("chkTxt").textContent, smsg: document.getElementById("smsg").textContent, rows: rows.length, ocr: window.__ocrN })); };
   s = await shot(["VLT004040265"]);
   check("with no barcode, the printed LPN is read and shown to check before it's added", s.bar && /^Read VLT004040265 from the printed label \(no barcode found\): check it matches the label\. Add it as FMCG\?$/.test(s.chk) && s.rows === 0 && /Check it, then Add or Skip/.test(s.smsg), s);
   await p.click("#chkAdd"); await p.waitForTimeout(100);
@@ -211,11 +211,17 @@ module.exports = async ({ browser, URL0 }) => {
   s = await shot({ out: [], odd: ["LPN 0013323651"] });
   check("a number read after LPN: without its letters is named, to type in", !s.bar && /\(0013323651\): type it in with the letters at the start/.test(s.smsg), s);
   s = await shot({ err: "The photo reader couldn’t load. Check you’re online and try again." });
-  check("when the photo reader can't load, it says so instead of asking for a better photo", /couldn’t load/.test(s.smsg) && !/Move closer/.test(s.smsg), s);
+  check("when the photo reader can't load, it says so instead of asking for a better photo", /couldn’t load/.test(s.smsg) && !/Try a clearer/.test(s.smsg), s);
   s = await shot([]);
-  check("a photo with neither a barcode nor a readable LPN says so", !s.bar && s.smsg === "No barcode or LPN found. Move closer, hold steady and try again." && s.rows === 0, s);
-  s = await p.evaluate(() => document.getElementById("file").hasAttribute("capture"));
-  check("Scan by photo lets you pick a photo from the gallery, not only take one", s === false, s);
+  check("a photo with neither a barcode nor a readable LPN says so", !s.bar && s.smsg === "No barcode or LPN found. Try a clearer, closer photo of the label." && s.rows === 0, s);
+  s = await p.evaluate(() => ({ cam: document.getElementById("file").getAttribute("capture"), up: document.getElementById("upFile").hasAttribute("capture"), both: !document.getElementById("photo").hidden && !document.getElementById("upload").hidden, tip: document.getElementById("scanTip").textContent }));
+  check("Scan by photo opens the camera; Upload photo lets you pick a photo you've already taken; both buttons show", s.cam === "environment" && s.up === false && s.both && s.tip === "Tip: if Live scan doesn’t work, try Scan by photo or Upload photo instead.", s);
+  // Scan by photo (the camera) reads barcodes only: no barcode means no text reading, with a pointer to Upload photo.
+  s = await shot({ out: ["VLT004040265"] }, "#file");
+  check("Scan by photo with no barcode doesn't read the label text and points to Upload photo", s.ocr === 0 && !s.bar && s.rows === 0 && s.smsg === "No barcode found. Move closer, hold steady and try again. If the barcode is damaged, tap Upload photo: it can read the LPN printed on the label.", s);
+  // With Upload photo switched off, its button is gone, no text is read, and Scan by photo doesn't mention it.
+  s = await p.evaluate(async () => { let called = 0; window.ocrLpns = async () => { called++; return ["VLT004040265"]; }; SITE.on.photoUpload = false; applySite(); await readLabelText(new File(["x"], "x.png")); const msg = document.getElementById("smsg").textContent; await decodePhoto(new File(["x"], "x.png"), false); const msg2 = document.getElementById("smsg").textContent; const tip = document.getElementById("scanTip").textContent; SITE.on.photoUpload = true; return { called, msg, msg2, tip, up: document.getElementById("upload").hidden, photo: document.getElementById("photo").hidden }; });
+  check("with Upload photo switched off its button is hidden, no label text is read, and Scan by photo doesn't point to it", s.called === 0 && s.up && !s.photo && /No barcode found/.test(s.msg) && !/Upload photo/.test(s.msg2) && s.tip === "Tip: if Live scan doesn’t work, try Scan by photo instead.", s);
   // With Reading photos switched off, a photo with no barcode isn't read for text.
   s = await p.evaluate(async () => { let called = 0; window.ocrLpns = async () => { called++; return []; }; SITE.on.manifestPhotos = false; await readLabelText(new File(["x"], "x.png")); SITE.on.manifestPhotos = true; return { called, msg: document.getElementById("smsg").textContent }; });
   check("with Reading photos switched off, a photo's text isn't read", s.called === 0 && /No barcode found/.test(s.msg), s);

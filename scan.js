@@ -39,7 +39,9 @@ function loadZX(){
   });
 }
 /* Shows the "in testing" note (config.js) for the scan in use, if there is one. */
-function scanNote(k){document.querySelectorAll('#scanbox .testnote[data-test="liveScan"],#scanbox .testnote[data-test="scanByPhoto"]').forEach(n=>{n.hidden=n.dataset.test!==k})}
+/* The other way to scan, naming only a photo button that is switched on. */
+function photoAlt(pre,post){const k=feat("scanByPhoto")?"Scan by photo":feat("photoUpload")?"Upload photo":"";return k?pre+k+post:""}
+function scanNote(k){document.querySelectorAll('#scanbox .testnote[data-test="liveScan"],#scanbox .testnote[data-test="scanByPhoto"],#scanbox .testnote[data-test="photoUpload"]').forEach(n=>{n.hidden=n.dataset.test!==k})}
 /* The camera is asked for a sharp picture (up to 1920×1080) with continuous focus, so small barcodes can be read
    from further away; browsers that can't give that use the nearest they have. The slower ZXing reader (iPhones,
    Firefox) reads every pixel itself, so it asks for 1280×720. */
@@ -89,7 +91,7 @@ async function startScan(){
     stopScan(true);
     const denied=e&&(e.name==="NotAllowedError"||e.name==="SecurityError");
     $("scanbox").hidden=false;
-    $("smsg").textContent=denied?"Camera access was blocked. Allow camera permission for this site in your browser settings, make sure the page is opened over https, or use “Scan by photo”.":"Couldn't start the scanner ("+((e&&e.message)||"error")+").";
+    $("smsg").textContent=denied?"Camera access was blocked. Allow camera permission for this site in your browser settings, make sure the page is opened over https"+photoAlt(", or use “","”")+".":"Couldn't start the scanner ("+((e&&e.message)||"error")+").";
   }
 }
 /* Torch: shown only when the phone lets a web page turn its light on (most Android phones; iPhones mostly don't). */
@@ -103,7 +105,7 @@ function torchSetup(s){
 $("torch").onclick=async()=>{
   if(!torchTrack)return;const want=!torchOn;
   try{await camApply(torchTrack,{torch:want});torchOn=want}
-  catch(e){diag("scan","Torch couldn't be switched: "+((e&&e.message)||"error"));$("smsg").textContent=want?"The torch couldn't be switched on. Try more light, or Scan by photo.":"The torch couldn't be switched off. Stop scanning to turn it off.";return}
+  catch(e){diag("scan","Torch couldn't be switched: "+((e&&e.message)||"error"));$("smsg").textContent=want?"The torch couldn't be switched on. Try more light"+photoAlt(", or ","")+".":"The torch couldn't be switched off. Stop scanning to turn it off.";return}
   const b=$("torch");b.setAttribute("aria-pressed",String(torchOn));b.classList.toggle("on",torchOn);
 };
 /* Zoom: − and + buttons in a corner of the camera picture on phones that let a web page zoom (most Android
@@ -139,9 +141,10 @@ function stopScan(keepMsg){
   const v=$("video");v.srcObject=null;
   if(!keepMsg){$("scanbox").hidden=true;$("smsg").textContent=""}
 }
-async function decodePhoto(file){
+/* Scan by photo (camera) reads the barcode only. Upload photo (a photo already taken) also reads the printed LPN. */
+async function decodePhoto(file,upload){
   const sm=$("smsg");$("scanbox").hidden=false;$("video").hidden=true;
-  scanNote("scanByPhoto");
+  scanNote(upload?"photoUpload":"scanByPhoto");
   sm.textContent="Reading barcode…";
   try{
     let text="";
@@ -157,7 +160,8 @@ async function decodePhoto(file){
     }
     if(text){lastCode="";onCode(text);return}
   }catch(e){}
-  await readLabelText(file);
+  if(upload){await readLabelText(file);return}
+  sm.textContent="No barcode found. Move closer, hold steady and try again."+(feat("photoUpload")&&feat("manifestPhotos")&&typeof ocrLpns==="function"?" If the barcode is damaged, tap Upload photo: it can read the LPN printed on the label.":"");
 }
 /* No barcode could be read: the LPN printed on the label is read with the photo reader instead. Text can be misread,
    so the reading is always shown with Add and Skip, to check against the label first.
@@ -167,8 +171,8 @@ async function decodePhoto(file){
    - Other numbers (PO, SO, order numbers) are only mentioned, never offered as pallets.
    - A number read after "LPN:" without its letters is named, so it can be typed in. */
 async function readLabelText(file){
-  const sm=$("smsg"),none="No barcode or LPN found. Move closer, hold steady and try again.";
-  if(typeof ocrLpns!=="function"||!feat("scanByPhoto")||!feat("manifestPhotos")){sm.textContent="No barcode found. Move closer, hold steady and try again.";return}
+  const sm=$("smsg"),none="No barcode or LPN found. Try a clearer, closer photo of the label.";
+  if(typeof ocrLpns!=="function"||!feat("photoUpload")||!feat("manifestPhotos")){sm.textContent="No barcode found. Try a clearer, closer photo of the barcode.";return}
   if(pendingAdd){sm.textContent="Answer the check above first (Add or Skip), then try the photo again.";return}
   sm.textContent="No barcode found, so reading the LPN printed on the label. This can take up to a minute…";
   const mine=t=>{sm.textContent="Reading the printed LPN: "+t};
@@ -180,7 +184,7 @@ async function readLabelText(file){
     const pf=typeof getPfx==="function"?getPfx():[];
     const rank=x=>(pf.length&&okPfx(x)?0:1)+(lpnDigitsOk(x)?0:2);
     const lpns=all.filter(lpnDigitsOk).sort((a,b)=>rank(a)-rank(b)),others=all.filter(x=>!lpnDigitsOk(x));
-    diag("scan","Scan by photo: no barcode; LPNs read from the label: "+(lpns.join(" ")||"none")+(others.length?"; other numbers: "+others.length:""));
+    diag("scan","Upload photo: no barcode; LPNs read from the label: "+(lpns.join(" ")||"none")+(others.length?"; other numbers: "+others.length:""));
     if(!lpns.length){sm.textContent=lost.length?"No barcode found. A number after “LPN:” was read without its letters ("+lost[0]+"): type it in with the letters at the start.":none;return}
     if(pendingAdd){sm.textContent="Read "+lpns[0]+" from the printed label, but another check is waiting above. Answer it, then try the photo again.";return}
     const v=lpns[0],more=lpns.slice(1),mended=(r.mended||[]).includes(v);
@@ -191,9 +195,12 @@ async function readLabelText(file){
   finally{if(ocrSay===mine)ocrSay=null}
 }
 $("scan").onclick=()=>{$("video").hidden=false;startScan()};
-$("photo").onclick=()=>{if(scanning)stopScan();$("file").value="";$("file").click()};
+const pickPhoto=id=>{if(scanning)stopScan();$(id).value="";$(id).click()};
+$("photo").onclick=()=>pickPhoto("file");
+$("upload").onclick=()=>pickPhoto("upFile");
 $("noLpn").onclick=()=>addNoLpn();
-$("file").onchange=e=>{const f=e.target.files&&e.target.files[0];if(f)decodePhoto(f)};
+$("file").onchange=e=>{const f=e.target.files&&e.target.files[0];if(f)decodePhoto(f,false)};
+$("upFile").onchange=e=>{const f=e.target.files&&e.target.files[0];if(f)decodePhoto(f,true)};
 
 $("stopscan").onclick=()=>stopScan();
 syncType();
