@@ -218,7 +218,7 @@ module.exports = async ({ browser, URL0 }) => {
   check("Scan by photo opens the camera; Upload photo lets you pick a photo you've already taken; both buttons show", s.cam === "environment" && s.up === false && s.both && s.tip === "Tip: if Live scan doesn’t work, try Scan by photo or Upload photo instead.", s);
   // Scan by photo (the camera) reads barcodes only; with none found it offers to read the printed LPN from the same photo.
   s = await shot({ out: ["VLT004040265"] }, "#file");
-  check("Scan by photo with no barcode doesn't read the label text by itself, and offers Read the printed LPN", s.ocr === 0 && !s.bar && s.rows === 0 && s.readBtn && s.smsg === "No barcode found. Try again closer and steadier, or tap Read the printed LPN to read it from this photo.", s);
+  check("Scan by photo with no barcode doesn't read the label text by itself, and offers Read the printed LPN", s.ocr === 0 && !s.bar && s.rows === 0 && s.readBtn && s.smsg === "No barcode found. Try again closer and steadier, or tap Read the printed LPN to read the number printed on the label in this photo.", s);
   await p.click("#readLabel"); await p.waitForTimeout(300);
   s = await p.evaluate(() => ({ bar: !document.getElementById("chkBar").hidden, chk: document.getElementById("chkTxt").textContent, readBtn: !document.getElementById("readLabel").hidden, ocr: window.__ocrN, rows: rows.length }));
   check("Read the printed LPN reads that same photo and asks before adding; the button goes", s.ocr === 1 && s.bar && /^Read VLT004040265 from the printed label/.test(s.chk) && !s.readBtn && s.rows === 0, s);
@@ -250,6 +250,11 @@ module.exports = async ({ browser, URL0 }) => {
   await p.click("#chkSkip"); await p.waitForTimeout(200);
   s = await p.evaluate(() => ({ smsg: document.getElementById("smsg").textContent, rows: rows.map(r => r.lpn).join(), busy: photoBusy }));
   check("after the last photo a summary says what was added and where nothing was found", s.smsg === "3 photos read: 1 pallet added, nothing found on 1 photo." && s.rows === "VLT004040265" && !s.busy, s);
+  // A number read without its letters, or a photo that couldn't be read, is kept for the summary; nothing added says "no pallets".
+  await p.evaluate(() => { let n = 0; window.ocrLpns = async () => { n++; if (n === 2) throw new Error("The photo reader couldn’t load."); const a = []; a.skipped = []; a.odd = ["LPN 0013323651"]; a.mended = []; return a; }; });
+  await p.setInputFiles("#upFile", [1, 2].map(k => ({ name: "l" + k + ".png", mimeType: "image/png", buffer: png }))); await p.waitForTimeout(500);
+  s = await p.evaluate(() => document.getElementById("smsg").textContent);
+  check("several photos: a number to type in and a photo that couldn't be read are kept in the summary", s === "2 photos read: no pallets added. Photo 1: a number after “LPN:” was read without its letters (0013323651): type it in with the letters at the start. Photo 2: couldn’t be read: The photo reader couldn’t load.", s);
   s = await p.evaluate(() => document.getElementById("upFile").multiple);
   check("Upload photo lets you choose several photos", s === true, s);
   // With Upload photo switched off, its button is gone, no text is read, and Scan by photo doesn't mention it.
