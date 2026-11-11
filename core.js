@@ -184,12 +184,15 @@ function render(){
           said.push("Changed "+old+" to "+v);backs.push(()=>{r.lpn=old});
         }
         if(said.length){save();showUndo(said.join(". "),()=>{backs.forEach(f=>f());save();render()})}
+        // Tab past the last choice can land on another control in this pallet's row (when the browser is slow, before
+        // the redraw): go back to its LPN as well, the same as when focus is lost.
+        const ae=document.activeElement,inRow=!!(ae&&ae!==inp&&tr.contains(ae));
         render();
         // Back on the edited LPN, so keyboard users don't lose their place.
         // (also when focus was on a part of the table that has just been redrawn)
         // A box that opened by itself after adding goes back to the LPN box, so the next pallet can be scanned.
         if(fromAdd&&key&&$("lpn")){$("lpn").focus();return}
-        if(key||!document.activeElement||document.activeElement===document.body){const back=document.querySelector('#body .lpnedit[data-i="'+i+'"]');if(back)back.focus({preventScroll:!key})}
+        if(key||inRow||!document.activeElement||document.activeElement===document.body){const back=document.querySelector('#body .lpnedit[data-i="'+i+'"]');if(back)back.focus({preventScroll:!key})}
       };
       // Finish when focus leaves both the LPN box and the damage choices.
       inp.onblur=()=>setTimeout(()=>{if(!dr.contains(document.activeElement)&&document.activeElement!==inp)finish(true)},0);
