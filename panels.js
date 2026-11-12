@@ -22,7 +22,7 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <p data-f="fppDesc"><b>FPP pallet:</b> when you log an FPP pallet, a <b>Description</b> box opens so you can say what is on it, such as kitchen roll. You don’t have to fill it in. Type what is on it and press Enter, or press Enter to leave it blank. The LPN box is then ready for the next pallet. If you scan the next pallet while the box is open, it is logged as the next pallet, not as the description. The description shows under the LPN and goes on the exports. During Live scan the box doesn’t open, so tap the LPN afterwards to add a description. To change it later, tap the LPN again.</p>
 <p data-f="refused"><b>Refused pallet:</b> if a pallet is sent back with the driver, tap its LPN and choose <b>Refused (sent back)</b>. It stays on the log and the exports, marked as refused, but isn’t counted in the totals of pallets received. It still counts towards the expected pallets, because it came off the trailer. Tap it again and choose <b>Not refused</b> to undo it.</p>
 <p data-f="damage"><b>Damaged pallet:</b> tap the LPN, then choose Crushed, Wet or Other (type what’s wrong). It shows in red and goes on the exports. Choose None to remove the damage.</p>
-<p>Use search and the filters to find pallets. The totals count the whole log. FSDUs<span data-f="refused"> and refused pallets</span> are counted separately and aren’t in the total.</p>
+<p>Use search and the filters to find pallets, or tap a total (such as <b>FMCG</b>) to show only those; tap it again to show all. On a long log, <b>↓ Latest</b> takes you back to the newest pallet. The totals count the whole log. FSDUs<span data-f="refused"> and refused pallets</span> are counted separately and aren’t in the total.</p>
 <h3>4. Scanning barcodes</h3>
 <p data-f="liveScan|scanByPhoto|photoUpload">On a phone, tap <b>Scan</b> next to Add.</p>
 <ul>
@@ -44,6 +44,7 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <p data-f="manifestCheck"><span data-f="manifestPhotos"><b>Prefix presets</b> (in the Manifest check) limit which numbers are picked up from photos. If a photo finds numbers with a prefix that isn’t listed, you can add it with one tap. </span>Start new delivery clears the manifest numbers.</p>
 <h3>6. Export</h3>
 <p>The <b>Export</b> menu has <b>Download (Excel)</b>, <b>Email PDF</b> and <b>Print</b>. Files show your logo, the delivery details, the numbered pallet list and the totals. They fit A4 and are named with the date and trailer number. If the total doesn’t match the expected pallets, you get a reminder first.</p>
+<p data-f="tallySheet"><b>Blank tally sheet</b> (also in the Export menu) prints an empty sheet to write pallets on by hand, for when a phone isn’t available. Type or scan the LPNs into the app afterwards.</p>
 <p><b>Email PDF</b> opens your phone’s share menu with the PDF attached. If you see a message that the file is ready, tap <b>Tap to share</b>. If the share menu can’t open, the file is saved for you to attach.</p>
 <h3>7. Saved deliveries and backups</h3>
 <p><b>Start new delivery</b> saves the log and clears the page. If you haven’t exported, it asks you to do that first. <b>Saved deliveries</b> keeps what you saved this week and last week (weeks start on Sunday). Older ones are removed automatically. There you can open, export, email or delete a delivery<span data-nf="findLpn"> or import an exported file</span><span data-f="findLpn">, import an exported file, or use <b>Find an LPN</b> to see which delivery holds it</span>.</p>
@@ -58,6 +59,7 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <h3>9. Settings and good to know</h3>
 <ul>
 <li><b>Settings</b> has colours (or follow the phone’s light or dark mode), text size, date format, default pallet type, warnings, sound<span data-nf="shareApp"> and vibration</span><span data-f="shareApp">, vibration and <b>Share this app</b></span>.</li>
+<li data-f="twoPhones"><b>Sharing the log with another person:</b> tap <b>Share log</b> (under Start new delivery). Your phone shows its pallets as QR codes and theirs scans them, so all the pallets end up on one phone, for example when two people unload one trailer.</li>
 <li data-f="historyVideo">The <b>Changelog</b> starts with a one-minute video of how the app has grown, from build 13 to build 65.</li>
 <li>LPNs are a letter prefix then digits: usually 3 letters and 9 or 10 digits. IM numbers (full pallet picks) have 2 letters and 10 or 11 digits.</li>
 <li data-f="report"><b>Something not working, or an idea?</b> <button type="button" class="linkbtn" id="fbGuide">Report a problem or idea</button> (also the <b>Report a problem</b> button at the top).</li>
@@ -71,8 +73,19 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <li>The Excel, PDF and photo reading tools are downloaded from public code servers the first time they’re needed. Your data isn’t sent to them. Like any website, they see your internet address.</li>
 <li>Clearing this site’s data deletes your log and saved deliveries. On an iPhone, if the app isn’t on the home screen, its data can be cleared after a few weeks without use. So install the app and back up.</li>
 </ul>
+`,phones:`<p>Send your pallets to another person’s phone, or add theirs to yours. Handy when two people unload one trailer: each scans on their own phone, then all the pallets go on one phone to export.</p>
+<h3>1. To send your pallets</h3>
+<button type="button" id="qrShow" class="p">Show my pallets as QR codes</button>
+<div id="qrBox" hidden><div class="qrimg" id="qrImg" role="img" aria-label="QR codes for the other phone"></div>
+<p class="qrcount" id="qrCount" aria-live="off"></p>
+<div class="row"><button type="button" id="qrPrev">Previous</button><button type="button" id="qrNext">Next</button></div>
+<p class="hint">The codes change by themselves every 2 seconds. Keep this screen bright and hold it steady. Tap Previous or Next to hold one code; tap Show my pallets as QR codes to start again. If you log more pallets, tap Show again.</p></div>
+<p class="msg" id="qrMsg" role="status" aria-live="polite"></p>
+<h3>2. To add another person’s pallets</h3>
+<button type="button" id="qrScan" class="p">Scan the other phone’s codes</button>
+<p class="hint">Point the camera at the other phone until every code is read. Pallets already in this log aren’t added twice, and <b>Undo</b> takes them all away again. The other phone’s log isn’t changed. Both phones need the latest version of the app.</p>
 `,log:`<h3>v4.0 <span class="ver">Current</span></h3>
-<ul><li data-f="photoUpload"><b>Upload photo</b> can read several photos at once, one after another.<span data-f="scanByPhoto"><span data-f="manifestPhotos"> When Scan by photo can’t read a barcode, <b>Read the printed LPN</b> reads the number printed on the label from that same photo, so you don’t need to take it again. You still check it before it’s added.</span></span></li><li data-f="historyVideo">A one-minute video at the top of the Changelog shows how the app has grown, from build 13 to build 65.</li><li data-f="photoUpload"><b>Upload photo</b> is a new button for a photo of the label you’ve already taken.<span data-f="manifestPhotos"> When the barcode can’t be read, the app reads the LPN printed on the label and asks you to check it before it’s added.</span><span data-f="scanByPhoto"> <b>Scan by photo</b> now opens the camera straight away and reads the barcode.</span></li><li data-nf="photoUpload" data-f="scanByPhoto"><b>Scan by photo</b> now opens the camera straight away and reads the barcode.</li><li data-f="refused">A pallet sent back with the driver can be marked <b>Refused (sent back)</b>: it stays on the log and exports but isn’t counted as received.</li><li data-f="exportReminder">If a delivery from an earlier day was never exported, the app reminds you when it opens.</li><li>Add your site or store name in Settings to show it on every export.</li><li><b>Undo</b> now goes back through the last 10 changes, with an Undo button next to Export. The screen stays on while the app is open, so a handheld scanner’s scans aren’t lost (Settings can turn this off).</li><li>Importing an exported log from weeks ago now keeps it in <b>Saved deliveries</b>: they are kept by when you saved or imported them.</li><li>Fixed: <b>Start new delivery</b> on a delivery dated more than a week ago now saves it to Saved deliveries and starts the new one, instead of stopping.</li><li>Settings has <b>Test a handheld scanner</b>: scan any barcode to see what your scanner sends and whether it works with the app. Nothing is added to the log.</li><li data-f="report">The button at the top now says <b>Report a problem</b>, so it’s clear it’s for problems with the app or ideas for it.</li><li data-f="manifestPhotos">Manifest photos: LPNs starting with a single V, R or Q (such as V0013323651) are no longer left out, a number read with a gap in it is still found, and a page with only one LPN on it no longer gets an extra 0 or picks up print showing through from the back.</li><li data-f="fppDesc">When you log an FPP pallet, a box opens to say what is on it, such as kitchen roll. The description shows under the LPN and goes on the exports.</li><li>Easier to read and tap: grey text stays readable on mid-grey background colours, the pallet count in the bottom bar is never cut off, the box for editing an LPN is bigger, and long descriptions take two lines on small phones (tap the LPN to see all of it).</li><li data-f="noLpn">The <b>No LPN</b> button logs pallets that arrive without one, with an optional description. They go on the exports and are counted separately in the Manifest check.</li><li>Live scan reads barcodes from further away: the camera now gives a sharper picture and keeps focusing, and phones that allow it have zoom buttons in the corner of the picture.</li><li>Delivery has a <b>Clear trailer, seals and notes</b> button for the next trailer on the same day. It keeps the date, name and expected pallets, and can be undone.</li><li>A site settings file (<b>config.js</b> in the repo) can switch features off for everyone, or add a note that a feature is still being tested.</li><li>Version 4.0, ready to share with colleagues: <b>Share this app</b> in Settings has a QR code to scan, the Guide is shorter and has a <b>Your data and privacy</b> section, and new users get a welcome card with the demo video.</li><li>Damaged pallets: tap an LPN to mark it Crushed, Wet or in your own words. It shows on the exports.</li><li>Manifest check: <b>Share missing list</b> sends the missing and extra LPNs as a message, sideways or upside-down photos are turned and read again, and one tap adds a missing prefix.</li><li>Saved deliveries: <b>Find an LPN</b> shows which delivery holds a pallet. Exported file names include the trailer number.</li><li>Live scan has a <b>Torch</b> button on phones that allow it, and a note asks you to check seal numbers that look wrong.</li><li>Colours can follow the phone’s light or dark mode, reports can include your name, and after an update a card says what’s new.</li></ul>
+<ul><li data-f="twoPhones"><b>Share log</b> (under Start new delivery) sends your pallets to another person’s phone with QR codes, so when two people unload one trailer you export from one phone.</li><li data-f="tallySheet">The Export menu has a <b>Blank tally sheet</b> to print, for writing pallets down by hand if a phone isn’t available.</li><li data-f="photoUpload"><b>Upload photo</b> can read several photos at once, one after another.<span data-f="scanByPhoto"><span data-f="manifestPhotos"> When Scan by photo can’t read a barcode, <b>Read the printed LPN</b> reads the number printed on the label from that same photo, so you don’t need to take it again. You still check it before it’s added.</span></span></li><li>Tap a total, such as <b>FMCG</b>, to show only those pallets. On a long log, <b>↓ Latest</b> takes you back to the newest one. The phone’s Back button now closes the Guide, Settings and other panels, and pulling down no longer reloads the page.</li><li data-f="historyVideo">A one-minute video at the top of the Changelog shows how the app has grown, from build 13 to build 65.</li><li data-f="photoUpload"><b>Upload photo</b> is a new button for a photo of the label you’ve already taken.<span data-f="manifestPhotos"> When the barcode can’t be read, the app reads the LPN printed on the label and asks you to check it before it’s added.</span><span data-f="scanByPhoto"> <b>Scan by photo</b> now opens the camera straight away and reads the barcode.</span></li><li data-nf="photoUpload" data-f="scanByPhoto"><b>Scan by photo</b> now opens the camera straight away and reads the barcode.</li><li data-f="refused">A pallet sent back with the driver can be marked <b>Refused (sent back)</b>: it stays on the log and exports but isn’t counted as received.</li><li data-f="exportReminder">If a delivery from an earlier day was never exported, the app reminds you when it opens.</li><li>Add your site or store name in Settings to show it on every export.</li><li><b>Undo</b> now goes back through the last 10 changes, with an Undo button next to Export. The screen stays on while the app is open, so a handheld scanner’s scans aren’t lost (Settings can turn this off).</li><li>Importing an exported log from weeks ago now keeps it in <b>Saved deliveries</b>: they are kept by when you saved or imported them.</li><li>Fixed: <b>Start new delivery</b> on a delivery dated more than a week ago now saves it to Saved deliveries and starts the new one, instead of stopping.</li><li>Settings has <b>Test a handheld scanner</b>: scan any barcode to see what your scanner sends and whether it works with the app. Nothing is added to the log.</li><li data-f="report">The button at the top now says <b>Report a problem</b>, so it’s clear it’s for problems with the app or ideas for it.</li><li data-f="manifestPhotos">Manifest photos: LPNs starting with a single V, R or Q (such as V0013323651) are no longer left out, a number read with a gap in it is still found, and a page with only one LPN on it no longer gets an extra 0 or picks up print showing through from the back.</li><li data-f="fppDesc">When you log an FPP pallet, a box opens to say what is on it, such as kitchen roll. The description shows under the LPN and goes on the exports.</li><li>Easier to read and tap: grey text stays readable on mid-grey background colours, the pallet count in the bottom bar is never cut off, the box for editing an LPN is bigger, and long descriptions take two lines on small phones (tap the LPN to see all of it).</li><li data-f="noLpn">The <b>No LPN</b> button logs pallets that arrive without one, with an optional description. They go on the exports and are counted separately in the Manifest check.</li><li>Live scan reads barcodes from further away: the camera now gives a sharper picture and keeps focusing, and phones that allow it have zoom buttons in the corner of the picture.</li><li>Delivery has a <b>Clear trailer, seals and notes</b> button for the next trailer on the same day. It keeps the date, name and expected pallets, and can be undone.</li><li>A site settings file (<b>config.js</b> in the repo) can switch features off for everyone, or add a note that a feature is still being tested.</li><li>Version 4.0, ready to share with colleagues: <b>Share this app</b> in Settings has a QR code to scan, the Guide is shorter and has a <b>Your data and privacy</b> section, and new users get a welcome card with the demo video.</li><li>Damaged pallets: tap an LPN to mark it Crushed, Wet or in your own words. It shows on the exports.</li><li>Manifest check: <b>Share missing list</b> sends the missing and extra LPNs as a message, sideways or upside-down photos are turned and read again, and one tap adds a missing prefix.</li><li>Saved deliveries: <b>Find an LPN</b> shows which delivery holds a pallet. Exported file names include the trailer number.</li><li>Live scan has a <b>Torch</b> button on phones that allow it, and a note asks you to check seal numbers that look wrong.</li><li>Colours can follow the phone’s light or dark mode, reports can include your name, and after an update a card says what’s new.</li></ul>
 <h3>v3.30</h3>
 <ul><li>Faster photo reading: one photo reader is used for a whole batch of photos instead of starting a new one for each. Live scan fits small phones: the camera view is shorter so the “Added” line and Stop scanning stay on screen.</li><li>Manifest photos: the note names any number the app corrected to match the page, so you can check it against the paper, and <b>Report a problem with these photos</b> sends a report with the photo attached. On desktop the seal boxes fit longer seal numbers, and with the Manifest check open on a phone, Undo shows at the top.</li><li>Report a problem or idea with the <b>Report a problem</b> button at the top of the page (also in Settings and the Guide). It opens in the middle of the screen: choose Problem or Idea, say what happened, add a photo if it helps, and send. The problem report is attached unless you untick it. With no signal it waits on the phone and sends when you’re back online.</li><li>More accessibility fixes: on phones the Undo bar shows just above the entry bar and stays 20 seconds; LPNs in the log can be edited with the keyboard; Escape closes the Export menus; clearer labels for screen readers on saved deliveries and the log table; Guide links don’t animate when reduced motion is on.</li><li>Easier to use with gloves and in poor light: a scan made while a warning is showing is kept in the box instead of being lost (Escape skips the warning), stronger edges on boxes and buttons, accent-coloured text always readable, bigger FSDU tick box and scan buttons, the warning shows above the camera, and the Guide and Settings panels move focus in and back out for keyboard and screen reader users.</li><li>Manifest photos are read much better: shade across the page and paper grain no longer turn into junk, every number on a page with ruled lines is found, and a number read slightly wrong (VL1… for VLT…, or an extra 0) is matched to the others on the same page. Specks on the paper that look like a code are left out. IM numbers (full pallet picks, 10 or 11 digits) are always kept and not called unusual.</li><li>Manifest check: each photo or PDF now says how many LPNs it found, how many were new and how many were already listed, and names any left out because their prefix isn’t in the prefix list. One photo that can’t be read no longer stops the rest.</li><li>Problem report in Settings: if something goes wrong, download it and send it with what happened. It lists recent manifest reads and errors on this device.</li><li>Exports: long delivery notes and longer LPNs no longer get cut off in the spreadsheets, and every export notes the app version it was made with (at the bottom of the sheet and in the page footer).</li><li>Importing an exported log and loading one in the Manifest check now read spreadsheets the same way, so the version line at the bottom is always skipped.</li><li>Safer PDFs: a PDF opened in the app (a supplier manifest or an exported log) can no longer run hidden code, and the PDF reader is updated to the latest version.</li><li>Safer backups and files: a damaged backup can no longer stop the app opening, restoring asks first and saves a copy of your current data, and files from outside can’t add links, formulas or scripts to your exports.</li><li>A security policy now only lets the app run code from its own site and its three library sources, as a second line of defence.</li><li>A demo video at the top of the Guide shows the app in action, with narration and subtitles, including picking the pallet type before scanning. It starts at half volume.</li><li>Easier to use: the pallet table scrolls with the page on phones, progress only turns red when something is wrong, one count line when the manifest sets the expected number, the Manifest check starts with its steps (prefix presets tucked away), the logo moved to Settings, the entry bar steps aside in the Manifest check, and bigger tick boxes and header buttons.</li><li>Undo last pallet button on the phone entry bar, “Use n as expected” from the manifest count, an “Exported at” note with a warning before starting a new delivery that hasn’t been exported, and a “Start a new delivery?” prompt after exporting.</li><li>Trailer number, Seal in and Seal out in Delivery, shown on exports and saved deliveries.</li><li>Live manifest tracking: add the manifest numbers first and the Pallet log counts them off as you scan, shows which are still missing and warns about pallets not on the manifest.</li><li>Phone layout: a pallet counter on the entry bar, an “Added” confirmation after each pallet, Delivery folds into one line once you start logging, neater top buttons and a clearer ✕ on each row.</li><li>Smaller tweaks: a reminder when the log is dated before today, tap-to-fill “Received by” names, a check when the total differs from the expected pallets, an FSDU filter, Excel and Email PDF buttons on saved deliveries, a last-backed-up note, and an offline notice.</li><li>Exports: a title band, numbered rows, clearer grid lines, page numbers, gridlines hidden on screen, roomier headers, the logo kept in proportion and much smaller PDFs. The manifest check has the same Export menu as the log.</li><li>Date format setting (dd/mm/yyyy by default), used in exports, lists and the date box.</li><li>Fonts are now part of the app, updates show up straight away, and the tablet layout and field alignment are fixed.</li></ul>
 <h3>v3.20</h3>
@@ -114,12 +127,45 @@ function pageInert(on){["main","header.top","#hello","#unexp"].forEach(s=>{const
 function dlgOpen(focusEl){if(!dlgOpener)dlgOpener=document.activeElement;pageInert(true);setTimeout(()=>{if(focusEl)focusEl.focus()},0)}
 function dlgClose(){if(!$("panel").hidden||!$("instBox").hidden)return; // the other dialog is still open
   pageInert(false);const o=dlgOpener;dlgOpener=null;if(o&&o.focus&&document.contains(o))o.focus()}
+/* The phone's Back button closes an open panel, the install box or the report box instead of leaving the app.
+   While any of them is open there is exactly one extra history step: Back closes the top one and, if another is still
+   open, the step is added again. Closing the last one any other way takes the step back off. */
+const backStack=[];let backSkip=0,backClosing=false;
+const backArm=()=>{try{history.pushState({lpnDlg:1},"")}catch(e){}};
+function backOpen(name){if(backStack.includes(name))return;backStack.push(name);if(backStack.length===1)backArm()}
+function backClose(name){if(backClosing)return;const i=backStack.lastIndexOf(name);if(i<0)return;backStack.splice(i,1);
+  if(!backStack.length){backSkip++;try{history.back()}catch(e){backSkip--}}}
+window.addEventListener("popstate",()=>{
+  // Our own step being taken off: if something was opened again meanwhile, it needs a step of its own.
+  if(backSkip){backSkip--;if(backStack.length)backArm();return}
+  const name=backStack.pop();if(!name)return;
+  backClosing=true;try{({panel:closeHelp,install:closeInstall,report:closeFeedback})[name]()}finally{backClosing=false}
+  if(backStack.length)backArm();
+});
 function openHelp(k,t){
   $("panelTitle").textContent=t;$("panelBody").innerHTML=k==="guide"?DEMO_HTML+guideToc(siteHtml(HELP.guide)):(k==="log"&&feat("historyVideo")?HIST_HTML:"")+siteHtml(HELP[k]);
-  $("panel").hidden=false;$("shade").hidden=false;$("panel").scrollTop=0;if(k==="settings")initSettings();if(k==="history")initHistory();if(k==="guide")initDemo();if(k==="log"&&$("histPlay")){initDemo("hist");testNote("historyVideo",$("histPlay").parentNode)}
-  dlgOpen($("panelClose"));
+  $("panel").hidden=false;$("shade").hidden=false;$("panel").scrollTop=0;if(k==="settings")initSettings();if(k==="history")initHistory();if(k==="guide")initDemo();if(k==="phones")initPhones();if(k==="log"&&$("histPlay")){initDemo("hist");testNote("historyVideo",$("histPlay").parentNode)}
+  dlgOpen($("panelClose"));backOpen("panel");
 }
-function closeHelp(){["demoVid","histVid"].forEach(id=>{const v=$(id);if(v)v.pause()});const was=!$("panel").hidden;$("panel").hidden=true;$("shade").hidden=true;if(was)dlgClose()}
+function closeHelp(){["demoVid","histVid"].forEach(id=>{const v=$(id);if(v)v.pause()});if(qrTimer){clearInterval(qrTimer);qrTimer=null}const was=!$("panel").hidden;$("panel").hidden=true;$("shade").hidden=true;if(was){dlgClose();backClose("panel")}}
+/* "↓ Latest": on a long log, once the newest pallet is out of sight, a button takes you back to it. */
+(function(){
+  const b=$("toLatest");if(!b)return;let queued=false;
+  const last=()=>{const r=$("body").lastElementChild;return r&&r.querySelector(".lpnedit")?r:null};
+  const check=()=>{queued=false;const r=last();
+    if(!r||rows.length<8){b.hidden=true;return}
+    const en=document.querySelector(".entry"),dock=en&&getComputedStyle(en).position==="fixed"?en.getBoundingClientRect().height:0;
+    const box=r.getBoundingClientRect(),bottom=innerHeight-dock;
+    // Out of the way while the Undo bar or the "Added" note shows over the same spot.
+    const over=["undoBar","flash"].some(id=>{const e=$(id);return e&&!e.hidden});
+    b.hidden=over||(box.top<bottom&&box.bottom>0);document.documentElement.classList.toggle("haslatest",!b.hidden)};
+  const later=()=>{if(!queued){queued=true;requestAnimationFrame(check)}};
+  addEventListener("scroll",later,{passive:true});addEventListener("resize",later);
+  new MutationObserver(later).observe($("body"),{childList:true});
+  ["undoBar","flash"].forEach(id=>{const e=$(id);if(e)new MutationObserver(later).observe(e,{attributes:true,attributeFilter:["hidden"]})});
+  b.onclick=()=>{const r=last();if(!r)return;r.scrollIntoView({block:"center"});const e=r.querySelector(".lpnedit");if(e)e.focus({preventScroll:true});b.hidden=true};
+  later();
+})();
 /* The fixed entry bar's height, so focused controls scroll clear of it (styles.css scroll-padding-bottom). */
 (function(){const en=document.querySelector(".entry");if(!en||!window.ResizeObserver)return;new ResizeObserver(()=>document.documentElement.style.setProperty("--dockh",en.offsetHeight+"px")).observe(en)})();
 /* ---- settings: custom colours ---- */
@@ -488,10 +534,11 @@ function openFeedback(opts){
   $("fbShade").hidden=false;$("fbBox").hidden=false;
   pageInert(true);if($("panel"))$("panel").inert=true;if($("instBox"))$("instBox").inert=true;
   const waiting=fbQueue().length;$("fbMsg").textContent=waiting?waiting+" report"+(waiting===1?" is":"s are")+" waiting to be sent when you’re back online.":"";
-  setTimeout(()=>$("fbText").focus(),0);
+  setTimeout(()=>$("fbText").focus(),0);backOpen("report");
 }
 function closeFeedback(){
   if($("fbBox").hidden)return;
+  backClose("report");
   fbPhotoJob++;$("fbSend").disabled=false;$("fbText").placeholder="";
   $("fbShade").hidden=true;$("fbBox").hidden=true;
   if($("panel"))$("panel").inert=false;if($("instBox"))$("instBox").inert=false;
@@ -615,6 +662,36 @@ function histFilter(){
 }
 $("newDel").onclick=newDelivery;
 $("histBtn").onclick=()=>openHelp("history","Saved deliveries");
+$("phonesBtn").onclick=()=>openHelp("phones","Share the log with another person");
+/* Share log: this phone's pallets as a run of QR codes (qr.js). Each code is "LPNM1 <id> <k>/<n> <part>"; the parts
+   joined give {t: trailer, r: pallets}. The receiving phone reads them in Live scan (scan.js, qrPart). */
+let qrTimer=null;
+function qrCodesFor(list){
+  // Characters outside plain ASCII are written as \u escapes, so every code is plain ASCII: a code is never too
+  // big for its QR code, and readers can't guess the wrong character set.
+  const data=JSON.stringify({t:($("trailer").value||"").trim().slice(0,40),r:list.map(r=>{const o={lpn:r.lpn,type:r.type};if(r.fsdu)o.fsdu=true;if(r.dmg)o.dmg=r.dmg;if(r.desc)o.desc=r.desc;if(r.ref)o.ref=true;return o})}).replace(/[\u007f-\uffff]/g,c=>"\\u"+c.charCodeAt(0).toString(16).padStart(4,"0"));
+  const ch=Array.from(data),parts=[],id=Math.random().toString(36).slice(2,6).padEnd(4,"0");
+  for(let i=0;i<ch.length;i+=280)parts.push(ch.slice(i,i+280).join(""));
+  return parts.map((p,k)=>"LPNM1 "+id+" "+(k+1)+"/"+parts.length+" "+p);
+}
+function initPhones(){
+  let codes=[],at=0;
+  const show=k=>{at=(k+codes.length)%codes.length;
+    try{$("qrImg").innerHTML=QR.svg(codes[at])}catch(e){if(qrTimer){clearInterval(qrTimer);qrTimer=null}$("qrBox").hidden=true;$("qrMsg").textContent="These pallets couldn’t be turned into codes. Export them instead.";return}
+    $("qrCount").textContent=codes.length>1?"Code "+(at+1)+" of "+codes.length:"One code"};
+  $("qrShow").onclick=()=>{
+    $("qrMsg").textContent="";
+    if(!rows.length){$("qrMsg").textContent="There are no pallets on this phone to send.";$("qrBox").hidden=true;return}
+    codes=qrCodesFor(rows);$("qrBox").hidden=false;$("qrCount").setAttribute("aria-live","off");$("qrPrev").hidden=$("qrNext").hidden=codes.length<2;show(0);
+    if(qrTimer)clearInterval(qrTimer);qrTimer=codes.length>1?setInterval(()=>show(at+1),2000):null;$("qrBox").scrollIntoView({block:"nearest"});
+    $("qrMsg").textContent=rows.length+" pallet"+(rows.length===1?"":"s")+" in "+codes.length+" code"+(codes.length===1?"":"s")+". Leave this open until the other phone says they’re added.";
+  };
+  // Stepping by hand stops the automatic change, so a code can be held for a slow camera.
+  // (Read out only when stepped by hand; while the codes change by themselves a screen reader would never stop.)
+  const step=d=>{if(qrTimer){clearInterval(qrTimer);qrTimer=null}$("qrCount").setAttribute("aria-live","polite");show(at+d)};
+  $("qrPrev").onclick=()=>step(-1);$("qrNext").onclick=()=>step(1);
+  $("qrScan").onclick=()=>{closeHelp();qrRecv=null;$("video").hidden=false;startScan().then(()=>{if(scanning){qrWant=true;$("smsg").textContent="Point the camera at the other phone’s QR codes.";$("stopscan").focus({preventScroll:true});$("scanbox").scrollIntoView({block:"nearest"})}})};
+}
 /* Share this app: the phone's share menu, or copy the link. */
 async function shareApp(){
   const url="https://jamie9904.github.io/",m=$("shareMsg");
@@ -717,9 +794,9 @@ function openInstall(){
   const a=$("instAnd"),b=$("instIos"),par=a.parentNode;
   if(ios)par.insertBefore(b,a);else par.insertBefore(a,b);
   $("instShade").hidden=false;$("instBox").hidden=false;$("instBox").scrollTop=0;
-  dlgOpen($("instBox").querySelector("button:not([hidden])"));
+  dlgOpen($("instBox").querySelector("button:not([hidden])"));backOpen("install");
 }
-function closeInstall(){const was=!$("instBox").hidden;$("instShade").hidden=true;$("instBox").hidden=true;if(was)dlgClose()}
+function closeInstall(){const was=!$("instBox").hidden;$("instShade").hidden=true;$("instBox").hidden=true;if(was){dlgClose();backClose("install")}}
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;$("instNow").hidden=false});
 $("instNow").onclick=async()=>{
   if(!deferredInstall)return;
@@ -749,6 +826,8 @@ function applySite(){
   if(!feat("liveScan"))hide("scan");
   if(!feat("scanByPhoto"))hide("photo");
   if(!feat("photoUpload"))hide("upload");
+  if(!feat("twoPhones"))hide("phonesBtn");
+  if(!feat("tallySheet"))hide("tallyBtn");
   { // the tip names only photo buttons that are switched on
     const alt=[feat("scanByPhoto")&&"Scan by photo",feat("photoUpload")&&"Upload photo"].filter(Boolean);
     if(feat("liveScan")&&alt.length)$("scanTip").textContent="Tip: if Live scan doesn’t work, try "+alt.join(" or ")+" instead.";else hide("scanTip");

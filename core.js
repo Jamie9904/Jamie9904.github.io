@@ -2,7 +2,7 @@
 const FIRST_OPEN=(()=>{try{for(let i=0;i<localStorage.length;i++){if(/^lpn/.test(localStorage.key(i)))return false}return true}catch(e){return false}})();
 /* Site settings from config.js (loaded before this file): which features are shown, and which carry a note that
    they are still being tested. A missing or broken config.js means every feature on and no notes. */
-const FEATURES=["report","manifestCheck","manifestPhotos","liveScan","scanByPhoto","photoUpload","torch","damage","refused","noLpn","fppDesc","exportReminder","historyVideo","shareMissing","findLpn","shareApp","welcome","whatsNew"];
+const FEATURES=["report","manifestCheck","manifestPhotos","liveScan","scanByPhoto","photoUpload","torch","damage","refused","noLpn","fppDesc","exportReminder","historyVideo","twoPhones","tallySheet","shareMissing","findLpn","shareApp","welcome","whatsNew"];
 /* Pallets that arrived without an LPN are logged as "No LPN 1", "No LPN 2", … (numbered within the delivery). */
 const isNoLpn=v=>/^No LPN \d+$/i.test(String(v==null?"":v).trim());
 const SITE=(()=>{
@@ -16,7 +16,7 @@ const feat=k=>SITE.on[k]!==false;
 function testNote(k,el,where){
   if(!SITE.test[k]||!el)return null;
   const n=document.createElement("p");n.className="note testnote";n.dataset.test=k;
-  const what={noLpn:"Logging pallets with no LPN",refused:"Marking pallets as refused",exportReminder:"The reminder about deliveries not exported",historyVideo:"The build history video",fppDesc:"Descriptions for FPP pallets",manifestCheck:"The Manifest check",manifestPhotos:"Reading photos",liveScan:"Live scan",scanByPhoto:"Scan by photo",photoUpload:"Upload photo",torch:"The torch",damage:"Marking damage",shareMissing:"Share missing list",findLpn:"Find an LPN",shareApp:"Share this app"}[k];
+  const what={noLpn:"Logging pallets with no LPN",refused:"Marking pallets as refused",exportReminder:"The reminder about deliveries not exported",historyVideo:"The build history video",twoPhones:"Sharing the log",tallySheet:"The blank tally sheet",fppDesc:"Descriptions for FPP pallets",manifestCheck:"The Manifest check",manifestPhotos:"Reading photos",liveScan:"Live scan",scanByPhoto:"Scan by photo",photoUpload:"Upload photo",torch:"The torch",damage:"Marking damage",shareMissing:"Share missing list",findLpn:"Find an LPN",shareApp:"Share this app"}[k];
   n.textContent=k==="report"?"In testing: reports may not always arrive yet, so for anything urgent also use Download problem report in Settings."
     :"In testing: "+what+" may not always work yet, so check what it gives you"+(feat("report")?", and use Report a problem if something goes wrong.":".");
   el.insertAdjacentElement(where||"beforeend",n);return n;
@@ -221,7 +221,7 @@ function render(){
     tr.append(n,l,t,f,x);b.appendChild(tr);
   });
   if(rows.length&&!shown){b.innerHTML='<tr><td colspan="5" class="empty">No pallets match the search</td></tr>'}
-  const fi=$("fltInfo");const fa=!!(q||ft);fi.hidden=!fa;if(fa)fi.textContent="Showing "+shown+" of "+rows.length+" pallets (counts above are for the whole log).";
+  const fi=$("fltInfo");const fa=!!(q||ft||ff);fi.hidden=!fa;if(fa)fi.textContent="Showing "+shown+" of "+rows.length+" pallets (counts above are for the whole log).";
   summary();
 }
 /* The damage choices shown under a pallet while it is edited. pick(reason or "", fromKeyboard). */
@@ -287,6 +287,12 @@ function dmgRow(r,pick,opt){
   addRef();return tr;
 }
 function extras(){const o=[];const e=parseInt($("expect").value,10);if(e>=0)o.push(["Expected pallets",String(e)]);[["trailer","Trailer number"],["sealIn","Seal in"],["sealOut","Seal out"]].forEach(f=>{const v=($(f[0]).value||"").trim();if(v)o.push([f[1],v])});const n=($("notes").value||"").trim();if(n)o.push(["Notes",n]);rows.forEach(r=>{if(r.ref)o.push(["Refused pallet",r.lpn+": sent back with the driver"])});rows.forEach(r=>{if(r.dmg)o.push(["Damaged pallet",r.lpn+": "+r.dmg])});rows.forEach(r=>{if(r.desc)o.push(["Pallet description",r.lpn+": "+r.desc])});return o}
+$("sum").addEventListener("click",e=>{
+  const b=e.target.closest(".sumbtn");if(!b)return;
+  const k=b.dataset.f,on=b.getAttribute("aria-pressed")==="true";
+  $("fltType").value="";$("fltFsdu").value="";if(!on){if(k==="FSDU")$("fltFsdu").value="y";else $("fltType").value=k}
+  render();const again=$("sum").querySelector('.sumbtn[data-f="'+k+'"]');if(again)again.focus();
+});
 function summary(){
   $("undoLast").hidden=!rows.length;
   {const en=$("expNote"),fresh=exported&&exported.sig===logSig();
@@ -302,7 +308,9 @@ function summary(){
   if(ex>=0&&ms&&ms.total===ex)ei.hidden=true;
   else if(ex>=0){const d=rows.length-ex;ei.hidden=false;ei.className="expinfo "+(d===0?"ok":d<0?"prog":"bad");ei.textContent=rows.length+" of "+ex+" expected"+(d===0?" ✓ all accounted for":d<0?" ("+(-d)+" to go)":" ("+d+" more than expected)")}else ei.hidden=true;
   const t=typeCounts(),c=t.c;
-  $("sum").innerHTML="<span><b>"+t.total+"</b>Total</span><span><b>"+c.BB+"</b>BB</span><span><b>"+c.FMCG+"</b>FMCG</span><span><b>"+c.FPP+"</b>FPP</span><span><b>"+c.Mixed+"</b>Mixed</span><span><b>"+t.fsdu+"</b>FSDU</span>"+(t.refused?"<span class=\"refsum\"><b>"+t.refused+"</b>Refused</span>":"");
+  // Each type and FSDU is a button: tapping one shows only those pallets in the log, tapping it again shows all.
+  const ft=$("fltType").value,ff=$("fltFsdu").value,tb=(k,n,on)=>"<button type=\"button\" class=\"sumbtn\" data-f=\""+k+"\" aria-pressed=\""+on+"\" aria-label=\""+k+" "+n+"\"><b>"+n+"</b>"+k+"</button>";
+  $("sum").innerHTML="<span><b>"+t.total+"</b>Total</span>"+["BB","FMCG","FPP","Mixed"].map(k=>tb(k,c[k],ft===k&&!ff)).join("")+tb("FSDU",t.fsdu,ff==="y"&&!ft)+(t.refused?"<span class=\"refsum\"><b>"+t.refused+"</b>Refused</span>":"");
 }
 /* Pallets received, by type: refused pallets (sent back with the driver) are left out and counted on their own. Used by
    the totals on screen and by every export. */
@@ -359,6 +367,21 @@ function add(){
   if(pendingAdd){$("msg").textContent="Answer the check first (Skip or Add anyway), then add "+v+".";sfx("warn");$("lpn").select();return}
   tryAdd(v);
   $("lpn").value="";$("lpn").focus();
+}
+/* Share log: pallets from another phone are added after this log's. One already here isn't added twice;
+   a No LPN pallet gets this log's next free number. One Undo takes just those away. Returns what happened. */
+function mergePallets(list){
+  const mine=new Set(),norm=v=>String(v).toUpperCase().replace(/\s+/g,""),have=new Set(rows.map(r=>norm(r.lpn)));
+  let added=0,dup=0,n=0;rows.forEach(r=>{const m=/^No LPN (\d+)$/i.exec(String(r.lpn).trim());if(m)n=Math.max(n,+m[1])});
+  cleanRows(list).forEach(r=>{
+    if(isNoLpn(r.lpn))r.lpn="No LPN "+(++n);
+    else if(have.has(norm(r.lpn))){dup++;return}
+    have.add(norm(r.lpn));rows.push(r);mine.add(r);added++;
+  });
+  const said=(added?"Added "+added+" pallet"+(added===1?"":"s")+" from the other phone.":"No new pallets from the other phone.")+(dup?" "+dup+" "+(dup===1?"was":"were")+" already in this log.":"");
+  if(added){save();render();sfx("ok");showUndo("Added "+added+" pallet"+(added===1?"":"s")+" from the other phone",()=>{rows=rows.filter(r=>!mine.has(r));save();render()})} // takes away only these, so pallets logged since stay
+  diag("merge","Share log: "+added+" added, "+dup+" already here");
+  return said;
 }
 function addValue(v,o){
   if(typeof onAdded==="function")onAdded(v);

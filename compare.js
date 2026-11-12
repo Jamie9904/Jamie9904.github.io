@@ -813,7 +813,8 @@ $("pfxDl").onclick=()=>{
   pfxMsg("Downloaded presets.json. Replace the file next to the app with it to share these presets.");
 };
 $("dlMail").onclick=()=>emailVia($("dl").onclick,"dlmsg");
-$("expBtn").onclick=()=>{const m=$("expMenu");m.hidden=!m.hidden;$("expBtn").setAttribute("aria-expanded",!m.hidden);};
+$("expBtn").onclick=()=>{const m=$("expMenu");m.hidden=!m.hidden;$("expBtn").setAttribute("aria-expanded",!m.hidden);
+  if(!m.hidden){const last=[...m.querySelectorAll("button")].filter(b=>!b.hidden).pop();if(last&&last.scrollIntoView)last.scrollIntoView({block:"nearest"})}}; // the last item clear of the entry bar
 $("expMenu").addEventListener("click",e=>{if(e.target.closest("button")){$("expMenu").hidden=true;$("expBtn").setAttribute("aria-expanded","false")}});
 async function printBuf(buf,fname,m){
   let printed=false;
@@ -839,6 +840,11 @@ $("prn").onclick=async()=>{
     await printBuf(await buildLogPdf(d),"LPN-log-"+d+fileTag()+".pdf",m);
     markExported();
   }catch(e){m.textContent="Couldn’t prepare the print copy: "+((e&&e.message)||"unknown error")}
+};
+$("tallyBtn").onclick=async()=>{
+  const m=$("dlmsg");m.textContent="";
+  try{m.textContent="Preparing the tally sheet…";await printBuf(await buildTallyPdf(),"LPN-tally-sheet.pdf",m)}
+  catch(e){m.textContent="Couldn’t prepare the tally sheet: "+((e&&e.message)||"unknown error")}
 };
 $("cmpExpBtn").onclick=()=>{const m=$("cmpExpMenu");m.hidden=!m.hidden;$("cmpExpBtn").setAttribute("aria-expanded",!m.hidden)};
 $("cmpExpMenu").addEventListener("click",e=>{if(e.target.closest("button")){$("cmpExpMenu").hidden=true;$("cmpExpBtn").setAttribute("aria-expanded","false")}});

@@ -175,11 +175,11 @@ async function xlLogo(wb,ws,maxWpx){
   ws.addImage(id,{tl:{col:0,row:0},ext:{width:Math.round(f.w),height:Math.round(f.h)},editAs:"oneCell"});
   return 5;
 }
-async function pdfBanner(doc,x,width){
+async function pdfBanner(doc,x,width,maxH){
   let y=12;
   try{
     const L=await exportLogo();
-    if(L){const f=fitLogo(L.r,width,30);doc.addImage(L.data,"JPEG",x,y,f.w,f.h);y+=f.h+6}
+    if(L){const f=fitLogo(L.r,width,maxH||30);doc.addImage(L.data,"JPEG",x,y,f.w,f.h);y+=f.h+6}
   }catch(e){}
   return y;
 }
@@ -218,6 +218,49 @@ async function buildLogPdf(d){
   }));
   pdfFooter(doc);
   return doc.output("arraybuffer");
+}
+/* A blank tally sheet to fill in by hand (Export menu): the delivery details with space to write, then numbered
+   rows with a box for each pallet type, FSDU and a note, and a totals row. One A4 page; print more as needed. */
+async function buildTallyPdf(){
+  // Rows are counted from where the table starts; if a font or a tall logo still pushes it onto a second page,
+  // the sheet is made again with one row fewer, so it always prints on one page.
+  let n=0;
+  for(let tries=0;tries<8;tries++){
+    const r=await tallyPdf(n);
+    if(r.pages<=1||r.rows<=10)return r.buf;
+    n=r.rows-1;
+  }
+  return (await tallyPdf(10)).buf;
+}
+async function tallyPdf(want){
+  await loadJsPdf();await appVersion();
+  const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:"portrait"});
+  doc.setProperties({title:"Blank tally sheet",subject:"LPN Pallet Log tally sheet"});
+  const L=10,yb=await pdfBanner(doc,L,100,18);
+  const y0=pdfTitle(doc,L,yb-6<12?12:yb-6,"Goods-in tally sheet","Write each pallet down, then type or scan the LPNs into the app when you can.");
+  const bold={fontStyle:"bold",fillColor:PDF_HEAD},blank="";
+  doc.autoTable(Object.assign({},PDF_BASE,PDF_PLAIN,{
+    startY:y0,margin:{left:L,right:10,top:12,bottom:16},
+    body:[[pdfCell("Date",bold),blank,pdfCell("Received by",bold),blank],[pdfCell("Trailer number",bold),blank,pdfCell("Expected pallets",bold),blank],[pdfCell("Seal in",bold),blank,pdfCell("Seal out",bold),blank]],
+    styles:Object.assign({},PDF_BASE.styles,{minCellHeight:9}),
+    columnStyles:{0:{cellWidth:36},1:{cellWidth:59},2:{cellWidth:36},3:{cellWidth:59}}
+  }));
+  // Row heights: 10 pt text with 1.5 mm padding top and bottom is under 7.4 mm, so every row is 7.4 mm; the
+  // one-line header is about 8 mm.
+  const ph=doc.internal.pageSize.getHeight(),top=doc.lastAutoTable.finalY+6,rowH=7.4,headH=8.2;
+  const n=want||Math.max(10,Math.floor((ph-16-top-headH-rowH)/rowH));
+  const body=Array.from({length:n},(x,i)=>[String(i+1),"","","","","","",""]);
+  body.push([{content:"Totals",colSpan:2,styles:{fontStyle:"bold",halign:"right",fillColor:PDF_HEAD}},"","","","","",{content:"",styles:{fillColor:PDF_HEAD}}]);
+  doc.autoTable(Object.assign({},PDF_BASE,PDF_PLAIN,{
+    startY:top,margin:{left:L,right:10,top:12,bottom:16},
+    head:[["#","LPN","BB","FMCG","FPP","Mixed","FSDU","Notes (damage, refused)"]],
+    body:body,
+    styles:Object.assign({},PDF_BASE.styles,{minCellHeight:rowH,fontSize:10,cellPadding:{top:1.5,bottom:1.5,left:2.2,right:2.2}}),
+    headStyles:Object.assign({},PDF_BASE.headStyles,{fontSize:9,halign:"center"}),
+    columnStyles:{0:{cellWidth:10,halign:"center",textColor:90},1:{cellWidth:56},2:{cellWidth:14},3:{cellWidth:14},4:{cellWidth:14},5:{cellWidth:14},6:{cellWidth:14},7:{cellWidth:54}}
+  }));
+  pdfFooter(doc);
+  return {buf:doc.output("arraybuffer"),pages:doc.getNumberOfPages(),rows:n};
 }
 async function buildCmpPdf(res,cnt,manCount,d,logCopy){
   await loadJsPdf();await appVersion();

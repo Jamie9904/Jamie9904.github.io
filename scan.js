@@ -21,12 +21,42 @@ syncAwake();
 function onCode(raw){
   const v=String(raw||"").trim();
   if(!v)return;
+  if(/^LPNM\d+ /.test(v)){qrPart(v);return} // a code from another phone's Share log screen, never a pallet
   const now=Date.now();
   if(v===lastCode&&now-lastAt<2500){lastAt=now;return}
   if(pendingAdd)return;
   lastCode=v;lastAt=now;
   const ok=tryAdd(v,true);
   $("smsg").textContent=ok?"Added: "+v+" ("+$("type").value+")":"Check the warning above.";
+}
+/* Share log: the codes another phone shows (panels.js, qrCodesFor). They can be read in any order; when every part
+   of one set is in, its pallets are added to this log (mergePallets, core.js) and the camera stops. */
+let qrRecv=null,qrWant=false;const qrDone=new Set();
+function qrPart(v){
+  const sm=$("smsg");
+  if(!feat("twoPhones"))return;
+  // Only after Scan the other phone's codes was tapped, so a code seen during ordinary scanning adds nothing.
+  if(!qrWant){sm.textContent="That’s a code from another phone. To add its pallets, use Share log, then Scan the other phone’s codes.";return}
+  if(!/^LPNM1 /.test(v)){sm.textContent="That code is from a different version of the app. Open the app online on both phones to update them, then try again.";sfx("warn");return}
+  const m=/^LPNM1 ([a-z0-9]{4}) (\d{1,2})\/(\d{1,2}) ([\s\S]*)$/.exec(v);
+  if(!m)return;
+  const id=m[1],k=+m[2],n=+m[3];if(!n||k<1||k>n)return;
+  if(qrDone.has(id)){sm.textContent="These pallets were already added from the other phone. On that phone, close the codes.";return}
+  if(pendingAdd){sm.textContent="Answer the check above first (Add or Skip), then keep the camera on the other phone.";return}
+  if(!qrRecv||qrRecv.id!==id)qrRecv={id,n,parts:{}};
+  if(n!==qrRecv.n||qrRecv.parts[k]!==undefined)return; // not this set's, or already read: no beep on every frame
+  qrRecv.parts[k]=m[4];
+  const got=Object.keys(qrRecv.parts).length;
+  if(got<n){sm.textContent="Codes from the other phone: "+got+" of "+n+" read. Keep the camera on its screen.";sfx("ok");return}
+  let o=null;try{o=JSON.parse(Array.from({length:n},(x,i)=>qrRecv.parts[i+1]).join(""))}catch(e){}
+  qrRecv=null;
+  if(o&&Array.isArray(o.r)&&o.r.length>500){sm.textContent="That’s more than 500 pallets, too many to add this way.";sfx("warn");return}
+  if(!o||!Array.isArray(o.r)){sm.textContent="Those codes couldn’t be read. On the other phone, tap Show my pallets as QR codes again.";sfx("warn");return}
+  const inBox=$("scanbox").contains(document.activeElement);
+  qrDone.add(id);stopScan();if(inBox)$("lpn").focus({preventScroll:true});
+  const mine=($("trailer").value||"").trim(),theirs=String(o.t||"").trim().slice(0,40);
+  const said=mergePallets(o.r);
+  $("msg").textContent=said+(mine&&theirs&&mine.toUpperCase()!==theirs.toUpperCase()?" Check the trailer: the other phone has "+theirs+", this one has "+mine+".":"");
 }
 function loadZX(){
   return new Promise((res,rej)=>{
@@ -139,7 +169,7 @@ function stopScan(keepMsg){
   if(zxReader){try{zxReader.reset()}catch(e){}zxReader=null}
   if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
   const v=$("video");v.srcObject=null;
-  $("readLabel").hidden=true;lastPhoto=null;
+  $("readLabel").hidden=true;lastPhoto=null;qrWant=false;
   if(!keepMsg){$("scanbox").hidden=true;$("smsg").textContent=""}
 }
 /* Scan by photo (camera) reads the barcode, and offers Read the printed LPN when there is none.
