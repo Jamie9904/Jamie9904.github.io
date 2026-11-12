@@ -16,8 +16,10 @@
 ├── logo.png                 default logo for the header and exports (optional)
 ├── presets.json             shared LPN prefix presets (optional)
 ├── media/
-│   ├── demo.mp4             narrated demo video for the Guide (720×1280, about 47 seconds, about 1.7 MB; re-recorded for v4.0 in build 52 and again in build 59 to show the Report a problem button; loaded only when tapped, not cached)
+│   ├── demo.mp4             narrated demo video for the Guide (720×1280, about 47 seconds, about 1.7 MB; re-recorded for v4.0 in build 52, again in build 59 to show the Report a problem button, and in build 65 to show the four-button scan row; loaded only when tapped, not cached)
 │   ├── demo-poster.jpg      still picture shown before the video plays
+│   ├── history.mp4          narrated build history video for the top of the Changelog (build 65; 1280×720, about 66 seconds, about 2.8 MB; loaded only when tapped, not cached)
+│   ├── history-poster.jpg   still picture shown before it plays (the last frame)
 │   └── share-qr.svg         QR code for Settings → Share this app (opens https://jamie9904.github.io/; in the offline shell, build 50)
 ├── fonts/
 │   ├── AtkinsonHyperlegible-{Regular,Bold}.woff2
@@ -35,16 +37,16 @@
 │   ├── lib.js               shared helpers for the checks: serve(), check(), page(), EXCEL_STUB, LIBS / libFile() / REAL_LIBS, file types (TYPES), counts()
 │   ├── groups/              the checks, one self-contained file per area (since build 52)
 │   │   ├── 01-layout.js … 06-real-export.js     layout; phone flows and Settings; Excel export; version note, PDF safety and spreadsheet import; saved data from outside and fingerprints; real export libraries and library versions
-│   │   ├── 07-security-policy.js … 12-report.js security policy; demo video; manifest photos and problem report; accessibility; feedback Worker; Report a problem or idea
-│   │   └── 13-photo-notes.js … 23-offline.js    photo notes; Find an LPN and turned photos; damaged pallets and Share this app; welcome card; offline store; real photo reading (GitHub only); site settings (config.js, build 53); pallets with no LPN and FPP descriptions (20-no-lpn.js, builds 55 and 56); data saved by older builds (21-old-data.js, after build 55); refused pallets, the reminder about a delivery not exported and the site name on exports (22-refused-reminder-site.js, build 62; Scan by photo reading the printed LPN added in build 63); offline (23-offline.js since build 62)
-│   ├── fixtures/old/build-N/  files saved by builds 19, 30, 46, 49 and 54 with their own code: storage.json, backup.json, cells.json, keywords.txt, log.xlsx, log.pdf, expect.json (read by groups/21-old-data.js)
+│   │   ├── 07-security-policy.js … 12-report.js security policy; demo video and the Changelog's build history video (build 65); manifest photos and problem report; accessibility; feedback Worker; Report a problem or idea
+│   │   └── 13-photo-notes.js … 23-offline.js    photo notes; Find an LPN and turned photos; damaged pallets and Share this app; welcome card; offline store; real photo reading (GitHub only); site settings (config.js, build 53); pallets with no LPN and FPP descriptions (20-no-lpn.js, builds 55 and 56); data saved by older builds (21-old-data.js, after build 55); refused pallets, the reminder about a delivery not exported and the site name on exports (22-refused-reminder-site.js, build 62; Scan by photo reading the printed LPN added in build 63, moved to Upload photo in build 64; Read the printed LPN and several photos in build 65); offline (23-offline.js since build 62)
+│   ├── fixtures/old/build-N/  files saved by builds 19, 30, 46, 49, 54 and 64 (build 64 since build 65) with their own code: storage.json, backup.json, cells.json, keywords.txt, log.xlsx, log.pdf, expect.json (read by groups/21-old-data.js)
 │   ├── advisories.js        asks osv.dev about security advisories for the pinned libraries
 │   ├── advisories-accepted.json  advisories checked and found not to affect the app, with reasons
 │   └── sri.js               checks the library fingerprints in core.js against the CDNs
 ├── tools/demo-video/        recorder for the Guide demo video (development only, see below)
 │   ├── make.sh              one command: voice, recording, render, web copy, poster, screen fingerprint and check frames
 │   ├── lines.json           the spoken line for each scene
-│   ├── voice.py             speaks the lines offline (Kokoro "Heart" voice through sherpa-onnx, downloaded once into ~/.cache/lpn-voice)
+│   ├── voice.py             speaks the lines offline; since build 65 it takes a folder (python3 voice.py <folder>) and reads that folder's lines.json and writes its out/, which tools/history-video uses (Kokoro "Heart" voice through sherpa-onnx, downloaded once into ~/.cache/lpn-voice)
 │   ├── stage.html           the 1080×1920 stage: headline, phone frame with the live app, subtitles, cards
 │   ├── record.mjs           serves the repository locally, drives the app scene by scene (SCENES) with Playwright and records frames (en-GB locale and browser language; a drawn barcode label stands in for the Live scan camera)
 │   ├── render.py            joins the frames with the narration; adds music and sound effects only when SFX_DIR is set
@@ -52,12 +54,19 @@
 │   ├── screens.json         the saved fingerprint, rewritten by make.sh after each recording
 │   ├── README.md            how to re-record
 │   └── .gitignore           keeps the working folder out/ out of git
+├── tools/history-video/     recorder for the Changelog's build history video (development only, build 65)
+│   ├── make.sh              one command: voice (../demo-video/voice.py on this folder), capture, render, then the web copy media/history.mp4 (1280×720) and its poster
+│   ├── lines.json           the spoken line for each scene (an intro and one per milestone build)
+│   ├── capture.js           takes each milestone build (13, 19, 23, 34, 44, 49, 52, 56, 62, 65) from git history (git archive), runs it with the same sample delivery and screenshots it with the part to outline (out/shots/)
+│   ├── render.js            draws every frame on stage.html at 1920×1080, 25 frames a second, then mixes the voice with music and a sound on each change
+│   ├── stage.html           the stage: screenshot, build number, date, caption and the row of builds
+│   └── .gitignore           keeps the working folder out/ out of git
 ├── tools/ocr-check/         photo reading check on real manifest photos (development only)
 │   ├── check.js             runs the app's photo code on the photos and scores the LPNs (also used by tests/groups/18-real-photo.js on GitHub)
 │   ├── expected.json        the LPNs printed on each photo (23)
 │   └── photos/              the user's four manifest photos, address boxes cut off (qub, rby, run, vlt .jpg), run-sideways.jpg (run.jpg turned, build 46) and rby-upside-down.jpg (rby.jpg turned 180°, build 47)
 ├── tools/old-data/          makes tests/fixtures/old from older builds (development only, after build 55)
-│   ├── make.js              runs each build in BUILDS from git history with stand-in ExcelJS and jsPDF and records its storage, backup, Excel cells and PDF hidden data
+│   ├── make.js              runs each build in ALL_BUILDS (19, 30, 46, 49, 54, 64), or only the ones named (node tools/old-data/make.js 64), from git history with stand-in ExcelJS and jsPDF and records its storage, backup, Excel cells and PDF hidden data
 │   └── files.py             turns the recorded cells and hidden data into log.xlsx (openpyxl) and log.pdf (reportlab)
 ├── tools/feedback-worker/   Cloudflare Worker that turns Report a problem or idea into issues in a private repo (not part of the site)
 │   ├── worker.mjs           POST /report: checks, limits (Limits Durable Object), GitHub issue and photo
@@ -98,7 +107,7 @@
 | `compare.js` | Everything manifest-related, file readers, OCR | Saved-delivery storage |
 | `panels.js` | Side-panel content (Guide, Changelog, Settings, Saved deliveries) and app-wide extras that run last | Code other scripts depend on during their own load |
 | `sw.js` | Caching only | App logic |
-| `media/` | The Guide's demo video and its poster, kept under 3 MB (a check fails above that), and the Settings QR code `share-qr.svg` (build 50, cached for offline use in `SHELL`) | Anything else the app needs to work offline (the video is never cached) |
+| `media/` | The Guide's demo video and its poster, kept under 3 MB (a check fails above that), the Changelog's build history video and its poster (build 65, kept under 4 MB), and the Settings QR code `share-qr.svg` (build 50, cached for offline use in `SHELL`) | Anything else the app needs to work offline (the video is never cached) |
 
 ## Load order and dependencies
 
@@ -115,6 +124,7 @@
 
 - `tests/`, `tools/`, `package.json`, `DESIGN.md` and `README.md` are on `main`, so GitHub Pages publishes them alongside the app. `tools/` is kept out of the site zip and the download copy (`outputs_reminder.py` doesn't count it as a site file).
 - `tools/demo-video/` only reads the app files; its output goes to `media/demo.mp4` and `media/demo-poster.jpg`, which the app does use, and to `tools/demo-video/screens.json`, which only `tests/groups/08-demo-video.js` reads.
+- `tools/history-video/` reads the app's older builds from git history (and, through `../demo-video/voice.py`, the offline voice); its output goes to `media/history.mp4` and `media/history-poster.jpg`, which the app uses in the Changelog.
 - `tools/ocr-check/` only reads the app files and its own photos; `tests/groups/18-real-photo.js` loads `check.js` to read the photos on GitHub, and `health.yml` runs it with `--url=` against the live site.
 - `tools/old-data/` reads older builds from git history and writes only into `tests/fixtures/old/`, which only `tests/groups/21-old-data.js` reads.
 - `tools/feedback-worker/` runs on Cloudflare, not on GitHub Pages; the app only talks to it through `FEEDBACK_URL` in `panels.js` (`https://lpn-feedback.jamie9904.workers.dev/report` since build 43). `tests/groups/11-feedback-worker.js` imports `worker.mjs` to check it.

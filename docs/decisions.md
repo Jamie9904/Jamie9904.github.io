@@ -771,13 +771,13 @@ A pallet that arrives without an LPN is logged with the **No LPN** button as an 
 
 ## Old-build data files made by the old builds' own code (after build 55, commit `f510058`)
 
-`tests/groups/21-old-data.js` checks the current app against data saved by builds 19, 30, 46, 49 and 54: browser storage, a backup file, an Excel export and the Email PDF's hidden data, kept in `tests/fixtures/old/build-N`. `tools/old-data/make.js` makes them by running each old build, taken from git history, and letting its own code save, export and back up the same delivery.
+`tests/groups/21-old-data.js` checks the current app against data saved by builds 19, 30, 46, 49, 54 and (since build 65) 64: browser storage, a backup file, an Excel export and the Email PDF's hidden data, kept in `tests/fixtures/old/build-N`. `tools/old-data/make.js` makes them by running each old build, taken from git history, and letting its own code save, export and back up the same delivery.
 
 - **Why:** phones keep whatever the build they had saved, and printed or emailed logs are imported again weeks later. Writing the old formats by hand in a check would only test what the check's author remembers about them; the old build's own code gives exactly what it really wrote.
 - **Why these builds:** each is where saved data or exports changed shape (trailer and seals, the storage and backup tidy-up, the last build before damage notes, damage notes added, the last build before No LPN pallets).
 - **Why the `.xlsx` and `.pdf` are rebuilt with Python:** ExcelJS and jsPDF can't be installed everywhere the files are made (for example the Claude cloud sandbox), so `make.js` records what the old build passed to stand-ins (the cells and merged cells, and the PDF keywords), and `files.py` writes real files from that with openpyxl and reportlab, with fixed dates so a rebuild gives the same bytes. The recorded content is checked everywhere; the real files are opened with the real ExcelJS and pdf.js only on GitHub.
 - **Why a fixed clock:** saved deliveries older than last week are removed, so both the old builds and the check run with the clock at 2 March 2026, the day the files were made.
-- **Trade-off:** the rebuilt files don't have the old build's styling or real jsPDF layout, only its content. A new folder has to be added by hand (`BUILDS` in `make.js`) when the data shape changes; build 55's No LPN pallets and descriptions don't have one yet.
+- **Trade-off:** the rebuilt files don't have the old build's styling or real jsPDF layout, only its content. A new folder has to be added by hand (`ALL_BUILDS` in `make.js`, `BUILDS` before build 65) when the data shape changes. Build 64's folder (added with build 65) covers descriptions (`desc`, from build 55), refused pallets (`ref` and the PDF's sixth item, from build 62) and the site name; there are no separate build-55 or build-62 folders. Since build 65 `make.js` can make only the builds named (`node tools/old-data/make.js 64`), so adding a build doesn't remake the others.
 
 ## Descriptions for FPP pallets (build 56)
 
@@ -891,7 +891,7 @@ A pallet that comes off the trailer and is sent back with the driver used to be 
 - **Read back exactly:** imports read the Delivery Details rows, and the PDF's hidden data gets a sixth item (`1`) on refused rows only, so PDFs without refused pallets are unchanged.
 - **How it looks:** the review fixes (`03ac99c`) replaced a line through the LPN with a bar at the side (a struck-through LPN is hard to read and check), stopped the tag breaking mid-word, and gave the button plain wording ("Refused (sent back)" / "Not refused") instead of a pressed state.
 - **Switch:** `refused` in `config.js`; switching it off only removes the button, and pallets already marked keep their mark and stay out of the totals, so a switched-off feature never changes counts already recorded.
-- **Data shape:** rows can now carry `ref`, and the PDF hidden data a sixth item. `tests/fixtures/old/` has no build-62 set yet; one should be added after the release with the `lpn-old-data-fixtures` skill, so later builds are checked against logs with refused pallets.
+- **Data shape:** rows can now carry `ref`, and the PDF hidden data a sixth item. No build-62 set was made; the build-64 set added with build 65 has a refused pallet, so later builds are checked against logs with refused pallets.
 
 ## Reminder about a delivery not exported (build 62)
 
@@ -945,9 +945,53 @@ Build 63 made **Scan by photo** open the phone's picker (take or choose) and rea
 - **Its own switch:** `photoUpload` was added to `FEATURES` and `config.js` (on, not in testing), with its own testing note ("Upload photo"), so a site can hide the slower, less certain reading without losing Scan by photo. Reading the printed LPN now needs `photoUpload` and `manifestPhotos`; `scanByPhoto` no longer affects it.
 - **Messages name only buttons that exist:** the tip under the buttons, the blocked-camera message and the torch message use `photoAlt()` (or, for the tip, `applySite()`), so nobody is sent to a switched-off button. The tip is hidden when Live scan is off, since it is about Live scan not working.
 - **Four buttons on one row:** on phones Live scan, Scan by photo, Upload photo and No LPN stay in one row at least 48px tall (for gloves), with labels allowed to wrap onto two lines (`line-height: 1.15`, less side padding) and smaller text and gaps under 360px, rather than a second row of buttons. The row still wraps under 300px.
+- **Superseded in build 65:** Scan by photo now offers **Read the printed LPN** on the same photo instead of pointing to Upload photo (see "Read the printed LPN" below).
 - **Privacy wording widened:** photos from Scan by photo and Upload photo are read on the phone too, so the privacy line now says "Photos and PDFs you scan or add…" and shows when the Manifest check, Scan by photo or Upload photo is on.
 
 ## Smaller fixes in build 64
 
 - **"Reading barcode…" set a frame late:** `decodePhoto()` empties the message line and writes "Reading barcode…" in the next animation frame, after the camera box is shown. The code comment gives the reason: so screen readers announce it (text put in at the moment the box appears may be missed).
 - **Tab past the last damage choice:** on a slow browser, focus can move to another control in the pallet's row before the table is redrawn, and the old rule only brought it back to the LPN when focus was lost entirely. `finish()` now also returns focus to the LPN when it was on another control in that row. The check in `15-damaged.js` now presses Tab one key at a time and waits for focus to move after each, because on busy machines the keys could run together and the check failed now and then.
+
+## Read the printed LPN on a Scan by photo photo (build 65)
+
+In build 64 a Scan by photo with no barcode said to use **Upload photo**, which meant taking or choosing the photo again. Build 65 keeps the photo and shows **Read the printed LPN** in the camera box.
+
+- **Only when asked:** the read can take up to a minute, so Scan by photo still only reads the barcode by itself; the slow read starts when the button is tapped. The result still goes through the check bar with Add and Skip.
+- **Same switches:** it needs `photoUpload` and `manifestPhotos`, like reading the printed LPN from Upload photo (`canReadLabel()`), so a site that switched that off doesn't get it back through Scan by photo. No new switch was added.
+- **The photo isn't lost to a waiting check:** if a check is open, the button stays and the photo is kept, with a message to answer the check first.
+- **Focus:** the button hides once pressed, so focus is moved to **Stop scanning** first (not lost to the page) and then to **Skip** on the check, the safe choice for a reading that may be wrong.
+- **Prefix said once:** with the usual LPN checks on, the check bar already lists a prefix outside the list, so the label's own prefix note is only added when those checks are off (in build 64 it was said twice).
+
+## Several photos at once with Upload photo (build 65)
+
+`#upFile` takes several photos. `readPhotos()` reads them in turn rather than all at once.
+
+- **One question at a time:** there is one check bar (`pendingAdd`), so each photo that needs an answer waits for Add or Skip before the next is read. `hideCheck()` got a one-off `onCheckDone` callback for this, instead of polling. Each message and question starts "Photo n of m:", so it's clear which photo is being asked about.
+- **Other checks come first:** a handheld scan can open a check while a photo is being read. The photo then isn't offered (it would replace that check) and is read again once that check is answered, rather than being counted as found nothing.
+- **A summary that counts only the photos:** `onAdded()` counts only LPNs that came from the batch's photos (`b.expect`), so pallets scanned or typed meanwhile don't inflate "N pallets added". Notes that the next photo's messages would replace (a number without letters, a photo that couldn't be read) are kept and listed after the summary.
+- **Never into the wrong delivery:** anything that replaces or empties the log (Clear all, Start new delivery once it really starts, opening a saved delivery, exporting a saved delivery, which swaps the log in for a moment) or the user stopping (Stop scanning, switching the LPN checks off, which takes away the check bar) ends the batch with `stopPhotos()`. Only the batch's own question is taken away, so a handheld scan's question still gets its answer; the buttons are freed and the summary given at once instead of waiting for a slow read; and a read that finishes later adds and asks nothing. The first reason is kept, so the summary says why it stopped.
+- **Nothing else starts meanwhile:** Live scan, Scan by photo and Upload photo say "Still reading your photos…" while a batch runs, as they share the camera box and its message line.
+- **One photo as before:** choosing one photo uses the old path, with no "Photo 1 of 1" or summary.
+- **Trade-off:** photos are read one after another, so a batch of photos without barcodes can take about a minute each.
+
+## Camera box buttons wrap (build 65)
+
+With **Read the printed LPN** next to **Torch** and **Stop scanning**, the buttons didn't fit beside the message on small phones or with big text. `.scanbtns` now wraps (lined up on the right) and the message keeps at least 200px, instead of the buttons pushing it to nothing or the page sliding sideways.
+
+## Build history video in the Changelog (build 65)
+
+The Changelog starts with a one-minute narrated video of the app at ten builds, from 13 to 65.
+
+- **Made from the real old builds:** `tools/history-video/capture.js` runs each milestone build from git history with the same sample delivery, so the screens are what each build really looked like, not mock-ups. It reuses the demo video's offline voice (`voice.py` now takes a folder).
+- **Same loading rules as the demo:** a button first and `preload="none"`, so nothing downloads until tapped; not cached by the service worker; half volume; stops when the panel closes. It is landscape (16:9, full panel width) because it shows a wide stage with the build row, unlike the portrait demo.
+- **Placed after the photo news:** its changelog bullet comes second, so the what's-new card after the update still leads with the Upload photo change (commit `b737735`).
+- **Its own switch:** `historyVideo`, so a site can leave it out; its Guide line and changelog bullet go with it.
+- **Checked weekly:** `health.yml` downloads the live file and checks it decodes as H.264 and AAC and is longer than 30 seconds.
+- **Trade-off:** it names "build 13 to build 65" in the Guide line, changelog bullet and `aria-label`, and shows a fixed set of builds, so it doesn't update itself; re-recording means editing `capture.js`, `lines.json` and `render.js`. Its music and sound effects come from a folder outside the repository.
+
+## Smaller changes in build 65
+
+- **Demo video re-recorded** so the scan row shows the four buttons from build 64 (length unchanged, 46.6 seconds).
+- **Problem log wording:** the `scan` entry now starts "Printed LPN read:", as it comes from either Upload photo or Read the printed LPN.
+- **A barcode with a check open:** a single photo whose barcode is read while the check bar is showing now says "Answer the check above first (Add or Skip), then try the photo again." Before, the code went to `onCode()`, which ignores codes while a check is waiting, so the photo was dropped without a word.

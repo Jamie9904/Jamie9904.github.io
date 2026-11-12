@@ -102,7 +102,22 @@ How `record.mjs` records:
 - There is no camera, so before the app loads it replaces `navigator.mediaDevices.getUserMedia` with a stream from a drawn canvas (`captureStream(30)`): a grey background with a white label that shows bars and the code in `window.__showCode`, or "…" when that is empty. It also replaces `window.BarcodeDetector` with a stand-in whose `detect()` returns `window.__showCode` while one is set. Everything after the code is reported (adding the pallet with the selected type and the "Added" message) is the app's own `onCode`.
 - The scanning scene (8.4 s) taps **FMCG**, **Scan** and **Live scan**, scrolls the camera box and **Stop scanning** into view, shows `VLT004037901` (added as FMCG), taps **BB**, then shows `RUN0001830770` (added as BB). It then taps **Stop scanning** and closes the scan buttons, so the next scene starts with them closed. Its headline is "Log pallets" / "Pick the type, then scan." and its narration is "Pick the pallet type first, then scan. Each pallet is logged with that type, so change it before the next one."
 
-A check in `tests/groups/08-demo-video.js` fails if the video is over 3 MB. Re-record when `npm test` prints that the screens differ from the demo video (on GitHub, the "Demo video may be out of date" warning) and the change shows in the video. The weekly health check also downloads the live video and checks it plays.
+A check in `tests/groups/08-demo-video.js` fails if the video is over 3 MB. Re-record when `npm test` prints that the screens differ from the demo video (on GitHub, the "Demo video may be out of date" warning) and the change shows in the video. The weekly health check also downloads the live video and checks it plays. Since build 65 `voice.py` can be given a folder (`python3 tools/demo-video/voice.py <folder>`): it then reads that folder's `lines.json` and writes its `out/`; with no folder it works on `tools/demo-video/` as before.
+
+### Re-recording the Changelog build history video
+
+`tools/history-video/` (build 65) re-makes `media/history.mp4` and `media/history-poster.jpg`, the one-minute video at the top of the Changelog. It needs Node.js with Playwright, Python 3, `ffmpeg` and the full git history, and uses the same offline voice as the demo video (downloaded into `~/.cache/lpn-voice` on first use).
+
+```bash
+sh tools/history-video/make.sh
+```
+
+1. `make.sh` runs `../demo-video/voice.py` on the `tools/history-video` folder (its `lines.json`: an intro, one line per build and a closing line), then `capture.js` and `render.js`.
+2. `capture.js` takes each milestone build (13, 19, 23, 34, 44, 49, 52, 56, 62 and 65, each pinned to its commit in `ALL`) from git with `git archive`, serves it locally, fills it with the same sample delivery (eight pallets, a twelve-number manifest, trailer `TR 4471`) and screenshots it, with the part of the screen to outline, into `out/shots/`. `node capture.js b65` re-takes only the builds named.
+3. `render.js` draws every frame on `stage.html` (1920×1080, 25 frames a second) with each build's date, number and caption from `INFO`, and mixes the voice with a music bed and a whoosh on each change. Those sound files are read from `~/app-demos/lpn-pallet-log/public/sfx` (`whoosh.wav`, `starter-beat.mp3`), which is not in the repository.
+4. `make.sh` then writes the web copy `media/history.mp4` (1280×720, H.264 and AAC, `+faststart`) and its poster from the last frame, and prints its size. Watch `tools/history-video/out/lpn-pallet-log-build-history.mp4` before committing `media/`. The working files in `out/` are ignored by git.
+
+To add a milestone, add the build to `ALL` in `capture.js`, its line to `lines.json`, and its entry to `INFO`, `ORDER` and the `RAIL` list in `render.js`, and update the Guide line, the changelog bullet and the video's `aria-label` in `panels.js`, which name "build 13 to build 65". A check in `tests/groups/08-demo-video.js` fails if the video is over 4 MB; there is no screen fingerprint for it, as it shows past builds. The weekly health check downloads the live video and checks it plays (longer than 30 seconds, H.264 and AAC). Like the rest of `tools/`, it is not part of the site zip.
 
 ### Checking photo reading on real manifest photos
 
@@ -127,11 +142,12 @@ sh tools/release/photo-ok.sh tools/ocr-check/photos/<photo>.jpg
 `tools/old-data/` makes the files in `tests/fixtures/old/build-N` that `tests/groups/21-old-data.js` checks the current app against (since commit `f510058`, after build 55): what each older build kept in the browser, its backup file, the cells its Excel export wrote and the hidden data its Email PDF wrote, all made by that build's own code. It needs Node.js with Playwright, the full git history (each build is taken from its commit with `git archive`), and Python 3 with `openpyxl` and `reportlab`:
 
 ```bash
-node tools/old-data/make.js
+node tools/old-data/make.js        # every build in ALL_BUILDS
+node tools/old-data/make.js 64     # only the builds named (since build 65); the other folders stay as they are
 python3 tools/old-data/files.py
 ```
 
-`make.js` prints `ok` or `PROBLEM …` for each build; `files.py` prints the `log.xlsx` and `log.pdf` it wrote for each. To add a build (when the shape of saved data or an export changes), add its number and commit to `BUILDS` in `make.js` after it is released, run both, run `npm test` and commit the new folder. See [testing.md](testing.md#data-saved-by-older-builds-testsfixturesold) for what is in each folder. Like the rest of `tools/`, it is not part of the site zip.
+`make.js` prints `ok` or `PROBLEM …` for each build; `files.py` prints the `log.xlsx` and `log.pdf` it wrote for each. To add a build (when the shape of saved data or an export changes), add its number and commit to `ALL_BUILDS` in `make.js` (`BUILDS` before build 65) after it is released, run both (`make.js` with just the new number is enough), run `npm test` and commit the new folder. See [testing.md](testing.md#data-saved-by-older-builds-testsfixturesold) for what is in each folder. Like the rest of `tools/`, it is not part of the site zip.
 
 ### Guards when working with Claude Code
 
@@ -201,8 +217,8 @@ window.LPN_CONFIG = {
     manifestCheck: true,   // the whole Manifest check section
     manifestPhotos: true,  // reading manifests, printed logs and printed LPNs on labels from photos (PDFs and typing still work)
     liveScan: true,        // Live scan with the camera
-    scanByPhoto: true,     // Scan by photo (opens the camera and reads the barcode)
-    photoUpload: true,     // Upload photo (choose a photo already taken; reads the printed LPN when there is no barcode, if manifestPhotos is on)
+    scanByPhoto: true,     // Scan by photo (opens the camera and reads the barcode; offers Read the printed LPN when photoUpload and manifestPhotos are on)
+    photoUpload: true,     // Upload photo (choose one or more photos already taken; reads the printed LPN when there is no barcode, if manifestPhotos is on; also needed for Read the printed LPN)
     torch: true,           // Torch button in Live scan (only on phones that allow it)
     damage: true,          // marking a pallet as damaged
     refused: true,         // marking a pallet as refused (sent back with the driver)
@@ -213,12 +229,13 @@ window.LPN_CONFIG = {
     shareApp: true,        // Share this app (QR code) in Settings
     welcome: true,         // the welcome card on someone's first visit
     whatsNew: true,        // the card after an update saying what's new
-    exportReminder: true   // reminder when a delivery from an earlier day was never exported
+    exportReminder: true,  // reminder when a delivery from an earlier day was never exported
+    historyVideo: true     // the one-minute video at the top of the Changelog showing how the app has grown
   },
   testing: {
     report: false, manifestCheck: true, manifestPhotos: false, liveScan: false, scanByPhoto: false,
     photoUpload: false, torch: false, damage: false, refused: false, noLpn: false, fppDesc: false, shareMissing: false,
-    findLpn: false, shareApp: false, exportReminder: false
+    findLpn: false, shareApp: false, exportReminder: false, historyVideo: false
   }
 };
 ```
@@ -242,9 +259,9 @@ The preferred way, by the user's decision, is to ask Claude to change the settin
 |---|---|
 | `report` | No **Report** button, report box, or report links in Settings, the Guide and the Manifest check (**Report a problem with these photos**); reports already waiting on a phone are not sent. The Guide's privacy section says there's no Report button in this copy, so nothing leaves the phone. **Download problem report** stays. |
 | `manifestCheck` | The Manifest check card is hidden, and manifest numbers already saved on a phone are ignored: no live tracking or "not on the manifest" warnings in the Pallet log. |
-| `manifestPhotos` | The photo buttons for manifests and printed logs and the prefix presets are hidden; the step is labelled "2. Manifest PDFs". PDFs and typed numbers still work, and the prefix list is ignored (no numbers are left out because of their prefix). **Upload photo** also stops reading the LPN printed on a label when no barcode is found (it just says "No barcode found…"; in build 63 this applied to **Scan by photo**), Scan by photo's no-barcode message no longer points to Upload photo, and the Guide's sentences about reading the printed LPN and that part of the changelog bullet are left out. |
-| `liveScan` / `scanByPhoto` | That scan button is hidden; with Live scan, Scan by photo and Upload photo all off (and `noLpn` off too, since build 55) the **Scan** button is hidden too. With `liveScan` off, the tip under the buttons is hidden. With `scanByPhoto` off, its Guide line and its part of the build 64 changelog bullet are left out, and the tip and the blocked-camera and torch messages name Upload photo instead (or no photo button). |
-| `photoUpload` (build 64) | No **Upload photo** button, so no reading of the printed LPN on a label (Scan by photo reads barcodes only). Its Guide line, the Scan by photo line's "use **Upload photo** instead" sentence and its part of the changelog bullet are left out, and the tip, Scan by photo's no-barcode message and the blocked-camera and torch messages don't mention it. Marked as in testing, the note "In testing: Upload photo may not always work yet…" shows in the camera box while an uploaded photo is read. |
+| `manifestPhotos` | The photo buttons for manifests and printed logs and the prefix presets are hidden; the step is labelled "2. Manifest PDFs". PDFs and typed numbers still work, and the prefix list is ignored (no numbers are left out because of their prefix). **Upload photo** also stops reading the LPN printed on a label when no barcode is found (it just says "No barcode found…"; in build 63 this applied to **Scan by photo**), Scan by photo doesn't offer **Read the printed LPN** (build 65; in build 64 its no-barcode message no longer pointed to Upload photo), and the Guide's sentences about reading the printed LPN and that part of the changelog bullet are left out. |
+| `liveScan` / `scanByPhoto` | That scan button is hidden; with Live scan, Scan by photo and Upload photo all off (and `noLpn` off too, since build 55) the **Scan** button is hidden too. With `liveScan` off, the tip under the buttons is hidden. With `scanByPhoto` off, its Guide line, its part of the build 64 changelog bullet and the build 65 sentence about **Read the printed LPN** are left out, and the tip and the blocked-camera and torch messages name Upload photo instead (or no photo button). |
+| `photoUpload` (build 64) | No **Upload photo** button (so no reading of several photos either), and no reading of the printed LPN on a label: since build 65 Scan by photo doesn't offer **Read the printed LPN**, so it reads barcodes only. Its Guide line, the Scan by photo line's sentence about the printed LPN, its part of the build 64 changelog bullet and the whole build 65 photo bullet are left out, and the tip, Scan by photo's no-barcode message and the blocked-camera and torch messages don't mention it. Marked as in testing, the note "In testing: Upload photo may not always work yet…" shows in the camera box while an uploaded photo is read. |
 | `torch` | No **Torch** button in Live scan. |
 | `damage` | No damage choices when an LPN is tapped (it can still be edited). Damage already noted on pallets stays and still goes on the exports. |
 | `refused` (build 62) | No **Refused (sent back)** button when an LPN is tapped, and its Guide paragraph, the "and refused pallets" words in the Guide's totals sentence, the Saved deliveries help sentence and the changelog bullet are left out. Pallets already marked refused keep the mark, stay out of the totals and still go on the exports as refused. Marked as in testing, the note "In testing: Marking pallets as refused may not always work yet…" shows under the button. |
@@ -255,6 +272,7 @@ The preferred way, by the user's decision, is to ask Claude to change the settin
 | `shareApp` | No **Share this app** section in Settings. |
 | `welcome` / `whatsNew` | The welcome card on a first visit, or the what's new card after an update, isn't shown. |
 | `exportReminder` (build 62) | No card when the app opens with a delivery from an earlier day that was never exported, and its changelog bullet is left out. Marked as in testing, the note "In testing: The reminder about deliveries not exported may not always work yet…" shows in the card. |
+| `historyVideo` (build 65) | No build history video at the top of the Changelog, and the Guide line about it (section 9) and its changelog bullet are left out. Marked as in testing, the note "In testing: The build history video may not always work yet…" shows under its button. |
 
 The Guide and Settings leave out the lines for switched-off features, and the Guide's numbered sections are renumbered so there are no gaps (with everything off it has 9 sections).
 
