@@ -105,7 +105,7 @@ def main():
     if here and live:
         notes.append("build here %d, live build %d" % (here, live) + (" (bump needed before committing app changes)" if branch not in ("main", "docs", "HEAD") and here <= live else ""))
 
-    app = ["index.html", "styles.css", "core.js", "scan.js", "export.js", "compare.js", "panels.js", "sw.js", "config.js", "tests/run.js", "tests/lib.js", "tests/groups"]
+    app = ["index.html", "styles.css", "core.js", "qr.js", "scan.js", "export.js", "compare.js", "panels.js", "sw.js", "config.js", "tests/run.js", "tests/lib.js", "tests/groups"]
     behind = git(["rev-list", "--count", "origin/docs..origin/main", "--"] + app, top).stdout.strip()
     if behind and behind != "0":
         notes.append("docs branch is %s app commit(s) behind main (run docs-updater)" % behind)

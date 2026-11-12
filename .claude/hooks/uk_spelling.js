@@ -4,7 +4,7 @@
 // and exits 2 so Claude fixes it; silent when the text is clean or the file isn't one of the app's.
 // Run by hand on every app file:  node .claude/hooks/uk_spelling.js --all
 const fs = require("fs"), path = require("path");
-const APP = ["index.html", "core.js", "scan.js", "export.js", "compare.js", "panels.js"];
+const APP = ["index.html", "core.js", "qr.js", "scan.js", "export.js", "compare.js", "panels.js"];
 const US = [
   [/\bcolor(s|ed|ful|ing)?\b/i, "colour"], [/\bfavorit(e|es|ed)\b/i, "favourite"], [/\bfavor(s|ed|ing)?\b/i, "favour"],
   [/\b(re)?organiz(e|es|ed|ing|ation|ations)\b/i, "organise"], [/\brecogniz(e|es|ed|ing)\b/i, "recognise"],

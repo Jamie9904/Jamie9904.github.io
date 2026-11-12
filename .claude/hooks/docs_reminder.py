@@ -26,7 +26,7 @@ def main():
     main_sha = git(["rev-parse", "refs/remotes/origin/main"], t).stdout.strip()
     if not main_sha:
         return 0
-    app = ["index.html", "styles.css", "core.js", "scan.js", "export.js", "compare.js", "panels.js", "sw.js", "config.js", "tests/run.js", "tests/lib.js", "tests/groups"]
+    app = ["index.html", "styles.css", "core.js", "qr.js", "scan.js", "export.js", "compare.js", "panels.js", "sw.js", "config.js", "tests/run.js", "tests/lib.js", "tests/groups"]
     pending = git(["log", "--oneline", "refs/remotes/origin/docs..refs/remotes/origin/main", "--"] + app, t).stdout.strip()
     if not pending:
         return 0

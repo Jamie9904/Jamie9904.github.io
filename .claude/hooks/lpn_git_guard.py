@@ -11,7 +11,7 @@ Exit code 2 blocks the tool call and shows stderr to Claude.
 """
 import json, os, re, shlex, subprocess, sys
 
-APP = re.compile(r"^(index\.html|styles\.css|core\.js|scan\.js|export\.js|compare\.js|panels\.js|manifest\.webmanifest|icon-192\.png|icon-512\.png|apple-touch-icon\.png|fonts/.+)$")
+APP = re.compile(r"^(index\.html|styles\.css|core\.js|qr\.js|scan\.js|export\.js|compare\.js|panels\.js|manifest\.webmanifest|icon-192\.png|icon-512\.png|apple-touch-icon\.png|fonts/.+)$")
 
 def run(args, cwd, timeout=60):
     return subprocess.run(args, cwd=cwd, capture_output=True, text=True, timeout=timeout)

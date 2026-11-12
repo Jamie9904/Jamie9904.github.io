@@ -136,6 +136,11 @@ module.exports = async ({ browser, URL0 }) => {
   check("a tally sheet that runs onto a second page is made again with fewer rows until it fits", s.length >= 2 && s[s.length - 1] === 18 && s[0] > 18, s);
   s = await p.evaluate(() => { SITE.on.tallySheet = false; applySite(); const r = document.getElementById("tallyBtn").hidden; SITE.on.tallySheet = true; SITE.on.twoPhones = false; applySite(); r && (window.__p = document.getElementById("phonesBtn").hidden); SITE.on.twoPhones = true; return { tally: r, phones: window.__p }; });
   check("each has its own switch in the site settings", s.tally && s.phones, s);
+  // Marked as in testing: a note in the Share log panel, and one in the Export menu under Blank tally sheet.
+  s = await p.evaluate(() => { SITE.test.twoPhones = true; SITE.test.tallySheet = true; applySite(); openHelp("phones", "Share the log with another person");
+    const n1 = document.querySelector('#panelBody .testnote[data-test="twoPhones"]'), n2 = document.querySelector('#expMenu .testnote[data-test="tallySheet"]'); closeHelp();
+    const r = { share: n1 && n1.textContent, tally: n2 && n2.textContent, count: document.querySelectorAll('#expMenu .testnote[data-test="tallySheet"]').length }; SITE.test.twoPhones = false; SITE.test.tallySheet = false; return r; });
+  check("marked as in testing, Share log and the tally sheet each show their note", /^In testing: Sharing the log may not always work yet/.test(s.share || "") && /^In testing: The blank tally sheet may not always work yet/.test(s.tally || ""), s);
   check("no script errors", p.errors.length === 0, p.errors);
   await p.ctx.close();
 
