@@ -27,7 +27,8 @@ window.LPN_CONFIG = {
     shareApp: true,        // Share this app (QR code) in Settings
     welcome: true,         // the welcome card on someone's first visit
     whatsNew: true,        // the card after an update saying what's new
-    exportReminder: true   // reminder when a delivery from an earlier day was never exported
+    exportReminder: true,  // reminder when a delivery from an earlier day was never exported
+    historyVideo: true     // the one-minute video at the top of the Changelog showing how the app has grown
   },
   testing: {
     report: false,
@@ -44,6 +45,7 @@ window.LPN_CONFIG = {
     shareMissing: false,
     findLpn: false,
     shareApp: false,
-    exportReminder: false
+    exportReminder: false,
+    historyVideo: false
   }
 };

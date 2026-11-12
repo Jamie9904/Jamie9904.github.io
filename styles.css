@@ -364,6 +364,7 @@ details.opts>summary .note{min-width:0;overflow:hidden;text-overflow:ellipsis;wh
 .demo{margin:0 0 18px}
 .demobtn{width:100%;min-height:52px;font-weight:700}
 .demo video{display:block;width:100%;max-width:360px;margin:0 auto;border-radius:16px;background:#000;aspect-ratio:9/16}
+.demo.wide video{max-width:100%;aspect-ratio:16/9;border-radius:12px}
 .demonote{margin:10px 0 0;color:var(--dg)}
 
 /* Very narrow screens or extra large text: header buttons wrap rather than pushing the page sideways. */

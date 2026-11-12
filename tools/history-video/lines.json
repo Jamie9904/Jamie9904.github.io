@@ -1,0 +1,50 @@
+[
+ {
+  "id": "intro",
+  "say": "Seventeen days, fifty-two builds. Here's how the LPN Pallet Log grew."
+ },
+ {
+  "id": "b13",
+  "say": "Build thirteen, the earliest one saved: every pallet logged by type, with running totals."
+ },
+ {
+  "id": "b19",
+  "say": "Build nineteen added trailer and seal numbers, and live tracking against the manifest."
+ },
+ {
+  "id": "b23",
+  "say": "Build twenty-three: undo the last pallet in one tap."
+ },
+ {
+  "id": "b34",
+  "say": "By build thirty-four, the manifest check reads photos and PDFs of the manifest, and shows what's missing and what's extra."
+ },
+ {
+  "id": "b44",
+  "say": "Build forty-four: a report button, so problems get flagged straight from the dock."
+ },
+ {
+  "id": "b49",
+  "say": "Build forty-nine: damaged pallets, marked crushed, wet, or in your own words."
+ },
+ {
+  "id": "b52",
+  "say": "Version four, build fifty-two: ready to share, with a welcome card and a demo video."
+ },
+ {
+  "id": "b56",
+  "say": "Then pallets with no LPN, and descriptions for FPP pallets."
+ },
+ {
+  "id": "b62",
+  "say": "Build sixty-two: refused pallets, sent back with the driver."
+ },
+ {
+  "id": "b65",
+  "say": "And build sixty-five: scan by photo, upload photos, and read the printed LPN when a barcode won't scan."
+ },
+ {
+  "id": "outro",
+  "say": "Same job. Far less paper."
+ }
+]

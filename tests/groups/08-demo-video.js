@@ -24,6 +24,27 @@ module.exports = async ({ browser, URL0 }) => {
   }
 
   {
+    // The build history video at the top of the Changelog (tools/history-video).
+    const mp4 = path.join(ROOT, "media", "history.mp4"), poster = path.join(ROOT, "media", "history-poster.jpg");
+    check("the build history video and its poster are in the site, small enough for phones", fs.existsSync(mp4) && fs.existsSync(poster) && fs.statSync(mp4).size < 4e6, fs.existsSync(mp4) && fs.statSync(mp4).size);
+    p = await page(browser, 375);
+    await p.goto(URL0); await p.waitForTimeout(300);
+    s = await p.evaluate(() => { openHelp("log", "Changelog"); const body = document.getElementById("panelBody"), b = document.getElementById("histPlay"), v = document.getElementById("histVid");
+      const r = b.getBoundingClientRect();
+      return { first: body.firstElementChild && body.firstElementChild.contains(b), hidden: v.hidden, preload: v.preload, fits: r.left >= 0 && r.right <= innerWidth && r.height >= 44, text: b.textContent }; });
+    check("the Changelog starts with a button to play the build history video, and nothing loads until it's tapped", s.first && s.hidden && s.preload === "none" && s.fits && /Watch how the app has grown/.test(s.text), s);
+    await p.click("#histPlay"); await p.waitForTimeout(300);
+    s = await p.evaluate(() => { const v = document.getElementById("histVid"), r = v.getBoundingClientRect(); return { shown: !v.hidden, src: v.querySelector("source").getAttribute("src"), w: r.width, h: r.height, vol: v.volume, btn: document.getElementById("histPlay").hidden }; });
+    check("tapping it shows the landscape player, at half volume, fitting the panel", s.shown && s.btn && s.src === "media/history.mp4" && s.w > 280 && s.w <= 375 && Math.abs(s.w / s.h - 16 / 9) < 0.05 && s.vol === 0.5, s);
+    s = await p.evaluate(() => { closeHelp(); return document.getElementById("histVid").paused; });
+    check("closing the Changelog stops the video", s === true, s);
+    s = await p.evaluate(() => { SITE.on.historyVideo = false; openHelp("log", "Changelog"); const r = { btn: !!document.getElementById("histPlay"), log: /one-minute video/.test(document.getElementById("panelBody").textContent) }; closeHelp(); openHelp("guide", "Guide"); r.guide = /one-minute video/.test(document.getElementById("panelBody").textContent); closeHelp(); SITE.on.historyVideo = true; return r; });
+    check("with the history video switched off, the Changelog has no video and neither it nor the Guide mentions it", !s.btn && !s.log && !s.guide, s);
+    check("no script errors", p.errors.length === 0, p.errors);
+    await p.ctx.close();
+  }
+
+  {
     // Does the Guide's demo video still show what the app looks like? Compares the key screens with the fingerprint
     // taken when it was recorded (tools/demo-video/screens.json). A difference is a warning, never a failure.
     const scr = require(path.join(ROOT, "tools", "demo-video", "screens.js"));
