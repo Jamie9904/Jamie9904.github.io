@@ -813,7 +813,8 @@ $("pfxDl").onclick=()=>{
   pfxMsg("Downloaded presets.json. Replace the file next to the app with it to share these presets.");
 };
 $("dlMail").onclick=()=>emailVia($("dl").onclick,"dlmsg");
-$("expBtn").onclick=()=>{const m=$("expMenu");m.hidden=!m.hidden;$("expBtn").setAttribute("aria-expanded",!m.hidden);};
+$("expBtn").onclick=()=>{const m=$("expMenu");m.hidden=!m.hidden;$("expBtn").setAttribute("aria-expanded",!m.hidden);
+  if(!m.hidden){const last=[...m.querySelectorAll("button")].filter(b=>!b.hidden).pop();if(last&&last.scrollIntoView)last.scrollIntoView({block:"nearest"})}}; // the last item clear of the entry bar
 $("expMenu").addEventListener("click",e=>{if(e.target.closest("button")){$("expMenu").hidden=true;$("expBtn").setAttribute("aria-expanded","false")}});
 async function printBuf(buf,fname,m){
   let printed=false;

@@ -76,14 +76,14 @@ const HELP={guide:`<h3>1. Quick start</h3>
 `,phones:`<p>Two people unloading one trailer? Each scans on their own phone. At the end, put all the pallets on one phone and export from that one.</p>
 <h3>1. On the phone sending its pallets</h3>
 <button type="button" id="qrShow" class="p">Show my pallets as QR codes</button>
-<div id="qrBox" hidden><div class="qrimg" id="qrImg" role="img" aria-label="QR code"></div>
-<p class="qrcount" id="qrCount" role="status" aria-live="polite"></p>
+<div id="qrBox" hidden><div class="qrimg" id="qrImg" role="img" aria-label="QR codes for the other phone"></div>
+<p class="qrcount" id="qrCount" aria-live="off"></p>
 <div class="row"><button type="button" id="qrPrev">Previous</button><button type="button" id="qrNext">Next</button></div>
-<p class="hint">The codes change by themselves every 2 seconds. Keep this screen bright and hold it steady.</p></div>
+<p class="hint">The codes change by themselves every 2 seconds. Keep this screen bright and hold it steady. Tap Previous or Next to hold one code; tap Show my pallets as QR codes to start again. If you log more pallets, tap Show again.</p></div>
 <p class="msg" id="qrMsg" role="status" aria-live="polite"></p>
 <h3>2. On the phone that will export</h3>
 <button type="button" id="qrScan" class="p">Scan the other phone’s codes</button>
-<p class="hint">Point the camera at the other phone until every code is read. Pallets already in this log aren’t added twice, and <b>Undo</b> takes them all away again. The other phone’s log isn’t changed.</p>
+<p class="hint">Point the camera at the other phone until every code is read. Pallets already in this log aren’t added twice, and <b>Undo</b> takes them all away again. The other phone’s log isn’t changed. Both phones need the latest version of the app.</p>
 `,log:`<h3>v4.0 <span class="ver">Current</span></h3>
 <ul><li data-f="twoPhones"><b>Two phones</b> (under Start new delivery): when two people unload one trailer, one phone sends its pallets to the other with QR codes, so you export from one phone.</li><li data-f="tallySheet">The Export menu has a <b>Blank tally sheet</b> to print, for writing pallets down by hand if a phone isn’t available.</li><li data-f="photoUpload"><b>Upload photo</b> can read several photos at once, one after another.<span data-f="scanByPhoto"><span data-f="manifestPhotos"> When Scan by photo can’t read a barcode, <b>Read the printed LPN</b> reads the number printed on the label from that same photo, so you don’t need to take it again. You still check it before it’s added.</span></span></li><li data-f="historyVideo">A one-minute video at the top of the Changelog shows how the app has grown, from build 13 to build 65.</li><li data-f="photoUpload"><b>Upload photo</b> is a new button for a photo of the label you’ve already taken.<span data-f="manifestPhotos"> When the barcode can’t be read, the app reads the LPN printed on the label and asks you to check it before it’s added.</span><span data-f="scanByPhoto"> <b>Scan by photo</b> now opens the camera straight away and reads the barcode.</span></li><li data-nf="photoUpload" data-f="scanByPhoto"><b>Scan by photo</b> now opens the camera straight away and reads the barcode.</li><li data-f="refused">A pallet sent back with the driver can be marked <b>Refused (sent back)</b>: it stays on the log and exports but isn’t counted as received.</li><li data-f="exportReminder">If a delivery from an earlier day was never exported, the app reminds you when it opens.</li><li>Add your site or store name in Settings to show it on every export.</li><li><b>Undo</b> now goes back through the last 10 changes, with an Undo button next to Export. The screen stays on while the app is open, so a handheld scanner’s scans aren’t lost (Settings can turn this off).</li><li>Importing an exported log from weeks ago now keeps it in <b>Saved deliveries</b>: they are kept by when you saved or imported them.</li><li>Fixed: <b>Start new delivery</b> on a delivery dated more than a week ago now saves it to Saved deliveries and starts the new one, instead of stopping.</li><li>Settings has <b>Test a handheld scanner</b>: scan any barcode to see what your scanner sends and whether it works with the app. Nothing is added to the log.</li><li data-f="report">The button at the top now says <b>Report a problem</b>, so it’s clear it’s for problems with the app or ideas for it.</li><li data-f="manifestPhotos">Manifest photos: LPNs starting with a single V, R or Q (such as V0013323651) are no longer left out, a number read with a gap in it is still found, and a page with only one LPN on it no longer gets an extra 0 or picks up print showing through from the back.</li><li data-f="fppDesc">When you log an FPP pallet, a box opens to say what is on it, such as kitchen roll. The description shows under the LPN and goes on the exports.</li><li>Easier to read and tap: grey text stays readable on mid-grey background colours, the pallet count in the bottom bar is never cut off, the box for editing an LPN is bigger, and long descriptions take two lines on small phones (tap the LPN to see all of it).</li><li data-f="noLpn">The <b>No LPN</b> button logs pallets that arrive without one, with an optional description. They go on the exports and are counted separately in the Manifest check.</li><li>Live scan reads barcodes from further away: the camera now gives a sharper picture and keeps focusing, and phones that allow it have zoom buttons in the corner of the picture.</li><li>Delivery has a <b>Clear trailer, seals and notes</b> button for the next trailer on the same day. It keeps the date, name and expected pallets, and can be undone.</li><li>A site settings file (<b>config.js</b> in the repo) can switch features off for everyone, or add a note that a feature is still being tested.</li><li>Version 4.0, ready to share with colleagues: <b>Share this app</b> in Settings has a QR code to scan, the Guide is shorter and has a <b>Your data and privacy</b> section, and new users get a welcome card with the demo video.</li><li>Damaged pallets: tap an LPN to mark it Crushed, Wet or in your own words. It shows on the exports.</li><li>Manifest check: <b>Share missing list</b> sends the missing and extra LPNs as a message, sideways or upside-down photos are turned and read again, and one tap adds a missing prefix.</li><li>Saved deliveries: <b>Find an LPN</b> shows which delivery holds a pallet. Exported file names include the trailer number.</li><li>Live scan has a <b>Torch</b> button on phones that allow it, and a note asks you to check seal numbers that look wrong.</li><li>Colours can follow the phone’s light or dark mode, reports can include your name, and after an update a card says what’s new.</li></ul>
 <h3>v3.30</h3>
@@ -633,27 +633,30 @@ $("phonesBtn").onclick=()=>openHelp("phones","Two phones, one trailer");
    joined give {t: trailer, r: pallets}. The receiving phone reads them in Live scan (scan.js, qrPart). */
 let qrTimer=null;
 function qrCodesFor(list){
-  const data=JSON.stringify({t:($("trailer").value||"").trim().slice(0,40),r:list.map(r=>{const o={lpn:r.lpn,type:r.type};if(r.fsdu)o.fsdu=true;if(r.dmg)o.dmg=r.dmg;if(r.desc)o.desc=r.desc;if(r.ref)o.ref=true;return o})});
+  // Characters outside plain ASCII are written as \u escapes, so every code is plain ASCII: a code is never too
+  // big for its QR code, and readers can't guess the wrong character set.
+  const data=JSON.stringify({t:($("trailer").value||"").trim().slice(0,40),r:list.map(r=>{const o={lpn:r.lpn,type:r.type};if(r.fsdu)o.fsdu=true;if(r.dmg)o.dmg=r.dmg;if(r.desc)o.desc=r.desc;if(r.ref)o.ref=true;return o})}).replace(/[\u007f-\uffff]/g,c=>"\\u"+c.charCodeAt(0).toString(16).padStart(4,"0"));
   const ch=Array.from(data),parts=[],id=Math.random().toString(36).slice(2,6).padEnd(4,"0");
   for(let i=0;i<ch.length;i+=280)parts.push(ch.slice(i,i+280).join(""));
   return parts.map((p,k)=>"LPNM1 "+id+" "+(k+1)+"/"+parts.length+" "+p);
 }
 function initPhones(){
   let codes=[],at=0;
-  const show=k=>{at=(k+codes.length)%codes.length;$("qrImg").innerHTML=QR.svg(codes[at]);
-    $("qrImg").setAttribute("aria-label","QR code "+(at+1)+" of "+codes.length);
+  const show=k=>{at=(k+codes.length)%codes.length;
+    try{$("qrImg").innerHTML=QR.svg(codes[at])}catch(e){if(qrTimer){clearInterval(qrTimer);qrTimer=null}$("qrBox").hidden=true;$("qrMsg").textContent="These pallets couldn’t be turned into codes. Export them instead.";return}
     $("qrCount").textContent=codes.length>1?"Code "+(at+1)+" of "+codes.length:"One code"};
   $("qrShow").onclick=()=>{
     $("qrMsg").textContent="";
     if(!rows.length){$("qrMsg").textContent="There are no pallets on this phone to send.";$("qrBox").hidden=true;return}
-    codes=qrCodesFor(rows);$("qrBox").hidden=false;$("qrPrev").hidden=$("qrNext").hidden=codes.length<2;show(0);
-    if(qrTimer)clearInterval(qrTimer);qrTimer=codes.length>1?setInterval(()=>show(at+1),2000):null;
+    codes=qrCodesFor(rows);$("qrBox").hidden=false;$("qrCount").setAttribute("aria-live","off");$("qrPrev").hidden=$("qrNext").hidden=codes.length<2;show(0);
+    if(qrTimer)clearInterval(qrTimer);qrTimer=codes.length>1?setInterval(()=>show(at+1),2000):null;$("qrBox").scrollIntoView({block:"nearest"});
     $("qrMsg").textContent=rows.length+" pallet"+(rows.length===1?"":"s")+" in "+codes.length+" code"+(codes.length===1?"":"s")+". Leave this open until the other phone says they’re added.";
   };
   // Stepping by hand stops the automatic change, so a code can be held for a slow camera.
-  $("qrPrev").onclick=()=>{if(qrTimer){clearInterval(qrTimer);qrTimer=null}show(at-1)};
-  $("qrNext").onclick=()=>{if(qrTimer){clearInterval(qrTimer);qrTimer=null}show(at+1)};
-  $("qrScan").onclick=()=>{closeHelp();qrRecv=null;$("video").hidden=false;startScan().then(()=>{if(scanning)$("smsg").textContent="Point the camera at the other phone’s QR codes."})};
+  // (Read out only when stepped by hand; while the codes change by themselves a screen reader would never stop.)
+  const step=d=>{if(qrTimer){clearInterval(qrTimer);qrTimer=null}$("qrCount").setAttribute("aria-live","polite");show(at+d)};
+  $("qrPrev").onclick=()=>step(-1);$("qrNext").onclick=()=>step(1);
+  $("qrScan").onclick=()=>{closeHelp();qrRecv=null;$("video").hidden=false;startScan().then(()=>{if(scanning){qrWant=true;$("smsg").textContent="Point the camera at the other phone’s QR codes.";$("stopscan").focus({preventScroll:true});$("scanbox").scrollIntoView({block:"nearest"})}})};
 }
 /* Share this app: the phone's share menu, or copy the link. */
 async function shareApp(){
