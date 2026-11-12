@@ -1032,4 +1032,17 @@ When two people unload one trailer, each logs on their own phone, and the pallet
 
 - **Demo video re-recorded** to show Share log, the four-item Export menu, the totals spacing and ↓ Latest.
 - **Check file names:** the two new check files are `225-two-phones-tally.js` and `226-small-touches.js`. The runner sorts names as text, so they run after `22-…` and before `23-offline.js`, which must stay last, without renaming it.
-- **No "In testing" note yet:** `testNote()` has wordings for `twoPhones` and `tallySheet`, but nothing calls them, so marking either as in testing in `config.js` shows no note in build 66.
+- **"In testing" notes:** when build 66 was first released, `testNote()` had wordings for `twoPhones` and `tallySheet` but nothing called them, so marking either as in testing showed no note. A later tweak (commit `eb6d023`) puts the Share log note at the top of its panel, where the feature is used, and the tally sheet note in the Export menu under its button, since the sheet itself is a printed PDF with nowhere in the app to show a note.
+- **`qr.js` in the tooling lists:** the git guard's cache-bump list, the docs reminder, the session-start docs lag and the UK spelling hook named only the five older scripts, so a change to `qr.js` alone wasn't held back for a cache bump, didn't count towards the docs lag and wasn't checked for US spellings (the guard's uncommitted-files check before a push already counted it, as it counts any `.js` file at the top of the repository). Commit `eb6d023` added it to all four hooks.
+
+## Blank tally sheet footer: no printed date (build 66 tweak)
+
+The PDF footer normally ends with "Printed dd/mm/yyyy". A tally sheet is usually printed ahead of time and filled in on a later day, so that date would be misleading next to the Date box. `pdfFooter()` got a third argument, `noDate`, which only the tally sheet sets; the version and page number stay (commit `eaff3c8`).
+
+## Small tweaks can keep the latest build's number
+
+The tweaks above (testing notes for Share log and the tally sheet, the tally sheet footer and the `qr.js` tooling lists) went live on `main` at `aedaf29` as build 66, not build 67. They were first committed as build 67, and then, by the user's choice, `CACHE` in `sw.js` was put back to `lpn-log-v66`.
+
+- **Why it still reaches phones:** the service worker loads the app's own files network-first and saves the fresh copy, so a phone that opens the app online gets the changed `export.js` and `panels.js` without a new cache name, the same reasoning as for `config.js` edits.
+- **What is given up:** without a new `CACHE` name no new service worker installs, so there is no "A new version is available" banner and no What's new card, and exports made before and after the tweaks both say build 66. A phone that stays offline keeps its older saved copy until it is next online.
+- **When it fits:** small changes to features that came in with the latest build, with no change to saved data or to how exports are read back. Anything people need to be told about, or a change to what is stored, still gets a new build number.

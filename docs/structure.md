@@ -90,7 +90,7 @@
     │   ├── config_check.js  checks config.js right after it is edited, with the same rules as tests/groups/19-site-config.js
     │   ├── lpn_git_guard.py commit and push guard (cache bump, also accepted when the same command runs bump.sh first; docs on main, no commits on main or new branches, unconfirmed manifest photos, no push with uncommitted or new untracked app or check files, tests before push)
     │   ├── uk_spelling.js   flags US spellings in text people see after index.html or an app script is edited (`--all` checks every app file)
-    │   ├── docs_reminder.py reminds when the docs branch is behind main (counting main commits that touch the app files, `config.js`, `tests/run.js`, `tests/lib.js` or `tests/groups/`)
+    │   ├── docs_reminder.py reminds when the docs branch is behind main (counting main commits that touch the app files including `qr.js`, `config.js`, `tests/run.js`, `tests/lib.js` or `tests/groups/`)
     │   └── outputs_reminder.py reminds when the download copy (outputs folder, and the zip compared by content; pictures, video and SVGs only need to be in the zip) doesn't match main
     └── agents/              export-reviewer, phone-layout-checker, docs-updater (one at a time, lock file /home/claude/lpn-docs-wt.lock), release-reviewer (with a never-build list), old-data-checker, guide-checker, security-reviewer, ocr-reviewer, a11y-reviewer
 ```
