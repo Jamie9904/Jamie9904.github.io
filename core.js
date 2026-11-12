@@ -287,6 +287,12 @@ function dmgRow(r,pick,opt){
   addRef();return tr;
 }
 function extras(){const o=[];const e=parseInt($("expect").value,10);if(e>=0)o.push(["Expected pallets",String(e)]);[["trailer","Trailer number"],["sealIn","Seal in"],["sealOut","Seal out"]].forEach(f=>{const v=($(f[0]).value||"").trim();if(v)o.push([f[1],v])});const n=($("notes").value||"").trim();if(n)o.push(["Notes",n]);rows.forEach(r=>{if(r.ref)o.push(["Refused pallet",r.lpn+": sent back with the driver"])});rows.forEach(r=>{if(r.dmg)o.push(["Damaged pallet",r.lpn+": "+r.dmg])});rows.forEach(r=>{if(r.desc)o.push(["Pallet description",r.lpn+": "+r.desc])});return o}
+$("sum").addEventListener("click",e=>{
+  const b=e.target.closest(".sumbtn");if(!b)return;
+  const k=b.dataset.f,on=b.getAttribute("aria-pressed")==="true";
+  $("fltType").value="";$("fltFsdu").value="";if(!on){if(k==="FSDU")$("fltFsdu").value="y";else $("fltType").value=k}
+  render();const again=$("sum").querySelector('.sumbtn[data-f="'+k+'"]');if(again)again.focus();
+});
 function summary(){
   $("undoLast").hidden=!rows.length;
   {const en=$("expNote"),fresh=exported&&exported.sig===logSig();
@@ -302,7 +308,9 @@ function summary(){
   if(ex>=0&&ms&&ms.total===ex)ei.hidden=true;
   else if(ex>=0){const d=rows.length-ex;ei.hidden=false;ei.className="expinfo "+(d===0?"ok":d<0?"prog":"bad");ei.textContent=rows.length+" of "+ex+" expected"+(d===0?" ✓ all accounted for":d<0?" ("+(-d)+" to go)":" ("+d+" more than expected)")}else ei.hidden=true;
   const t=typeCounts(),c=t.c;
-  $("sum").innerHTML="<span><b>"+t.total+"</b>Total</span><span><b>"+c.BB+"</b>BB</span><span><b>"+c.FMCG+"</b>FMCG</span><span><b>"+c.FPP+"</b>FPP</span><span><b>"+c.Mixed+"</b>Mixed</span><span><b>"+t.fsdu+"</b>FSDU</span>"+(t.refused?"<span class=\"refsum\"><b>"+t.refused+"</b>Refused</span>":"");
+  // Each type and FSDU is a button: tapping one shows only those pallets in the log, tapping it again shows all.
+  const ft=$("fltType").value,ff=$("fltFsdu").value,tb=(k,n,on)=>"<button type=\"button\" class=\"sumbtn\" data-f=\""+k+"\" aria-pressed=\""+on+"\" aria-label=\""+n+" "+k+(on?", showing only these. Tap to show all":", tap to show only these")+"\"><b>"+n+"</b>"+k+"</button>";
+  $("sum").innerHTML="<span><b>"+t.total+"</b>Total</span>"+["BB","FMCG","FPP","Mixed"].map(k=>tb(k,c[k],ft===k&&!ff)).join("")+tb("FSDU",t.fsdu,ff==="y"&&!ft)+(t.refused?"<span class=\"refsum\"><b>"+t.refused+"</b>Refused</span>":"");
 }
 /* Pallets received, by type: refused pallets (sent back with the driver) are left out and counted on their own. Used by
    the totals on screen and by every export. */

@@ -5,7 +5,9 @@
 @font-face{font-family:"IBM Plex Mono";font-style:normal;font-weight:600;font-display:swap;src:url("fonts/IBMPlexMono-SemiBold.woff2") format("woff2")}
 :root{color-scheme:dark;--bg:#0c1830;--paper:#13264a;--ink:#eaf0fa;--mu:#9db0d0;--rule:#223a63;--ac:#ff8a2a;--ac2:#ffa24f;--acs:#3a3550;--bb:#dba56c;--fm:#6fa8ff;--fp:#a9c95a;--mx:#c79bf0;--dg:#ff7b6e;--wn:#ffcf8a;--wns:#3a3020;--sel:#1a3562;--line:#35507f;--r:6px;box-sizing:border-box;padding-bottom:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%;font-size:calc(16px*var(--ts,1))}
+html{-webkit-text-size-adjust:100%;font-size:calc(16px*var(--ts,1));overscroll-behavior-y:contain}
+/* Pulling down at the top of the page doesn't reload it (that stopped the camera mid-scan). */
+body{overscroll-behavior-y:contain}
 body{margin:0;background:var(--bg);color:var(--ink);font:1.03rem/1.55 "Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
 .top{display:flex;align-items:center;gap:14px;max-width:720px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top,0px)) 18px 12px}
 .top .brand{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
@@ -65,16 +67,18 @@ button.d:hover{background:color-mix(in srgb,var(--dg) 12%,var(--paper));border-c
 .warn{background:var(--wns);color:var(--wn);border-left:4px solid var(--wn);padding:9px 12px;font-size:.9rem;margin:0 0 14px}
 .sum{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 #sum{display:flex;gap:6px 18px;flex-wrap:wrap;align-items:baseline;margin:0 0 12px;font-size:.95rem}
-#sum span{display:inline-flex;align-items:baseline;gap:6px;font-weight:700;color:var(--mu)}
+#sum span,#sum .sumbtn{display:inline-flex;align-items:baseline;gap:6px;font-weight:700;color:var(--mu)}
+#sum .sumbtn{background:none;border:0;border-radius:8px;padding:8px 6px;margin:-8px -6px;min-height:44px;font:inherit;font-weight:700;cursor:pointer}
+#sum .sumbtn[aria-pressed="true"]{outline:2px solid var(--act,var(--ac));outline-offset:-2px;color:var(--ink)}
 #sum b{order:2;font-size:1.15rem;color:var(--ink)}
 #sum span:first-child{flex-basis:100%;font-size:.9rem}
 #sum span:first-child b{font-size:1.6rem}
-#sum span:nth-child(n+2)::before{content:"";width:12px;height:12px;border-radius:3px;background:var(--line);align-self:center;margin-right:2px}
-#sum span:nth-child(2)::before{background:var(--bb)}
-#sum span:nth-child(3)::before{background:var(--fm)}
-#sum span:nth-child(4)::before{background:var(--fp)}
-#sum span:nth-child(5)::before{background:var(--mx)}
-#sum span:nth-child(6)::before{background:var(--ink);border-radius:50%}
+#sum>:nth-child(n+2)::before{content:"";width:12px;height:12px;border-radius:3px;background:var(--line);align-self:center;margin-right:2px}
+#sum>:nth-child(2)::before{background:var(--bb)}
+#sum>:nth-child(3)::before{background:var(--fm)}
+#sum>:nth-child(4)::before{background:var(--fp)}
+#sum>:nth-child(5)::before{background:var(--mx)}
+#sum>:nth-child(6)::before{background:var(--ink);border-radius:50%}
 #cmpSum span{background:var(--sel);border-radius:var(--r);padding:3px 10px;font-size:.88rem;color:var(--ink)}
 #cmpSum b{color:var(--ink)}
 @media (max-width:620px){#cmpBody>.row>.grow{flex:1 1 100%}}
@@ -162,6 +166,7 @@ button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
   .addgrid>div:nth-child(2){grid-column:1;grid-row:2}
   /* Keep a focused control clear of the fixed entry bar (its height is kept in --dockh). */
   html{scroll-padding-bottom:calc(var(--dockh,220px) + 12px)}
+  html .tolatest{bottom:calc(var(--dockh,220px) + 14px)} /* beats the base rule further down */
   /* Bigger FSDU tick box for gloves. */
   .entry #fsdu{width:40px;height:40px}
   /* Camera view shorter on short screens, so the "Added" line and Stop scanning stay on screen. */
@@ -364,6 +369,7 @@ details.opts>summary .note{min-width:0;overflow:hidden;text-overflow:ellipsis;wh
 .demo{margin:0 0 18px}
 .demobtn{width:100%;min-height:52px;font-weight:700}
 .demo video{display:block;width:100%;max-width:360px;margin:0 auto;border-radius:16px;background:#000;aspect-ratio:9/16}
+.tolatest{position:fixed;right:16px;bottom:20px;z-index:25;min-height:44px;padding:8px 16px;border-radius:999px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.35)}
 .qrimg{width:min(300px,100%);aspect-ratio:1;margin:12px auto 4px;background:#fff;border-radius:8px}
 .qrimg svg{display:block;width:100%;height:100%}
 .qrcount{text-align:center;font-weight:700;margin:4px 0 10px}
