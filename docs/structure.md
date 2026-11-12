@@ -5,18 +5,19 @@
 ├── config.js                site settings (build 53): `window.LPN_CONFIG` with `features` (switch a feature off for everyone) and `testing` (add an "in testing" note); loaded before core.js, in the offline shell
 ├── index.html               page markup: header, Delivery, Add a pallet, Pallet log, Manifest check, panels, report box, install box, banners
 ├── styles.css               all CSS: theme tokens, components, phone/tablet/desktop layouts, print rules
-├── core.js                  site settings (`FEATURES`, `SITE`, `feat()`, `testNote()`, `siteHtml()`), state, persistence, tidying of saved data, table, validation, add flow, undo (the last 10 changes since build 62), received-pallet counts (`typeCounts()`, leaving out refused pallets), library loader and fingerprints (SRI), helpers
-├── scan.js                  live and photo barcode scanning (Scan by photo and, since build 64, Upload photo, which also reads the printed LPN when a photo has no readable barcode), camera request (resolution, focus), Torch and Zoom buttons, wake lock (Live scan, and Keep the screen on since build 62), input wiring
-├── export.js                Excel/PDF builders (titles with the site name since build 62), print, delivery (download/share/mailto), logo
+├── core.js                  site settings (`FEATURES`, `SITE`, `feat()`, `testNote()`, `siteHtml()`), state, persistence, tidying of saved data, table, validation, add flow, undo (the last 10 changes since build 62), received-pallet counts (`typeCounts()`, leaving out refused pallets; the type and FSDU totals are filter buttons since build 66), `mergePallets()` (adds pallets from another phone, build 66), library loader and fingerprints (SRI), helpers
+├── qr.js                    QR code maker for Share log (build 66): `QR.encode(text)` and `QR.svg(text)`, byte mode, error correction level M, versions 1 to 20, no outside library; in the offline shell
+├── scan.js                  live and photo barcode scanning (Scan by photo and, since build 64, Upload photo, which also reads the printed LPN when a photo has no readable barcode), camera request (resolution, focus), Torch and Zoom buttons, wake lock (Live scan, and Keep the screen on since build 62), reading another phone's Share log codes (`qrPart()`, build 66), input wiring
+├── export.js                Excel/PDF builders (titles with the site name since build 62), the blank tally sheet (`buildTallyPdf()`, build 66), print, delivery (download/share/mailto), logo
 ├── compare.js               manifest check, file readers, OCR, presets, live tracking
-├── panels.js                guide, changelog, settings, `applySite()` (hides switched-off features), report a problem or idea (with its offline queue), saved deliveries, backups, install, update banner, reminder about a delivery not exported (`unexpCheck()`, build 62)
+├── panels.js                guide, changelog, settings, `applySite()` (hides switched-off features), report a problem or idea (with its offline queue), saved deliveries, backups, install, update banner, reminder about a delivery not exported (`unexpCheck()`, build 62), Share log panel and its QR codes (`qrCodesFor()`, `initPhones()`, build 66), the phone's Back button closing dialogs (`backOpen()`/`backClose()`, build 66) and the ↓ Latest button (build 66)
 ├── sw.js                    service worker (offline shell + library cache)
 ├── manifest.webmanifest     install metadata (name, colours, icons)
 ├── icon-192.png, icon-512.png, apple-touch-icon.png
 ├── logo.png                 default logo for the header and exports (optional)
 ├── presets.json             shared LPN prefix presets (optional)
 ├── media/
-│   ├── demo.mp4             narrated demo video for the Guide (720×1280, about 47 seconds, about 1.7 MB; re-recorded for v4.0 in build 52, again in build 59 to show the Report a problem button, and in build 65 to show the four-button scan row; loaded only when tapped, not cached)
+│   ├── demo.mp4             narrated demo video for the Guide (720×1280, about 47 seconds, about 1.7 MB; re-recorded for v4.0 in build 52, again in build 59 to show the Report a problem button, in build 65 to show the four-button scan row, and in build 66 to show Share log, the four-item Export menu, the totals and ↓ Latest; loaded only when tapped, not cached)
 │   ├── demo-poster.jpg      still picture shown before the video plays
 │   ├── history.mp4          narrated build history video for the top of the Changelog (build 65; 1280×720, about 66 seconds, about 2.8 MB; loaded only when tapped, not cached)
 │   ├── history-poster.jpg   still picture shown before it plays (the last frame)
@@ -38,7 +39,7 @@
 │   ├── groups/              the checks, one self-contained file per area (since build 52)
 │   │   ├── 01-layout.js … 06-real-export.js     layout; phone flows and Settings; Excel export; version note, PDF safety and spreadsheet import; saved data from outside and fingerprints; real export libraries and library versions
 │   │   ├── 07-security-policy.js … 12-report.js security policy; demo video and the Changelog's build history video (build 65); manifest photos and problem report; accessibility; feedback Worker; Report a problem or idea
-│   │   └── 13-photo-notes.js … 23-offline.js    photo notes; Find an LPN and turned photos; damaged pallets and Share this app; welcome card; offline store; real photo reading (GitHub only); site settings (config.js, build 53); pallets with no LPN and FPP descriptions (20-no-lpn.js, builds 55 and 56); data saved by older builds (21-old-data.js, after build 55); refused pallets, the reminder about a delivery not exported and the site name on exports (22-refused-reminder-site.js, build 62; Scan by photo reading the printed LPN added in build 63, moved to Upload photo in build 64; Read the printed LPN and several photos in build 65); offline (23-offline.js since build 62)
+│   │   └── 13-photo-notes.js … 23-offline.js    photo notes; Find an LPN and turned photos; damaged pallets and Share this app; welcome card; offline store; real photo reading (GitHub only); site settings (config.js, build 53); pallets with no LPN and FPP descriptions (20-no-lpn.js, builds 55 and 56); data saved by older builds (21-old-data.js, after build 55); refused pallets, the reminder about a delivery not exported and the site name on exports (22-refused-reminder-site.js, build 62; Scan by photo reading the printed LPN added in build 63, moved to Upload photo in build 64; Read the printed LPN and several photos in build 65); Share log and the blank tally sheet (225-two-phones-tally.js, build 66); Back button, no pull-to-refresh, totals as filters and ↓ Latest (226-small-touches.js, build 66); offline (23-offline.js since build 62). The runner sorts names as text, so 225- and 226- run after 22- and before 23-offline.js
 │   ├── fixtures/old/build-N/  files saved by builds 19, 30, 46, 49, 54 and 64 (build 64 since build 65) with their own code: storage.json, backup.json, cells.json, keywords.txt, log.xlsx, log.pdf, expect.json (read by groups/21-old-data.js)
 │   ├── advisories.js        asks osv.dev about security advisories for the pinned libraries
 │   ├── advisories-accepted.json  advisories checked and found not to affect the app, with reasons
@@ -102,16 +103,17 @@
 | `index.html` | Static markup and element ids | Inline logic (all behaviour is in the scripts) |
 | `styles.css` | All styling; colours via the CSS variables set by `applyTheme()` | Hard-coded colours for themed surfaces |
 | `core.js` | Anything other scripts need at load time: state, `save`/`render`, the `clean*` helpers for saved data, the `SRI` map, helpers | Library loading for exports or OCR |
+| `qr.js` | Turning text into a QR code (`QR.encode`, `QR.svg`) | Anything about pallets or the log (that is `qrCodesFor()` in `panels.js`) |
 | `scan.js` | Camera and barcode code | Log or export logic beyond calling `tryAdd()` |
 | `export.js` | File generation and delivery | Reading files back (that is `compare.js` / `panels.js`) |
 | `compare.js` | Everything manifest-related, file readers, OCR | Saved-delivery storage |
-| `panels.js` | Side-panel content (Guide, Changelog, Settings, Saved deliveries) and app-wide extras that run last | Code other scripts depend on during their own load |
+| `panels.js` | Side-panel content (Guide, Changelog, Settings, Saved deliveries, Share log) and app-wide extras that run last | Code other scripts depend on during their own load |
 | `sw.js` | Caching only | App logic |
 | `media/` | The Guide's demo video and its poster, kept under 3 MB (a check fails above that), the Changelog's build history video and its poster (build 65, kept under 4 MB), and the Settings QR code `share-qr.svg` (build 50, cached for offline use in `SHELL`) | Anything else the app needs to work offline (the video is never cached) |
 
 ## Load order and dependencies
 
-`index.html` loads `config.js → core.js → scan.js → export.js → compare.js → panels.js` as classic scripts. They share one global scope, so:
+`index.html` loads `config.js → core.js → qr.js → scan.js → export.js → compare.js → panels.js` as classic scripts. They share one global scope, so:
 
 - top-level `const`/`let` names must be unique across files;
 - `config.js` only sets `window.LPN_CONFIG`; `core.js` reads it once into `SITE` when it loads, so every later file can call `feat()` and `testNote()`;

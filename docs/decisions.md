@@ -995,3 +995,41 @@ The Changelog starts with a one-minute narrated video of the app at ten builds, 
 - **Demo video re-recorded** so the scan row shows the four buttons from build 64 (length unchanged, 46.6 seconds).
 - **Problem log wording:** the `scan` entry now starts "Printed LPN read:", as it comes from either Upload photo or Read the printed LPN.
 - **A barcode with a check open:** a single photo whose barcode is read while the check bar is showing now says "Answer the check above first (Add or Skip), then try the photo again." Before, the code went to `onCode()`, which ignores codes while a check is waiting, so the photo was dropped without a word.
+
+## Share log: pallets sent between phones as QR codes (build 66)
+
+When two people unload one trailer, each logs on their own phone, and the pallets need to end up on one phone to export. **Share log** (switch `twoPhones`; called "Two phones" while it was built) does this with QR codes: one phone shows them, the other reads them with its camera.
+
+- **No server and no connection between the phones:** the pallets go from screen to camera, so nothing is sent over the internet and it works offline. The codes are made in the app by `qr.js` (byte mode, level M, versions 1 to 20, following the QR Code standard), not by a CDN library, so there is no new library to load, fingerprint or allow in the security policy, and `qr.js` is in the offline shell.
+- **Several small codes in turn, not one big one:** the data is cut into 280-character parts, so each code stays small enough to read off a phone screen (the checks keep each under 330 bytes), and they change by themselves every 2 seconds. **Previous** and **Next** stop the change and hold one code for a slow camera. The receiving phone reads them in any order and only beeps for a part it didn't have.
+- **Plain ASCII only:** characters outside plain ASCII are written as `\u` escapes before the text is cut, so a part is never bigger than its character count, an accented character is never split between two codes, and a reader can't guess the wrong character set.
+- **Only when asked:** a code is acted on only after **Scan the other phone's codes**, so pointing Live scan at the other phone by accident adds nothing. A code starting `LPNM` is never logged as a pallet. The `1` in `LPNM1` is a version: a code from a later format says to update both phones instead of guessing.
+- **Added once, like a backup:** the pallets go through `cleanRows()`, the same tidying as a backup, as they come from outside. A set's random id is remembered (until a reload) so the same codes can't be added twice; pallets already in the log are skipped; No LPN pallets take this log's next numbers, as their numbers only mean something within one log. At most 500 pallets.
+- **One Undo for the whole merge**, which takes away only the merged pallets, so anything logged after them stays.
+- **Waits for a check:** if a check bar is waiting, the codes wait too, as there is one check bar and its answer comes first.
+- **Trailer pointed out, not blocked:** a different trailer number on the other phone is mentioned in the message; the pallets are still added, as only the person can tell whether it is a typo.
+- **Screen readers:** the counter "Code k of n" isn't a live region while the codes change by themselves (it would talk every 2 seconds), only after Previous or Next.
+- **Trade-off:** the sending phone keeps its pallets, so both phones still hold them and either could be exported; the panel's hint says the other phone's log isn't changed. Codes are made from the log when **Show** is tapped, so pallets logged afterwards need Show again. The receiving phone needs a working camera.
+
+## Blank tally sheet (build 66)
+
+**Blank tally sheet** (switch `tallySheet`) in the Export menu prints an empty A4 page for writing pallets down by hand, for example when a phone isn't available.
+
+- **One page, always:** the number of rows is worked out from the space left under the details; if a font or a tall logo still pushes it onto a second page, `buildTallyPdf()` makes it again with fewer rows. The logo is limited to 18 mm (`pdfBanner()` got a height argument) so it leaves room for rows.
+- **Same print path as the log:** it uses `printBuf()`, so where printing isn't available the PDF is saved instead.
+- **Not an export of the log:** it carries no pallets, works with an empty log, and doesn't change the "Exported at" note or ask about the expected count.
+- **Columns match the app:** a box per pallet type, FSDU and a notes column for damage and refused pallets, the same things the app records for each pallet.
+
+## Back button, pull-to-refresh, totals and ↓ Latest (build 66)
+
+- **Back closes, rather than leaves:** the phone's Back button used to leave the app even with a panel open. One history entry is added while any panel, the install box or the report box is open (not one per dialog), and taken off again when the last one is closed another way, so the history doesn't fill up with steps. Its own `history.back()` is counted and ignored, which keeps it right when dialogs are opened and closed quickly.
+- **No pull-to-refresh:** `overscroll-behavior-y: contain`, because pulling down at the top of the page reloaded it and stopped the camera mid-scan.
+- **Totals as filters:** the type and FSDU totals were already there, so they became buttons that set the existing filters rather than adding new controls. A tap sets one filter and clears the other, and a second tap shows all (search is left as it is). Total and Refused aren't filters. The pressed state is an inner border, not an outline, so the focus ring still shows; the rows of totals got more space so taps don't land on the row below. The FSDU filter on its own now gets the "Showing x of y" line too, which build 65 only gave to search and the type filter.
+- **↓ Latest:** on a long log the newest pallet scrolls out of view while checking older ones. The button shows only from 8 pallets and only when the newest is out of view, and steps aside while the Undo bar or the "Added" note shows in the same place. While it shows, focused controls scroll clear of it.
+- **Export menu:** with a fourth item, the menu's last button could open under the entry bar on a phone, so opening the menu scrolls it into view.
+
+## Smaller changes in build 66
+
+- **Demo video re-recorded** to show Share log, the four-item Export menu, the totals spacing and ↓ Latest.
+- **Check file names:** the two new check files are `225-two-phones-tally.js` and `226-small-touches.js`. The runner sorts names as text, so they run after `22-…` and before `23-offline.js`, which must stay last, without renaming it.
+- **No "In testing" note yet:** `testNote()` has wordings for `twoPhones` and `tallySheet`, but nothing calls them, so marking either as in testing in `config.js` shows no note in build 66.
