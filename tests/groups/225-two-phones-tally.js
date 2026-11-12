@@ -101,13 +101,14 @@ module.exports = async ({ browser, URL0 }) => {
   p = await page(browser, 375);
   await p.goto(URL0); await p.waitForTimeout(300);
   s = await p.evaluate(async () => {
-    const calls = [];
+    const calls = [], texts = [];
     const doc = new Proxy({}, { get(t, k) {
       if (k === "autoTable") return o => { calls.push(o); return doc; };
       if (k === "internal") return { pageSize: { getWidth: () => 210, getHeight: () => 297 } };
       if (k === "lastAutoTable") return { finalY: 90 };
       if (k === "getTextWidth") return () => 50; if (k === "getNumberOfPages") return () => 1;
       if (k === "output") return () => new ArrayBuffer(4); if (k === "then") return undefined;
+      if (k === "text") return t => { texts.push(String(t)); return doc; };
       return () => doc; } });
     const J = function () { return doc; }; J.API = { autoTable() {} }; window.jspdf = { jsPDF: J };
     let printed = null; window.printBuf = async (buf, name) => { printed = name; };
@@ -115,9 +116,9 @@ module.exports = async ({ browser, URL0 }) => {
     document.getElementById("expBtn").click(); const btn = document.getElementById("tallyBtn"), vis = !btn.hidden && btn.getBoundingClientRect().height >= 40;
     await btn.onclick();
     const main = calls[1] || {};
-    return { vis, printed, msg: document.getElementById("dlmsg").textContent, details: JSON.stringify(calls[0] && calls[0].body), head: main.head && main.head[0], n: main.body ? main.body.length : 0, last: main.body && main.body[main.body.length - 1][0].content, first: main.body && main.body[0] };
+    return { dated: texts.some(t => /^Printed /.test(t)), footer: texts.some(t => /^Page 1 of 1$/.test(t)), vis, printed, msg: document.getElementById("dlmsg").textContent, details: JSON.stringify(calls[0] && calls[0].body), head: main.head && main.head[0], n: main.body ? main.body.length : 0, last: main.body && main.body[main.body.length - 1][0].content, first: main.body && main.body[0] };
   });
-  check("the Export menu has Blank tally sheet, which works with an empty log", s.vis && s.printed === "LPN-tally-sheet.pdf" && !/Add at least one/.test(s.msg), s);
+  check("the Export menu has Blank tally sheet, which works with an empty log; its footer has no printed date", !s.dated && s.footer && s.vis && s.printed === "LPN-tally-sheet.pdf" && !/Add at least one/.test(s.msg), s);
   check("the tally sheet has spaces for the date, receiver, trailer, expected pallets and seals", ["Date", "Received by", "Trailer number", "Expected pallets", "Seal in", "Seal out"].every(w => s.details.includes('"' + w + '"')), s.details);
   check("the tally sheet has numbered empty rows with a column per pallet type, FSDU and notes, and a totals row", JSON.stringify(s.head) === JSON.stringify(["#", "LPN", "BB", "FMCG", "FPP", "Mixed", "FSDU", "Notes (damage, refused)"]) && s.n >= 20 && s.last === "Totals" && s.first[0] === "1" && s.first.slice(1).every(c => c === ""), s);
   // If a sheet runs onto a second page, it is made again with one row fewer until it fits.
@@ -151,9 +152,9 @@ module.exports = async ({ browser, URL0 }) => {
     s = await p.evaluate(async () => {
       await loadPdfJs(); const buf = await buildTallyPdf(); const pdf = await openPdf(new Uint8Array(buf.slice(0)));
       const pg = await pdf.getPage(1); const words = (await pg.getTextContent()).items.map(i => i.str.trim()).filter(Boolean);
-      return { pages: pdf.numPages, size: buf.byteLength, title: words.includes("Goods-in tally sheet"), totals: words.includes("Totals"), nums: words.filter(w => /^\d+$/.test(w)).map(Number), head: words.includes("Notes (damage, refused)") };
+      return { printed: words.some(w => /^Printed /.test(w)), pages: pdf.numPages, size: buf.byteLength, title: words.includes("Goods-in tally sheet"), totals: words.includes("Totals"), nums: words.filter(w => /^\d+$/.test(w)).map(Number), head: words.includes("Notes (damage, refused)") };
     });
-    check("real jsPDF: the tally sheet is one A4 page with its title, numbered rows and totals", s.pages === 1 && s.title && s.totals && s.head && s.nums.includes(1) && s.nums.includes(20), s);
+    check("real jsPDF: the tally sheet is one A4 page with its title, numbered rows and totals", s.pages === 1 && !s.printed && s.title && s.totals && s.head && s.nums.includes(1) && s.nums.includes(20), s);
     check("no script errors", p.errors.length === 0, p.errors);
     await p.ctx.close();
   }

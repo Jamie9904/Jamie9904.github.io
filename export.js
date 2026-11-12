@@ -145,11 +145,11 @@ function pdfTitle(doc,x,y,title,sub){
   doc.setFont("helvetica","normal");doc.setFontSize(10);doc.setTextColor(60);doc.text(sub,x,y+12);doc.setTextColor(0);
   return y+17;
 }
-function pdfFooter(doc,extra){
+function pdfFooter(doc,extra,noDate){ // noDate: the blank tally sheet, which is printed now and filled in later
   const n=doc.getNumberOfPages(),tot=n+(extra||0),pw=doc.internal.pageSize.getWidth(),ph=doc.internal.pageSize.getHeight();
   const now=new Date(),pd=String(now.getDate()).padStart(2,"0")+"/"+String(now.getMonth()+1).padStart(2,"0")+"/"+now.getFullYear();
   for(let i=1;i<=n;i++){doc.setPage(i);doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(90);
-    doc.text(appVer||appVerTry||"LPN Pallet Log",10,ph-7);doc.text("Page "+i+" of "+tot,pw/2,ph-7,{align:"center"});doc.text("Printed "+pd,pw-10,ph-7,{align:"right"});}
+    doc.text(appVer||appVerTry||"LPN Pallet Log",10,ph-7);doc.text("Page "+i+" of "+tot,pw/2,ph-7,{align:"center"});if(!noDate)doc.text("Printed "+pd,pw-10,ph-7,{align:"right"});}
   doc.setTextColor(0);
 }
 
@@ -259,7 +259,7 @@ async function tallyPdf(want){
     headStyles:Object.assign({},PDF_BASE.headStyles,{fontSize:9,halign:"center"}),
     columnStyles:{0:{cellWidth:10,halign:"center",textColor:90},1:{cellWidth:56},2:{cellWidth:14},3:{cellWidth:14},4:{cellWidth:14},5:{cellWidth:14},6:{cellWidth:14},7:{cellWidth:54}}
   }));
-  pdfFooter(doc);
+  pdfFooter(doc,0,true);
   return {buf:doc.output("arraybuffer"),pages:doc.getNumberOfPages(),rows:n};
 }
 async function buildCmpPdf(res,cnt,manCount,d,logCopy){
