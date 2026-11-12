@@ -21,7 +21,7 @@ syncAwake();
 function onCode(raw){
   const v=String(raw||"").trim();
   if(!v)return;
-  if(/^LPNM\d+ /.test(v)){qrPart(v);return} // a code from another phone's Two phones screen, never a pallet
+  if(/^LPNM\d+ /.test(v)){qrPart(v);return} // a code from another phone's Share log screen, never a pallet
   const now=Date.now();
   if(v===lastCode&&now-lastAt<2500){lastAt=now;return}
   if(pendingAdd)return;
@@ -29,14 +29,14 @@ function onCode(raw){
   const ok=tryAdd(v,true);
   $("smsg").textContent=ok?"Added: "+v+" ("+$("type").value+")":"Check the warning above.";
 }
-/* Two phones: the codes another phone shows (panels.js, qrCodesFor). They can be read in any order; when every part
+/* Share log: the codes another phone shows (panels.js, qrCodesFor). They can be read in any order; when every part
    of one set is in, its pallets are added to this log (mergePallets, core.js) and the camera stops. */
 let qrRecv=null,qrWant=false;const qrDone=new Set();
 function qrPart(v){
   const sm=$("smsg");
   if(!feat("twoPhones"))return;
   // Only after Scan the other phone's codes was tapped, so a code seen during ordinary scanning adds nothing.
-  if(!qrWant){sm.textContent="That’s a code from another phone. To add its pallets, use Two phones, then Scan the other phone’s codes.";return}
+  if(!qrWant){sm.textContent="That’s a code from another phone. To add its pallets, use Share log, then Scan the other phone’s codes.";return}
   if(!/^LPNM1 /.test(v)){sm.textContent="That code is from a different version of the app. Open the app online on both phones to update them, then try again.";sfx("warn");return}
   const m=/^LPNM1 ([a-z0-9]{4}) (\d{1,2})\/(\d{1,2}) ([\s\S]*)$/.exec(v);
   if(!m)return;

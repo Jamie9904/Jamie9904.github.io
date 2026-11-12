@@ -1,4 +1,4 @@
-/* QR codes made in the app (no outside library), for sending pallets to another phone (panels.js, Two phones).
+/* QR codes made in the app (no outside library), for sending pallets to another phone (panels.js, Share log).
    Byte mode, error correction level M, versions 1 to 20 (up to 666 bytes). qrSvg(text) gives an SVG string with a
    4-module quiet zone; it throws when the text is too long for version 20. Follows the QR Code standard
    (ISO/IEC 18004); the steps and tables are the same as in Project Nayuki's reference encoder (MIT). */

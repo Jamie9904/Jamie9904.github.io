@@ -18,7 +18,7 @@ module.exports = async ({ browser, URL0 }) => {
     const img = document.getElementById("qrImg"), svg = img.querySelector("svg");
     return { vis, title: document.getElementById("panelTitle").textContent, svg: !!svg, count: document.getElementById("qrCount").textContent, msg: document.getElementById("qrMsg").textContent, codes: qrCodesFor(rows), w: img.getBoundingClientRect().width, label: img.getAttribute("aria-label") };
   });
-  check("Two phones opens from its own button and shows this phone's pallets as QR codes, several for a long log", s.vis && s.title === "Two phones, one trailer" && s.svg && s.codes.length > 1 && s.count === "Code 1 of " + s.codes.length && /^31 pallets in \d+ codes\./.test(s.msg) && s.w >= 250 && s.w <= 330 && s.label === "QR codes for the other phone", { ...s, codes: s.codes.length });
+  check("Share log opens from its own button and shows this phone's pallets as QR codes, several for a long log", s.vis && s.title === "Share the log with another person" && s.svg && s.codes.length > 1 && s.count === "Code 1 of " + s.codes.length && /^31 pallets in \d+ codes\./.test(s.msg) && s.w >= 250 && s.w <= 330 && s.label === "QR codes for the other phone", { ...s, codes: s.codes.length });
   check("each code is small enough for a phone camera to read off a screen", s.codes.every(c => /^LPNM1 [a-z0-9]{4} \d+\/\d+ /.test(c) && Buffer.byteLength(c) <= 330), s.codes.map(c => Buffer.byteLength(c)));
   const codes = s.codes;
   await p.waitForTimeout(2300);
@@ -29,7 +29,7 @@ module.exports = async ({ browser, URL0 }) => {
   check("Next steps on and stops the automatic change, so a code can be held", s === "Code 3 of " + codes.length, s);
   s = await p.evaluate(() => { document.getElementById("qrShow").click(); const running = !!qrTimer; closeHelp(); return { running, after: qrTimer }; });
   check("closing the panel stops the codes changing", s.running && s.after === null, s);
-  s = await p.evaluate(() => { rows = []; save(); render(); openHelp("phones", "Two phones, one trailer"); document.getElementById("qrShow").click(); const r = { box: document.getElementById("qrBox").hidden, msg: document.getElementById("qrMsg").textContent }; closeHelp(); return r; });
+  s = await p.evaluate(() => { rows = []; save(); render(); openHelp("phones", "Share the log with another person"); document.getElementById("qrShow").click(); const r = { box: document.getElementById("qrBox").hidden, msg: document.getElementById("qrMsg").textContent }; closeHelp(); return r; });
   check("with no pallets there is nothing to send, and it says so", s.box && s.msg === "There are no pallets on this phone to send.", s);
 
   // The receiving phone: codes read in any order; pallets already here aren't added twice; No LPN renumbered; one Undo.
@@ -89,7 +89,7 @@ module.exports = async ({ browser, URL0 }) => {
   s = await p.evaluate(() => { rows = []; save(); render(); const said = mergePallets([{ lpn: "VLT004040265", type: "Nonsense", fsdu: "yes", dmg: "x".repeat(500), extra: "<img src=x onerror=alert(1)>" }, null, { lpn: "" }, "text"]); return { said, rows: JSON.stringify(rows) }; });
   check("pallets from another phone are tidied like a backup (unknown type, odd fields, very long text)", s.said === "Added 1 pallet from the other phone." && !/extra|onerror/.test(s.rows) && JSON.parse(s.rows)[0].type !== "Nonsense" && JSON.parse(s.rows)[0].dmg.length < 500, s);
   // Scan the other phone's codes: closes the panel and starts the camera.
-  s = await p.evaluate(async () => { let started = 0; const was = window.startScan; window.startScan = async () => { started++; }; openHelp("phones", "Two phones, one trailer"); document.getElementById("qrScan").click(); await new Promise(r => setTimeout(r, 50)); window.startScan = was; return { started, panel: document.getElementById("panel").hidden }; });
+  s = await p.evaluate(async () => { let started = 0; const was = window.startScan; window.startScan = async () => { started++; }; openHelp("phones", "Share the log with another person"); document.getElementById("qrScan").click(); await new Promise(r => setTimeout(r, 50)); window.startScan = was; return { started, panel: document.getElementById("panel").hidden }; });
   check("Scan the other phone's codes closes the panel and starts the camera", s.started === 1 && s.panel, s);
   // The QR maker: deterministic shape for a given text, sized to fit, and refuses what can't fit.
   s = await p.evaluate(() => { const a = QR.encode("LPNM1 abcd 1/1 " + "x".repeat(250)), b = QR.encode("hi"); let big = ""; try { QR.encode("y".repeat(700)); } catch (e) { big = e.message; } return { va: a.version, sa: a.size, vb: b.version, sb: b.size, big }; });

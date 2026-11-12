@@ -16,7 +16,7 @@ const feat=k=>SITE.on[k]!==false;
 function testNote(k,el,where){
   if(!SITE.test[k]||!el)return null;
   const n=document.createElement("p");n.className="note testnote";n.dataset.test=k;
-  const what={noLpn:"Logging pallets with no LPN",refused:"Marking pallets as refused",exportReminder:"The reminder about deliveries not exported",historyVideo:"The build history video",twoPhones:"Two phones",tallySheet:"The blank tally sheet",fppDesc:"Descriptions for FPP pallets",manifestCheck:"The Manifest check",manifestPhotos:"Reading photos",liveScan:"Live scan",scanByPhoto:"Scan by photo",photoUpload:"Upload photo",torch:"The torch",damage:"Marking damage",shareMissing:"Share missing list",findLpn:"Find an LPN",shareApp:"Share this app"}[k];
+  const what={noLpn:"Logging pallets with no LPN",refused:"Marking pallets as refused",exportReminder:"The reminder about deliveries not exported",historyVideo:"The build history video",twoPhones:"Sharing the log",tallySheet:"The blank tally sheet",fppDesc:"Descriptions for FPP pallets",manifestCheck:"The Manifest check",manifestPhotos:"Reading photos",liveScan:"Live scan",scanByPhoto:"Scan by photo",photoUpload:"Upload photo",torch:"The torch",damage:"Marking damage",shareMissing:"Share missing list",findLpn:"Find an LPN",shareApp:"Share this app"}[k];
   n.textContent=k==="report"?"In testing: reports may not always arrive yet, so for anything urgent also use Download problem report in Settings."
     :"In testing: "+what+" may not always work yet, so check what it gives you"+(feat("report")?", and use Report a problem if something goes wrong.":".");
   el.insertAdjacentElement(where||"beforeend",n);return n;
@@ -360,7 +360,7 @@ function add(){
   tryAdd(v);
   $("lpn").value="";$("lpn").focus();
 }
-/* Two phones: pallets from another phone are added after this log's. One already here isn't added twice;
+/* Share log: pallets from another phone are added after this log's. One already here isn't added twice;
    a No LPN pallet gets this log's next free number. One Undo takes just those away. Returns what happened. */
 function mergePallets(list){
   const mine=new Set(),norm=v=>String(v).toUpperCase().replace(/\s+/g,""),have=new Set(rows.map(r=>norm(r.lpn)));
@@ -372,7 +372,7 @@ function mergePallets(list){
   });
   const said=(added?"Added "+added+" pallet"+(added===1?"":"s")+" from the other phone.":"No new pallets from the other phone.")+(dup?" "+dup+" "+(dup===1?"was":"were")+" already in this log.":"");
   if(added){save();render();sfx("ok");showUndo("Added "+added+" pallet"+(added===1?"":"s")+" from the other phone",()=>{rows=rows.filter(r=>!mine.has(r));save();render()})} // takes away only these, so pallets logged since stay
-  diag("merge","Two phones: "+added+" added, "+dup+" already here");
+  diag("merge","Share log: "+added+" added, "+dup+" already here");
   return said;
 }
 function addValue(v,o){

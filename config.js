@@ -29,7 +29,7 @@ window.LPN_CONFIG = {
     whatsNew: true,        // the card after an update saying what's new
     exportReminder: true,  // reminder when a delivery from an earlier day was never exported
     historyVideo: true,    // the one-minute video at the top of the Changelog showing how the app has grown
-    twoPhones: true,       // Two phones: send one phone's pallets to another with QR codes, for one trailer unloaded by two people
+    twoPhones: true,       // Share log: send this log's pallets to another person's phone with QR codes, e.g. when two people unload one trailer
     tallySheet: true       // Blank tally sheet in the Export menu, a paper sheet to fill in by hand
   },
   testing: {
