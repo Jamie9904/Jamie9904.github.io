@@ -3,7 +3,9 @@ Downloads the engine and the voice model from GitHub once (~350 MB) into ~/.cach
 line in lines.json into out/vo/*.wav (silence trimmed, 48 kHz mono) and writes out/vo.json with each length.
 Run: python3 voice.py"""
 import json, os, subprocess, tarfile, urllib.request
-here = os.path.dirname(os.path.abspath(__file__)); out = os.path.join(here, "out"); cache = os.path.expanduser("~/.cache/lpn-voice")
+import sys
+# A folder can be named (tools/history-video uses this): its lines.json is read and out/ written there.
+here = os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.path.dirname(os.path.abspath(__file__)); out = os.path.join(here, "out"); cache = os.path.expanduser("~/.cache/lpn-voice")
 ENGINE = "sherpa-onnx-v1.12.15-linux-x64-shared"
 FILES = {ENGINE: f"https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.12.15/{ENGINE}.tar.bz2",
          "kokoro-multi-lang-v1_0": "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-multi-lang-v1_0.tar.bz2"}

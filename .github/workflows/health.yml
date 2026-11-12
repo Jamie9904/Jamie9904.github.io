@@ -53,6 +53,17 @@ jobs:
           ffmpeg -v error -i demo.mp4 -f null - || { echo "::error title=Demo video damaged::the video doesn't decode"; exit 1; }
           awk "BEGIN{exit !($d > 20)}" && [ "$v" = h264 ] && [ "$a" = aac ] || { echo "::error title=Demo video wrong::duration $d s, video $v, audio $a"; exit 1; }
           echo "::notice title=Demo video::plays: $d s, $v and $a"
+      - name: Changelog build history video is on the live site and plays
+        run: |
+          curl -fsSL --retry 2 -o history.mp4 https://jamie9904.github.io/media/history.mp4 || { echo "::error title=History video missing::https://jamie9904.github.io/media/history.mp4 didn't download"; exit 1; }
+          curl -fsSL --retry 2 -o hposter.jpg https://jamie9904.github.io/media/history-poster.jpg || { echo "::error title=History poster missing::media/history-poster.jpg didn't download"; exit 1; }
+          command -v ffprobe >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg >/dev/null; }
+          d=$(ffprobe -v error -show_entries format=duration -of csv=p=0 history.mp4)
+          v=$(ffprobe -v error -select_streams v:0 -show_entries stream=codec_name -of csv=p=0 history.mp4)
+          a=$(ffprobe -v error -select_streams a:0 -show_entries stream=codec_name -of csv=p=0 history.mp4)
+          ffmpeg -v error -i history.mp4 -f null - || { echo "::error title=History video damaged::the video doesn't decode"; exit 1; }
+          awk "BEGIN{exit !($d > 30)}" && [ "$v" = h264 ] && [ "$a" = aac ] || { echo "::error title=History video wrong::duration $d s, video $v, audio $a"; exit 1; }
+          echo "::notice title=History video::plays: $d s, $v and $a"
       - name: Report system works (feedback Worker and its GitHub token)
         env:
           FEEDBACK_GITHUB_TOKEN: ${{ secrets.FEEDBACK_GITHUB_TOKEN }}

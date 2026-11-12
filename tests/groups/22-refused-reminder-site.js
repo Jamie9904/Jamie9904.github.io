@@ -192,7 +192,7 @@ module.exports = async ({ browser, URL0 }) => {
   const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
   const shot = async (reads, input) => { await p.evaluate(r => { rows = []; save(); render(); hideCheck(); delete window.BarcodeDetector; window.loadZX = async () => { throw new Error("no reader"); }; window.__ocrN = 0; window.ocrLpns = async () => { window.__ocrN++; if (r.err) throw new Error(r.err); const a = (r.out || r).slice(); a.skipped = r.skipped || []; a.odd = r.odd || []; a.mended = r.mended || []; return a; }; document.querySelector('#tyb button[data-t="FMCG"]').click(); }, reads);
     await p.setInputFiles(input || "#upFile", { name: "label.png", mimeType: "image/png", buffer: png }); await p.waitForTimeout(400);
-    return p.evaluate(() => ({ bar: !document.getElementById("chkBar").hidden, chk: document.getElementById("chkTxt").textContent, smsg: document.getElementById("smsg").textContent, rows: rows.length, ocr: window.__ocrN })); };
+    return p.evaluate(() => ({ bar: !document.getElementById("chkBar").hidden, chk: document.getElementById("chkTxt").textContent, smsg: document.getElementById("smsg").textContent, rows: rows.length, ocr: window.__ocrN, readBtn: !document.getElementById("readLabel").hidden })); };
   s = await shot(["VLT004040265"]);
   check("with no barcode, the printed LPN is read and shown to check before it's added", s.bar && /^Read VLT004040265 from the printed label \(no barcode found\): check it matches the label\. Add it as FMCG\?$/.test(s.chk) && s.rows === 0 && /Check it, then Add or Skip/.test(s.smsg), s);
   await p.click("#chkAdd"); await p.waitForTimeout(100);
@@ -205,7 +205,7 @@ module.exports = async ({ browser, URL0 }) => {
   // offered once; numbers that aren't LPN-shaped are only counted; one read without its letters is named.
   await p.evaluate(() => { document.getElementById("cmpPfx").value = "VLT"; });
   s = await shot({ out: [], skipped: ["RUN001840861", "RUN001840861"], odd: ["SO123456"] });
-  check("an LPN whose prefix isn't in the prefix list is still offered, with a note; a repeat isn't named; other numbers are only counted", /^Read RUN001840861 from the printed label \(no barcode found\): check it matches the label\. Its prefix isn’t in your prefix list\./.test(s.chk) && !/Other LPNs/.test(s.smsg) && /1 other number on the label was left out/.test(s.smsg), s);
+  check("an LPN whose prefix isn't in the prefix list is still offered, with a note; a repeat isn't named; other numbers are only counted", /^Read RUN001840861 from the printed label \(no barcode found\): check it matches the label\. Check RUN001840861: prefix RUN isn’t in your prefix list\.$/.test(s.chk) && !/Other LPNs/.test(s.smsg) && /1 other number on the label was left out/.test(s.smsg), s);
   await p.click("#chkSkip"); await p.waitForTimeout(50);
   await p.evaluate(() => { document.getElementById("cmpPfx").value = ""; });
   s = await shot({ out: [], odd: ["LPN 0013323651"] });
@@ -216,12 +216,114 @@ module.exports = async ({ browser, URL0 }) => {
   check("a photo with neither a barcode nor a readable LPN says so", !s.bar && s.smsg === "No barcode or LPN found. Try a clearer, closer photo of the label." && s.rows === 0, s);
   s = await p.evaluate(() => ({ cam: document.getElementById("file").getAttribute("capture"), up: document.getElementById("upFile").hasAttribute("capture"), both: !document.getElementById("photo").hidden && !document.getElementById("upload").hidden, tip: document.getElementById("scanTip").textContent }));
   check("Scan by photo opens the camera; Upload photo lets you pick a photo you've already taken; both buttons show", s.cam === "environment" && s.up === false && s.both && s.tip === "Tip: if Live scan doesn’t work, try Scan by photo or Upload photo instead.", s);
-  // Scan by photo (the camera) reads barcodes only: no barcode means no text reading, with a pointer to Upload photo.
+  // Scan by photo (the camera) reads barcodes only; with none found it offers to read the printed LPN from the same photo.
   s = await shot({ out: ["VLT004040265"] }, "#file");
-  check("Scan by photo with no barcode doesn't read the label text and points to Upload photo", s.ocr === 0 && !s.bar && s.rows === 0 && s.smsg === "No barcode found. Move closer, hold steady and try again. If the barcode is damaged, use Upload photo: it can read the LPN printed on the label.", s);
+  check("Scan by photo with no barcode doesn't read the label text by itself, and offers Read the printed LPN", s.ocr === 0 && !s.bar && s.rows === 0 && s.readBtn && s.smsg === "No barcode found. Try again closer and steadier, or use Read the printed LPN to read the number printed on the label in this photo.", s);
+  await p.click("#readLabel"); await p.waitForTimeout(300);
+  s = await p.evaluate(() => ({ bar: !document.getElementById("chkBar").hidden, chk: document.getElementById("chkTxt").textContent, readBtn: !document.getElementById("readLabel").hidden, ocr: window.__ocrN, rows: rows.length }));
+  check("Read the printed LPN reads that same photo and asks before adding; the button goes", s.ocr === 1 && s.bar && /^Read VLT004040265 from the printed label/.test(s.chk) && !s.readBtn && s.rows === 0, s);
+  await p.click("#chkSkip"); await p.waitForTimeout(50);
+  s = await shot({ out: ["VLT004040265"] }, "#file");
+  await p.click("#stopscan"); await p.waitForTimeout(50);
+  s = await p.evaluate(() => ({ readBtn: !document.getElementById("readLabel").hidden, last: lastPhoto }));
+  check("closing the camera box takes away Read the printed LPN", !s.readBtn && s.last === null, s);
+  // With the usual LPN checks on, a prefix not in the list is mentioned once, not twice; with them off, the note says it.
+  await p.evaluate(() => { document.getElementById("cmpPfx").value = "VLT"; cfg.check = false; });
+  s = await shot({ out: [], skipped: ["RUN001840861"] });
+  check("with the LPN checks off, the label note still says the prefix isn't in the list", /Its prefix isn’t in your prefix list\.$/.test(s.chk.replace(/ Add it as \w+\?$/, "")), s.chk);
+  await p.click("#chkSkip"); await p.waitForTimeout(50);
+  await p.evaluate(() => { cfg.check = true; });
+  s = await shot({ out: [], skipped: ["RUN001840861"] });
+  check("with the LPN checks on, the prefix warning appears once", (s.chk.match(/prefix list/g) || []).length === 1 && /prefix RUN isn’t in your prefix list/.test(s.chk), s.chk);
+  await p.click("#chkSkip"); await p.waitForTimeout(50);
+  await p.evaluate(() => { document.getElementById("cmpPfx").value = ""; });
+  // Several photos at once: read in turn, each waiting for Add or Skip, then a summary.
+  await p.evaluate(() => { rows = []; save(); render(); hideCheck(); let n = 0; const reads = [["VLT004040265"], [], ["VLT004040273"]]; window.__ocrN = 0; window.ocrLpns = async () => { window.__ocrN++; const a = (reads[n++] || []).slice(); a.skipped = []; a.odd = []; a.mended = []; return a; }; });
+  await p.setInputFiles("#upFile", [1, 2, 3].map(k => ({ name: "label" + k + ".png", mimeType: "image/png", buffer: png }))); await p.waitForTimeout(400);
+  s = await p.evaluate(() => ({ chk: document.getElementById("chkTxt").textContent, ocr: window.__ocrN, busy: photoBusy }));
+  await p.evaluate(() => document.getElementById("upload").click()); await p.waitForTimeout(50);
+  s.again = await p.evaluate(() => document.getElementById("smsg").textContent);
+  check("several photos: the first one's LPN is asked about (naming the photo) and the rest wait; Upload photo again says it's still reading", /^Photo 1 of 3: Read VLT004040265/.test(s.chk) && s.ocr === 1 && s.busy && s.again === "Still reading your photos. Answer the check above (Add or Skip) to go on to the next one.", s);
+  await p.click("#chkAdd"); await p.waitForTimeout(500);
+  s = await p.evaluate(() => ({ chk: document.getElementById("chkTxt").textContent, bar: !document.getElementById("chkBar").hidden, ocr: window.__ocrN, smsg: document.getElementById("smsg").textContent }));
+  check("after Add, the next photos are read (nothing on photo 2) and photo 3's LPN is asked about", s.bar && /^Photo 3 of 3: Read VLT004040273/.test(s.chk) && s.ocr === 3 && /^Photo 3 of 3: /.test(s.smsg), s);
+  await p.click("#chkSkip"); await p.waitForTimeout(200);
+  s = await p.evaluate(() => ({ smsg: document.getElementById("smsg").textContent, rows: rows.map(r => r.lpn).join(), busy: photoBusy }));
+  check("after the last photo a summary says what was added, skipped and where nothing was found", s.smsg === "3 photos read: 1 pallet added, 1 skipped, nothing found on 1 photo." && s.rows === "VLT004040265" && !s.busy, s);
+  // A number read without its letters, or a photo that couldn't be read, is kept for the summary; nothing added says "no pallets".
+  await p.evaluate(() => { let n = 0; window.ocrLpns = async () => { n++; if (n === 2) throw new Error("The photo reader couldn’t load."); const a = []; a.skipped = []; a.odd = ["LPN 0013323651"]; a.mended = []; return a; }; });
+  await p.setInputFiles("#upFile", [1, 2].map(k => ({ name: "l" + k + ".png", mimeType: "image/png", buffer: png }))); await p.waitForTimeout(500);
+  s = await p.evaluate(() => document.getElementById("smsg").textContent);
+  check("several photos: a number to type in and a photo that couldn't be read are kept in the summary", s === "2 photos read: no pallets added. Photo 1: a number after “LPN:” was read without its letters (0013323651): type it in with the letters at the start. Photo 2: couldn’t be read: The photo reader couldn’t load.", s);
+  // Stopping, and anything that replaces the log, ends the batch; the count is of pallets from the photos only.
+  const batchOf = async n => { await p.evaluate(() => { let n = 0; window.ocrLpns = async () => { n++; const a = ["VLT00404027" + n]; a.skipped = []; a.odd = []; a.mended = []; return a; }; });
+    await p.setInputFiles("#upFile", Array.from({ length: n }, (x, k) => ({ name: "b" + k + ".png", mimeType: "image/png", buffer: png }))); await p.waitForTimeout(400); };
+  await p.evaluate(() => { rows = [{ lpn: "RUN000000001", type: "BB", fsdu: false }, { lpn: "RUN000000002", type: "BB", fsdu: false }]; save(); render(); hideCheck(); });
+  await batchOf(3);
+  await p.evaluate(() => { rows.splice(0, 2); save(); render(); addValue("RUN000000009", { type: "BB", fsdu: false }); }); // two earlier pallets deleted, and a handheld scan, meanwhile
+  await p.click("#chkAdd"); await p.waitForTimeout(400);
+  await p.click("#stopscan"); await p.waitForTimeout(300);
+  s = await p.evaluate(() => ({ msg: document.getElementById("msg").textContent, bar: !document.getElementById("chkBar").hidden, rows: rows.map(r => r.lpn).join(), busy: photoBusy, box: !document.getElementById("scanbox").hidden }));
+  check("Stop scanning ends a batch: its check goes, no more photos are read, and the count is only of pallets from the photos", s.msg === "Stopped reading photos (2 of 3 read): 1 pallet added." && !s.bar && s.rows === "RUN000000009,VLT004040271" && !s.busy && !s.box, s);
+  await p.evaluate(() => { rows = [{ lpn: "RUN000000001", type: "BB", fsdu: false }]; save(); render(); });
+  await batchOf(3);
+  await p.evaluate(() => document.getElementById("clear").click()); await p.waitForTimeout(400);
+  s = await p.evaluate(() => ({ bar: !document.getElementById("chkBar").hidden, rows: rows.length, busy: photoBusy, ocr: 0 }));
+  check("Clear all during a batch ends it: nothing more is read or added", !s.bar && s.rows === 0 && !s.busy, s);
+  await p.evaluate(() => { rows = [{ lpn: "RUN000000001", type: "BB", fsdu: false }]; save(); render(); });
+  await batchOf(2);
+  await p.evaluate(() => newDelivery()); await p.waitForTimeout(100);
+  s = await p.evaluate(() => ({ bar: !document.getElementById("chkBar").hidden, busy: photoBusy }));
+  check("the first press of Start new delivery (which only asks to export first) doesn't stop the batch", s.bar && s.busy, s);
+  await p.evaluate(() => newDelivery()); await p.waitForTimeout(400);
+  s = await p.evaluate(() => ({ bar: !document.getElementById("chkBar").hidden, rows: rows.length, busy: photoBusy }));
+  check("Start new delivery during a batch ends it, so no photo goes into the new delivery", !s.bar && s.rows === 0 && !s.busy, s);
+  // A slow read: a handheld check that opens meanwhile is answered first, then the photo is read again and offered.
+  await p.evaluate(() => { rows = []; save(); render(); hideCheck(); window.__go = []; window.__ocrN = 0; window.ocrLpns = () => new Promise(res => { window.__ocrN++; window.__go.push(() => { const a = ["VLT004040281"]; a.skipped = []; a.odd = []; a.mended = []; res(a); }); }); });
+  await p.setInputFiles("#upFile", [1, 2].map(k => ({ name: "s" + k + ".png", mimeType: "image/png", buffer: png }))); await p.waitForTimeout(300);
+  await p.evaluate(() => { tryAdd("RUN000000077", true, "Handheld:"); window.__go.shift()(); }); await p.waitForTimeout(200);
+  s = await p.evaluate(() => ({ chk: document.getElementById("chkTxt").textContent, ocr: window.__ocrN }));
+  await p.click("#chkSkip"); await p.waitForTimeout(300);
+  s.after = await p.evaluate(() => ({ ocr: window.__ocrN }));
+  await p.evaluate(() => window.__go.shift()()); await p.waitForTimeout(200);
+  s.chk2 = await p.evaluate(() => document.getElementById("chkTxt").textContent);
+  check("a photo read while another check opened waits, then is read again and offered", /^Handheld:/.test(s.chk) && s.ocr === 1 && s.after.ocr === 2 && /^Photo 1 of 2: Read VLT004040281/.test(s.chk2), s);
+  // Stop scanning during a slow read frees the buttons at once, and the read finishing later adds nothing.
+  await p.click("#stopscan"); await p.waitForTimeout(100);
+  s = await p.evaluate(() => ({ busy: photoBusy, msg: document.getElementById("msg").textContent, bar: !document.getElementById("chkBar").hidden }));
+  check("Stop scanning takes away the batch's question, frees the buttons at once and says what was done", !s.busy && !s.bar && s.msg === "Stopped reading photos (1 of 2 read): no pallets added.", s);
+  // Stop while a handheld scan's question is open (the batch waiting for it): that question stays.
+  await p.evaluate(() => { rows = []; save(); render(); tryAdd("RUN000000078", true, "Handheld:"); });
+  await p.setInputFiles("#upFile", [1, 2].map(k => ({ name: "h" + k + ".png", mimeType: "image/png", buffer: png }))); await p.waitForTimeout(200);
+  await p.evaluate(() => document.getElementById("stopscan").click()); await p.waitForTimeout(100);
+  s = await p.evaluate(() => ({ busy: photoBusy, chk: document.getElementById("chkTxt").textContent, bar: !document.getElementById("chkBar").hidden }));
+  check("Stop scanning keeps a handheld scan's question for an answer", !s.busy && s.bar && /^Handheld:/.test(s.chk), s);
+  await p.click("#chkSkip"); await p.waitForTimeout(50);
+  // A read that finishes after Stop scanning adds and asks nothing.
+  await p.setInputFiles("#upFile", [1, 2].map(k => ({ name: "t" + k + ".png", mimeType: "image/png", buffer: png }))); await p.waitForTimeout(300);
+  await p.evaluate(() => document.getElementById("stopscan").click()); await p.waitForTimeout(50);
+  const busyDuringRead = await p.evaluate(() => photoBusy);
+  check("Stop scanning during a slow read frees the photo buttons at once", busyDuringRead === false, busyDuringRead);
+  await p.evaluate(() => { while (window.__go.length) window.__go.shift()(); }); await p.waitForTimeout(300);
+  s = await p.evaluate(() => ({ busy: photoBusy, bar: !document.getElementById("chkBar").hidden, rows: rows.length }));
+  check("a read that finishes after Stop scanning adds nothing and asks nothing", !s.busy && !s.bar && s.rows === 0, s);
+  // Read the printed LPN tapped while another check is open keeps the photo and the button.
+  await p.evaluate(() => { rows = []; save(); render(); hideCheck(); window.__ocrN = 0; window.ocrLpns = async () => { window.__ocrN++; const a = ["VLT004040265"]; a.skipped = []; a.odd = []; a.mended = []; return a; }; });
+  await p.setInputFiles("#file", { name: "c.png", mimeType: "image/png", buffer: png }); await p.waitForTimeout(300);
+  await p.evaluate(() => tryAdd("VLT004040299", true, "Handheld:"));
+  await p.click("#readLabel"); await p.waitForTimeout(200);
+  s = await p.evaluate(() => ({ btn: !document.getElementById("readLabel").hidden, photo: !!lastPhoto, ocr: window.__ocrN, smsg: document.getElementById("smsg").textContent }));
+  check("Read the printed LPN with another check open keeps the photo and the button, and says why", s.btn && s.photo && s.ocr === 0 && /^Answer the check above first/.test(s.smsg), s);
+  await p.click("#chkSkip"); await p.waitForTimeout(50);
+  await p.click("#readLabel"); await p.waitForTimeout(300);
+  s = await p.evaluate(() => ({ focus: document.activeElement && document.activeElement.id, bar: !document.getElementById("chkBar").hidden }));
+  check("after Read the printed LPN, focus goes to Skip on the check (the button that was pressed hides)", s.bar && s.focus === "chkSkip", s);
+  await p.click("#chkSkip"); await p.waitForTimeout(50);
+  s = await p.evaluate(() => document.getElementById("upFile").multiple);
+  check("Upload photo lets you choose several photos", s === true, s);
   // With Upload photo switched off, its button is gone, no text is read, and Scan by photo doesn't mention it.
-  s = await p.evaluate(async () => { let called = 0; window.ocrLpns = async () => { called++; return ["VLT004040265"]; }; SITE.on.photoUpload = false; applySite(); await readLabelText(new File(["x"], "x.png")); const msg = document.getElementById("smsg").textContent; await decodePhoto(new File(["x"], "x.png"), false); const msg2 = document.getElementById("smsg").textContent; const tip = document.getElementById("scanTip").textContent; SITE.on.photoUpload = true; return { called, msg, msg2, tip, up: document.getElementById("upload").hidden, photo: document.getElementById("photo").hidden }; });
-  check("with Upload photo switched off its button is hidden, no label text is read, and Scan by photo doesn't point to it", s.called === 0 && s.up && !s.photo && /No barcode found/.test(s.msg) && !/Upload photo/.test(s.msg2) && s.tip === "Tip: if Live scan doesn’t work, try Scan by photo instead.", s);
+  s = await p.evaluate(async () => { let called = 0; window.ocrLpns = async () => { called++; return ["VLT004040265"]; }; SITE.on.photoUpload = false; applySite(); await readLabelText(new File(["x"], "x.png")); const msg = document.getElementById("smsg").textContent; await decodePhoto(new File(["x"], "x.png"), false); const msg2 = document.getElementById("smsg").textContent, rb = !document.getElementById("readLabel").hidden; const tip = document.getElementById("scanTip").textContent; SITE.on.photoUpload = true; return { called, msg, msg2, rb, tip, up: document.getElementById("upload").hidden, photo: document.getElementById("photo").hidden }; });
+  check("with Upload photo switched off its button is hidden, no label text is read, and Scan by photo doesn't offer Read the printed LPN", s.called === 0 && s.up && !s.photo && /No barcode found/.test(s.msg) && !/Upload photo|Read the printed/.test(s.msg2) && !s.rb && s.tip === "Tip: if Live scan doesn’t work, try Scan by photo instead.", s);
   // With Reading photos switched off, a photo with no barcode isn't read for text.
   s = await p.evaluate(async () => { let called = 0; window.ocrLpns = async () => { called++; return []; }; SITE.on.manifestPhotos = false; await readLabelText(new File(["x"], "x.png")); SITE.on.manifestPhotos = true; return { called, msg: document.getElementById("smsg").textContent }; });
   check("with Reading photos switched off, a photo's text isn't read", s.called === 0 && /No barcode found/.test(s.msg), s);

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>LPN Pallet Log: build history</title>
+<style>
+@font-face{font-family:"Atkinson Hyperlegible";font-weight:400;src:url(../../fonts/AtkinsonHyperlegible-Regular.woff2)}
+@font-face{font-family:"Atkinson Hyperlegible";font-weight:700;src:url(../../fonts/AtkinsonHyperlegible-Bold.woff2)}
+@font-face{font-family:"IBM Plex Mono";font-weight:600;src:url(../../fonts/IBMPlexMono-SemiBold.woff2)}
+html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#0b1428}
+body{font-family:"Atkinson Hyperlegible",sans-serif;color:#eef2fb}
+#bg{position:absolute;inset:0;background:radial-gradient(1200px 800px at 30% 40%,#1b2c52 0%,#0b1428 70%)}
+.phone{position:absolute;width:420px;height:880px;border-radius:56px;background:#05080f;box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 0 2px #2a3a5e inset;padding:14px;box-sizing:border-box}
+.screen{position:relative;width:100%;height:100%;border-radius:44px;overflow:hidden;background:#111a2e}
+.screen img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top}
+.ring{position:absolute;border:4px solid #ff8a2a;border-radius:12px;box-shadow:0 0 0 6px rgba(255,138,42,.25),0 0 30px rgba(255,138,42,.6)}
+#right{position:absolute;left:820px;top:0;width:980px;height:1080px}
+.kicker{font:600 30px/1 "IBM Plex Mono",monospace;letter-spacing:.08em;color:#ff8a2a;text-transform:uppercase}
+.big{font-weight:700;font-size:150px;line-height:1;letter-spacing:-.02em}
+.head{font-weight:700;font-size:58px;line-height:1.12;max-width:920px}
+#sub{position:absolute;left:0;right:0;bottom:56px;text-align:center}
+#sub span{display:inline-block;max-width:1500px;background:rgba(5,8,15,.82);padding:14px 26px;border-radius:14px;font-size:38px;line-height:1.3;font-weight:700}
+#rail{position:absolute;left:820px;top:830px;width:980px;height:60px}
+#rail .line{position:absolute;left:0;right:0;top:28px;height:4px;background:#2a3a5e;border-radius:2px}
+#rail .fill{position:absolute;left:0;top:28px;height:4px;background:#ff8a2a;border-radius:2px}
+#rail .dot{position:absolute;top:20px;width:20px;height:20px;margin-left:-10px;border-radius:50%;background:#2a3a5e}
+#rail .dot.on{background:#ff8a2a}
+#rail .lab{position:absolute;top:-14px;transform:translateX(-50%);font:600 22px/1 "IBM Plex Mono",monospace;color:#8a9bc4}
+#rail .lab.on{color:#ffffff}
+.center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:26px}
+.cap{font:600 26px/1 "IBM Plex Mono",monospace;color:#8a9bc4;letter-spacing:.06em;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<div id="root"></div>
+<div id="sub"><span id="subt"></span></div>
+<script>
+const W = window;
+// Filled by render.js: W.SCENES = [{id,start,end,kind,shot,box,build,date,head,sub}], W.RAIL = [13,...]
+const ease = x => x < 0 ? 0 : x > 1 ? 1 : 1 - Math.pow(1 - x, 3);
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+function phone(left, top, shot, box, ringA, scale) {
+  // The screenshot is 390 x 844 CSS px; the screen shows it at 392 px wide.
+  const k = 392 / 390;
+  const ring = box && ringA > 0 ? `<div class="ring" style="opacity:${ringA};left:${box.x * k - 8}px;top:${box.y * k - 8}px;width:${box.w * k + 16}px;height:${box.h * k + 16}px"></div>` : "";
+  return `<div class="phone" style="left:${left}px;top:${top}px;transform:scale(${scale});transform-origin:50% 50%"><div class="screen"><img src="${shot}">${ring}</div></div>`;
+}
+function rail(build, a) {
+  const R = W.RAIL, lo = R[0], hi = R[R.length - 1], x = b => (b - lo) / (hi - lo) * 980;
+  let h = `<div class="line"></div><div class="fill" style="width:${x(build)}px"></div>`;
+  R.forEach(b => { const on = b <= build; h += `<div class="dot${on ? " on" : ""}" style="left:${x(b)}px"></div><div class="lab${b === build ? " on" : ""}" style="left:${x(b)}px">${b}</div>`; });
+  return `<div id="rail" style="opacity:${a}">${h}</div>`;
+}
+W.renderAt = t => {
+  const S = W.SCENES, i = S.findIndex(s => t >= s.start && t < s.end), s = S[i < 0 ? S.length - 1 : i], local = t - s.start, dur = s.end - s.start;
+  const inA = ease(local / 0.5), outA = 1 - ease((local - (dur - 0.35)) / 0.35);
+  let h = "";
+  if (s.kind === "intro") {
+    const n = Math.round(13 + (65 - 13) * ease(clamp((local - 0.8) / 2.6, 0, 1)));
+    h = `<div class="center" style="opacity:${Math.min(inA, outA)}"><div class="kicker">LPN Pallet Log</div><div class="big" style="font-size:190px">Build ${n}</div><div class="head" style="font-weight:400;color:#c3cde6">26 October to 12 November 2026</div></div>`;
+  } else if (s.kind === "outro") {
+    const a = Math.min(inA, 1), sc = 0.8;
+    h = `<div style="opacity:${a}">${phone(330, 40, W.FIRST, null, 0, sc)}${phone(1170, 40, W.LAST, null, 0, sc)}
+      <div class="cap" style="position:absolute;left:330px;width:420px;top:850px;text-align:center">Build 13 · 26 Oct</div>
+      <div class="cap" style="position:absolute;left:1170px;width:420px;top:850px;text-align:center;color:#ff8a2a">Build 65 · 12 Nov</div>
+      <div class="head" style="position:absolute;left:760px;width:400px;top:430px;text-align:center;font-size:64px">Same job.<br>Far less paper.</div></div>`;
+  } else {
+    // The phone stays put between build scenes; only its screen and the words change.
+    const prev = S[i - 1], fromPhone = prev && prev.kind === "build";
+    const phA = fromPhone ? 1 : inA;
+    const ringA = ease((local - 0.7) / 0.4) * (0.75 + 0.25 * Math.sin((local - 0.7) * 5));
+    const scale = 0.9 + 0.022 * clamp(local / dur, 0, 1);
+    let scr = phone(250, 60, s.shot, s.box, ringA, scale);
+    if (fromPhone && local < 0.45) scr = `<div style="position:absolute;inset:0;opacity:${1 - ease(local / 0.45)}">${phone(250, 60, prev.shot, null, 0, 0.922)}</div><div style="position:absolute;inset:0;opacity:${ease(local / 0.45)}">${scr}</div>`;
+    const ty = 30 * (1 - inA);
+    h = `<div style="opacity:${phA}">${scr}</div>
+      <div id="right" style="opacity:${Math.min(inA, outA)};transform:translateY(${ty}px)">
+        <div style="position:absolute;top:210px" class="kicker">${s.date}</div>
+        <div style="position:absolute;top:260px" class="big">Build ${s.build}</div>
+        <div style="position:absolute;top:450px" class="head">${s.head}</div>
+      </div>${rail(s.build, phA)}`;
+  }
+  document.getElementById("root").innerHTML = h;
+  const subA = Math.min(ease((local - 0.2) / 0.3), 1 - ease((local - (dur - 0.3)) / 0.3));
+  const st = document.getElementById("subt"); st.textContent = s.sub; st.parentNode.style.opacity = s.sub ? subA : 0;
+};
+</script>
+</body>
+</html>

@@ -15,8 +15,8 @@ window.LPN_CONFIG = {
     manifestCheck: true,   // the whole Manifest check section
     manifestPhotos: true,  // reading manifests, printed logs and printed LPNs on labels from photos (PDFs and typing still work)
     liveScan: true,        // Live scan with the camera
-    scanByPhoto: true,     // Scan by photo (opens the camera and reads the barcode)
-    photoUpload: true,     // Upload photo (choose a photo already taken; reads the printed LPN when there is no barcode, if manifestPhotos is on)
+    scanByPhoto: true,     // Scan by photo (opens the camera and reads the barcode; offers Read the printed LPN when photoUpload and manifestPhotos are on)
+    photoUpload: true,     // Upload photo (choose one or more photos already taken; reads the printed LPN when there is no barcode, if manifestPhotos is on; also needed for Read the printed LPN)
     torch: true,           // Torch button in Live scan (only on phones that allow it)
     damage: true,          // marking a pallet as damaged
     refused: true,         // marking a pallet as refused (sent back with the driver)
@@ -27,7 +27,8 @@ window.LPN_CONFIG = {
     shareApp: true,        // Share this app (QR code) in Settings
     welcome: true,         // the welcome card on someone's first visit
     whatsNew: true,        // the card after an update saying what's new
-    exportReminder: true   // reminder when a delivery from an earlier day was never exported
+    exportReminder: true,  // reminder when a delivery from an earlier day was never exported
+    historyVideo: true     // the one-minute video at the top of the Changelog showing how the app has grown
   },
   testing: {
     report: false,
@@ -44,6 +45,7 @@ window.LPN_CONFIG = {
     shareMissing: false,
     findLpn: false,
     shareApp: false,
-    exportReminder: false
+    exportReminder: false,
+    historyVideo: false
   }
 };

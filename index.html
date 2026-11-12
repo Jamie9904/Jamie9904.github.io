@@ -71,7 +71,7 @@
     <button id="upload">Upload photo</button>
     <button type="button" id="noLpn" aria-label="Add a pallet with no LPN">No LPN</button>
     <input type="file" id="file" accept="image/*" capture="environment" hidden>
-    <input type="file" id="upFile" accept="image/*" hidden>
+    <input type="file" id="upFile" accept="image/*" multiple hidden>
   </div>
   <div class="note" id="scanTip">Tip: if Live scan doesn’t work, try Scan by photo instead.</div>
   <div class="chkbar" id="chkBar" hidden role="alert"><div id="chkTxt"></div><div class="row"><button id="chkSkip">Skip</button><button class="p" id="chkAdd">Add anyway</button></div></div>
@@ -79,7 +79,7 @@
     <div class="vidwrap"><video id="video" playsinline muted></video><div class="zoomrow" id="zoomRow" role="group" aria-label="Zoom" hidden><button type="button" id="zoomOut" aria-label="Zoom out">−</button><span id="zoomVal" role="status" aria-live="polite">1×</span><button type="button" id="zoomIn" aria-label="Zoom in">+</button></div></div>
     <div class="row" style="align-items:center;margin-top:8px">
       <span class="msg grow" id="smsg" role="status" aria-live="polite" style="margin:0;color:var(--tx)"></span>
-      <span class="scanbtns"><button id="torch" type="button" aria-pressed="false" hidden>Torch</button><button id="stopscan">Stop scanning</button></span>
+      <span class="scanbtns"><button id="readLabel" type="button" hidden>Read the printed LPN</button><button id="torch" type="button" aria-pressed="false" hidden>Torch</button><button id="stopscan">Stop scanning</button></span>
     </div>
   </div>
   <div class="msg" id="msg" role="status" aria-live="polite"></div>

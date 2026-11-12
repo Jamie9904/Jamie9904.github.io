@@ -6,7 +6,7 @@ const { fs, path, ROOT, check, REAL_LIBS, page } = require("../lib");
 const DIR = path.join(ROOT, "tests/fixtures/old");
 const NOW = new Date("2026-03-02T10:00:00"); // the date the files were made (saved deliveries older than last week are removed)
 const FIELDS = ["date", "recv", "notes", "expect", "trailer", "sealIn", "sealOut"];
-const rowsOf = a => JSON.stringify((a || []).map(r => { const o = { lpn: r.lpn, type: r.type, fsdu: !!r.fsdu }; if (r.dmg) o.dmg = r.dmg; if (r.desc) o.desc = r.desc; return o; }));
+const rowsOf = a => JSON.stringify((a || []).map(r => { const o = { lpn: r.lpn, type: r.type, fsdu: !!r.fsdu }; if (r.dmg) o.dmg = r.dmg; if (r.desc) o.desc = r.desc; if (r.ref) o.ref = true; return o; }));
 const delOf = o => JSON.stringify(FIELDS.map(k => String(o[k] == null ? "" : o[k])));
 
 module.exports = async ({ browser, URL0 }) => {
