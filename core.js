@@ -2,7 +2,7 @@
 const FIRST_OPEN=(()=>{try{for(let i=0;i<localStorage.length;i++){if(/^lpn/.test(localStorage.key(i)))return false}return true}catch(e){return false}})();
 /* Site settings from config.js (loaded before this file): which features are shown, and which carry a note that
    they are still being tested. A missing or broken config.js means every feature on and no notes. */
-const FEATURES=["report","manifestCheck","manifestPhotos","liveScan","scanByPhoto","photoUpload","torch","damage","refused","noLpn","fppDesc","exportReminder","historyVideo","shareMissing","findLpn","shareApp","welcome","whatsNew"];
+const FEATURES=["report","manifestCheck","manifestPhotos","liveScan","scanByPhoto","photoUpload","torch","damage","refused","noLpn","fppDesc","exportReminder","historyVideo","twoPhones","tallySheet","shareMissing","findLpn","shareApp","welcome","whatsNew"];
 /* Pallets that arrived without an LPN are logged as "No LPN 1", "No LPN 2", … (numbered within the delivery). */
 const isNoLpn=v=>/^No LPN \d+$/i.test(String(v==null?"":v).trim());
 const SITE=(()=>{
@@ -16,7 +16,7 @@ const feat=k=>SITE.on[k]!==false;
 function testNote(k,el,where){
   if(!SITE.test[k]||!el)return null;
   const n=document.createElement("p");n.className="note testnote";n.dataset.test=k;
-  const what={noLpn:"Logging pallets with no LPN",refused:"Marking pallets as refused",exportReminder:"The reminder about deliveries not exported",historyVideo:"The build history video",fppDesc:"Descriptions for FPP pallets",manifestCheck:"The Manifest check",manifestPhotos:"Reading photos",liveScan:"Live scan",scanByPhoto:"Scan by photo",photoUpload:"Upload photo",torch:"The torch",damage:"Marking damage",shareMissing:"Share missing list",findLpn:"Find an LPN",shareApp:"Share this app"}[k];
+  const what={noLpn:"Logging pallets with no LPN",refused:"Marking pallets as refused",exportReminder:"The reminder about deliveries not exported",historyVideo:"The build history video",twoPhones:"Two phones",tallySheet:"The blank tally sheet",fppDesc:"Descriptions for FPP pallets",manifestCheck:"The Manifest check",manifestPhotos:"Reading photos",liveScan:"Live scan",scanByPhoto:"Scan by photo",photoUpload:"Upload photo",torch:"The torch",damage:"Marking damage",shareMissing:"Share missing list",findLpn:"Find an LPN",shareApp:"Share this app"}[k];
   n.textContent=k==="report"?"In testing: reports may not always arrive yet, so for anything urgent also use Download problem report in Settings."
     :"In testing: "+what+" may not always work yet, so check what it gives you"+(feat("report")?", and use Report a problem if something goes wrong.":".");
   el.insertAdjacentElement(where||"beforeend",n);return n;
@@ -359,6 +359,21 @@ function add(){
   if(pendingAdd){$("msg").textContent="Answer the check first (Skip or Add anyway), then add "+v+".";sfx("warn");$("lpn").select();return}
   tryAdd(v);
   $("lpn").value="";$("lpn").focus();
+}
+/* Two phones: pallets from another phone are added after this log's. One already here isn't added twice;
+   a No LPN pallet gets this log's next free number. One Undo takes just those away. Returns what happened. */
+function mergePallets(list){
+  const mine=new Set(),norm=v=>String(v).toUpperCase().replace(/\s+/g,""),have=new Set(rows.map(r=>norm(r.lpn)));
+  let added=0,dup=0,n=0;rows.forEach(r=>{const m=/^No LPN (\d+)$/i.exec(String(r.lpn).trim());if(m)n=Math.max(n,+m[1])});
+  cleanRows(list).forEach(r=>{
+    if(isNoLpn(r.lpn))r.lpn="No LPN "+(++n);
+    else if(have.has(norm(r.lpn))){dup++;return}
+    have.add(norm(r.lpn));rows.push(r);mine.add(r);added++;
+  });
+  const said=(added?"Added "+added+" pallet"+(added===1?"":"s")+" from the other phone.":"No new pallets from the other phone.")+(dup?" "+dup+" "+(dup===1?"was":"were")+" already in this log.":"");
+  if(added){save();render();sfx("ok");showUndo("Added "+added+" pallet"+(added===1?"":"s")+" from the other phone",()=>{rows=rows.filter(r=>!mine.has(r));save();render()})} // takes away only these, so pallets logged since stay
+  diag("merge","Two phones: "+added+" added, "+dup+" already here");
+  return said;
 }
 function addValue(v,o){
   if(typeof onAdded==="function")onAdded(v);

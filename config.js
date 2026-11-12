@@ -28,7 +28,9 @@ window.LPN_CONFIG = {
     welcome: true,         // the welcome card on someone's first visit
     whatsNew: true,        // the card after an update saying what's new
     exportReminder: true,  // reminder when a delivery from an earlier day was never exported
-    historyVideo: true     // the one-minute video at the top of the Changelog showing how the app has grown
+    historyVideo: true,    // the one-minute video at the top of the Changelog showing how the app has grown
+    twoPhones: true,       // Two phones: send one phone's pallets to another with QR codes, for one trailer unloaded by two people
+    tallySheet: true       // Blank tally sheet in the Export menu, a paper sheet to fill in by hand
   },
   testing: {
     report: false,
@@ -46,6 +48,8 @@ window.LPN_CONFIG = {
     findLpn: false,
     shareApp: false,
     exportReminder: false,
-    historyVideo: false
+    historyVideo: false,
+    twoPhones: false,
+    tallySheet: false
   }
 };

@@ -219,6 +219,37 @@ async function buildLogPdf(d){
   pdfFooter(doc);
   return doc.output("arraybuffer");
 }
+/* A blank tally sheet to fill in by hand (Export menu): the delivery details with space to write, then numbered
+   rows with a box for each pallet type, FSDU and a note, and a totals row. One A4 page; print more as needed. */
+async function buildTallyPdf(){
+  await loadJsPdf();await appVersion();
+  const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:"portrait"});
+  doc.setProperties({title:"Blank tally sheet",subject:"LPN Pallet Log tally sheet"});
+  const L=10,yb=await pdfBanner(doc,L,48);
+  const y0=pdfTitle(doc,L,yb-6<12?12:yb-6,"Goods-in tally sheet","Write each pallet down, then type or scan the LPNs into the app when you can.");
+  const bold={fontStyle:"bold",fillColor:PDF_HEAD},blank="";
+  doc.autoTable(Object.assign({},PDF_BASE,PDF_PLAIN,{
+    startY:y0,margin:{left:L,right:10,top:12,bottom:16},
+    body:[[pdfCell("Date",bold),blank,pdfCell("Received by",bold),blank],[pdfCell("Trailer number",bold),blank,pdfCell("Expected pallets",bold),blank],[pdfCell("Seal in",bold),blank,pdfCell("Seal out",bold),blank]],
+    styles:Object.assign({},PDF_BASE.styles,{minCellHeight:9}),
+    columnStyles:{0:{cellWidth:34},1:{cellWidth:61},2:{cellWidth:34},3:{cellWidth:61}}
+  }));
+  const ph=doc.internal.pageSize.getHeight(),top=doc.lastAutoTable.finalY+6,rowH=7.4;
+  // As many rows as fit on the page, under the header row and above the totals row and the footer.
+  const n=Math.max(10,Math.floor((ph-16-top-2*rowH)/rowH)-1);
+  const body=Array.from({length:n},(x,i)=>[String(i+1),"","","","","","",""]);
+  body.push([{content:"Totals",colSpan:2,styles:{fontStyle:"bold",halign:"right",fillColor:PDF_HEAD}},"","","","","",{content:"",styles:{fillColor:PDF_HEAD}}]);
+  doc.autoTable(Object.assign({},PDF_BASE,PDF_PLAIN,{
+    startY:top,margin:{left:L,right:10,top:12,bottom:16},
+    head:[["#","LPN","BB","FMCG","FPP","Mixed","FSDU","Notes (damage, refused, what's on it)"]],
+    body:body,
+    styles:Object.assign({},PDF_BASE.styles,{minCellHeight:rowH,fontSize:10}),
+    headStyles:Object.assign({},PDF_BASE.headStyles,{fontSize:9,halign:"center"}),
+    columnStyles:{0:{cellWidth:10,halign:"center",textColor:90},1:{cellWidth:56},2:{cellWidth:14},3:{cellWidth:14},4:{cellWidth:14},5:{cellWidth:14},6:{cellWidth:14},7:{cellWidth:54}}
+  }));
+  pdfFooter(doc);
+  return doc.output("arraybuffer");
+}
 async function buildCmpPdf(res,cnt,manCount,d,logCopy){
   await loadJsPdf();await appVersion();
   const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:"portrait"});

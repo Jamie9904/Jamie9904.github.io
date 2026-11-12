@@ -21,12 +21,32 @@ syncAwake();
 function onCode(raw){
   const v=String(raw||"").trim();
   if(!v)return;
+  if(/^LPNM1 /.test(v)){qrPart(v);return} // a code from another phone's Two phones screen, never a pallet
   const now=Date.now();
   if(v===lastCode&&now-lastAt<2500){lastAt=now;return}
   if(pendingAdd)return;
   lastCode=v;lastAt=now;
   const ok=tryAdd(v,true);
   $("smsg").textContent=ok?"Added: "+v+" ("+$("type").value+")":"Check the warning above.";
+}
+/* Two phones: the codes another phone shows (panels.js, qrCodesFor). They can be read in any order; when every part
+   of one set is in, its pallets are added to this log (mergePallets, core.js) and the camera stops. */
+let qrRecv=null;
+function qrPart(v){
+  const m=/^LPNM1 ([a-z0-9]{4}) (\d{1,3})\/(\d{1,3}) ([\s\S]*)$/.exec(v),sm=$("smsg");
+  if(!m||!feat("twoPhones"))return;
+  const id=m[1],k=+m[2],n=+m[3];if(!n||k<1||k>n)return;
+  if(!qrRecv||qrRecv.id!==id)qrRecv={id,n,parts:{}};
+  qrRecv.parts[k]=m[4];
+  const got=Object.keys(qrRecv.parts).length;
+  if(got<n){sm.textContent="Codes from the other phone: "+got+" of "+n+" read. Keep the camera on its screen.";sfx("ok");return}
+  let o=null;try{o=JSON.parse(Array.from({length:n},(x,i)=>qrRecv.parts[i+1]).join(""))}catch(e){}
+  qrRecv=null;
+  if(!o||!Array.isArray(o.r)){sm.textContent="Those codes couldn’t be read. On the other phone, tap Show my pallets as QR codes again.";sfx("warn");return}
+  stopScan();
+  const mine=($("trailer").value||"").trim(),theirs=String(o.t||"").trim().slice(0,40);
+  const said=mergePallets(o.r);
+  $("msg").textContent=said+(mine&&theirs&&mine.toUpperCase()!==theirs.toUpperCase()?" Check the trailer: the other phone has "+theirs+", this one has "+mine+".":"");
 }
 function loadZX(){
   return new Promise((res,rej)=>{
