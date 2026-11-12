@@ -221,7 +221,7 @@ function render(){
     tr.append(n,l,t,f,x);b.appendChild(tr);
   });
   if(rows.length&&!shown){b.innerHTML='<tr><td colspan="5" class="empty">No pallets match the search</td></tr>'}
-  const fi=$("fltInfo");const fa=!!(q||ft);fi.hidden=!fa;if(fa)fi.textContent="Showing "+shown+" of "+rows.length+" pallets (counts above are for the whole log).";
+  const fi=$("fltInfo");const fa=!!(q||ft||ff);fi.hidden=!fa;if(fa)fi.textContent="Showing "+shown+" of "+rows.length+" pallets (counts above are for the whole log).";
   summary();
 }
 /* The damage choices shown under a pallet while it is edited. pick(reason or "", fromKeyboard). */
@@ -309,7 +309,7 @@ function summary(){
   else if(ex>=0){const d=rows.length-ex;ei.hidden=false;ei.className="expinfo "+(d===0?"ok":d<0?"prog":"bad");ei.textContent=rows.length+" of "+ex+" expected"+(d===0?" ✓ all accounted for":d<0?" ("+(-d)+" to go)":" ("+d+" more than expected)")}else ei.hidden=true;
   const t=typeCounts(),c=t.c;
   // Each type and FSDU is a button: tapping one shows only those pallets in the log, tapping it again shows all.
-  const ft=$("fltType").value,ff=$("fltFsdu").value,tb=(k,n,on)=>"<button type=\"button\" class=\"sumbtn\" data-f=\""+k+"\" aria-pressed=\""+on+"\" aria-label=\""+n+" "+k+(on?", showing only these. Tap to show all":", tap to show only these")+"\"><b>"+n+"</b>"+k+"</button>";
+  const ft=$("fltType").value,ff=$("fltFsdu").value,tb=(k,n,on)=>"<button type=\"button\" class=\"sumbtn\" data-f=\""+k+"\" aria-pressed=\""+on+"\" aria-label=\""+k+" "+n+"\"><b>"+n+"</b>"+k+"</button>";
   $("sum").innerHTML="<span><b>"+t.total+"</b>Total</span>"+["BB","FMCG","FPP","Mixed"].map(k=>tb(k,c[k],ft===k&&!ff)).join("")+tb("FSDU",t.fsdu,ff==="y"&&!ft)+(t.refused?"<span class=\"refsum\"><b>"+t.refused+"</b>Refused</span>":"");
 }
 /* Pallets received, by type: refused pallets (sent back with the driver) are left out and counted on their own. Used by

@@ -156,10 +156,13 @@ function closeHelp(){["demoVid","histVid"].forEach(id=>{const v=$(id);if(v)v.pau
     if(!r||rows.length<8){b.hidden=true;return}
     const en=document.querySelector(".entry"),dock=en&&getComputedStyle(en).position==="fixed"?en.getBoundingClientRect().height:0;
     const box=r.getBoundingClientRect(),bottom=innerHeight-dock;
-    b.hidden=box.top<bottom&&box.bottom>0};
+    // Out of the way while the Undo bar or the "Added" note shows over the same spot.
+    const over=["undoBar","flash"].some(id=>{const e=$(id);return e&&!e.hidden});
+    b.hidden=over||(box.top<bottom&&box.bottom>0);document.documentElement.classList.toggle("haslatest",!b.hidden)};
   const later=()=>{if(!queued){queued=true;requestAnimationFrame(check)}};
   addEventListener("scroll",later,{passive:true});addEventListener("resize",later);
   new MutationObserver(later).observe($("body"),{childList:true});
+  ["undoBar","flash"].forEach(id=>{const e=$(id);if(e)new MutationObserver(later).observe(e,{attributes:true,attributeFilter:["hidden"]})});
   b.onclick=()=>{const r=last();if(!r)return;r.scrollIntoView({block:"center"});const e=r.querySelector(".lpnedit");if(e)e.focus({preventScroll:true});b.hidden=true};
   later();
 })();

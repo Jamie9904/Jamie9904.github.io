@@ -66,10 +66,10 @@ button.d:hover{background:color-mix(in srgb,var(--dg) 12%,var(--paper));border-c
 .note{font-size:.88rem;color:var(--mu);margin-top:10px}
 .warn{background:var(--wns);color:var(--wn);border-left:4px solid var(--wn);padding:9px 12px;font-size:.9rem;margin:0 0 14px}
 .sum{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-#sum{display:flex;gap:6px 18px;flex-wrap:wrap;align-items:baseline;margin:0 0 12px;font-size:.95rem}
+#sum{display:flex;gap:18px 18px;flex-wrap:wrap;align-items:baseline;margin:0 0 12px;font-size:.95rem}
 #sum span,#sum .sumbtn{display:inline-flex;align-items:baseline;gap:6px;font-weight:700;color:var(--mu)}
 #sum .sumbtn{background:none;border:0;border-radius:8px;padding:8px 6px;margin:-8px -6px;min-height:44px;font:inherit;font-weight:700;cursor:pointer}
-#sum .sumbtn[aria-pressed="true"]{outline:2px solid var(--act,var(--ac));outline-offset:-2px;color:var(--ink)}
+#sum .sumbtn[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--act,var(--ac));color:var(--ink)} /* not outline, which stays free for the focus ring */
 #sum b{order:2;font-size:1.15rem;color:var(--ink)}
 #sum span:first-child{flex-basis:100%;font-size:.9rem}
 #sum span:first-child b{font-size:1.6rem}
@@ -167,6 +167,8 @@ button.tgl[aria-expanded="true"] .chev{transform:rotate(180deg)}
   /* Keep a focused control clear of the fixed entry bar (its height is kept in --dockh). */
   html{scroll-padding-bottom:calc(var(--dockh,220px) + 12px)}
   html .tolatest{bottom:calc(var(--dockh,220px) + 14px)} /* beats the base rule further down */
+  /* While ↓ Latest shows, a focused control in the log scrolls clear of it too. */
+  html.haslatest{scroll-padding-bottom:calc(var(--dockh,220px) + 72px)}
   /* Bigger FSDU tick box for gloves. */
   .entry #fsdu{width:40px;height:40px}
   /* Camera view shorter on short screens, so the "Added" line and Stop scanning stay on screen. */

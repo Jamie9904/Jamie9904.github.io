@@ -46,7 +46,7 @@ module.exports = async ({ browser, URL0 }) => {
   });
   check("tapping a total shows only those pallets, and tapping it again shows all", s.fmcg === 2 && s.pressed === "true" && s.sel === "FMCG" && s.focus && s.all === 6 && s.sel2 === "", s);
   check("FSDU works the same way, and picking a type clears the FSDU filter", s.fsdu === 1 && s.ff === "y" && s.bb === 2 && s.ff2 === "", s);
-  check("the totals are buttons big enough to tap, named for screen readers, and the Total itself isn't a filter", s.h >= 44 && /^2 FMCG, tap to show only these$/.test(s.label) && /^6Total$/.test(s.total), s);
+  check("the totals are buttons big enough to tap, named for screen readers, and the Total itself isn't a filter", s.h >= 44 && s.label === "FMCG 2" && /^6Total$/.test(s.total), s);
   // ↓ Latest.
   s = await p.evaluate(async () => {
     const wait = ms => new Promise(r => setTimeout(r, ms)); const b = document.getElementById("toLatest");
@@ -60,6 +60,23 @@ module.exports = async ({ browser, URL0 }) => {
   });
   check("↓ Latest appears only when the newest pallet is out of sight, above the entry bar", s.atEnd && s.up && s.clear && s.h >= 44, s);
   check("↓ Latest brings the newest pallet into view, clear of the entry bar, and puts focus on it", s.after && s.inView && s.focus, s);
+  s = await p.evaluate(async () => {
+    const wait = ms => new Promise(r => setTimeout(r, ms)); const b = document.getElementById("toLatest");
+    rows = []; for (let i = 0; i < 40; i++) rows.push({ lpn: "RUN0018307" + String(i).padStart(2, "0"), type: "BB", fsdu: i === 4 }); save(); render(); window.scrollTo(0, 0); await wait(150);
+    const pad = document.documentElement.classList.contains("haslatest");
+    const fsduBtn = document.querySelector('#sum .sumbtn[data-f="FSDU"]'); fsduBtn.click(); await wait(50);
+    const info = document.getElementById("fltInfo"); const out = { pad, info: info.hidden ? "" : info.textContent };
+    fsduBtn.click(); await wait(50); window.scrollTo(0, 0); await wait(100);
+    showUndo("Removed RUN000000001", () => {}); await wait(150); out.underUndo = b.hidden; document.getElementById("undoBar").hidden = true; await wait(150); out.back = !b.hidden;
+    document.querySelector('#sum .sumbtn[data-f="BB"]').click(); const sb = document.querySelector('#sum .sumbtn[data-f="BB"]'); sb.blur(); const st = getComputedStyle(sb); out.selOutline = st.outlineStyle; out.selShadow = st.boxShadow !== "none";
+    sb.click(); const r1 = document.querySelector('#sum .sumbtn[data-f="BB"]').getBoundingClientRect(), r2 = document.querySelector('#sum .sumbtn[data-f="Mixed"]').getBoundingClientRect();
+    out.overlap = r1.top !== r2.top && r1.bottom > r2.top;
+    return out;
+  });
+  check("while ↓ Latest shows, focused controls scroll clear of it too", s.pad === true, s);
+  check("the FSDU filter says how many pallets it shows", s.info === "Showing 1 of 40 pallets (counts above are for the whole log).", s.info);
+  check("↓ Latest steps aside while the Undo bar shows, and comes back after", s.underUndo && s.back, s);
+  check("a selected total is marked without using the focus ring, and totals on different rows don't overlap", s.selShadow && s.selOutline === "none" && !s.overlap, s);
   s = await p.evaluate(async () => { rows = rows.slice(0, 5); save(); render(); window.scrollTo(0, 0); await new Promise(r => setTimeout(r, 150)); return document.getElementById("toLatest").hidden; });
   check("on a short log ↓ Latest stays out of the way", s === true, s);
   check("no script errors", p.errors.length === 0, p.errors);
