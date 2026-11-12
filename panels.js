@@ -144,7 +144,7 @@ window.addEventListener("popstate",()=>{
 });
 function openHelp(k,t){
   $("panelTitle").textContent=t;$("panelBody").innerHTML=k==="guide"?DEMO_HTML+guideToc(siteHtml(HELP.guide)):(k==="log"&&feat("historyVideo")?HIST_HTML:"")+siteHtml(HELP[k]);
-  $("panel").hidden=false;$("shade").hidden=false;$("panel").scrollTop=0;if(k==="settings")initSettings();if(k==="history")initHistory();if(k==="guide")initDemo();if(k==="phones")initPhones();if(k==="log"&&$("histPlay")){initDemo("hist");testNote("historyVideo",$("histPlay").parentNode)}
+  $("panel").hidden=false;$("shade").hidden=false;$("panel").scrollTop=0;if(k==="settings")initSettings();if(k==="history")initHistory();if(k==="guide")initDemo();if(k==="phones"){initPhones();testNote("twoPhones",$("panelBody"),"afterbegin")}if(k==="log"&&$("histPlay")){initDemo("hist");testNote("historyVideo",$("histPlay").parentNode)}
   dlgOpen($("panelClose"));backOpen("panel");
 }
 function closeHelp(){["demoVid","histVid"].forEach(id=>{const v=$(id);if(v)v.pause()});if(qrTimer){clearInterval(qrTimer);qrTimer=null}const was=!$("panel").hidden;$("panel").hidden=true;$("shade").hidden=true;if(was){dlgClose();backClose("panel")}}
@@ -828,6 +828,7 @@ function applySite(){
   if(!feat("photoUpload"))hide("upload");
   if(!feat("twoPhones"))hide("phonesBtn");
   if(!feat("tallySheet"))hide("tallyBtn");
+  testNote("tallySheet",$("expMenu"),"beforeend");
   { // the tip names only photo buttons that are switched on
     const alt=[feat("scanByPhoto")&&"Scan by photo",feat("photoUpload")&&"Upload photo"].filter(Boolean);
     if(feat("liveScan")&&alt.length)$("scanTip").textContent="Tip: if Live scan doesn’t work, try "+alt.join(" or ")+" instead.";else hide("scanTip");
