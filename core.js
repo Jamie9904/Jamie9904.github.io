@@ -139,7 +139,7 @@ function render(){
     if(isNoLpn(r.lpn))eb.classList.add("nolpn");
     // Press and hold (or Ctrl+C on it) copies the LPN, to paste into an email or another system.
     {let t=null,x=0,y=0;
-     eb.addEventListener("pointerdown",e=>{held=false;x=e.clientX;y=e.clientY;clearTimeout(t);t=setTimeout(()=>{held=true;copyLpn(r.lpn)},600)});
+     eb.addEventListener("pointerdown",e=>{held=false;if(e.button!==0)return;x=e.clientX;y=e.clientY;clearTimeout(t);t=setTimeout(()=>{held=true;copyLpn(r.lpn)},600)});
      eb.addEventListener("pointermove",e=>{if(Math.abs(e.clientX-x)>10||Math.abs(e.clientY-y)>10)clearTimeout(t)});
      ["pointerup","pointercancel","pointerleave"].forEach(k=>eb.addEventListener(k,()=>clearTimeout(t)));
      eb.addEventListener("contextmenu",e=>{if(held)e.preventDefault()});
@@ -267,13 +267,16 @@ function dmgRow(r,pick,opt){
   // Refused: the pallet came off the trailer but was sent back with the driver. It stays on the log and exports,
   // marked, and isn't counted as received. Added after the damage choices, so Tab reaches them first.
   const addRef=()=>{
-    if(!opt.refuse)return;
     const rl=document.createElement("div");rl.className="refline";
+    // Copy LPN: the one-tap way to copy (pressing and holding the LPN does the same).
+    if(!isNoLpn(r.lpn)){const cb=document.createElement("button");cb.type="button";cb.className="copybtn";cb.textContent="Copy LPN";cb.setAttribute("aria-label","Copy "+r.lpn);
+      const k=e=>e.preventDefault();cb.addEventListener("pointerdown",k);cb.addEventListener("mousedown",k);cb.onclick=()=>copyLpn(r.lpn);rl.appendChild(cb)}
+    if(!opt.refuse){if(rl.firstChild)td.appendChild(rl);return}
     const rb=document.createElement("button");rb.type="button";rb.className="refbtn";rb.textContent=r.ref?"Not refused":"Refused (sent back)";
     if(r.ref)rb.classList.add("on");rb.setAttribute("aria-label",(r.ref?"Mark "+r.lpn+" as not refused":"Mark "+r.lpn+" as refused, sent back with the driver"));
     const keep=e=>e.preventDefault();rb.addEventListener("pointerdown",keep);rb.addEventListener("mousedown",keep);
     rb.onclick=e=>opt.refuse(!r.ref,e.detail===0);
-    rl.appendChild(rb);td.appendChild(rl);
+    rl.insertBefore(rb,rl.firstChild);td.appendChild(rl);
     testNote("refused",rl);
   };
   if(opt.damage===false){addRef();return tr}
@@ -408,13 +411,14 @@ function addPasted(text){
   const type=$("type").value,fsdu=$("fsdu").checked,mine=[],skipped=[];
   list.forEach(v=>{
     const issues=cfg.check?lpnIssues(v):[];
-    if(issues.length){skipped.push(v+" ("+issues[0]+")");return}
+    if(issues.length){const i=issues[0];skipped.push(v+" "+(/^already/.test(i)?"is already logged":/^prefix/.test(i)?"has a prefix not in your list":i.replace(/ \(.*\)$/,"")));return}
     const r={lpn:v.slice(0,100),type:type,fsdu:fsdu};rows.push(r);mine.push(r);
   });
   $("fsdu").checked=false;if($("flt").value)$("flt").value="";
   if(mine.length){save();render();sfx("ok");showUndo("Added "+mine.length+" pasted pallet"+(mine.length===1?"":"s"),()=>{rows=rows.filter(r=>mine.indexOf(r)<0);save();render()})}
   else if(skipped.length)sfx("warn");
-  $("msg").textContent=(mine.length?"Added "+mine.length+" pasted pallet"+(mine.length===1?"":"s")+" as "+type+".":"No pasted pallets were added.")+(skipped.length?" Not added, check "+(skipped.length===1?"it":"them")+": "+skipped.slice(0,5).join(", ")+(skipped.length>5?" and "+(skipped.length-5)+" more":"")+".":"");
+  // The Undo bar says how many were added, so this only names what wasn't (and what to do), to keep it short.
+  $("msg").textContent=skipped.length?(mine.length?"":"No pasted pallets were added. ")+"Not added: "+skipped.slice(0,3).join("; ")+(skipped.length>3?"; and "+(skipped.length-3)+" more":"")+". Type or scan "+(skipped.length===1?"it":"them")+" to add "+(skipped.length===1?"it":"them")+".":"";
 }
 function addValue(v,o){
   if(typeof onAdded==="function")onAdded(v);

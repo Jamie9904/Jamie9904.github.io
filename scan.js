@@ -299,7 +299,7 @@ async function readPhotos(fs){
 $("stopscan").onclick=()=>{stopPhotos("stopped");stopScan()};
 syncType();
 $("type").addEventListener("change",syncType);
-document.querySelectorAll("#tyb button").forEach(b=>{b.onclick=()=>{$("type").value=b.dataset.t;syncType()}});
+document.querySelectorAll("#tyb button").forEach(b=>{b.onclick=e=>{$("type").value=b.dataset.t;syncType();if(e&&e.detail>0&&matchMedia("(pointer:coarse)").matches)$("lpn").focus({preventScroll:true})}});
 $("add").onclick=add;
 $("flt").oninput=render;$("fltType").onchange=render;$("fltFsdu").onchange=render;
 $("lpn").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();add()}});
@@ -310,8 +310,10 @@ $("lpn").addEventListener("paste",e=>{const t=(e.clipboardData||window.clipboard
 $("fltClear").onclick=()=>{$("flt").value="";render();$("flt").focus()};
 $("flt").addEventListener("input",()=>{$("fltClear").hidden=!$("flt").value});
 // The mute button on the entry bar: the same as the sound switch in Settings.
-function syncMute(){const b=$("muteBtn");b.setAttribute("aria-pressed",String(!cfg.sound));b.classList.toggle("muted",!cfg.sound);const t=cfg.sound?"Mute beeps":"Beeps muted, tap to turn them on";b.setAttribute("aria-label",t);b.title=t}
-$("muteBtn").onclick=()=>{cfg.sound=!cfg.sound;saveCfg();syncMute();if($("setSound"))$("setSound").checked=cfg.sound;if(cfg.sound)sfx("ok");$("msg").textContent=cfg.sound?"Beeps on.":"Beeps muted."};
+function syncMute(){const b=$("muteBtn");b.setAttribute("aria-pressed",String(!cfg.sound));b.classList.toggle("muted",!cfg.sound);b.title=cfg.sound?"Mute beeps":"Beeps muted: tap to turn them on"}
+// After a tap (not the keyboard), focus goes back to the LPN box: a handheld scan then lands there instead of
+// pressing mute again with its Enter.
+$("muteBtn").onclick=e=>{cfg.sound=!cfg.sound;saveCfg();syncMute();if($("setSound"))$("setSound").checked=cfg.sound;if(cfg.sound)sfx("ok");$("msg").textContent=cfg.sound?"Beeps on.":"Beeps muted.";if(e&&e.detail>0)$("lpn").focus({preventScroll:true})};
 syncMute();
 $("date").onchange=save;
 $("recv").oninput=save;

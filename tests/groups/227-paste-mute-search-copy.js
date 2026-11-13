@@ -13,7 +13,7 @@ module.exports = async ({ browser, URL0 }) => {
   s = await paste("RUN001830763\nQUB001899210, RBY006291189;VLT004040265\nnot-an-lpn\nRUN001830763");
   s.after = await p.evaluate(() => ({ rows: rows.map(r => r.lpn + "|" + r.type).join(), msg: document.getElementById("msg").textContent, undo: document.getElementById("undoTxt").textContent, search: document.getElementById("flt").value, shown: document.querySelectorAll("#body .lpnedit").length }));
   check("pasting a list adds each LPN with the type chosen, in one go", s.went === false && s.box === "" && s.after.rows === "VLT004040265|BB,RUN001830763|FMCG,QUB001899210|FMCG,RBY006291189|FMCG", s);
-  check("pasted LPNs the checks would ask about are named and left out", /^Added 3 pasted pallets as FMCG\. Not added, check them: VLT004040265 \(already logged\), not-an-lpn \(doesn’t look like an LPN/.test(s.after.msg) && /RUN001830763 \(already logged\)/.test(s.after.msg), s.after.msg);
+  check("pasted LPNs the checks would ask about are named (at most 3) and left out, with what to do", s.after.msg === "Not added: VLT004040265 is already logged; not-an-lpn doesn’t look like an LPN; RUN001830763 is already logged. Type or scan them to add them.", s.after.msg);
   check("one Undo takes the pasted pallets away again, and the old search is cleared so they show", s.after.undo === "Added 3 pasted pallets" && s.after.search === "" && s.after.shown === 4, s.after);
   s = await p.evaluate(() => { const e = undoStack.filter(x => /pasted/.test(x.text)).pop(); addValue("RUN000000099"); e.fn(); return rows.map(r => r.lpn).join(); });
   check("undoing a paste keeps pallets added since", s === "VLT004040265,RUN000000099", s);
@@ -27,13 +27,20 @@ module.exports = async ({ browser, URL0 }) => {
 
   // Mute button: the same switch as Settings, kept after a reload.
   s = await p.evaluate(() => { const b = document.getElementById("muteBtn"), r = b.getBoundingClientRect(); const out = { h: r.height, w: r.width, label0: b.getAttribute("aria-label"), pressed0: b.getAttribute("aria-pressed") }; b.click(); out.sound = cfg.sound; out.pressed = b.getAttribute("aria-pressed"); out.label = b.getAttribute("aria-label"); out.msg = document.getElementById("msg").textContent; let beeps = 0; const ac = window.AudioContext; out.saved = JSON.parse(localStorage.getItem("lpncfg")).sound; return out; });
-  check("the mute button turns the beeps off and says so", s.h >= 44 && s.w >= 40 && s.label0 === "Mute beeps" && s.pressed0 === "false" && s.sound === false && s.pressed === "true" && /muted/.test(s.label) && s.msg === "Beeps muted." && s.saved === false, s);
+  check("the mute button turns the beeps off and says so", s.h >= 44 && s.w >= 40 && s.label0 === "Mute beeps" && s.pressed0 === "false" && s.sound === false && s.pressed === "true" && s.label === "Mute beeps" && s.msg === "Beeps muted." && s.saved === false, s);
   await p.reload(); await p.waitForTimeout(300);
   s = await p.evaluate(() => { openHelp("settings", "Settings"); const set = document.getElementById("setSound").checked; closeHelp(); return { set, pressed: document.getElementById("muteBtn").getAttribute("aria-pressed") }; });
   check("muting stays after a reload and matches the sound switch in Settings", s.set === false && s.pressed === "true", s);
   s = await p.evaluate(() => { openHelp("settings", "Settings"); const c = document.getElementById("setSound"); c.checked = true; c.onchange(); closeHelp(); return document.getElementById("muteBtn").getAttribute("aria-pressed"); });
   check("turning sound on in Settings un-mutes the button too", s === "false", s);
 
+  // After a tap on mute, focus goes back to the LPN box, so a handheld scan lands there (not on mute again).
+  await p.click("#muteBtn"); await p.waitForTimeout(50);
+  s = await p.evaluate(() => ({ focus: document.activeElement && document.activeElement.id, sound: cfg.sound }));
+  await p.keyboard.type("VLT004040299"); await p.keyboard.press("Enter"); await p.waitForTimeout(100);
+  s.after = await p.evaluate(() => ({ added: rows.some(r => r.lpn === "VLT004040299"), sound: cfg.sound }));
+  check("after tapping mute a handheld scan goes into the LPN box and doesn't press mute again", s.focus === "lpn" && s.after.added && s.after.sound === s.sound, s);
+  await p.evaluate(() => { const b = document.getElementById("muteBtn"); if (!cfg.sound) b.click(); });
   // Clearing the search.
   s = await p.evaluate(() => { rows = [{ lpn: "VLT004040265", type: "BB", fsdu: false }, { lpn: "RUN001830763", type: "BB", fsdu: false }]; save(); render(); const f = document.getElementById("flt"), c = document.getElementById("fltClear"); const out = { hidden0: c.hidden }; f.value = "RUN"; f.dispatchEvent(new Event("input", { bubbles: true })); render(); out.shown = document.querySelectorAll("#body .lpnedit").length; out.hidden1 = c.hidden; const r = c.getBoundingClientRect(); out.size = [r.width, r.height]; c.click(); out.value = f.value; out.all = document.querySelectorAll("#body .lpnedit").length; out.focus = document.activeElement === f; out.hidden2 = c.hidden; return out; });
   check("the ✕ in the search box shows only with a search, clears it and shows everything", s.hidden0 && s.shown === 1 && !s.hidden1 && s.size[0] >= 40 && s.size[1] >= 40 && s.value === "" && s.all === 2 && s.focus && s.hidden2, s);
@@ -47,8 +54,8 @@ module.exports = async ({ browser, URL0 }) => {
   s = await p.evaluate(() => ({ copied: window.__copied.join(), msg: document.getElementById("msg").textContent, editor: !!document.querySelector(".dmgrow"), input: !!document.querySelector("#body td input.lpnin, #body td input") }));
   check("pressing and holding an LPN copies it and doesn't open the editor", s.copied === "RUN001830763" && s.msg === "Copied RUN001830763." && !s.editor, s);
   await p.click('#body .lpnedit[data-i="0"]'); await p.waitForTimeout(150);
-  s = await p.evaluate(() => { const r = !!document.querySelector(".dmgrow"); document.activeElement.blur(); return r; });
-  check("a normal tap still opens the editor", s === true, s);
+  s = await p.evaluate(() => { const b = document.querySelector(".dmgrow .copybtn"), r = { editor: !!document.querySelector(".dmgrow"), btn: b && b.textContent, label: b && b.getAttribute("aria-label"), h: b && b.getBoundingClientRect().height }; b.click(); r.copied = window.__copied.slice(-1)[0]; r.open = !!document.querySelector(".dmgrow"); document.activeElement.blur(); return r; });
+  check("a normal tap still opens the editor, which has a Copy LPN button for one-tap and keyboard copying", s.editor && s.btn === "Copy LPN" && s.label === "Copy VLT004040265" && s.h >= 44 && s.copied === "VLT004040265" && s.open, s);
   await p.waitForTimeout(100); await p.evaluate(() => { const b = document.querySelector('#body .lpnedit[data-i="2"]'); b.focus(); });
   await p.keyboard.press("Control+c"); await p.waitForTimeout(100);
   s = await p.evaluate(() => window.__copied.slice(-1)[0]);
