@@ -121,6 +121,7 @@ function render(){
   const b=$("body");b.innerHTML="";
   if(!rows.length){b.innerHTML='<tr><td colspan="5" class="empty">No pallets logged yet</td></tr>'}
   const q=($("flt").value||"").trim().toUpperCase().replace(/\s+/g,""),ft=$("fltType").value,ff=$("fltFsdu").value;
+  if($("fltClear"))$("fltClear").hidden=!$("flt").value;
   let shown=0;
   rows.forEach((r,i)=>{
     if(q&&r.lpn.toUpperCase().replace(/\s+/g,"").indexOf(q)<0)return;
@@ -136,8 +137,16 @@ function render(){
     if(r.ref){tr.classList.add("refused");const rt=document.createElement("span");rt.className="reftag";rt.textContent="Refused: sent back";l.appendChild(rt)}
     if(r.dmg){tr.classList.add("dmg");const dt=document.createElement("span");dt.className="dmgtag";dt.textContent="Damaged: "+r.dmg;l.appendChild(dt)}
     if(isNoLpn(r.lpn))eb.classList.add("nolpn");
+    // Press and hold (or Ctrl+C on it) copies the LPN, to paste into an email or another system.
+    {let t=null,x=0,y=0;
+     eb.addEventListener("pointerdown",e=>{held=false;x=e.clientX;y=e.clientY;clearTimeout(t);t=setTimeout(()=>{held=true;copyLpn(r.lpn)},600)});
+     eb.addEventListener("pointermove",e=>{if(Math.abs(e.clientX-x)>10||Math.abs(e.clientY-y)>10)clearTimeout(t)});
+     ["pointerup","pointercancel","pointerleave"].forEach(k=>eb.addEventListener(k,()=>clearTimeout(t)));
+     eb.addEventListener("contextmenu",e=>{if(held)e.preventDefault()});
+     eb.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="c"&&!String(window.getSelection&&getSelection())){e.preventDefault();copyLpn(r.lpn)}});}
     if(r.desc){const dd=document.createElement("span");dd.className="desctag";dd.textContent=r.desc;l.appendChild(dd)}
     l.onclick=()=>{
+      if(held){held=false;return} // the end of a press and hold that copied the LPN
       if(l.querySelector("input"))return;
       const noL=isNoLpn(r.lpn),fromAdd=focusDesc; // opened by itself after adding (No LPN or an FPP pallet)
       const inp=document.createElement("input");inp.value=noL?"":r.lpn;inp.setAttribute("autocapitalize","characters");inp.setAttribute("aria-label",noL?"LPN for "+r.lpn+", if you find one":"Edit LPN");if(noL)inp.placeholder="LPN if found";
@@ -383,12 +392,37 @@ function mergePallets(list){
   diag("merge","Share log: "+added+" added, "+dup+" already here");
   return said;
 }
+let held=false;
+function copyLpn(v){
+  const said=()=>{$("msg").textContent="Copied "+v+".";try{if(cfg.vibrate&&navigator.vibrate)navigator.vibrate(30)}catch(e){}};
+  const old=()=>{const ta=document.createElement("textarea");ta.value=v;ta.setAttribute("readonly","");ta.style.cssText="position:fixed;opacity:0;top:0";document.body.appendChild(ta);ta.select();
+    let ok=false;try{ok=document.execCommand("copy")}catch(e){}ta.remove();if(ok)said();else $("msg").textContent="Couldn’t copy "+v+" on this phone."};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(v).then(said,old);else old();
+}
+/* Several LPNs pasted into the LPN box at once (from an email or a message, one per line or with commas between):
+   each is added with the type and FSDU chosen. Ones the usual checks would ask about are left out and named, so
+   they can be looked at; one Undo takes away the rest. */
+function addPasted(text){
+  const list=String(text).split(/[\s,;]+/).map(s=>s.trim()).filter(Boolean).slice(0,300);
+  if(pendingAdd){$("msg").textContent="Answer the check first (Skip or Add anyway), then paste again.";sfx("warn");return}
+  const type=$("type").value,fsdu=$("fsdu").checked,mine=[],skipped=[];
+  list.forEach(v=>{
+    const issues=cfg.check?lpnIssues(v):[];
+    if(issues.length){skipped.push(v+" ("+issues[0]+")");return}
+    const r={lpn:v.slice(0,100),type:type,fsdu:fsdu};rows.push(r);mine.push(r);
+  });
+  $("fsdu").checked=false;if($("flt").value)$("flt").value="";
+  if(mine.length){save();render();sfx("ok");showUndo("Added "+mine.length+" pasted pallet"+(mine.length===1?"":"s"),()=>{rows=rows.filter(r=>mine.indexOf(r)<0);save();render()})}
+  else if(skipped.length)sfx("warn");
+  $("msg").textContent=(mine.length?"Added "+mine.length+" pasted pallet"+(mine.length===1?"":"s")+" as "+type+".":"No pasted pallets were added.")+(skipped.length?" Not added, check "+(skipped.length===1?"it":"them")+": "+skipped.slice(0,5).join(", ")+(skipped.length>5?" and "+(skipped.length-5)+" more":"")+".":"");
+}
 function addValue(v,o){
   if(typeof onAdded==="function")onAdded(v);
   o=o||{type:$("type").value,fsdu:$("fsdu").checked};
   $("msg").textContent="";
   rows.push({lpn:v,type:o.type,fsdu:!!o.fsdu});
   if(o===undefined||!arguments[1])$("fsdu").checked=false;
+  if($("flt").value){$("flt").value=""} // an old search would hide the pallet just added
   if(!cfg.keepType){$("type").value=cfg.defType;$("type").dataset.t=cfg.defType}
   const off=!isNoLpn(v)&&typeof manState==="function"&&(()=>{const s=manState();return s.total&&!s.has(v)})();
   save();render();sfx(off?"warn":"ok");

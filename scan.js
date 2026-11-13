@@ -303,6 +303,16 @@ document.querySelectorAll("#tyb button").forEach(b=>{b.onclick=()=>{$("type").va
 $("add").onclick=add;
 $("flt").oninput=render;$("fltType").onchange=render;$("fltFsdu").onchange=render;
 $("lpn").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();add()}});
+// A pasted list goes in pallet by pallet; one LPN pasted on its own goes in the box as usual.
+$("lpn").addEventListener("paste",e=>{const t=(e.clipboardData||window.clipboardData).getData("text")||"";
+  if(t.trim().split(/[\s,;]+/).filter(Boolean).length<2)return;
+  e.preventDefault();$("lpn").value="";addPasted(t);$("lpn").focus()});
+$("fltClear").onclick=()=>{$("flt").value="";render();$("flt").focus()};
+$("flt").addEventListener("input",()=>{$("fltClear").hidden=!$("flt").value});
+// The mute button on the entry bar: the same as the sound switch in Settings.
+function syncMute(){const b=$("muteBtn");b.setAttribute("aria-pressed",String(!cfg.sound));b.classList.toggle("muted",!cfg.sound);const t=cfg.sound?"Mute beeps":"Beeps muted, tap to turn them on";b.setAttribute("aria-label",t);b.title=t}
+$("muteBtn").onclick=()=>{cfg.sound=!cfg.sound;saveCfg();syncMute();if($("setSound"))$("setSound").checked=cfg.sound;if(cfg.sound)sfx("ok");$("msg").textContent=cfg.sound?"Beeps on.":"Beeps muted."};
+syncMute();
 $("date").onchange=save;
 $("recv").oninput=save;
 $("notes").oninput=save;
