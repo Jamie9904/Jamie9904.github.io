@@ -25,6 +25,20 @@ module.exports = async ({ browser, URL0 }) => {
   s.msg = await p.evaluate(() => { const m = document.getElementById("msg").textContent, n = rows.length; hideCheck(); return { m, n }; });
   check("with a check waiting, a paste says to answer it first and adds nothing", /^Answer the check first/.test(s.msg.m) && s.msg.n === 2, s);
 
+  // Typed LPNs are tidied (capitals, no spaces or dashes) when the result is LPN-shaped; anything else is kept as typed.
+  s = await p.evaluate(() => {
+    rows = []; save(); render(); const box = document.getElementById("lpn"), out = {};
+    box.value = " vlt 0040-40265 "; add(); out.typed = rows.map(r => r.lpn).join();
+    box.value = "run001830763"; add(); out.lower = rows[1] && rows[1].lpn;
+    box.value = "PO-12 ab"; add(); out.other = document.getElementById("chkTxt").textContent; hideCheck();
+    return out; });
+  check("an LPN typed by hand is put into capitals without spaces or dashes", s.typed === "VLT004040265" && s.lower === "RUN001830763", s);
+  check("something that isn't LPN-shaped is kept exactly as typed", /PO-12 ab/.test(s.other), s);
+  s = await paste("vlt 004040266\nrun-001830764");
+  s.rows = await p.evaluate(() => rows.map(r => r.lpn).join());
+  check("pasted LPNs are tidied the same way, and a space inside one LPN keeps it whole", s.rows === "VLT004040265,RUN001830763,VLT004040266,RUN001830764", s);
+  s = await p.evaluate(async () => { document.querySelector('#body .lpnedit[data-i="0"]').click(); await new Promise(r => setTimeout(r, 100)); const i = document.querySelector("#body td input"); i.value = "qub 0018-99210"; i.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })); await new Promise(r => setTimeout(r, 100)); return rows[0].lpn; });
+  check("an LPN changed in the editor is tidied too", s === "QUB001899210", s);
   // Mute button: the same switch as Settings, kept after a reload.
   s = await p.evaluate(() => { const b = document.getElementById("muteBtn"), r = b.getBoundingClientRect(); const out = { h: r.height, w: r.width, label0: b.getAttribute("aria-label"), pressed0: b.getAttribute("aria-pressed") }; b.click(); out.sound = cfg.sound; out.pressed = b.getAttribute("aria-pressed"); out.label = b.getAttribute("aria-label"); out.msg = document.getElementById("msg").textContent; let beeps = 0; const ac = window.AudioContext; out.saved = JSON.parse(localStorage.getItem("lpncfg")).sound; return out; });
   check("the mute button turns the beeps off and says so", s.h >= 44 && s.w >= 40 && s.label0 === "Mute beeps" && s.pressed0 === "false" && s.sound === false && s.pressed === "true" && s.label === "Mute beeps" && s.msg === "Beeps muted." && s.saved === false, s);

@@ -183,7 +183,7 @@ function render(){
           const was=r.dmg||"";if(dmgPick)r.dmg=dmgPick;else delete r.dmg;
           said.push(dmgPick?"Marked "+name+" as damaged ("+dmgPick+")":"Damage note removed from "+name);backs.push(()=>{if(was)r.dmg=was;else delete r.dmg});
         }
-        const v=inp.value.trim();
+        const v=tidyLpn(inp.value);
         if(ok&&v&&v!==r.lpn){
           const u=v.toUpperCase().replace(/\s+/g,"");
           const dup=rows.some((z,k)=>k!==i&&z.lpn.toUpperCase().replace(/\s+/g,"")===u);
@@ -371,8 +371,12 @@ function tryAdd(v,scan,ask){
   if(issues.length)sfx("warn");
   return false;
 }
+/* An LPN typed by hand, tidied: capitals, without spaces or dashes ("vlt 0040-40265" becomes VLT004040265), so it
+   matches the manifest. Only when the result is LPN-shaped (1 to 3 letters, then digits): anything else, such as
+   another kind of barcode, is left exactly as it was entered. */
+function tidyLpn(v){const s=String(v==null?"":v).trim(),u=s.toUpperCase().replace(/[\s\-\u2010-\u2015]+/g,"");return /^[A-Z]{1,3}\d+$/.test(u)?u:s}
 function add(){
-  const v=$("lpn").value.trim();
+  const v=tidyLpn($("lpn").value);
   if(!v){$("msg").textContent="Enter an LPN number first.";return}
   // A warning is waiting for an answer: keep this LPN in the box rather than losing it (a handheld scanner types
   // and presses Enter without anyone looking at the screen).
@@ -406,7 +410,10 @@ function copyLpn(v){
    each is added with the type and FSDU chosen. Ones the usual checks would ask about are left out and named, so
    they can be looked at; one Undo takes away the rest. */
 function addPasted(text){
-  const list=String(text).split(/[\s,;]+/).map(s=>s.trim()).filter(Boolean).slice(0,300);
+  // Split on new lines, commas and semicolons (a space inside one LPN, "VLT 004040265", stays part of it), then tidy.
+  let parts=String(text).split(/[\r\n,;\t]+/).map(s=>s.trim()).filter(Boolean);
+  if(parts.length<2)parts=String(text).split(/\s+/).filter(Boolean); // one line of LPNs with spaces between
+  const list=parts.map(tidyLpn).slice(0,300);
   if(pendingAdd){$("msg").textContent="Answer the check first (Skip or Add anyway), then paste again.";sfx("warn");return}
   const type=$("type").value,fsdu=$("fsdu").checked,mine=[],skipped=[];
   list.forEach(v=>{

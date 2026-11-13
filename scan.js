@@ -305,7 +305,7 @@ $("flt").oninput=render;$("fltType").onchange=render;$("fltFsdu").onchange=rende
 $("lpn").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();add()}});
 // A pasted list goes in pallet by pallet; one LPN pasted on its own goes in the box as usual.
 $("lpn").addEventListener("paste",e=>{const t=(e.clipboardData||window.clipboardData).getData("text")||"";
-  if(t.trim().split(/[\s,;]+/).filter(Boolean).length<2)return;
+  if(t.trim().split(/[\r\n,;\t]+/).filter(Boolean).length<2&&!/^\s*[A-Za-z]{1,3}\d{6,}(\s+[A-Za-z]{1,3}\d{6,})+\s*$/.test(t))return;
   e.preventDefault();$("lpn").value="";addPasted(t);$("lpn").focus()});
 // − and + by Expected pallets: no keyboard needed. Never below 0; − on an empty box does nothing.
 const stepExp=d=>{const e=$("expect"),n=parseInt(e.value,10);const v=isNaN(n)?(d>0?1:NaN):Math.max(0,n+d);
