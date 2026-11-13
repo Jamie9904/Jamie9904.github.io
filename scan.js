@@ -299,10 +299,30 @@ async function readPhotos(fs){
 $("stopscan").onclick=()=>{stopPhotos("stopped");stopScan()};
 syncType();
 $("type").addEventListener("change",syncType);
-document.querySelectorAll("#tyb button").forEach(b=>{b.onclick=()=>{$("type").value=b.dataset.t;syncType()}});
+document.querySelectorAll("#tyb button").forEach(b=>{b.onclick=e=>{$("type").value=b.dataset.t;syncType();if(e&&e.detail>0&&matchMedia("(pointer:coarse)").matches)$("lpn").focus({preventScroll:true})}});
 $("add").onclick=add;
 $("flt").oninput=render;$("fltType").onchange=render;$("fltFsdu").onchange=render;
 $("lpn").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();add()}});
+// A pasted list goes in pallet by pallet; one LPN pasted on its own goes in the box as usual.
+$("lpn").addEventListener("paste",e=>{const t=(e.clipboardData||window.clipboardData).getData("text")||"";
+  if(t.trim().split(/[\r\n,;\t]+/).filter(Boolean).length<2&&!/^\s*[A-Za-z]{1,3}\d{6,}(\s+[A-Za-z]{1,3}\d{6,})+\s*$/.test(t))return;
+  e.preventDefault();$("lpn").value="";addPasted(t);$("lpn").focus()});
+// − and + by Expected pallets: no keyboard needed. Never below 0; − on an empty box does nothing.
+const stepExp=d=>{const e=$("expect"),n=parseInt(e.value,10);const v=isNaN(n)?(d>0?1:NaN):Math.max(0,n+d);
+  if(isNaN(v)){$("msg").textContent="Expected pallets is empty: tap + or type a number.";return}e.value=String(v);e.dispatchEvent(new Event("input",{bubbles:true}));e.dispatchEvent(new Event("change",{bubbles:true}));$("msg").textContent="Expected pallets: "+v+"."};
+$("expDown").onclick=()=>stepExp(-1);$("expUp").onclick=()=>stepExp(1);
+// Trailer numbers are tidied to capitals as they're typed (the cursor stays where it was).
+// Not while a phone keyboard is still building a word (that can repeat letters); the word is done on compositionend.
+const upTrailer=()=>{const e=$("trailer"),u=e.value.toUpperCase();if(u!==e.value){const p=e.selectionStart;e.value=u;try{e.setSelectionRange(p,p)}catch(x){}}};
+$("trailer").addEventListener("input",ev=>{if(!ev.isComposing)upTrailer()});$("trailer").addEventListener("compositionend",upTrailer);$("trailer").addEventListener("change",upTrailer);
+$("fltClear").onclick=()=>{$("flt").value="";render();$("flt").focus()};
+$("flt").addEventListener("input",()=>{$("fltClear").hidden=!$("flt").value});
+// The mute button on the entry bar: the same as the sound switch in Settings.
+function syncMute(){const b=$("muteBtn");b.setAttribute("aria-pressed",String(!cfg.sound));b.classList.toggle("muted",!cfg.sound);b.title=cfg.sound?"Mute beeps":"Beeps muted: tap to turn them on"}
+// After a tap (not the keyboard), focus goes back to the LPN box: a handheld scan then lands there instead of
+// pressing mute again with its Enter.
+$("muteBtn").onclick=e=>{cfg.sound=!cfg.sound;saveCfg();syncMute();if($("setSound"))$("setSound").checked=cfg.sound;if(cfg.sound)sfx("ok");$("msg").textContent=cfg.sound?"Beeps on.":"Beeps muted.";if(e&&e.detail>0)$("lpn").focus({preventScroll:true})};
+syncMute();
 $("date").onchange=save;
 $("recv").oninput=save;
 $("notes").oninput=save;

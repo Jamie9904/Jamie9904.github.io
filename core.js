@@ -62,7 +62,7 @@ function setDel(o){o=o||{};DEL_F.forEach(k=>{$(k).value=k==="date"?(o.date||loca
 function syncClear(){const b=$("delClear");if(b)b.disabled=!["trailer","sealIn","sealOut","notes"].some(k=>($(k).value||"").trim())}
 const $=id=>document.getElementById(id);
 function syncType(){const v=$("type").value;$("type").dataset.t=v;document.querySelectorAll("#tyb button").forEach(b=>{const on=b.dataset.t===v;b.classList.toggle("on",on);b.setAttribute("aria-pressed",on)})}
-let cfg={defType:"BB",check:true,sound:true,size:"1",keepType:true,vibrate:true,confirmScan:false,dateFmt:"uk",awake:true,site:""};
+let cfg={defType:"BB",check:true,sound:true,size:"1",keepType:true,vibrate:true,confirmScan:false,dateFmt:"uk",awake:true,keys:true,site:""};
 /* Saved data can come back from a backup file, so everything read from storage is checked and tidied before use.
    A damaged or crafted backup then can't stop the app starting or put anything odd into an export. */
 const isTxt=v=>typeof v==="string"||typeof v==="number";
@@ -121,6 +121,7 @@ function render(){
   const b=$("body");b.innerHTML="";
   if(!rows.length){b.innerHTML='<tr><td colspan="5" class="empty">No pallets logged yet</td></tr>'}
   const q=($("flt").value||"").trim().toUpperCase().replace(/\s+/g,""),ft=$("fltType").value,ff=$("fltFsdu").value;
+  if($("fltClear"))$("fltClear").hidden=!$("flt").value;
   let shown=0;
   rows.forEach((r,i)=>{
     if(q&&r.lpn.toUpperCase().replace(/\s+/g,"").indexOf(q)<0)return;
@@ -136,8 +137,16 @@ function render(){
     if(r.ref){tr.classList.add("refused");const rt=document.createElement("span");rt.className="reftag";rt.textContent="Refused: sent back";l.appendChild(rt)}
     if(r.dmg){tr.classList.add("dmg");const dt=document.createElement("span");dt.className="dmgtag";dt.textContent="Damaged: "+r.dmg;l.appendChild(dt)}
     if(isNoLpn(r.lpn))eb.classList.add("nolpn");
+    // Press and hold (or Ctrl+C on it) copies the LPN, to paste into an email or another system.
+    {let t=null,x=0,y=0;
+     eb.addEventListener("pointerdown",e=>{held=false;if(e.button!==0)return;x=e.clientX;y=e.clientY;clearTimeout(t);t=setTimeout(()=>{held=true;copyLpn(r.lpn)},600)});
+     eb.addEventListener("pointermove",e=>{if(Math.abs(e.clientX-x)>10||Math.abs(e.clientY-y)>10)clearTimeout(t)});
+     ["pointerup","pointercancel","pointerleave"].forEach(k=>eb.addEventListener(k,()=>clearTimeout(t)));
+     eb.addEventListener("contextmenu",e=>{if(held)e.preventDefault()});
+     eb.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="c"&&!String(window.getSelection&&getSelection())){e.preventDefault();copyLpn(r.lpn)}});}
     if(r.desc){const dd=document.createElement("span");dd.className="desctag";dd.textContent=r.desc;l.appendChild(dd)}
     l.onclick=()=>{
+      if(held){held=false;return} // the end of a press and hold that copied the LPN
       if(l.querySelector("input"))return;
       const noL=isNoLpn(r.lpn),fromAdd=focusDesc; // opened by itself after adding (No LPN or an FPP pallet)
       const inp=document.createElement("input");inp.value=noL?"":r.lpn;inp.setAttribute("autocapitalize","characters");inp.setAttribute("aria-label",noL?"LPN for "+r.lpn+", if you find one":"Edit LPN");if(noL)inp.placeholder="LPN if found";
@@ -174,7 +183,7 @@ function render(){
           const was=r.dmg||"";if(dmgPick)r.dmg=dmgPick;else delete r.dmg;
           said.push(dmgPick?"Marked "+name+" as damaged ("+dmgPick+")":"Damage note removed from "+name);backs.push(()=>{if(was)r.dmg=was;else delete r.dmg});
         }
-        const v=inp.value.trim();
+        const v=tidyLpn(inp.value);
         if(ok&&v&&v!==r.lpn){
           const u=v.toUpperCase().replace(/\s+/g,"");
           const dup=rows.some((z,k)=>k!==i&&z.lpn.toUpperCase().replace(/\s+/g,"")===u);
@@ -258,13 +267,16 @@ function dmgRow(r,pick,opt){
   // Refused: the pallet came off the trailer but was sent back with the driver. It stays on the log and exports,
   // marked, and isn't counted as received. Added after the damage choices, so Tab reaches them first.
   const addRef=()=>{
-    if(!opt.refuse)return;
     const rl=document.createElement("div");rl.className="refline";
+    // Copy LPN: the one-tap way to copy (pressing and holding the LPN does the same).
+    if(!isNoLpn(r.lpn)){const cb=document.createElement("button");cb.type="button";cb.className="copybtn";cb.textContent="Copy LPN";cb.setAttribute("aria-label","Copy "+r.lpn);
+      const k=e=>e.preventDefault();cb.addEventListener("pointerdown",k);cb.addEventListener("mousedown",k);cb.onclick=()=>copyLpn(r.lpn);rl.appendChild(cb)}
+    if(!opt.refuse){if(rl.firstChild)td.appendChild(rl);return}
     const rb=document.createElement("button");rb.type="button";rb.className="refbtn";rb.textContent=r.ref?"Not refused":"Refused (sent back)";
     if(r.ref)rb.classList.add("on");rb.setAttribute("aria-label",(r.ref?"Mark "+r.lpn+" as not refused":"Mark "+r.lpn+" as refused, sent back with the driver"));
     const keep=e=>e.preventDefault();rb.addEventListener("pointerdown",keep);rb.addEventListener("mousedown",keep);
     rb.onclick=e=>opt.refuse(!r.ref,e.detail===0);
-    rl.appendChild(rb);td.appendChild(rl);
+    rl.insertBefore(rb,rl.firstChild);td.appendChild(rl);
     testNote("refused",rl);
   };
   if(opt.damage===false){addRef();return tr}
@@ -359,8 +371,12 @@ function tryAdd(v,scan,ask){
   if(issues.length)sfx("warn");
   return false;
 }
+/* An LPN typed by hand, tidied: capitals, without spaces or dashes ("vlt 0040-40265" becomes VLT004040265), so it
+   matches the manifest. Only when the result is LPN-shaped (1 to 3 letters, then digits): anything else, such as
+   another kind of barcode, is left exactly as it was entered. */
+function tidyLpn(v){const s=String(v==null?"":v).trim(),u=s.toUpperCase().replace(/[\s\-\u2010-\u2015]+/g,"");return /^[A-Z]{1,3}\d+$/.test(u)?u:s}
 function add(){
-  const v=$("lpn").value.trim();
+  const v=tidyLpn($("lpn").value);
   if(!v){$("msg").textContent="Enter an LPN number first.";return}
   // A warning is waiting for an answer: keep this LPN in the box rather than losing it (a handheld scanner types
   // and presses Enter without anyone looking at the screen).
@@ -383,12 +399,41 @@ function mergePallets(list){
   diag("merge","Share log: "+added+" added, "+dup+" already here");
   return said;
 }
+let held=false;
+function copyLpn(v){
+  const said=()=>{$("msg").textContent="Copied "+v+".";try{if(cfg.vibrate&&navigator.vibrate)navigator.vibrate(30)}catch(e){}};
+  const old=()=>{const ta=document.createElement("textarea");ta.value=v;ta.setAttribute("readonly","");ta.style.cssText="position:fixed;opacity:0;top:0";document.body.appendChild(ta);ta.select();
+    let ok=false;try{ok=document.execCommand("copy")}catch(e){}ta.remove();if(ok)said();else $("msg").textContent="Couldn’t copy "+v+" on this phone."};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(v).then(said,old);else old();
+}
+/* Several LPNs pasted into the LPN box at once (from an email or a message, one per line or with commas between):
+   each is added with the type and FSDU chosen. Ones the usual checks would ask about are left out and named, so
+   they can be looked at; one Undo takes away the rest. */
+function addPasted(text){
+  // Split on new lines, commas and semicolons (a space inside one LPN, "VLT 004040265", stays part of it), then tidy.
+  let parts=String(text).split(/[\r\n,;\t]+/).map(s=>s.trim()).filter(Boolean);
+  if(parts.length<2)parts=String(text).split(/\s+/).filter(Boolean); // one line of LPNs with spaces between
+  const list=parts.map(tidyLpn).slice(0,300);
+  if(pendingAdd){$("msg").textContent="Answer the check first (Skip or Add anyway), then paste again.";sfx("warn");return}
+  const type=$("type").value,fsdu=$("fsdu").checked,mine=[],skipped=[];
+  list.forEach(v=>{
+    const issues=cfg.check?lpnIssues(v):[];
+    if(issues.length){const i=issues[0];skipped.push(v+" "+(/^already/.test(i)?"is already logged":/^prefix/.test(i)?"has a prefix not in your list":i.replace(/ \(.*\)$/,"")));return}
+    const r={lpn:v.slice(0,100),type:type,fsdu:fsdu};rows.push(r);mine.push(r);
+  });
+  $("fsdu").checked=false;if($("flt").value)$("flt").value="";
+  if(mine.length){save();render();sfx("ok");showUndo("Added "+mine.length+" pasted pallet"+(mine.length===1?"":"s"),()=>{rows=rows.filter(r=>mine.indexOf(r)<0);save();render()})}
+  else if(skipped.length)sfx("warn");
+  // The Undo bar says how many were added, so this only names what wasn't (and what to do), to keep it short.
+  $("msg").textContent=skipped.length?(mine.length?"":"No pasted pallets were added. ")+"Not added: "+skipped.slice(0,3).join("; ")+(skipped.length>3?"; and "+(skipped.length-3)+" more":"")+". Type or scan "+(skipped.length===1?"it":"them")+" to add "+(skipped.length===1?"it":"them")+".":"";
+}
 function addValue(v,o){
   if(typeof onAdded==="function")onAdded(v);
   o=o||{type:$("type").value,fsdu:$("fsdu").checked};
   $("msg").textContent="";
   rows.push({lpn:v,type:o.type,fsdu:!!o.fsdu});
   if(o===undefined||!arguments[1])$("fsdu").checked=false;
+  if($("flt").value){$("flt").value=""} // an old search would hide the pallet just added
   if(!cfg.keepType){$("type").value=cfg.defType;$("type").dataset.t=cfg.defType}
   const off=!isNoLpn(v)&&typeof manState==="function"&&(()=>{const s=manState();return s.total&&!s.has(v)})();
   save();render();sfx(off?"warn":"ok");
@@ -421,7 +466,9 @@ function flashAdded(v,t,f){
   let man="";
   if(typeof manState==="function"&&!isNoLpn(v)){const s=manState();if(s.total)man=s.has(v)?" · ✓ on manifest":" · ⚠ NOT on manifest"}
   el.classList.toggle("warn",man.indexOf("NOT")>=0);
-  el.textContent="Added #"+rows.length+": "+v+" · "+t+(f?" · FSDU":"")+man;
+  // The type as a badge in its colour, so a wrong type stands out at a glance.
+  el.textContent="";const b=document.createElement("b");b.className="ftype";b.textContent=t;
+  el.append("Added #"+rows.length+": "+v+" · ",b,(f?" · FSDU":"")+man);
   clearTimeout(flashTimer);flashTimer=setTimeout(()=>{el.hidden=true},man.indexOf("NOT")>=0?4000:2200);
 }
 /* A gentle check of the seal numbers: the same number in both boxes, or two lengths that differ (seals on one trailer
@@ -498,6 +545,26 @@ function undoNow(){
 function undoClear(){undoStack.length=0;clearTimeout(undoTimer);const b=$("undoBar");if(b)b.hidden=true;syncUndo()}
 if($("undoMore"))$("undoMore").onclick=()=>undoNow();
 function syncUndo(){const b=$("undoMore");if(!b)return;const e=undoStack[undoStack.length-1];b.hidden=!e;if(e){const n=undoStack.length-1;b.textContent="Undo";b.setAttribute("aria-label","Undo: "+e.text+(n?" ("+n+" earlier change"+(n===1?"":"s")+" can be undone after it)":""))}}
+/* Keyboard shortcuts on a computer: 1 to 4 pick BB, FMCG, FPP or Mixed, F ticks FSDU and / goes to the search.
+   Not while typing in a box or with a panel open. Each waits a moment: a handheld scanner typing into the page (its
+   keys come under 50 ms apart) cancels it, so a scanned LPN can't change the type or FSDU by accident. */
+let keyWait=null,keyLast=0;
+document.addEventListener("keydown",e=>{
+  if(!cfg.keys||e.ctrlKey||e.metaKey||e.altKey)return;
+  const t=e.target;if(t&&(/^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName)||t.isContentEditable))return;
+  const main=document.querySelector("main");if(main&&main.inert)return;
+  if(!$("expMenu").hidden||document.querySelector(".dmgrow"))return; // not behind an open menu
+  const now=performance.now(),fast=now-keyLast<50;keyLast=now;
+  if(fast){clearTimeout(keyWait);keyWait=null;return}
+  const k=e.key,ty={"1":"BB","2":"FMCG","3":"FPP","4":"Mixed"}[k];
+  if(!ty&&k!=="f"&&k!=="F"&&k!=="/")return;
+  if(k==="/")e.preventDefault();
+  clearTimeout(keyWait);keyWait=setTimeout(()=>{keyWait=null;
+    if(ty){const b=document.querySelector('#tyb button[data-t="'+ty+'"]');if(b){$("type").value=ty;syncType();$("msg").textContent="Type: "+ty+" for the next pallet."}}
+    else if(k==="/"){$("flt").focus()}
+    else{$("fsdu").checked=!$("fsdu").checked;$("msg").textContent=$("fsdu").checked?"FSDU ticked for the next pallet.":"FSDU unticked."}
+  },70);
+});
 document.addEventListener("keydown",e=>{
   // Ctrl+Z (Cmd+Z on a Mac) undoes the newest change, except while typing in a box, where it undoes the typing.
   if(e.key.toLowerCase()!=="z"||!(e.ctrlKey||e.metaKey)||e.shiftKey||e.altKey)return;
