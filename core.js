@@ -459,7 +459,9 @@ function flashAdded(v,t,f){
   let man="";
   if(typeof manState==="function"&&!isNoLpn(v)){const s=manState();if(s.total)man=s.has(v)?" · ✓ on manifest":" · ⚠ NOT on manifest"}
   el.classList.toggle("warn",man.indexOf("NOT")>=0);
-  el.textContent="Added #"+rows.length+": "+v+" · "+t+(f?" · FSDU":"")+man;
+  // The type as a badge in its colour, so a wrong type stands out at a glance.
+  el.textContent="";const b=document.createElement("b");b.className="ftype";b.textContent=t;
+  el.append("Added #"+rows.length+": "+v+" · ",b,(f?" · FSDU":"")+man);
   clearTimeout(flashTimer);flashTimer=setTimeout(()=>{el.hidden=true},man.indexOf("NOT")>=0?4000:2200);
 }
 /* A gentle check of the seal numbers: the same number in both boxes, or two lengths that differ (seals on one trailer
@@ -536,6 +538,25 @@ function undoNow(){
 function undoClear(){undoStack.length=0;clearTimeout(undoTimer);const b=$("undoBar");if(b)b.hidden=true;syncUndo()}
 if($("undoMore"))$("undoMore").onclick=()=>undoNow();
 function syncUndo(){const b=$("undoMore");if(!b)return;const e=undoStack[undoStack.length-1];b.hidden=!e;if(e){const n=undoStack.length-1;b.textContent="Undo";b.setAttribute("aria-label","Undo: "+e.text+(n?" ("+n+" earlier change"+(n===1?"":"s")+" can be undone after it)":""))}}
+/* Keyboard shortcuts on a computer: 1 to 4 pick BB, FMCG, FPP or Mixed, F ticks FSDU and / goes to the search.
+   Not while typing in a box or with a panel open. Each waits a moment: a handheld scanner typing into the page (its
+   keys come under 50 ms apart) cancels it, so a scanned LPN can't change the type or FSDU by accident. */
+let keyWait=null,keyLast=0;
+document.addEventListener("keydown",e=>{
+  if(e.ctrlKey||e.metaKey||e.altKey)return;
+  const t=e.target;if(t&&(/^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName)||t.isContentEditable))return;
+  const main=document.querySelector("main");if(main&&main.inert)return;
+  const now=performance.now(),fast=now-keyLast<50;keyLast=now;
+  if(fast){clearTimeout(keyWait);keyWait=null;return}
+  const k=e.key,ty={"1":"BB","2":"FMCG","3":"FPP","4":"Mixed"}[k];
+  if(!ty&&k!=="f"&&k!=="F"&&k!=="/")return;
+  if(k==="/")e.preventDefault();
+  clearTimeout(keyWait);keyWait=setTimeout(()=>{keyWait=null;
+    if(ty){const b=document.querySelector('#tyb button[data-t="'+ty+'"]');if(b){$("type").value=ty;syncType()}}
+    else if(k==="/"){$("flt").focus()}
+    else{$("fsdu").checked=!$("fsdu").checked;$("msg").textContent=$("fsdu").checked?"FSDU ticked for the next pallet.":"FSDU unticked."}
+  },70);
+});
 document.addEventListener("keydown",e=>{
   // Ctrl+Z (Cmd+Z on a Mac) undoes the newest change, except while typing in a box, where it undoes the typing.
   if(e.key.toLowerCase()!=="z"||!(e.ctrlKey||e.metaKey)||e.shiftKey||e.altKey)return;

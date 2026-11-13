@@ -307,6 +307,11 @@ $("lpn").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();a
 $("lpn").addEventListener("paste",e=>{const t=(e.clipboardData||window.clipboardData).getData("text")||"";
   if(t.trim().split(/[\s,;]+/).filter(Boolean).length<2)return;
   e.preventDefault();$("lpn").value="";addPasted(t);$("lpn").focus()});
+// − and + by Expected pallets: no keyboard needed. Never below 0; − on an empty box does nothing.
+const stepExp=d=>{const e=$("expect"),n=parseInt(e.value,10);const v=isNaN(n)?(d>0?1:NaN):Math.max(0,n+d);if(isNaN(v))return;e.value=String(v);e.dispatchEvent(new Event("input",{bubbles:true}));e.dispatchEvent(new Event("change",{bubbles:true}))};
+$("expDown").onclick=()=>stepExp(-1);$("expUp").onclick=()=>stepExp(1);
+// Trailer numbers are tidied to capitals as they're typed (the cursor stays where it was).
+$("trailer").addEventListener("input",()=>{const e=$("trailer"),u=e.value.toUpperCase();if(u!==e.value){const p=e.selectionStart;e.value=u;try{e.setSelectionRange(p,p)}catch(x){}}});
 $("fltClear").onclick=()=>{$("flt").value="";render();$("flt").focus()};
 $("flt").addEventListener("input",()=>{$("fltClear").hidden=!$("flt").value});
 // The mute button on the entry bar: the same as the sound switch in Settings.
