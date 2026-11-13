@@ -62,7 +62,7 @@ function setDel(o){o=o||{};DEL_F.forEach(k=>{$(k).value=k==="date"?(o.date||loca
 function syncClear(){const b=$("delClear");if(b)b.disabled=!["trailer","sealIn","sealOut","notes"].some(k=>($(k).value||"").trim())}
 const $=id=>document.getElementById(id);
 function syncType(){const v=$("type").value;$("type").dataset.t=v;document.querySelectorAll("#tyb button").forEach(b=>{const on=b.dataset.t===v;b.classList.toggle("on",on);b.setAttribute("aria-pressed",on)})}
-let cfg={defType:"BB",check:true,sound:true,size:"1",keepType:true,vibrate:true,confirmScan:false,dateFmt:"uk",awake:true,site:""};
+let cfg={defType:"BB",check:true,sound:true,size:"1",keepType:true,vibrate:true,confirmScan:false,dateFmt:"uk",awake:true,keys:true,site:""};
 /* Saved data can come back from a backup file, so everything read from storage is checked and tidied before use.
    A damaged or crafted backup then can't stop the app starting or put anything odd into an export. */
 const isTxt=v=>typeof v==="string"||typeof v==="number";
@@ -543,16 +543,17 @@ function syncUndo(){const b=$("undoMore");if(!b)return;const e=undoStack[undoSta
    keys come under 50 ms apart) cancels it, so a scanned LPN can't change the type or FSDU by accident. */
 let keyWait=null,keyLast=0;
 document.addEventListener("keydown",e=>{
-  if(e.ctrlKey||e.metaKey||e.altKey)return;
+  if(!cfg.keys||e.ctrlKey||e.metaKey||e.altKey)return;
   const t=e.target;if(t&&(/^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName)||t.isContentEditable))return;
   const main=document.querySelector("main");if(main&&main.inert)return;
+  if(!$("expMenu").hidden||document.querySelector(".dmgrow"))return; // not behind an open menu
   const now=performance.now(),fast=now-keyLast<50;keyLast=now;
   if(fast){clearTimeout(keyWait);keyWait=null;return}
   const k=e.key,ty={"1":"BB","2":"FMCG","3":"FPP","4":"Mixed"}[k];
   if(!ty&&k!=="f"&&k!=="F"&&k!=="/")return;
   if(k==="/")e.preventDefault();
   clearTimeout(keyWait);keyWait=setTimeout(()=>{keyWait=null;
-    if(ty){const b=document.querySelector('#tyb button[data-t="'+ty+'"]');if(b){$("type").value=ty;syncType()}}
+    if(ty){const b=document.querySelector('#tyb button[data-t="'+ty+'"]');if(b){$("type").value=ty;syncType();$("msg").textContent="Type: "+ty+" for the next pallet."}}
     else if(k==="/"){$("flt").focus()}
     else{$("fsdu").checked=!$("fsdu").checked;$("msg").textContent=$("fsdu").checked?"FSDU ticked for the next pallet.":"FSDU unticked."}
   },70);

@@ -61,7 +61,7 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <li><b>Settings</b> has colours (or follow the phone’s light or dark mode), text size, date format, default pallet type, warnings, sound<span data-nf="shareApp"> and vibration</span><span data-f="shareApp">, vibration and <b>Share this app</b></span>.</li>
 <li data-f="twoPhones"><b>Sharing the log with another person:</b> tap <b>Share log</b> (under Start new delivery). Your phone shows its pallets as QR codes and theirs scans them, so all the pallets end up on one phone, for example when two people unload one trailer.</li>
 <li data-f="historyVideo">The <b>Changelog</b> starts with a one-minute video of how the app has grown, from build 13 to build 65.</li>
-<li><b>On a computer:</b> 1 to 4 pick BB, FMCG, FPP or Mixed, F ticks FSDU, / goes to the search and Ctrl+Z undoes. They don’t work while you’re typing in a box.</li>
+<li><b>On a computer:</b> 1 to 4 pick BB, FMCG, FPP or Mixed, F ticks FSDU, / goes to the search and Ctrl+Z undoes. They don’t work while you’re typing in a box, and Settings can turn them off.</li>
 <li>LPNs are a letter prefix then digits: usually 3 letters and 9 or 10 digits. IM numbers (full pallet picks) have 2 letters and 10 or 11 digits.</li>
 <li data-f="report"><b>Something not working, or an idea?</b> <button type="button" class="linkbtn" id="fbGuide">Report a problem or idea</button> (also the <b>Report a problem</b> button at the top).</li>
 </ul>
@@ -250,6 +250,7 @@ HELP.settings=`<h3>Colours</h3>
 <label class="chk"><input type="checkbox" id="setSound"><span>Play a sound when a pallet is added or a warning shows</span></label>
 <label class="chk"><input type="checkbox" id="setVib"><span>Vibrate when a pallet is added or a warning shows</span></label>
 <label class="chk"><input type="checkbox" id="setAwake"><span>Keep the screen on while the app is open</span></label>
+<label class="chk"><input type="checkbox" id="setKeys"><span>Keyboard shortcuts on a computer (1 to 4 for the type, F for FSDU, / for search)</span></label>
 <p class="note">So a handheld scanner’s scans aren’t lost while the screen is off. The phone won’t lock by itself while the app is open, so lock it before putting it in a pocket. It uses a little more battery, and stops when you switch to another app.</p>
 <label class="chk"><input type="checkbox" id="setConf"><span>Ask me to confirm each scanned barcode before it is added</span></label>
 <h3>Display</h3>
@@ -743,6 +744,7 @@ function initSettings(){
   $("setForget").onclick=()=>{names=[];saveNames();drawNames();$("setForget").textContent="Names forgotten"};
   $("setDef").value=cfg.defType;$("setDef").onchange=()=>{cfg.defType=$("setDef").value;saveCfg();$("type").value=cfg.defType;syncType()};
   $("setSite").value=cfg.site||"";$("setSite").onchange=()=>{cfg.site=$("setSite").value.replace(/\s+/g," ").trim().slice(0,40);$("setSite").value=cfg.site;saveCfg()};
+  $("setKeys").checked=cfg.keys;$("setKeys").onchange=()=>{cfg.keys=$("setKeys").checked;saveCfg()};
   $("setAwake").checked=cfg.awake;$("setAwake").onchange=()=>{cfg.awake=$("setAwake").checked;saveCfg();if(typeof syncAwake==="function")syncAwake()};
   $("setVib").checked=cfg.vibrate;$("setVib").onchange=()=>{cfg.vibrate=$("setVib").checked;saveCfg();if(cfg.vibrate)sfx("ok")};
   $("setConf").checked=cfg.confirmScan;$("setConf").onchange=()=>{cfg.confirmScan=$("setConf").checked;saveCfg()};

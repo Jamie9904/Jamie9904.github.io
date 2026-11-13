@@ -294,7 +294,7 @@ button.tgl .chev .chv{margin:0;width:18px;height:18px}
 /* pallet counter on the entry bar and "added" confirmation */
 .dockcnt{margin-left:auto;font-weight:700;color:var(--ink);font-size:.95rem;white-space:nowrap}
 .flash{pointer-events:none;position:fixed;left:50%;transform:translateX(-50%);bottom:20px;z-index:30;width:min(92vw,520px);padding:10px 14px;border:1px solid var(--line);border-left:6px solid var(--ac);border-radius:var(--r);background:var(--sel);font-weight:700;overflow-wrap:anywhere;box-shadow:0 4px 14px rgba(0,0,0,.4)}
-.flash .ftype{display:inline-block;padding:0 8px;border-radius:6px;color:#0c1830;background:var(--ac)}.flash[data-t=BB] .ftype{background:var(--bb)}.flash[data-t=FMCG] .ftype{background:var(--fm)}.flash[data-t=FPP] .ftype{background:var(--fp)}.flash[data-t=Mixed] .ftype{background:var(--mx)}
+.flash .ftype{display:inline-block;padding:0 8px;border-radius:6px;color:#000;background:var(--ac)} /* black passes 4.5:1 on every type colour, light theme too */.flash[data-t=BB] .ftype{background:var(--bb)}.flash[data-t=FMCG] .ftype{background:var(--fm)}.flash[data-t=FPP] .ftype{background:var(--fp)}.flash[data-t=Mixed] .ftype{background:var(--mx)}
 .flash[data-t=BB]{border-left-color:var(--bb)}.flash[data-t=FMCG]{border-left-color:var(--fm)}.flash[data-t=FPP]{border-left-color:var(--fp)}.flash[data-t=Mixed]{border-left-color:var(--mx)}
 .delsum{display:none}
 @media (min-width:760px){.dockcnt{display:none}}

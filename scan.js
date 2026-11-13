@@ -308,10 +308,13 @@ $("lpn").addEventListener("paste",e=>{const t=(e.clipboardData||window.clipboard
   if(t.trim().split(/[\s,;]+/).filter(Boolean).length<2)return;
   e.preventDefault();$("lpn").value="";addPasted(t);$("lpn").focus()});
 // − and + by Expected pallets: no keyboard needed. Never below 0; − on an empty box does nothing.
-const stepExp=d=>{const e=$("expect"),n=parseInt(e.value,10);const v=isNaN(n)?(d>0?1:NaN):Math.max(0,n+d);if(isNaN(v))return;e.value=String(v);e.dispatchEvent(new Event("input",{bubbles:true}));e.dispatchEvent(new Event("change",{bubbles:true}))};
+const stepExp=d=>{const e=$("expect"),n=parseInt(e.value,10);const v=isNaN(n)?(d>0?1:NaN):Math.max(0,n+d);
+  if(isNaN(v)){$("msg").textContent="Expected pallets is empty: tap + or type a number.";return}e.value=String(v);e.dispatchEvent(new Event("input",{bubbles:true}));e.dispatchEvent(new Event("change",{bubbles:true}));$("msg").textContent="Expected pallets: "+v+"."};
 $("expDown").onclick=()=>stepExp(-1);$("expUp").onclick=()=>stepExp(1);
 // Trailer numbers are tidied to capitals as they're typed (the cursor stays where it was).
-$("trailer").addEventListener("input",()=>{const e=$("trailer"),u=e.value.toUpperCase();if(u!==e.value){const p=e.selectionStart;e.value=u;try{e.setSelectionRange(p,p)}catch(x){}}});
+// Not while a phone keyboard is still building a word (that can repeat letters); the word is done on compositionend.
+const upTrailer=()=>{const e=$("trailer"),u=e.value.toUpperCase();if(u!==e.value){const p=e.selectionStart;e.value=u;try{e.setSelectionRange(p,p)}catch(x){}}};
+$("trailer").addEventListener("input",ev=>{if(!ev.isComposing)upTrailer()});$("trailer").addEventListener("compositionend",upTrailer);$("trailer").addEventListener("change",upTrailer);
 $("fltClear").onclick=()=>{$("flt").value="";render();$("flt").focus()};
 $("flt").addEventListener("input",()=>{$("fltClear").hidden=!$("flt").value});
 // The mute button on the entry bar: the same as the sound switch in Settings.
