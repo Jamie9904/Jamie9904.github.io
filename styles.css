@@ -373,6 +373,9 @@ details.opts>summary .note{min-width:0;overflow:hidden;text-overflow:ellipsis;wh
 .demobtn{width:100%;min-height:52px;font-weight:700}
 .demo video{display:block;width:100%;max-width:360px;margin:0 auto;border-radius:16px;background:#000;aspect-ratio:9/16}
 .stepper{display:flex;gap:6px;align-items:stretch}.stepper input{flex:1;min-width:0;text-align:center}.stepper .step{min-width:48px;min-height:44px;padding:0;font-size:1.3rem;font-weight:700}
+.helpq{display:inline-grid;place-items:center;width:28px;height:28px;min-height:0;padding:0;margin-left:8px;border-radius:50%;font:700 .95rem/1 "Atkinson Hyperlegible",sans-serif;vertical-align:middle;position:relative}
+.helpq::after{content:"";position:absolute;inset:-8px} /* a 44 px tap area round the small circle */
+html.simple #cmpCard,html.simple #phonesBtn,html.simple #photo,html.simple #upload,html.simple .flt,html.simple #fltInfo,html.simple #scanTip{display:none!important}
 .mutebtn{display:inline-grid;place-items:center;min-width:44px;min-height:44px;padding:0;background:transparent;border-color:transparent}
 .mutebtn svg{width:22px;height:22px}.mutebtn .off,.mutebtn.muted .on{display:none}.mutebtn.muted .off{display:block}
 .mutebtn.muted{color:var(--act,var(--ac))}

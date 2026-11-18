@@ -39,7 +39,7 @@
 <main>
 
 <div class="card" id="delCard">
-  <h2 class="ct">Delivery</h2>
+  <h2 class="ct">Delivery<button type="button" class="helpq" data-guide="Set up the delivery" aria-label="Help: delivery">?</button></h2>
   <button type="button" class="delsum" id="delSum" aria-expanded="true" aria-controls="delCard"><span class="tt" id="delSumTxt"></span><svg class="chv" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>
   <div class="undo" id="dateBar" hidden role="status"><span id="dateTxt"></span><span class="row" style="gap:6px;flex-wrap:nowrap"><button class="p" id="dateFix">Use today</button><button id="dateKeep">Keep</button></span></div>
   <div class="row dc-row">
@@ -87,7 +87,7 @@
 </div>
 
 <div class="card">
-  <h2 class="ct">Pallet log</h2>
+  <h2 class="ct">Pallet log<button type="button" class="helpq" data-guide="Log pallets" aria-label="Help: pallet log">?</button></h2>
   <div class="sum" id="sum"></div>
   <div class="expinfo" id="expInfo" hidden></div>
   <div class="manlive" id="manLive" hidden><div class="mlrow"><span id="manTxt"></span><button type="button" id="manUseExp" hidden></button><button type="button" id="manShow" aria-expanded="false" aria-controls="manList">Show missing</button></div><div class="manlist" id="manList" hidden></div></div>
@@ -111,7 +111,7 @@
   <div class="undo" id="nextBar" hidden role="status"><span>Exported. Start a new delivery?</span><span class="row" style="gap:6px;flex-wrap:nowrap"><button class="p" id="nextNew">Start new delivery</button><button id="nextNo">Not yet</button></span></div>
 </div>
 <div class="card" id="cmpCard">
-  <h2 class="tglh"><button type="button" class="tgl" id="cmpToggle" aria-expanded="false" aria-controls="cmpBody"><span class="tt">Manifest check</span><span class="chev" aria-hidden="true"><svg class="chv" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></button></h2>
+  <h2 class="tglh"><button type="button" class="tgl" id="cmpToggle" aria-expanded="false" aria-controls="cmpBody"><span class="tt">Manifest check</span><span class="chev" aria-hidden="true"><svg class="chv" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></button><button type="button" class="helpq" data-guide="Check against the manifest" aria-label="Help: Manifest check">?</button></h2>
   <div id="cmpBody" hidden style="margin-top:14px">
   <div style="margin-bottom:12px"><label for="cmpDate">Manifest date</label><input type="date" id="cmpDate"></div>
   <div class="row cmpsteps">
