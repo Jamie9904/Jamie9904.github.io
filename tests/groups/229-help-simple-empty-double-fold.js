@@ -22,7 +22,7 @@ module.exports = async ({ browser, URL0 }) => {
   check("the headings are named by their own text, not the help label", s.join() === "Delivery,Pallet log,Manifest check", s);
   // The empty log says what to do and has a button to the LPN box.
   s = await p.evaluate(() => { rows = []; save(); render(); const td = document.querySelector("#body .empty"); const b = document.getElementById("toLpn"); b.click(); return { text: td.textContent, focus: document.activeElement.id }; });
-  check("the empty log says what to do, with a button to the LPN box", /^No pallets yet\. Pick the type, then scan or type the first LPN in the LPN box\./.test(s.text) && s.focus === "lpn", s);
+  check("the empty log says what to do, with a button to the LPN box", /^No pallets yet\. Pick the type, then scan or type the first LPN in the LPN number box\./.test(s.text) && s.focus === "lpn", s);
   // A handheld scanner's double scan (same LPN again within 2 seconds) is ignored, not asked about.
   s = await p.evaluate(async () => { rows = []; save(); render(); const box = document.getElementById("lpn");
     box.value = "VLT004040265"; add(); box.value = "VLT004040265"; add();
@@ -46,6 +46,10 @@ module.exports = async ({ browser, URL0 }) => {
   s = await p.evaluate(() => { const m = document.getElementById("cmpNums"); m.value = "VLT004040265\nRUN001830763"; m.dispatchEvent(new Event("input", { bubbles: true })); rows = [{ lpn: "VLT004040265", type: "BB", fsdu: false }]; save(); render();
     return { live: !document.getElementById("manLive").hidden, dock: document.getElementById("dockCnt").getAttribute("aria-label") }; });
   check("Simple view also hides the live manifest count, in the log and the entry bar", !s.live && !/manifest/.test(s.dock || ""), s);
+  s = await p.evaluate(() => { addValue("QUB001899210"); const out = { flash: document.getElementById("flash").textContent };
+    SITE.on.manifestCheck = false; SITE.on.twoPhones = false; const txt = h => h.replace(/<[^>]+>/g, ""); out.guide = txt(siteHtml(HELP.guide)); out.settings = txt(siteHtml(HELP.settings)); SITE.on.manifestCheck = SITE.on.twoPhones = true; out.on = siteHtml(HELP.guide).replace(/<[^>]+>/g, ""); return out; });
+  check("in Simple view the Added note says nothing about the manifest", /QUB001899210/.test(s.flash) && !/manifest/.test(s.flash), s.flash);
+  check("with the Manifest check and Share log switched off, the Simple view text doesn't name them", /Simple view \(in Settings\) hides the photo buttons, the search/.test(s.guide) && /by Delivery and Pallet log opens this Guide/.test(s.guide) && /Simple view: hide the photo buttons, the search/.test(s.settings) && /by Delivery, Pallet log and Manifest check opens this Guide/.test(s.on), [/by Delivery, Pallet log and Manifest check opens this Guide/.test(s.on), s.guide.match(/Simple view \(in[^]{0,200}/)[0], s.settings.match(/Simple view:[^]{0,100}/)[0]]);
   await p.evaluate(() => { const m = document.getElementById("cmpNums"); m.value = ""; m.dispatchEvent(new Event("input", { bubbles: true })); rows = []; save(); render(); });
   await p.reload(); await p.waitForTimeout(300);
   s = await p.evaluate(() => { const on = document.documentElement.classList.contains("simple"); openHelp("settings", "Settings"); const c = document.getElementById("setSimple"); c.checked = false; c.onchange(); closeHelp(); return { on, off: !document.documentElement.classList.contains("simple"), cmp: getComputedStyle(document.getElementById("cmpCard")).display !== "none" }; });

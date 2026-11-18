@@ -119,7 +119,7 @@ function save(){
 function render(){
   syncType();
   const b=$("body");b.innerHTML="";
-  if(!rows.length){b.innerHTML='<tr><td colspan="5" class="empty"><b>No pallets yet.</b> Pick the type, then scan or type the first LPN in the LPN box. <button type="button" class="linkbtn" id="toLpn">Go to the LPN box</button></td></tr>';
+  if(!rows.length){b.innerHTML='<tr><td colspan="5" class="empty"><b>No pallets yet.</b> Pick the type, then scan or type the first LPN in the LPN number box. <button type="button" class="linkbtn" id="toLpn">Go to LPN number</button></td></tr>';
     const g=$("toLpn");if(g)g.onclick=()=>$("lpn").focus()}
   const q=($("flt").value||"").trim().toUpperCase().replace(/\s+/g,""),ft=$("fltType").value,ff=$("fltFsdu").value;
   if($("fltClear"))$("fltClear").hidden=!$("flt").value;

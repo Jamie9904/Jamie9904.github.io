@@ -36,7 +36,7 @@ function qrPart(v){
   const sm=$("smsg");
   if(!feat("twoPhones"))return;
   // Only after Scan the other phone's codes was tapped, so a code seen during ordinary scanning adds nothing.
-  if(!qrWant){sm.textContent="That’s a code from another phone. To add its pallets, use Share log, then Scan the other phone’s codes.";return}
+  if(!qrWant){sm.textContent=cfg.simple?"That’s a code from another phone. To add its pallets, turn off Simple view in Settings, then use Share log.":"That’s a code from another phone. To add its pallets, use Share log, then Scan the other phone’s codes.";return}
   if(!/^LPNM1 /.test(v)){sm.textContent="That code is from a different version of the app. Open the app online on both phones to update them, then try again.";sfx("warn");return}
   const m=/^LPNM1 ([a-z0-9]{4}) (\d{1,2})\/(\d{1,2}) ([\s\S]*)$/.exec(v);
   if(!m)return;
@@ -70,7 +70,7 @@ function loadZX(){
 }
 /* Shows the "in testing" note (config.js) for the scan in use, if there is one. */
 /* The other way to scan, naming only a photo button that is switched on. */
-function photoAlt(pre,post){const k=feat("scanByPhoto")?"Scan by photo":feat("photoUpload")?"Upload photo":"";return k?pre+k+post:""}
+function photoAlt(pre,post){const k=cfg.simple?"":feat("scanByPhoto")?"Scan by photo":feat("photoUpload")?"Upload photo":"";return k?pre+k+post:""}
 function scanNote(k){document.querySelectorAll('#scanbox .testnote[data-test="liveScan"],#scanbox .testnote[data-test="scanByPhoto"],#scanbox .testnote[data-test="photoUpload"]').forEach(n=>{n.hidden=n.dataset.test!==k})}
 /* The camera is asked for a sharp picture (up to 1920×1080) with continuous focus, so small barcodes can be read
    from further away; browsers that can't give that use the nearest they have. The slower ZXing reader (iPhones,

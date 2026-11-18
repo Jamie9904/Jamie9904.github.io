@@ -870,8 +870,8 @@ $("cmpToggle").onclick=()=>{
 /* ---- live manifest tracking in the Pallet log ---- */
 function manState(){
   const mp=new Map();
-  // With the Manifest check switched off (config.js), old manifest numbers are ignored: no tracking or warnings.
-  if(feat("manifestCheck"))$("cmpNums").value.split(/\r?\n/).forEach(s=>{s=s.trim();const k=norm(s);if(k&&!mp.has(k))mp.set(k,s)});
+  // With the Manifest check switched off (config.js) or Simple view on, manifest numbers are ignored: no tracking or warnings.
+  if(feat("manifestCheck")&&!cfg.simple)$("cmpNums").value.split(/\r?\n/).forEach(s=>{s=s.trim();const k=norm(s);if(k&&!mp.has(k))mp.set(k,s)});
   const logged=new Set(rows.map(r=>norm(r.lpn)));
   let found=0;const missing=[];
   mp.forEach((v,k)=>{if(logged.has(k))found++;else missing.push(v)});
