@@ -564,7 +564,7 @@ document.addEventListener("keydown",e=>{
   const now=performance.now(),fast=now-keyLast<50;keyLast=now;
   if(fast){clearTimeout(keyWait);keyWait=null;return}
   const k=e.key,ty={"1":"BB","2":"FMCG","3":"FPP","4":"Mixed"}[k];
-  if(!ty&&k!=="f"&&k!=="F"&&k!=="/")return;
+  if(!ty&&k!=="f"&&k!=="F"&&(k!=="/"||cfg.simple))return;
   if(k==="/")e.preventDefault();
   clearTimeout(keyWait);keyWait=setTimeout(()=>{keyWait=null;
     if(ty){const b=document.querySelector('#tyb button[data-t="'+ty+'"]');if(b){$("type").value=ty;syncType();$("msg").textContent="Type: "+ty+" for the next pallet."}}

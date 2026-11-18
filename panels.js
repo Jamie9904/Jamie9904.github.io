@@ -62,7 +62,7 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <li data-f="twoPhones"><b>Sharing the log with another person:</b> tap <b>Share log</b> (under Start new delivery). Your phone shows its pallets as QR codes and theirs scans them, so all the pallets end up on one phone, for example when two people unload one trailer.</li>
 <li data-f="historyVideo">The <b>Changelog</b> starts with a one-minute video of how the app has grown, from build 13 to build 65.</li>
 <li><b>Simple view</b> (in Settings) hides the Manifest check, Share log, the photo buttons and the search and filters, for people who only scan and export. The <b>?</b> by each heading opens this Guide at that part.</li>
-<li><b>On a computer:</b> 1 to 4 pick BB, FMCG, FPP or Mixed, F ticks FSDU, / goes to the search and Ctrl+Z undoes. They don’t work while you’re typing in a box, and Settings can turn them off.</li>
+<li><b>On a computer:</b> 1 to 4 pick BB, FMCG, FPP or Mixed, F ticks FSDU, / goes to the search (not in Simple view) and Ctrl+Z undoes. They don’t work while you’re typing in a box, and Settings can turn them off.</li>
 <li>LPNs are a letter prefix then digits: usually 3 letters and 9 or 10 digits. IM numbers (full pallet picks) have 2 letters and 10 or 11 digits.</li>
 <li data-f="report"><b>Something not working, or an idea?</b> <button type="button" class="linkbtn" id="fbGuide">Report a problem or idea</button> (also the <b>Report a problem</b> button at the top).</li>
 </ul>
@@ -673,7 +673,7 @@ $("histBtn").onclick=()=>openHelp("history","Saved deliveries");
 /* The ? by a heading opens the Guide at that part (found by its title, since switched-off parts renumber it). */
 document.querySelectorAll(".helpq").forEach(b=>{b.onclick=e=>{e.stopPropagation();openHelp("guide","How to use this app");
   const h=[...$("panelBody").querySelectorAll("h3")].find(x=>x.textContent.replace(/^\d+\.\s*/,"")===b.dataset.guide);
-  if(h){h.tabIndex=-1;h.scrollIntoView({block:"start"});setTimeout(()=>h.focus({preventScroll:true}),0)}}});
+  if(h){h.tabIndex=-1;setTimeout(()=>{h.focus({preventScroll:true});h.scrollIntoView({block:"start"})},0)}}});
 $("phonesBtn").onclick=()=>openHelp("phones","Share the log with another person");
 /* Share log: this phone's pallets as a run of QR codes (qr.js). Each code is "LPNM1 <id> <k>/<n> <part>"; the parts
    joined give {t: trailer, r: pallets}. The receiving phone reads them in Live scan (scan.js, qrPart). */

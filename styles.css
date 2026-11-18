@@ -376,7 +376,7 @@ details.opts>summary .note{min-width:0;overflow:hidden;text-overflow:ellipsis;wh
 .stepper{display:flex;gap:6px;align-items:stretch}.stepper input{flex:1;min-width:0;text-align:center}.stepper .step{min-width:48px;min-height:44px;padding:0;font-size:1.3rem;font-weight:700}
 .helpq{display:inline-grid;place-items:center;width:28px;height:28px;min-height:0;padding:0;margin-left:8px;border-radius:50%;font:700 .95rem/1 "Atkinson Hyperlegible",sans-serif;vertical-align:middle;position:relative}
 .helpq::after{content:"";position:absolute;inset:-9px} /* a 44 px tap area (26 px inside the border + 2 × 9) round the small circle */
-html.simple #cmpCard,html.simple #phonesBtn,html.simple #photo,html.simple #upload,html.simple .flt,html.simple #fltInfo,html.simple #scanTip{display:none!important}
+html.simple #cmpCard,html.simple #phonesBtn,html.simple #photo,html.simple #upload,html.simple .flt,html.simple #scanTip{display:none!important}
 .mutebtn{display:inline-grid;place-items:center;min-width:44px;min-height:44px;padding:0;background:transparent;border-color:transparent}
 .mutebtn svg{width:22px;height:22px}.mutebtn .off,.mutebtn.muted .on{display:none}.mutebtn.muted .off{display:block}
 .mutebtn.muted{color:var(--act,var(--ac))}
@@ -483,3 +483,4 @@ tr.refused td.l{box-shadow:inset 3px 0 0 var(--wn)}
 /* Four scan buttons in one row: smaller side padding and text on narrow phones so labels stay on two lines. */
 @media (max-width:359px){.entry .btnrow{gap:6px}.entry .btnrow button{padding:4px 3px;font-size:.84rem}}
 @media (max-width:300px){.entry .btnrow{flex-wrap:wrap}.entry .btnrow button{min-width:6em}}
+#panelBody h3{scroll-margin-top:12px}
