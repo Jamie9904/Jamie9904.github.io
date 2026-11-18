@@ -62,7 +62,7 @@ function setDel(o){o=o||{};DEL_F.forEach(k=>{$(k).value=k==="date"?(o.date||loca
 function syncClear(){const b=$("delClear");if(b)b.disabled=!["trailer","sealIn","sealOut","notes"].some(k=>($(k).value||"").trim())}
 const $=id=>document.getElementById(id);
 function syncType(){const v=$("type").value;$("type").dataset.t=v;document.querySelectorAll("#tyb button").forEach(b=>{const on=b.dataset.t===v;b.classList.toggle("on",on);b.setAttribute("aria-pressed",on)})}
-let cfg={defType:"BB",check:true,sound:true,size:"1",keepType:true,vibrate:true,confirmScan:false,dateFmt:"uk",awake:true,keys:true,site:""};
+let cfg={defType:"BB",check:true,sound:true,size:"1",keepType:true,vibrate:true,confirmScan:false,dateFmt:"uk",awake:true,keys:true,simple:false,site:""};
 /* Saved data can come back from a backup file, so everything read from storage is checked and tidied before use.
    A damaged or crafted backup then can't stop the app starting or put anything odd into an export. */
 const isTxt=v=>typeof v==="string"||typeof v==="number";
@@ -119,7 +119,8 @@ function save(){
 function render(){
   syncType();
   const b=$("body");b.innerHTML="";
-  if(!rows.length){b.innerHTML='<tr><td colspan="5" class="empty">No pallets logged yet</td></tr>'}
+  if(!rows.length){b.innerHTML='<tr><td colspan="5" class="empty"><b>No pallets yet.</b> Pick the type, then scan or type the first LPN in the LPN number box. <button type="button" class="linkbtn" id="toLpn">Go to LPN number</button></td></tr>';
+    const g=$("toLpn");if(g)g.onclick=()=>$("lpn").focus()}
   const q=($("flt").value||"").trim().toUpperCase().replace(/\s+/g,""),ft=$("fltType").value,ff=$("fltFsdu").value;
   if($("fltClear"))$("fltClear").hidden=!$("flt").value;
   let shown=0;
@@ -375,9 +376,13 @@ function tryAdd(v,scan,ask){
    matches the manifest. Only when the result is LPN-shaped (1 to 3 letters, then digits): anything else, such as
    another kind of barcode, is left exactly as it was entered. */
 function tidyLpn(v){const s=String(v==null?"":v).trim(),u=s.toUpperCase().replace(/[\s\-\u2010-\u2015]+/g,"");return /^[A-Z]{1,3}\d+$/.test(u)?u:s}
+let lastAdded=null;
 function add(){
   const v=tidyLpn($("lpn").value);
   if(!v){$("msg").textContent="Enter an LPN number first.";return}
+  // The same LPN again within 2 seconds of being added is a scanner trigger pressed twice: ignored, not asked about.
+  if(lastAdded&&lastAdded.v===v&&performance.now()-lastAdded.t<2000&&rows.length&&rows[rows.length-1].lpn===v){
+    $("lpn").value="";$("msg").textContent=v+" was added a moment ago, so the second scan was ignored.";$("lpn").focus();return}
   // A warning is waiting for an answer: keep this LPN in the box rather than losing it (a handheld scanner types
   // and presses Enter without anyone looking at the screen).
   if(pendingAdd){$("msg").textContent="Answer the check first (Skip or Add anyway), then add "+v+".";sfx("warn");$("lpn").select();return}
@@ -428,6 +433,7 @@ function addPasted(text){
   $("msg").textContent=skipped.length?(mine.length?"":"No pasted pallets were added. ")+"Not added: "+skipped.slice(0,3).join("; ")+(skipped.length>3?"; and "+(skipped.length-3)+" more":"")+". Type or scan "+(skipped.length===1?"it":"them")+" to add "+(skipped.length===1?"it":"them")+".":"";
 }
 function addValue(v,o){
+  lastAdded={v:v,t:performance.now()};
   if(typeof onAdded==="function")onAdded(v);
   o=o||{type:$("type").value,fsdu:$("fsdu").checked};
   $("msg").textContent="";
@@ -437,7 +443,7 @@ function addValue(v,o){
   if(!cfg.keepType){$("type").value=cfg.defType;$("type").dataset.t=cfg.defType}
   const off=!isNoLpn(v)&&typeof manState==="function"&&(()=>{const s=manState();return s.total&&!s.has(v)})();
   save();render();sfx(off?"warn":"ok");
-  if(rows.length===1&&($("recv").value||"").trim())delCollapsed=true;
+  if(rows.length===1&&($("recv").value||"").trim())delCollapsed=delFoldPref()!=="open";
   updateDel();flashAdded(v,o.type,!!o.fsdu);
   // An FPP pallet opens its description box, so what's on it (a full pallet of kitchen roll) can be typed in.
   // Not during Live scan: the phone's keyboard would cover the camera. Those are tapped afterwards.
@@ -481,6 +487,7 @@ function sealIssue(){
   return "";
 }
 function sealHint(live){const w=$("sealWarn");if(!w)return;const t=sealIssue();if(live&&t&&w.textContent!==t){if(w.textContent)w.textContent="";return}if(w.textContent!==t)w.textContent=t}
+function delFoldPref(){try{return localStorage.getItem("lpndelfold")||""}catch(e){return ""}}
 function updateDel(){
   const card=$("delCard");if(!card)return;
   if(!rows.length)delCollapsed=false;
@@ -557,7 +564,7 @@ document.addEventListener("keydown",e=>{
   const now=performance.now(),fast=now-keyLast<50;keyLast=now;
   if(fast){clearTimeout(keyWait);keyWait=null;return}
   const k=e.key,ty={"1":"BB","2":"FMCG","3":"FPP","4":"Mixed"}[k];
-  if(!ty&&k!=="f"&&k!=="F"&&k!=="/")return;
+  if(!ty&&k!=="f"&&k!=="F"&&(k!=="/"||cfg.simple))return;
   if(k==="/")e.preventDefault();
   clearTimeout(keyWait);keyWait=setTimeout(()=>{keyWait=null;
     if(ty){const b=document.querySelector('#tyb button[data-t="'+ty+'"]');if(b){$("type").value=ty;syncType();$("msg").textContent="Type: "+ty+" for the next pallet."}}
@@ -623,7 +630,8 @@ function localToday(){const n=new Date();return n.getFullYear()+"-"+String(n.get
     $("trailer").focus();
   };
   ["sealIn","sealOut"].forEach(id=>$(id).addEventListener("change",()=>sealHint()));
-  $("delSum").onclick=()=>{delCollapsed=!delCollapsed;updateDel()};
+  // Folding or opening it by hand is remembered: it opens that way next time, and after the first pallet.
+  $("delSum").onclick=()=>{delCollapsed=!delCollapsed;try{localStorage.setItem("lpndelfold",delCollapsed?"folded":"open")}catch(e){}updateDel()};
   showDate();
 })();
 

@@ -39,7 +39,8 @@ main{max-width:720px;margin:0 auto;background:var(--paper);padding:6px 18px 280p
 .card+.card{margin-top:26px;padding-top:18px;border-top:1px solid var(--line)}
 .card:first-of-type{margin-top:0}
 .ct{font:700 1.25rem/1.2 "Atkinson Hyperlegible",sans-serif;margin:8px 0 14px;color:inherit}
-.tglh{margin:0;font:inherit}
+.tglh{margin:0;font:inherit;display:flex;align-items:center}
+.tglh .tgl{flex:1;min-width:0}
 .ic{width:1.15em;height:1.15em;vertical-align:-.2em;margin-right:6px;flex:none}
 input::placeholder,textarea::placeholder{color:var(--mu);opacity:1}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
@@ -118,7 +119,7 @@ td input[type=checkbox]{width:26px;height:26px;accent-color:var(--ac)}
 #torch.on{background:var(--ac);color:var(--onac);border-color:var(--ac)}
 .sealwarn{color:var(--wn);font-weight:700}
 #video{width:100%;max-height:200px;background:#000;border-radius:var(--r);object-fit:cover}
-.empty{color:var(--mu);text-align:center;padding:30px 12px}
+.empty{color:var(--mu);text-align:center;padding:30px 12px;white-space:normal}
 td.l{cursor:text}
 td.l input{width:100%;min-width:9ch;min-height:44px;font:600 .98rem "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;padding:4px 8px}
 @media (max-width:359px){td.l input{min-width:0}
@@ -373,6 +374,9 @@ details.opts>summary .note{min-width:0;overflow:hidden;text-overflow:ellipsis;wh
 .demobtn{width:100%;min-height:52px;font-weight:700}
 .demo video{display:block;width:100%;max-width:360px;margin:0 auto;border-radius:16px;background:#000;aspect-ratio:9/16}
 .stepper{display:flex;gap:6px;align-items:stretch}.stepper input{flex:1;min-width:0;text-align:center}.stepper .step{min-width:48px;min-height:44px;padding:0;font-size:1.3rem;font-weight:700}
+.helpq{display:inline-grid;place-items:center;width:28px;height:28px;min-height:0;padding:0;margin-left:8px;border-radius:50%;font:700 .95rem/1 "Atkinson Hyperlegible",sans-serif;vertical-align:middle;position:relative}
+.helpq::after{content:"";position:absolute;inset:-9px} /* a 44 px tap area (26 px inside the border + 2 × 9) round the small circle */
+html.simple #cmpCard,html.simple #phonesBtn,html.simple #photo,html.simple #upload,html.simple .flt,html.simple #scanTip{display:none!important}
 .mutebtn{display:inline-grid;place-items:center;min-width:44px;min-height:44px;padding:0;background:transparent;border-color:transparent}
 .mutebtn svg{width:22px;height:22px}.mutebtn .off,.mutebtn.muted .on{display:none}.mutebtn.muted .off{display:block}
 .mutebtn.muted{color:var(--act,var(--ac))}
@@ -479,3 +483,4 @@ tr.refused td.l{box-shadow:inset 3px 0 0 var(--wn)}
 /* Four scan buttons in one row: smaller side padding and text on narrow phones so labels stay on two lines. */
 @media (max-width:359px){.entry .btnrow{gap:6px}.entry .btnrow button{padding:4px 3px;font-size:.84rem}}
 @media (max-width:300px){.entry .btnrow{flex-wrap:wrap}.entry .btnrow button{min-width:6em}}
+#panelBody h3{scroll-margin-top:12px}
