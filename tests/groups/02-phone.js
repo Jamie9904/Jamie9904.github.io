@@ -16,6 +16,7 @@ module.exports = async ({ browser, URL0 }) => {
   check("entry bar counter (shorter on narrow phones, full wording for screen readers)", s.dock === "1 of 3 logged" && ["1/3 logged", "1/3"].includes(s.dockShort), [s.dock, s.dockShort]);
   check("Delivery folds into one line", s.collapsed && /Tester/.test(s.sum) && /Trailer TR1/.test(s.sum), s.sum);
   check("trailer and seals saved", s.saved.trailer === "TR1" && s.saved.sealIn === "SI1" && s.saved.sealOut === "SO1", s.saved);
+  await p.evaluate(() => { lastAdded = null; }); // past the 2-second handheld double-scan window
   await p.fill("#lpn", "VLT003977037"); await p.press("#lpn", "Enter"); await p.waitForTimeout(100);
   check("duplicate LPN warning", await p.isVisible("#chkBar"));
   await p.click("#chkSkip");
