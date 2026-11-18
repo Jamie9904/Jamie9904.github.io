@@ -1,0 +1,8 @@
+# Made by the build (see .github/workflows/android.yml)
+www/
+lib/
+android/
+node_modules/
+package-lock.json
+*.apk
+*.p12
