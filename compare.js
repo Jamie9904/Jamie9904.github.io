@@ -880,7 +880,7 @@ function manState(){
 function manLive(){
   const box=$("manLive");if(!box)return null;
   const s=manState();
-  if(!s.total){box.hidden=true;return null}
+  if(!s.total||cfg.simple){box.hidden=true;return null}
   box.hidden=false;
   box.className="manlive "+(s.missing.length||s.extra?"bad":"ok");
   $("manTxt").textContent="Manifest: "+s.found+" of "+s.total+" found"+(s.missing.length?" · "+s.missing.length+" still to find":" ✓ all found")+(s.extra?" · "+s.extra+" not on manifest":"");

@@ -14,6 +14,10 @@ module.exports = async ({ browser, URL0 }) => {
   }
   s = await p.evaluate(async () => { SITE.on.liveScan = false; SITE.on.scanByPhoto = false; SITE.on.photoUpload = false; document.querySelector('#cmpCard .helpq').click(); await new Promise(r => setTimeout(r, 50)); const f = document.activeElement; const r = f && f.tagName === "H3" ? f.textContent : "(not a heading)"; closeHelp(); SITE.on.liveScan = SITE.on.scanByPhoto = SITE.on.photoUpload = true; return r; });
   check("? still finds its part when switched-off parts change the Guide's numbering", /^\d+\. Check against the manifest$/.test(s || ""), s);
+  // Each ? sits on its heading's line with a 44 px tap area.
+  s = await p.evaluate(() => [...document.querySelectorAll(".helpq")].map(b => { const h = b.closest("h2").getBoundingClientRect(), r = b.getBoundingClientRect(), a = getComputedStyle(b, "::after");
+    return { id: b.dataset.guide, h2: Math.round(h.height), inRow: r.top >= h.top - 1 && r.bottom <= h.bottom + 1 && h.height <= 50, tap: Math.round(r.width - parseFloat(a.left) - parseFloat(a.right) - 2 * parseFloat(getComputedStyle(b).borderLeftWidth)) }; }));
+  check("each ? sits on its heading's line, with a 44 px tap area", s.length === 3 && s.every(x => x.inRow && x.tap >= 44), s);
   // The empty log says what to do and has a button to the LPN box.
   s = await p.evaluate(() => { rows = []; save(); render(); const td = document.querySelector("#body .empty"); const b = document.getElementById("toLpn"); b.click(); return { text: td.textContent, focus: document.activeElement.id }; });
   check("the empty log says what to do, with a button to the LPN box", /^No pallets yet\. Pick the type, then scan or type the first LPN in the LPN box\./.test(s.text) && s.focus === "lpn", s);
@@ -31,6 +35,10 @@ module.exports = async ({ browser, URL0 }) => {
     const out = { cmp: vis("cmpCard"), share: vis("phonesBtn"), photo: vis("photo"), upload: vis("upload"), flt: getComputedStyle(document.querySelector(".flt")).display, live: !document.getElementById("scan").hidden, nolpn: !document.getElementById("noLpn").hidden, search: document.getElementById("flt").value, saved: JSON.parse(localStorage.getItem("lpncfg") || "{}").simple };
     return out; });
   check("Simple view hides the Manifest check, Share log, the photo buttons and the search and filters (clearing a search), and is kept", !s.cmp && !s.share && !s.photo && !s.upload && s.flt === "none" && s.live && s.nolpn && s.search === "" && s.saved === true, s);
+  s = await p.evaluate(() => { const m = document.getElementById("cmpNums"); m.value = "VLT004040265\nRUN001830763"; m.dispatchEvent(new Event("input", { bubbles: true })); rows = [{ lpn: "VLT004040265", type: "BB", fsdu: false }]; save(); render();
+    return { live: !document.getElementById("manLive").hidden, dock: document.getElementById("dockCnt").getAttribute("aria-label") }; });
+  check("Simple view also hides the live manifest count, in the log and the entry bar", !s.live && !/manifest/.test(s.dock || ""), s);
+  await p.evaluate(() => { const m = document.getElementById("cmpNums"); m.value = ""; m.dispatchEvent(new Event("input", { bubbles: true })); rows = []; save(); render(); });
   await p.reload(); await p.waitForTimeout(300);
   s = await p.evaluate(() => { const on = document.documentElement.classList.contains("simple"); openHelp("settings", "Settings"); const c = document.getElementById("setSimple"); c.checked = false; c.onchange(); closeHelp(); return { on, off: !document.documentElement.classList.contains("simple"), cmp: getComputedStyle(document.getElementById("cmpCard")).display !== "none" }; });
   check("Simple view stays on after a reload, and switching it off brings everything back", s.on && s.off && s.cmp, s);

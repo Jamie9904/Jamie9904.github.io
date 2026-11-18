@@ -251,7 +251,7 @@ HELP.settings=`<h3>Colours</h3>
 <label class="chk"><input type="checkbox" id="setSound"><span>Play a sound when a pallet is added or a warning shows</span></label>
 <label class="chk"><input type="checkbox" id="setVib"><span>Vibrate when a pallet is added or a warning shows</span></label>
 <label class="chk"><input type="checkbox" id="setAwake"><span>Keep the screen on while the app is open</span></label>
-<label class="chk"><input type="checkbox" id="setSimple"><span>Simple view: hide the Manifest check, Share log, the photo buttons and the search and filters</span></label>
+<label class="chk"><input type="checkbox" id="setSimple"><span>Simple view: hide the Manifest check (and its live count), Share log, the photo buttons and the search and filters</span></label>
 <label class="chk"><input type="checkbox" id="setKeys"><span>Keyboard shortcuts on a computer (1 to 4 for the type, F for FSDU, / for search)</span></label>
 <p class="note">So a handheld scanner’s scans aren’t lost while the screen is off. The phone won’t lock by itself while the app is open, so lock it before putting it in a pocket. It uses a little more battery, and stops when you switch to another app.</p>
 <label class="chk"><input type="checkbox" id="setConf"><span>Ask me to confirm each scanned barcode before it is added</span></label>
@@ -667,7 +667,7 @@ function histFilter(){
 $("newDel").onclick=newDelivery;
 /* Simple view (Settings): the less-used parts are hidden for people who only scan and export. Nothing is lost:
    switching it off brings them back as they were. */
-function applySimple(){document.documentElement.classList.toggle("simple",!!cfg.simple);if(cfg.simple){const f=$("flt"),t=$("fltType"),d=$("fltFsdu");if(f.value||t.value||d.value){f.value="";t.value="";d.value="";render()}}}
+function applySimple(){document.documentElement.classList.toggle("simple",!!cfg.simple);if(cfg.simple){const f=$("flt"),t=$("fltType"),d=$("fltFsdu");f.value="";t.value="";d.value=""}if(typeof render==="function"&&$("body"))render()}
 applySimple();
 $("histBtn").onclick=()=>openHelp("history","Saved deliveries");
 /* The ? by a heading opens the Guide at that part (found by its title, since switched-off parts renumber it). */
