@@ -56,7 +56,7 @@
   </div>
 </div>
 
-<div class="card entry">
+<div class="card entry" id="entryCard">
   <h2 class="ct">Add a pallet</h2>
   <div class="tyb" id="tyb" role="group" aria-label="Pallet type"><button type="button" data-t="BB" aria-keyshortcuts="1">BB</button><button type="button" data-t="FMCG" aria-keyshortcuts="2">FMCG</button><button type="button" data-t="FPP" aria-keyshortcuts="3">FPP</button><button type="button" data-t="Mixed" aria-keyshortcuts="4">Mixed</button><select id="type" hidden aria-hidden="true"><option>BB</option><option>FMCG</option><option>FPP</option><option>Mixed</option></select></div>
   <div class="addgrid">
@@ -86,7 +86,7 @@
   <button type="button" id="toLatest" class="tolatest" aria-label="Go to the newest pallet" hidden><span aria-hidden="true">↓</span> Latest</button>
 </div>
 
-<div class="card">
+<div class="card" id="logCard">
   <h2 class="ct" aria-labelledby="logH"><span id="logH">Pallet log</span><button type="button" class="helpq" data-guide="Log pallets" aria-label="Help with Pallet log">?</button></h2>
   <div class="sum" id="sum"></div>
   <div class="expinfo" id="expInfo" hidden></div>
@@ -145,7 +145,7 @@
   <div class="row" style="margin-top:6px"><button type="button" class="linkbtn" id="cmpReport" hidden>Report a problem with these photos</button></div>
   <label for="cmpNums" style="margin-top:10px">Numbers read from the manifest (one per line: fix any mistakes or type them in)</label>
   <textarea id="cmpNums" rows="6"></textarea>
-  <p class="note" style="margin-top:6px">While manifest numbers are here, the Pallet log shows how many are found and which are still missing as you scan. Numbers read from photos can be misread, so check them first.</p>
+  <p class="note" id="cmpLiveNote" style="margin-top:6px">While manifest numbers are here, the Pallet log shows how many are found and which are still missing as you scan. Numbers read from photos can be misread, so check them first.</p>
   <div class="sum" id="cmpSum" style="margin-top:10px"></div>
   <div class="cmpres" id="cmpRes" hidden></div>
   <div class="act"><button class="d" id="cmpClear">Clear</button><div class="row" style="gap:8px"><button class="p" id="cmpCheck">Check results</button><button class="p" id="cmpExpBtn" aria-expanded="false" aria-controls="cmpExpMenu">Export<svg class="chv" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button></div></div>

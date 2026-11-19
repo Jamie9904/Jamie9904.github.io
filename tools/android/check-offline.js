@@ -48,6 +48,13 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   s = await page.evaluate(() => { openHelp("settings", "Settings"); const t = document.getElementById("panelBody").textContent; closeHelp(); openHelp("guide", "How to use this app"); const g = document.getElementById("panelBody").textContent; closeHelp(); return { share: /Share this app/.test(t) || !!document.getElementById("shareUrl"), report: /Report a problem/.test(t + g) }; });
   check("Settings and the Guide don't offer Share this app or Report a problem", !s.share && !s.report, s);
 
+  s = await page.evaluate(async () => { const before = { logo: logo, shown: !document.getElementById("logoImg").hidden, btn: document.getElementById("logoBtn").textContent };
+    const c = document.createElement("canvas"); c.width = 40; c.height = 20; const x = c.getContext("2d"); x.fillStyle = "#c00"; x.fillRect(0, 0, 40, 20);
+    const blob = await new Promise(r => c.toBlob(r, "image/png")); const inp = document.getElementById("logoFile"); const dt = new DataTransfer(); dt.items.add(new File([blob], "mine.png", { type: "image/png" })); inp.files = dt.files; inp.dispatchEvent(new Event("change"));
+    for (let i = 0; i < 50 && !logo; i++) await new Promise(r => setTimeout(r, 100));
+    const after = { logo: !!logo, shown: !document.getElementById("logoImg").hidden, rm: document.getElementById("logoRm").textContent, kept: !!localStorage.getItem("lpnlogo") };
+    document.getElementById("logoRm").click(); return { before, after, gone: !logo }; });
+  check("no default logo, and a logo of your own can still be added and removed", s.before.logo === "" && !s.before.shown && s.before.btn === "Add logo" && s.after.logo && s.after.shown && s.after.rm === "Remove logo" && s.after.kept && s.gone, s);
   s = await page.evaluate(async () => { const out = {};
     for (const [k, f] of Object.entries({ excel: () => loadExcel(), pdf: () => loadJsPdf(), pdflib: () => loadPdfLib(), pdfread: () => loadPdfJs(),
       barcode: () => loadScript("./lib/cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js", () => window.ZXing) }))

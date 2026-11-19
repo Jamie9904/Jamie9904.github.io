@@ -2,13 +2,15 @@
 const FIRST_OPEN=(()=>{try{for(let i=0;i<localStorage.length;i++){if(/^lpn/.test(localStorage.key(i)))return false}return true}catch(e){return false}})();
 /* Site settings from config.js (loaded before this file): which features are shown, and which carry a note that
    they are still being tested. A missing or broken config.js means every feature on and no notes. */
-const FEATURES=["report","manifestCheck","manifestPhotos","liveScan","scanByPhoto","photoUpload","torch","damage","refused","noLpn","fppDesc","exportReminder","historyVideo","twoPhones","tallySheet","shareMissing","findLpn","shareApp","welcome","whatsNew"];
+const FEATURES=["palletLog","report","manifestCheck","manifestPhotos","liveScan","scanByPhoto","photoUpload","torch","damage","refused","noLpn","fppDesc","exportReminder","historyVideo","twoPhones","tallySheet","shareMissing","findLpn","shareApp","welcome","whatsNew"];
 /* Pallets that arrived without an LPN are logged as "No LPN 1", "No LPN 2", … (numbered within the delivery). */
 const isNoLpn=v=>/^No LPN \d+$/i.test(String(v==null?"":v).trim());
 const SITE=(()=>{
   const c=window.LPN_CONFIG&&typeof window.LPN_CONFIG==="object"?window.LPN_CONFIG:{},f=c.features||{},t=c.testing||{},on={},test={};
   const own=(o,k)=>o&&typeof o==="object"&&Object.prototype.hasOwnProperty.call(o,k)?o[k]:undefined; // only the file's own settings
   FEATURES.forEach(k=>{on[k]=own(f,k)!==false;test[k]=on[k]&&own(t,k)===true});
+  // With the pallet log off, the parts that only work with it are off too (only the Manifest check is left).
+  if(!on.palletLog)["liveScan","scanByPhoto","photoUpload","torch","damage","refused","noLpn","fppDesc","exportReminder","twoPhones","tallySheet","findLpn","welcome"].forEach(k=>{on[k]=false;test[k]=false});
   return {on,test};
 })();
 const feat=k=>SITE.on[k]!==false;
@@ -16,7 +18,7 @@ const feat=k=>SITE.on[k]!==false;
 function testNote(k,el,where){
   if(!SITE.test[k]||!el)return null;
   const n=document.createElement("p");n.className="note testnote";n.dataset.test=k;
-  const what={noLpn:"Logging pallets with no LPN",refused:"Marking pallets as refused",exportReminder:"The reminder about deliveries not exported",historyVideo:"The build history video",twoPhones:"Sharing the log",tallySheet:"The blank tally sheet",fppDesc:"Descriptions for FPP pallets",manifestCheck:"The Manifest check",manifestPhotos:"Reading photos",liveScan:"Live scan",scanByPhoto:"Scan by photo",photoUpload:"Upload photo",torch:"The torch",damage:"Marking damage",shareMissing:"Share missing list",findLpn:"Find an LPN",shareApp:"Share this app"}[k];
+  const what={palletLog:"The pallet log",noLpn:"Logging pallets with no LPN",refused:"Marking pallets as refused",exportReminder:"The reminder about deliveries not exported",historyVideo:"The build history video",twoPhones:"Sharing the log",tallySheet:"The blank tally sheet",fppDesc:"Descriptions for FPP pallets",manifestCheck:"The Manifest check",manifestPhotos:"Reading photos",liveScan:"Live scan",scanByPhoto:"Scan by photo",photoUpload:"Upload photo",torch:"The torch",damage:"Marking damage",shareMissing:"Share missing list",findLpn:"Find an LPN",shareApp:"Share this app"}[k];
   n.textContent=k==="report"?"In testing: reports may not always arrive yet, so for anything urgent also use Download problem report in Settings."
     :"In testing: "+what+" may not always work yet, so check what it gives you"+(feat("report")?", and use Report a problem if something goes wrong.":".");
   el.insertAdjacentElement(where||"beforeend",n);return n;
@@ -557,7 +559,7 @@ function syncUndo(){const b=$("undoMore");if(!b)return;const e=undoStack[undoSta
    keys come under 50 ms apart) cancels it, so a scanned LPN can't change the type or FSDU by accident. */
 let keyWait=null,keyLast=0;
 document.addEventListener("keydown",e=>{
-  if(!cfg.keys||e.ctrlKey||e.metaKey||e.altKey)return;
+  if(!cfg.keys||!feat("palletLog")||e.ctrlKey||e.metaKey||e.altKey)return;
   const t=e.target;if(t&&(/^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName)||t.isContentEditable))return;
   const main=document.querySelector("main");if(main&&main.inert)return;
   if(!$("expMenu").hidden||document.querySelector(".dmgrow"))return; // not behind an open menu
@@ -574,7 +576,7 @@ document.addEventListener("keydown",e=>{
 });
 document.addEventListener("keydown",e=>{
   // Ctrl+Z (Cmd+Z on a Mac) undoes the newest change, except while typing in a box, where it undoes the typing.
-  if(e.key.toLowerCase()!=="z"||!(e.ctrlKey||e.metaKey)||e.shiftKey||e.altKey)return;
+  if(e.key.toLowerCase()!=="z"||!(e.ctrlKey||e.metaKey)||e.shiftKey||e.altKey||!feat("palletLog"))return;
   const t=e.target;if(t&&/^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName))return;
   // Not while Settings, the Guide or another box is open over the log: the change wouldn't be seen.
   const main=document.querySelector("main");if(main&&main.inert)return;

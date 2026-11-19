@@ -11,6 +11,7 @@
 */
 window.LPN_CONFIG = {
   features: {
+    palletLog: true,       // the pallet log: Delivery, the LPN box and scanning, the log, Export, Start new delivery and Saved deliveries. Off leaves only the Manifest check
     report: true,          // Report a problem button, and the report links in Settings, the Guide and the Manifest check
     manifestCheck: true,   // the whole Manifest check section
     manifestPhotos: true,  // reading manifests, printed logs and printed LPNs on labels from photos (PDFs and typing still work)
@@ -33,6 +34,7 @@ window.LPN_CONFIG = {
     tallySheet: true       // Blank tally sheet in the Export menu, a paper sheet to fill in by hand
   },
   testing: {
+    palletLog: false,
     report: false,
     manifestCheck: true,
     manifestPhotos: false,

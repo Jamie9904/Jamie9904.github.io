@@ -1,5 +1,5 @@
 /* ---- help panel ---- */
-const HELP={guide:`<h3>1. Quick start</h3>
+const HELP={guide:`<div data-f="palletLog"><h3>1. Quick start</h3>
 <ol>
 <li><b>Delivery:</b> fill in the date and who received it.</li>
 <li data-f="manifestCheck"><b>Manifest</b> (optional): add it in Manifest check, so pallets are ticked off as you scan.</li>
@@ -32,23 +32,25 @@ const HELP={guide:`<h3>1. Quick start</h3>
 <li><b>Handheld or Bluetooth scanner:</b> tap the LPN box and scan. To check your scanner works with the app first, use <b>Test a handheld scanner</b> in Settings. The screen stays on while the app is open, so scans aren’t lost (you can turn this off in Settings).</li>
 </ul>
 <p>In Settings, you can choose to confirm each scan before it’s logged.</p>
+</div>
 <h3 data-f="manifestCheck">5. Check against the manifest</h3>
-<p data-f="manifestCheck">Tap the <b>Manifest check</b> heading to open it.</p>
+<p data-f="manifestCheck"><span data-f="palletLog">Tap the <b>Manifest check</b> heading to open it.</span><span data-nf="palletLog">The <b>Manifest check</b> is the whole page in this copy of the app: there’s no pallet log here, so compare the manifest with an exported or printed log.</span></p>
 <ul data-f="manifestCheck">
 <li><b>Add the manifest:</b> add <span data-f="manifestPhotos">photos or </span>PDFs (several at once), or type or paste the numbers.<span data-f="manifestPhotos"> Always check numbers read from photos. Reading photos needs iOS 16 or newer on an iPhone.</span></li>
-<li><b>While you scan</b>, the log shows how many manifest pallets are found and warns about pallets not on the manifest. <b>Show missing</b> lists the manifest pallets not found yet. <b>Use n as expected</b> copies the manifest count into Expected pallets.</li>
-<li><b>The log:</b> choose <b>Use current log</b>, a saved delivery, an exported file<span data-f="manifestPhotos">, or a photo of a printed log</span>.</li>
+<li data-f="palletLog"><b>While you scan</b>, the log shows how many manifest pallets are found and warns about pallets not on the manifest. <b>Show missing</b> lists the manifest pallets not found yet. <b>Use n as expected</b> copies the manifest count into Expected pallets.</li>
+<li><b>The log:</b> choose <span data-f="palletLog"><b>Use current log</b>, a saved delivery, </span>an exported file<span data-f="manifestPhotos">, or a photo of a printed log</span><span data-nf="palletLog">, or type or paste the numbers</span>.</li>
 <li><b>Check results:</b> Missing (report it), On the log only (book it in) and Matched. <b>Fix</b> corrects a misread number.<span data-f="noLpn"> Pallets with no LPN can’t be matched, so the results count them for you to check by hand.</span><span data-f="shareMissing"> <b>Share missing list</b> sends the list as a message.</span></li>
 <li><b>Export</b> gives the comparison as Excel, Email PDF or Print. If <b>Include a copy of the log</b> is on in Settings, a copy of the log is added.</li>
 </ul>
 <p data-f="manifestCheck"><span data-f="manifestPhotos"><b>Prefix presets</b> (in the Manifest check) limit which numbers are picked up from photos. If a photo finds numbers with a prefix that isn’t listed, you can add it with one tap. </span>Start new delivery clears the manifest numbers.</p>
-<h3>6. Export</h3>
+<div data-f="palletLog"><h3>6. Export</h3>
 <p>The <b>Export</b> menu has <b>Download (Excel)</b>, <b>Email PDF</b> and <b>Print</b>. Files show your logo, the delivery details, the numbered pallet list and the totals. They fit A4 and are named with the date and trailer number. If the total doesn’t match the expected pallets, you get a reminder first.</p>
 <p data-f="tallySheet"><b>Blank tally sheet</b> (also in the Export menu) prints an empty sheet to write pallets on by hand, for when a phone isn’t available. Type or scan the LPNs into the app afterwards.</p>
 <p><b>Email PDF</b> opens your phone’s share menu with the PDF attached. If you see a message that the file is ready, tap <b>Tap to share</b>. If the share menu can’t open, the file is saved for you to attach.</p>
 <h3>7. Saved deliveries and backups</h3>
 <p><b>Start new delivery</b> saves the log and clears the page. If you haven’t exported, it asks you to do that first. <b>Saved deliveries</b> keeps what you saved this week and last week (weeks start on Sunday). Older ones are removed automatically. There you can open, export, email or delete a delivery<span data-nf="findLpn"> or import an exported file</span><span data-f="findLpn">, import an exported file, or use <b>Find an LPN</b> to see which delivery holds it</span>.</p>
 <p>Everything is stored on this phone only, so tap <b>Back up now</b> (in Saved deliveries or Settings) from time to time. <b>Restore backup</b> in Settings shows what a backup holds and saves a copy of your current data first.</p>
+</div>
 <h3>8. Install it on your phone</h3>
 <ul>
 <li><b>Android (Chrome):</b> tap the ⋮ menu, then <b>Install app</b> or <b>Add to Home screen</b>.</li>
@@ -58,11 +60,11 @@ const HELP={guide:`<h3>1. Quick start</h3>
 </ul>
 <h3>9. Settings and good to know</h3>
 <ul>
-<li><b>Settings</b> has colours (or follow the phone’s light or dark mode), text size, date format, default pallet type, warnings, sound<span data-nf="shareApp"> and vibration</span><span data-f="shareApp">, vibration and <b>Share this app</b></span>.</li>
+<li><b>Settings</b> has colours (or follow the phone’s light or dark mode), text size and date format<span data-f="palletLog">, plus the default pallet type, warnings, sound and vibration</span><span data-f="shareApp">, and <b>Share this app</b></span>.</li>
 <li data-f="twoPhones"><b>Sharing the log with another person:</b> tap <b>Share log</b> (under Start new delivery). Your phone shows its pallets as QR codes and theirs scans them, so all the pallets end up on one phone, for example when two people unload one trailer.</li>
 <li data-f="historyVideo">The <b>Changelog</b> starts with a one-minute video of how the app has grown, from build 13 to build 65.</li>
-<li><b>Simple view</b> (in Settings) hides <span data-f="manifestCheck">the Manifest check, </span><span data-f="twoPhones">Share log, </span><span data-f="scanByPhoto|photoUpload">the photo buttons, </span>the search and the filters, for people who only scan and export. <span data-f="manifestCheck">Manifest numbers you added before turning it on are ignored until you turn it off again. </span>Tapping a total still shows only that type.</li><li>The <b>?</b> by Delivery<span data-f="manifestCheck">,</span><span data-nf="manifestCheck"> and</span> Pallet log<span data-f="manifestCheck"> and Manifest check</span> opens this Guide at that part.</li>
-<li><b>On a computer:</b> 1 to 4 pick BB, FMCG, FPP or Mixed, F ticks FSDU, / goes to the search (not in Simple view) and Ctrl+Z undoes. They don’t work while you’re typing in a box, and Settings can turn them off.</li>
+<li data-f="palletLog"><b>Simple view</b> (in Settings) hides <span data-f="manifestCheck">the Manifest check, </span><span data-f="twoPhones">Share log, </span><span data-f="scanByPhoto|photoUpload">the photo buttons, </span>the search and the filters, for people who only scan and export. <span data-f="manifestCheck">Manifest numbers you added before turning it on are ignored until you turn it off again. </span>Tapping a total still shows only that type.</li><li data-f="palletLog">The <b>?</b> by Delivery<span data-f="manifestCheck">,</span><span data-nf="manifestCheck"> and</span> Pallet log<span data-f="manifestCheck"> and Manifest check</span> opens this Guide at that part.</li><li data-nf="palletLog"><span data-f="manifestCheck">The <b>?</b> by Manifest check opens this Guide at that part.</span></li>
+<li data-f="palletLog"><b>On a computer:</b> 1 to 4 pick BB, FMCG, FPP or Mixed, F ticks FSDU, / goes to the search (not in Simple view) and Ctrl+Z undoes. They don’t work while you’re typing in a box, and Settings can turn them off.</li>
 <li>LPNs are a letter prefix then digits: usually 3 letters and 9 or 10 digits. IM numbers (full pallet picks) have 2 letters and 10 or 11 digits.</li>
 <li data-f="report"><b>Something not working, or an idea?</b> <button type="button" class="linkbtn" id="fbGuide">Report a problem or idea</button> (also the <b>Report a problem</b> button at the top).</li>
 </ul>
@@ -242,6 +244,7 @@ HELP.settings=`<h3>Colours</h3>
 <div class="row"><button id="setLogo">Add logo</button><button class="d" id="setLogoRm" hidden>Remove logo</button></div>
 <h3>Comparison</h3>
 <label class="chk"><input type="checkbox" id="setMerge"><span>Include a copy of the log with the manifest comparison (a tab in the spreadsheet, extra pages at the end of the PDF)</span></label>
+<div id="setLogging">
 <h3>Logging</h3>
 <div class="row" style="margin-bottom:10px"><button id="setForget">Forget remembered names</button></div>
 <label for="setDef">Default pallet type</label>
@@ -255,6 +258,7 @@ HELP.settings=`<h3>Colours</h3>
 <label class="chk"><input type="checkbox" id="setSimple"><span>Simple view: hide <span data-f="manifestCheck">the Manifest check (and its live count), </span><span data-f="twoPhones">Share log, </span><span data-f="scanByPhoto|photoUpload">the photo buttons, </span>the search and the filters</span></label>
 <label class="chk"><input type="checkbox" id="setKeys"><span>Keyboard shortcuts on a computer (1 to 4 for the type, F for FSDU, / for search when Simple view is off)</span></label>
 <label class="chk"><input type="checkbox" id="setConf"><span>Ask me to confirm each scanned barcode before it is added</span></label>
+</div>
 <h3>Display</h3>
 <label for="setSize">Text size</label>
 <select id="setSize"><option value="1">Normal</option><option value="1.12">Large</option><option value="1.25">Extra large</option></select>
@@ -264,11 +268,13 @@ HELP.settings=`<h3>Colours</h3>
 <label for="setDate">Date format</label>
 <select id="setDate"><option value="uk">dd/mm/yyyy (UK)</option><option value="us">mm/dd/yyyy (US)</option><option value="iso">yyyy-mm-dd</option></select>
 <p class="note">Used in spreadsheets, PDFs and the saved deliveries lists.</p>
+<div id="setScanner">
 <h3>Test a handheld scanner</h3>
 <p>Tap the box and scan any barcode with your handheld or Bluetooth scanner. Nothing is added to the log.</p>
 <label for="scanTest">Scan a barcode here</label>
 <input type="text" id="scanTest" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="done">
 <div class="msg" id="scanTestMsg" role="status" aria-live="polite"></div>
+</div>
 <h3 data-f="shareApp">Share this app</h3>
 <p data-f="shareApp">A colleague can scan this code with their phone camera to open the app, then install it from there. Or send them the link.</p>
 <img data-f="shareApp" class="shareqr" src="media/share-qr.svg" width="180" height="180" alt="QR code that opens jamie9904.github.io">
@@ -667,7 +673,7 @@ function histFilter(){
 $("newDel").onclick=newDelivery;
 /* Simple view (Settings): the less-used parts are hidden for people who only scan and export. Nothing is lost:
    switching it off brings them back as they were. */
-function applySimple(){document.documentElement.classList.toggle("simple",!!cfg.simple);if(cfg.simple){const f=$("flt"),t=$("fltType"),d=$("fltFsdu");f.value="";t.value="";d.value=""}if(typeof render==="function"&&$("body"))render()}
+function applySimple(){const on=!!cfg.simple&&feat("palletLog");document.documentElement.classList.toggle("simple",on);if(on){const f=$("flt"),t=$("fltType"),d=$("fltFsdu");f.value="";t.value="";d.value=""}if(typeof render==="function"&&$("body"))render()}
 applySimple();
 $("histBtn").onclick=()=>openHelp("history","Saved deliveries");
 /* The ? by a heading opens the Guide at that part (found by its title, since switched-off parts renumber it). */
@@ -712,6 +718,7 @@ async function shareApp(){
   m.textContent="Sharing isn’t available here. Send them this link: "+url;
 }
 function initSettings(){
+  if(!feat("palletLog")){$("setLogging").hidden=true;$("setScanner").hidden=true}
   if($("shareApp")){$("shareApp").onclick=shareApp;testNote("shareApp",$("shareApp").parentElement,"afterend")}
   $("setLogo").onclick=()=>$("logoBtn").click();$("setLogoRm").onclick=()=>$("logoRm").click();showLogo();
   applyTheme();
@@ -832,6 +839,12 @@ $("panelBody").addEventListener("click",e=>{if(e.target&&(e.target.id==="fbGuide
 function applySite(){
   const hide=id=>{const e=$(id);if(e)e.hidden=true};
   if(!feat("report"))hide("btnReport");
+  if(!feat("palletLog")){
+    // Only the Manifest check is left: no log to compare with here, so it starts open, with a file, photo or typed log.
+    ["delCard","entryCard","logCard","unexp","toLatest","cmpUseLog","cmpHist","cmpLiveNote"].forEach(hide);
+    if(feat("manifestCheck")){$("cmpBody").hidden=false;$("cmpToggle").setAttribute("aria-expanded","true")}
+    else{const p=document.createElement("p");p.className="card note";p.id="nothingOn";p.textContent="The pallet log and the Manifest check are both switched off in this copy of the app.";document.querySelector("main").prepend(p)}
+  }
   if(!feat("manifestCheck"))hide("cmpCard");
   if(!feat("manifestPhotos")){
     const g=$("cmpPhotoBtn").closest(".grow"),l=g&&g.querySelector("label");if(l)l.textContent="2. Manifest PDFs";
@@ -851,6 +864,7 @@ function applySite(){
   if(!feat("liveScan")&&!feat("scanByPhoto")&&!feat("photoUpload")&&!feat("noLpn")){hide("scanBtn");hide("btnrow")}
   testNote("report",$("fbBox").querySelector("p"),"afterend");
   testNote("manifestCheck",$("cmpBody"),"afterbegin");
+  testNote("palletLog",$("logCard"),"afterbegin");
   testNote("manifestPhotos",$("cmpPhotoBtn").closest(".grow"),"beforeend");
   // Live scan, Scan by photo and Upload photo notes sit in the camera box, shown by scan.js for the one in use.
   [testNote("liveScan",$("scanbox"),"afterbegin"),testNote("scanByPhoto",$("scanbox"),"afterbegin"),testNote("photoUpload",$("scanbox"),"afterbegin")].forEach(n=>{if(n)n.hidden=true});

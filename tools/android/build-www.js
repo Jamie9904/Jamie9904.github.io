@@ -21,10 +21,11 @@ if (!fs.existsSync(path.join(LIB, "tess.json"))) fail("run fetch-libs.js first")
 
 fs.rmSync(WWW, { recursive: true, force: true });
 fs.mkdirSync(WWW, { recursive: true });
-const FILES = ["index.html", "config.js", "core.js", "qr.js", "scan.js", "export.js", "compare.js", "panels.js", "styles.css", "manifest.webmanifest", "presets.json", "logo.png", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
+const FILES = ["index.html", "config.js", "core.js", "qr.js", "scan.js", "export.js", "compare.js", "panels.js", "styles.css", "manifest.webmanifest", "presets.json", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 for (const f of FILES) fs.copyFileSync(path.join(ROOT, f), path.join(WWW, f));
 for (const d of ["fonts", "media"]) fs.cpSync(path.join(ROOT, d), path.join(WWW, d), { recursive: true });
 fs.rmSync(path.join(WWW, "media", "share-qr.svg"), { force: true }); // the QR code to the website (Share this app is off)
+// No logo.png: the Android app has no default logo. People add their own in Settings (Add logo), as on the website.
 fs.cpSync(LIB, path.join(WWW, "lib"), { recursive: true, filter: s => !s.endsWith("tess.json") });
 
 const edit = (f, from, to, n = 1) => {
