@@ -178,13 +178,13 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     openHelp("guide", "How to use this app"); N.listeners.volumeDown(); await wait(300); const inPanel = scanning; closeHelp(); if (scanning) stopScan(); return { started, stopped, inPanel }; });
   check("volume-down starts Live scan and stops it again, but does nothing while a panel is open", s.started && s.stopped && !s.inPanel, s);
   // Exported files.
-  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); N.calls = []; window.__share = [];
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); if (scanning) stopScan(); N.calls = []; window.__share = [];
     window.__dir = [{ name: "LPN-log-2026-11-18.xlsx", type: "file", size: 9000, mtime: 1763460000000, uri: "file:///docs/a.xlsx" }, { name: "LPN-log-2026-11-19.pdf", type: "file", size: 52000, mtime: 1763550000000, uri: "file:///docs/b.pdf" }, { name: "sub", type: "directory" }];
     document.getElementById("apkFilesBtn").click(); await wait(200);
     const items = [...document.querySelectorAll(".apkfiles li")].map(li => ({ name: li.querySelector(".apkfname").textContent, btns: [...li.querySelectorAll("button")].map(b => b.textContent).join() }));
     const first = document.querySelectorAll(".apkfiles li")[0], btn = t => [...first.querySelectorAll("button")].find(b => b.textContent === t);
     btn("Print").click(); await wait(100); btn("Share").click(); await wait(100); btn("Open").click(); await wait(100);
-    const out = { title: document.getElementById("panelTitle").textContent, items, calls: N.calls, share: window.__share.map(x => x.files) };
+    const out = { title: document.getElementById("panelTitle").textContent, items, calls: N.calls.filter(c => c[0] !== "decode"), share: window.__share.map(x => x.files) };
     window.__dir = []; closeHelp(); return out; });
   check("Exported files lists the saved files newest first, to open, share or print (PDFs) again", s.title === "Exported files" && s.items.length === 2 && s.items[0].name === "LPN-log-2026-11-19.pdf" && s.items[0].btns === "Open,Share,Print" && s.items[1].btns === "Open,Share"
     && JSON.stringify(s.calls) === '[["print","LPN-log-2026-11-19","JVBER"],["open","LPN-log-2026-11-19.pdf"]]' && JSON.stringify(s.share) === '[["file:///docs/b.pdf"]]', s);
