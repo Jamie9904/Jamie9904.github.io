@@ -1,28 +1,6 @@
 {
   "_about": "Shown once on each phone after it installs a new Android update (not on a first install). Replace the list with what this update changes, in plain words, each time an Android update is approved and built.",
   "items": [
-    "Live scan uses the phone's own camera scanner: it locks on faster, you can tap the picture to focus, and it zooms in by itself on small or distant barcodes. A pallet that needs a check takes you back to the app to answer it. (You can switch back to the old scanner in Settings.)",
-    "Say the count out loud after each pallet, such as “14 of 20”, and “already logged” for a repeat. Turn it on in Settings › Android app.",
-    "At 15% battery with pallets not yet exported, the app offers to export or back up before the phone runs out.",
-    "Use the phone's colours: on Android 12 and later, the app can take its colours from your wallpaper (Settings › Android app).",
-    "When a Bluetooth or USB scanner connects or drops off, the app says so.",
-    "Your log now has room to grow: the app keeps its data in its own storage instead of the browser's (which was capped at about 10 MB). Settings shows how much it's using.",
-    "Save to…: put a copy of an exported file in any folder or in Drive, from the Saved bar or Exported files.",
-    "Back follows your swipe on Android 13 and later: an open panel eases back as you swipe, and leaving the app shows Android's own animation.",
-    "Settings switches look and work like Android's, and buttons ripple when pressed.",
-    "Long-press the app icon for Continue, with how many pallets the delivery in progress has.",
-    "Smoother scrolling on long logs.",
-    "Exported files: a list of the Excel and PDF files the app has saved, to open, share or print again (under Saved deliveries, and in Settings).",
-    "After Download (Excel) or saving a PDF, a bar at the bottom has Open and Share, so you needn't go looking for the file.",
-    "On a label with several barcodes, the LPN is the one used.",
-    "Share text with LPNs in it (for example manifest numbers in an email) to LPN Pallet Log, and choose whether they're manifest numbers or pallets for the log.",
-    "The app's text size follows your phone's: Large or Extra large when the phone's text is big. You can still change it in Settings.",
-    "Volume-down starts and stops Live scan. Turn it off in Settings if you'd rather use it for the volume.",
-    "The screen stays upright on phones while you move about.",
-    "Before Android first asks about the camera, the app says what it's for.",
-    "Your log stays on this phone only: it's no longer copied into Google's phone backups. Use Download backup in Settings to keep a copy.",
-    "No install instructions or install pop-up, since the app is already installed.",
-    "The Manifest check's date starts as today's date each time the app opens.",
-    "This note after each Android update, so you can see what changed."
+    "Scan by photo opens the camera again, to take a photo of the label. Upload photo still lets you choose photos you've already taken."
   ]
 }

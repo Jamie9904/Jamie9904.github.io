@@ -25,6 +25,12 @@ edit(man, /(<manifest[^>]*>)/, `$1
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />`);
+// Scan by photo opens the camera app (the page's capture="environment" input). Since Android 11 an app has to say it
+// will look for a camera app, or Android finds none and the photo picker opens instead (the same as Upload photo).
+edit(man, /(<application)/, `<queries>
+        <intent><action android:name="android.media.action.IMAGE_CAPTURE" /></intent>
+    </queries>
+    $1`);
 // The app's data stays on the phone: no copies in Google's backups (the owner keeps backups with Download backup).
 edit(man, /android:allowBackup="true"/, 'android:allowBackup="false"');
 // Android 13+ predictive back: the app's own Back (android.js) gets the swipe's progress, and leaving shows the system animation.
