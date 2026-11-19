@@ -177,6 +177,13 @@
     window.LPN_APK_MLKIT = true;
   }
 
+  // Buzzes: Android's own vibrator at full strength (the browser's is faint or missing on many phones). Added is one
+  // short buzz, a warning a double one (core.js sfx), and copying an LPN a tick.
+  if (N()) {
+    const vib = p => { const a = (Array.isArray(p) ? p : [p]).map(Number).filter(n => n >= 0); if (a.length && a.some(n => n > 0)) N().vibrate({ pattern: a }).catch(() => {}); return true; };
+    try { Object.defineProperty(navigator, "vibrate", { value: vib, configurable: true }); } catch (e) {}
+  }
+
   // Keep the screen on: the page asks for a "wake lock"; the app holds the screen on itself.
   if (N()) {
     let held = null;

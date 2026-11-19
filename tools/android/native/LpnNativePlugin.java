@@ -14,6 +14,9 @@ import android.os.Environment;
 import android.content.IntentFilter;
 import android.hardware.input.InputManager;
 import android.os.BatteryManager;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
+import android.os.VibratorManager;
 import android.speech.tts.TextToSpeech;
 import android.view.InputDevice;
 import java.util.HashMap;
@@ -78,7 +81,8 @@ import java.io.OutputStream;
    - speak: says the count after each pallet (Android's own voice, offline);
    - battery: the battery level, for the low-battery reminder;
    - phoneColours: the colours Android 12+ takes from the wallpaper;
-   - "scanner": a Bluetooth or USB scanner (or keyboard) connecting or disconnecting. */
+   - "scanner": a Bluetooth or USB scanner (or keyboard) connecting or disconnecting;
+   - vibrate: the page's buzzes (one short for added, a double for a warning) at full strength. */
 @CapacitorPlugin(name = "LpnNative")
 public class LpnNativePlugin extends Plugin {
     private static final long MAX_FILE = 40L * 1024 * 1024;
@@ -166,6 +170,26 @@ public class LpnNativePlugin extends Plugin {
             } else if (ttsReady) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "lpn");
             call.resolve();
         });
+    }
+
+    @PluginMethod
+    public void vibrate(PluginCall call) {
+        JSArray p = call.getArray("pattern");
+        try {
+            int n = p == null ? 0 : p.length();
+            if (n == 0) { call.resolve(); return; }
+            long[] t = new long[n + 1];
+            int[] amp = new int[n + 1];
+            t[0] = 0; amp[0] = 0;
+            for (int i = 0; i < n; i++) { t[i + 1] = Math.max(0, Math.min(1000, p.getLong(i))); amp[i + 1] = i % 2 == 0 ? 255 : 0; }
+            Vibrator v = android.os.Build.VERSION.SDK_INT >= 31
+                ? ((VibratorManager) getContext().getSystemService(Context.VIBRATOR_MANAGER_SERVICE)).getDefaultVibrator()
+                : (Vibrator) getContext().getSystemService(Context.VIBRATOR_SERVICE);
+            if (v == null || !v.hasVibrator()) { call.resolve(); return; }
+            if (android.os.Build.VERSION.SDK_INT >= 26) v.vibrate(v.hasAmplitudeControl() ? VibrationEffect.createWaveform(t, amp, -1) : VibrationEffect.createWaveform(t, -1));
+            else v.vibrate(t, -1);
+            call.resolve();
+        } catch (Exception e) { call.resolve(); }
     }
 
     @PluginMethod

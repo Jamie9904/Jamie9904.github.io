@@ -56,6 +56,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
         battery: async () => window.__batt || { level: 80, charging: false },
         phoneColours: async () => ({ available: true, bg: "#1a1c1e", ac: "#9ecaff" }),
         scanners: async () => ({ names: [] }),
+        vibrate: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["vib", o.pattern.join(",")]); },
         takePending: async () => { const N = window.Capacitor.Plugins.LpnNative, r = N.pending || {}; N.pending = null; return r; },
         addListener: (ev, fn) => { window.Capacitor.Plugins.LpnNative.listeners[ev] = fn; return { remove() {} }; } },
       App: { exited: 0, back: null, addListener: (ev, fn) => { if (ev === "backButton") window.Capacitor.Plugins.App.back = fn; return { remove() {} }; },
@@ -143,6 +144,10 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     cfg.size = "1.12"; saveCfg(); await LPN_APK_FONT(); out.kept = cfg.size;
     N.fontScale = async () => ({ scale: 1 }); await LPN_APK_FONT(); out.back = cfg.size; return out; });
   check("text size follows the phone's when that changes, and a choice made in Settings stays until it changes again", s.normal === "1" && s.big === "1.25" && s.css === "1.25" && s.kept === "1.12" && s.back === "1", s);
+  // Buzzes through Android's own vibrator: one short for added, a double for a warning.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); cfg.vibrate = true; rows = []; save(); render(); N.calls = [];
+    addValue("VLT004040431"); await wait(50); lastAdded = null; document.getElementById("lpn").value = "VLT004040431"; add(); await wait(100); const v = N.calls.filter(c => c[0] === "vib").map(c => c[1]); hideCheck(); return v; });
+  check("buzzes go to Android's own vibrator: one short when a pallet is added, a double for a warning", s.length === 2 && s[0] === "70" && s[1] === "140,80,140", s);
   // Keep the screen on, natively.
   s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative; await keepAwake(false); N.calls = []; await keepAwake(true); await keepAwake(false); return N.calls; });
   check("keeping the screen on uses the app's own switch (on, then off)", JSON.stringify(s) === '[["awake",true],["awake",false]]', s);
