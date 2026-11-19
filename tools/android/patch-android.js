@@ -36,7 +36,7 @@ edit(path.join(AND, "build.gradle"), /versionName "[^"]*"/, 'versionName "' + na
 const JAVA = path.join(AND, "src", "main", "java", "io", "github", "jamie9904", "lpnlog");
 if (!fs.existsSync(path.join(JAVA, "MainActivity.java"))) fail("Capacitor's MainActivity.java isn't where it was expected (" + JAVA + ")");
 for (const f of fs.readdirSync(path.join(__dirname, "native"))) fs.copyFileSync(path.join(__dirname, "native", f), path.join(JAVA, f));
-edit(path.join(AND, "build.gradle"), /dependencies \{/, "dependencies {\n    implementation 'com.google.mlkit:barcode-scanning:17.3.0' // ML Kit, model inside the app (no internet)");
+edit(path.join(AND, "build.gradle"), /dependencies \{/, "dependencies {\n    implementation 'com.google.mlkit:barcode-scanning:17.3.0' // ML Kit, model inside the app (no internet)\n    implementation 'androidx.camera:camera-camera2:1.3.4' // the phone's own camera scanner (ScanActivity)\n    implementation 'androidx.camera:camera-lifecycle:1.3.4'\n    implementation 'androidx.camera:camera-view:1.3.4'");
 // Files people open or share into the app, and the home-screen shortcuts.
 const MIMES = ["application/pdf", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-excel", "text/csv", "text/comma-separated-values", "application/json", "image/*"];
 const dataLines = MIMES.map(m => `                <data android:mimeType="${m}" />`).join("\n");
@@ -54,6 +54,9 @@ ${dataLines}
                 <data android:mimeType="text/plain" />
             </intent-filter>
             <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />$2`);
+// The phone's own camera scanner (Live scan).
+edit(man, /(<\/application>)/, `    <activity android:name=".ScanActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/AppTheme.NoActionBar" />
+    $1`);
 fs.mkdirSync(path.join(RES, "xml"), { recursive: true });
 const sc = (id, label, action) => `    <shortcut android:shortcutId="${id}" android:enabled="true" android:icon="@mipmap/ic_launcher" android:shortcutShortLabel="@string/sc_${id}" android:shortcutLongLabel="@string/sc_${id}">
         <intent android:action="io.github.jamie9904.lpnlog.${action}" android:targetPackage="io.github.jamie9904.lpnlog" android:targetClass="io.github.jamie9904.lpnlog.MainActivity" />

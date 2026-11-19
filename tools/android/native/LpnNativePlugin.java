@@ -11,6 +11,14 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.content.IntentFilter;
+import android.hardware.input.InputManager;
+import android.os.BatteryManager;
+import android.speech.tts.TextToSpeech;
+import android.view.InputDevice;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
 import android.os.Handler;
 import android.os.Looper;
 import android.webkit.WebView;
@@ -65,7 +73,12 @@ import java.io.OutputStream;
    - saveAs: Android's own "save to" screen, to put a file in any folder or Drive;
    - Back with Android's predictive back gesture ("back", "backProgress", "backCancelled"; allowExit lets the next Back
      close the app with the system animation);
-   - setDelivery: a "Continue" shortcut for the delivery in progress. */
+   - setDelivery: a "Continue" shortcut for the delivery in progress;
+   - startScanner / "nativeScan" / scanStatus / "nativeScanClosed": Live scan with the phone's own camera (ScanActivity);
+   - speak: says the count after each pallet (Android's own voice, offline);
+   - battery: the battery level, for the low-battery reminder;
+   - phoneColours: the colours Android 12+ takes from the wallpaper;
+   - "scanner": a Bluetooth or USB scanner (or keyboard) connecting or disconnecting. */
 @CapacitorPlugin(name = "LpnNative")
 public class LpnNativePlugin extends Plugin {
     private static final long MAX_FILE = 40L * 1024 * 1024;
@@ -75,6 +88,10 @@ public class LpnNativePlugin extends Plugin {
     private BarcodeScanner scanner = null;
 
     private OnBackPressedCallback backCb = null;
+    private TextToSpeech tts = null;
+    private boolean ttsReady = false;
+    private String ttsPending = null;
+    private final HashMap<Integer, String> keyboards = new HashMap<>();
     private final Handler main = new Handler(Looper.getMainLooper());
 
     @Override
@@ -94,6 +111,86 @@ public class LpnNativePlugin extends Plugin {
             @Override public void handleOnBackPressed() { notifyListeners("back", new JSObject()); }
         };
         getActivity().getOnBackPressedDispatcher().addCallback(getActivity(), backCb);
+        // Scanners that type like a keyboard (Bluetooth or USB): say when one connects or drops off.
+        InputManager im = (InputManager) getContext().getSystemService(Context.INPUT_SERVICE);
+        for (int id : im.getInputDeviceIds()) { InputDevice d = InputDevice.getDevice(id); if (externalKeys(d)) keyboards.put(id, d.getName()); }
+        im.registerInputDeviceListener(new InputManager.InputDeviceListener() {
+            @Override public void onInputDeviceAdded(int id) { InputDevice d = InputDevice.getDevice(id); if (externalKeys(d)) { keyboards.put(id, d.getName()); notifyListeners("scanner", new JSObject().put("connected", true).put("name", d.getName())); } }
+            @Override public void onInputDeviceRemoved(int id) { String n = keyboards.remove(id); if (n != null) notifyListeners("scanner", new JSObject().put("connected", false).put("name", n)); }
+            @Override public void onInputDeviceChanged(int id) {}
+        }, main);
+    }
+
+    private static boolean externalKeys(InputDevice d) {
+        if (d == null || d.isVirtual() || android.os.Build.VERSION.SDK_INT < 29 || !d.isExternal()) return false;
+        return (d.getSources() & InputDevice.SOURCE_KEYBOARD) == InputDevice.SOURCE_KEYBOARD;
+    }
+
+    @PluginMethod
+    public void scanners(PluginCall call) {
+        call.resolve(new JSObject().put("names", new JSArray(keyboards.values())));
+    }
+
+    @PluginMethod
+    public void startScanner(PluginCall call) {
+        getActivity().startActivity(new Intent(getActivity(), ScanActivity.class));
+        call.resolve();
+    }
+
+    static void scanned(List<String> values) {
+        if (current != null) current.notifyListeners("nativeScan", new JSObject().put("values", new JSArray(values)));
+    }
+
+    static void scanClosed(String reason) {
+        if (current != null) current.notifyListeners("nativeScanClosed", new JSObject().put("reason", reason));
+    }
+
+    @PluginMethod
+    public void scanStatus(PluginCall call) {
+        ScanActivity.show(call.getString("text"), Boolean.TRUE.equals(call.getBoolean("close", false)));
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void speak(PluginCall call) {
+        String text = call.getString("text");
+        if (text == null || text.isEmpty()) { call.resolve(); return; }
+        main.post(() -> {
+            if (tts == null) {
+                ttsPending = text;
+                tts = new TextToSpeech(getContext(), st -> {
+                    ttsReady = st == TextToSpeech.SUCCESS;
+                    if (ttsReady) { tts.setLanguage(Locale.UK); if (ttsPending != null) tts.speak(ttsPending, TextToSpeech.QUEUE_FLUSH, null, "lpn"); }
+                    ttsPending = null;
+                });
+            } else if (ttsReady) tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "lpn");
+            call.resolve();
+        });
+    }
+
+    @PluginMethod
+    public void battery(PluginCall call) {
+        Intent b = getContext().registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+        if (b == null) { call.reject("no battery"); return; }
+        int level = b.getIntExtra(BatteryManager.EXTRA_LEVEL, -1), scale = b.getIntExtra(BatteryManager.EXTRA_SCALE, 100);
+        int st = b.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
+        boolean charging = st == BatteryManager.BATTERY_STATUS_CHARGING || st == BatteryManager.BATTERY_STATUS_FULL || b.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) > 0;
+        call.resolve(new JSObject().put("level", scale > 0 ? Math.round(level * 100f / scale) : level).put("charging", charging));
+    }
+
+    @PluginMethod
+    public void phoneColours(PluginCall call) {
+        if (android.os.Build.VERSION.SDK_INT < 31) { call.resolve(new JSObject().put("available", false)); return; }
+        Context c = getContext();
+        String bg = String.format("#%06x", c.getColor(android.R.color.system_neutral1_900) & 0xffffff);
+        String ac = String.format("#%06x", c.getColor(android.R.color.system_accent1_300) & 0xffffff);
+        call.resolve(new JSObject().put("available", true).put("bg", bg).put("ac", ac));
+    }
+
+    @Override
+    protected void handleOnDestroy() {
+        if (tts != null) tts.shutdown();
+        super.handleOnDestroy();
     }
 
     /* The next Back within ms closes the app, with Android's own animation. */

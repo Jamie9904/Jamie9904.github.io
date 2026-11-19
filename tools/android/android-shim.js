@@ -152,6 +152,8 @@
   }
   window.LPN_APK_TOAST = toast;
 
+  // Which of several barcodes on one label to use: a Share log code, then an LPN, then anything LPN-shaped.
+  const rankCode = v => /^LPNM\d+ /.test(v) ? 0 : typeof lpnDigitsOk === "function" && lpnDigitsOk(tidyLpn(v)) ? 1 : /^[A-Z]{1,3}\d+$/i.test(String(v).replace(/[\s-]+/g, "")) ? 2 : 3;
   // Barcodes: ML Kit, given a still of the camera picture or the photo.
   function still(src) {
     const w = src.videoWidth || src.naturalWidth || src.width, h = src.videoHeight || src.naturalHeight || src.height;
@@ -169,8 +171,7 @@
         const c = still(src); if (!c) return [];
         const r = await N().decodeBarcodes({ data: c.toDataURL("image/jpeg", 0.85).split(",")[1] });
         // A label can have several barcodes (an LPN and a shipping code): the LPN comes first, so it's the one used.
-        const rank = v => /^LPNM\d+ /.test(v) ? 0 : typeof lpnDigitsOk === "function" && lpnDigitsOk(tidyLpn(v)) ? 1 : /^[A-Z]{1,3}\d+$/i.test(String(v).replace(/[\s-]+/g, "")) ? 2 : 3;
-        return ((r && r.barcodes) || []).map((b, i) => ({ rawValue: b.rawValue, format: String(b.format), i })).sort((a, b) => rank(a.rawValue) - rank(b.rawValue) || a.i - b.i).map(({ rawValue, format }) => ({ rawValue, format }));
+        return ((r && r.barcodes) || []).map((b, i) => ({ rawValue: b.rawValue, format: String(b.format), i })).sort((a, b) => rankCode(a.rawValue) - rankCode(b.rawValue) || a.i - b.i).map(({ rawValue, format }) => ({ rawValue, format }));
       }
     };
     window.LPN_APK_MLKIT = true;
@@ -331,12 +332,19 @@
       if (!$("panelTitle") || $("panelTitle").textContent !== "Settings" || $("apkSet")) return;
       const box = document.createElement("div"); box.id = "apkSet";
       box.innerHTML = '<h3>Android app</h3><p class="note" id="apkVer"></p>'
-        + (has("liveScan") ? '<label class="chk"><input type="checkbox" id="apkVol"><span>Volume-down button starts and stops Live scan (volume-up still changes the volume)</span></label>' : "")
+        + (has("liveScan") ? '<label class="chk"><input type="checkbox" id="apkVol"><span>Volume-down button starts and stops Live scan (volume-up still changes the volume)</span></label>'
+          + '<label class="chk"><input type="checkbox" id="apkCam"><span>Live scan with the phone’s own camera scanner (faster, with tap-to-focus and automatic zoom). Untick to use the one inside the app.</span></label>' : "")
+        + (has("palletLog") ? '<label class="chk"><input type="checkbox" id="apkSpeak"><span>Say the count out loud after each pallet (and “already logged” or “check” for a warning)</span></label>' : "")
+        + '<div class="row"><button type="button" id="apkColours" hidden>Use the phone’s colours</button></div>' 
         + '<div class="row"><button type="button" id="apkFilesSet">Exported files</button></div>';
       $("panelBody").prepend(box);
       $("apkVer").textContent = (window.LPN_APK_VER || "Android app") + (window.LPN_APK_STORE ? " · Data on this phone: " + mb(S.size()) : "");
       if ($("apkVol")) { $("apkVol").checked = volOn(); $("apkVol").onchange = () => { try { localStorage.setItem("lpnapkvol", $("apkVol").checked ? "on" : "off"); } catch (e) {} syncVol(); }; }
       $("apkFilesSet").onclick = () => showFiles();
+      const sw = (id, key, def) => { const c = $(id); if (!c) return; c.checked = pref(key, def); c.onchange = () => { try { localStorage.setItem(key, c.checked ? "on" : "off"); } catch (e) {} }; };
+      sw("apkCam", "lpnapkcamscan", true); sw("apkSpeak", "lpnapkspeak", false);
+      if (N()) N().phoneColours().then(c => { const b = $("apkColours"); if (!b || !c || !c.available) return; b.hidden = false;
+        b.onclick = () => { theme = { bg: c.bg, ac: c.ac }; applyTheme(); saveTheme(); closeHelp(); openHelp("settings", "Settings"); toast("Using your phone’s colours. Reset to default colours (in Settings) goes back."); }; }).catch(() => {});
     };
     if ($("panelBody")) new MutationObserver(add).observe($("panelBody"), { childList: true });
   }
@@ -357,6 +365,65 @@
     const main = document.querySelector("main"); if (main) main.prepend(c);
   }
   window.LPN_APK_WHATSNEW = whatsNew;
+  const pref = (key, def) => { try { const v = localStorage.getItem(key); return v === null ? def : v === "on"; } catch (e) { return def; } };
+
+  /* Live scan with the phone's own camera scanner (native/ScanActivity.java). What it reads comes here and goes through
+     the page's own scan handling (onCode: same checks, beeps and Share log codes); the scanner shows the result. A
+     warning closes the scanner, so the check can be answered in the app. */
+  window.LPN_APK_NATIVESCAN = false;
+  const countText = () => { const n = rows.length, ex = parseInt(($("expect") || {}).value, 10); return ex > 0 ? n + " of " + ex : n + (n === 1 ? " pallet" : " pallets"); };
+  if (N()) {
+    document.addEventListener("click", e => {
+      const b = e.target && e.target.closest && e.target.closest("#scan");
+      if (!b || !pref("lpnapkcamscan", true)) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      cameraOk().then(() => N().startScanner()).then(() => { window.LPN_APK_NATIVESCAN = true; }).catch(() => { if (typeof startScan === "function") { $("video").hidden = false; startScan(); } });
+    }, true);
+    try {
+      N().addListener("nativeScan", e => {
+        const vals = ((e && e.values) || []).slice().sort((a, b) => rankCode(a) - rankCode(b)); const v = vals[0]; if (!v) return;
+        if (pendingAdd) { N().scanStatus({ text: "Answer the check in the app first.", close: true }); return; }
+        onCode(v);
+        const said = ($("smsg") || {}).textContent || "";
+        if (pendingAdd) N().scanStatus({ text: (($("chkTxt") || {}).textContent || said) + " Answer it in the app.", close: true });
+        else N().scanStatus({ text: /^LPNM/.test(v) ? said : said + " · " + countText() });
+      });
+      N().addListener("nativeScanClosed", e => {
+        window.LPN_APK_NATIVESCAN = false;
+        if (e && e.reason === "denied") { $("scanbox").hidden = false; $("smsg").textContent = "Camera access was blocked. Allow the camera for LPN Pallet Log in your phone’s Settings › Apps."; }
+        else if (e && e.reason === "check") { const c = $("chkBar"); if (c) c.scrollIntoView({ block: "center" }); }
+      });
+    } catch (e) {}
+  }
+
+  /* The count out loud after each pallet, and a word for a warning (Settings › Android app). */
+  function sayIt(t) { if (N() && pref("lpnapkspeak", false)) N().speak({ text: t }).catch(() => {}); }
+  if (N()) window.addEventListener("load", () => {
+    if (typeof window.addValue === "function") { const orig = window.addValue; window.addValue = function () { const r = orig.apply(this, arguments); const n = rows.length, ex = parseInt(($("expect") || {}).value, 10); sayIt(ex > 0 ? n + " of " + ex : String(n)); return r; }; }
+    const bar = $("chkBar");
+    if (bar) new MutationObserver(() => { if (!bar.hidden) { const t = ($("chkTxt") || {}).textContent || ""; sayIt(/already logged/.test(t) ? "Already logged" : /Check /.test(t) ? "Check" : "Add it?"); } }).observe(bar, { attributes: true, attributeFilter: ["hidden"] });
+  });
+
+  /* Low battery: at 15% or less, not charging, with pallets not yet exported, offer to export or back up (once per drop). */
+  let battWarned = false;
+  async function checkBattery() {
+    if (!N() || document.visibilityState !== "visible") return;
+    let b; try { b = await N().battery(); } catch (e) { return; }
+    if (b.charging || b.level > 20) { battWarned = false; return; }
+    if (b.level > 15 || battWarned || !has("palletLog") || !rows.length || (exported && exported.sig === logSig())) return;
+    battWarned = true;
+    ask("Battery at " + b.level + "%. Export or back up the log now, so nothing is lost if the phone runs out.",
+      [["Download (Excel)", () => $("dl").click()], ["Back up", () => { if (typeof closeHelp === "function") closeHelp(); openHelp("settings", "Settings"); $("bkDl").click(); }]]);
+  }
+  window.LPN_APK_BATTERY = checkBattery;
+  if (N()) { window.addEventListener("load", () => setTimeout(checkBattery, 3000)); setInterval(checkBattery, 120000); document.addEventListener("visibilitychange", checkBattery); }
+
+  /* A scanner that types into the app (Bluetooth or USB) connecting or dropping off. */
+  if (N()) try { N().addListener("scanner", e => {
+    if (!has("palletLog")) return;
+    toast(e.connected ? "Scanner connected: " + e.name + "." : "Scanner disconnected: " + e.name + ". Scans won’t reach the app until it reconnects.");
+    if (!e.connected) sayIt("Scanner disconnected");
+  }); } catch (e) {}
   const mb = n => n >= 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB";
 
   /* The "Continue" shortcut (long-press the app icon) follows the delivery in progress: "Continue: 14 pallets". */

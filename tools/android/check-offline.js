@@ -50,6 +50,12 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
         allowExit: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["exit", o.ms]); },
         saveAs: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["saveAs", o.name, o.mime, o.data.slice(0, 5)]); return { saved: true }; },
         setDelivery: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["delivery", o.label]); },
+        startScanner: async () => { window.Capacitor.Plugins.LpnNative.calls.push(["scanner"]); },
+        scanStatus: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["status", o.text, !!o.close]); },
+        speak: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["speak", o.text]); },
+        battery: async () => window.__batt || { level: 80, charging: false },
+        phoneColours: async () => ({ available: true, bg: "#1a1c1e", ac: "#9ecaff" }),
+        scanners: async () => ({ names: [] }),
         takePending: async () => { const N = window.Capacitor.Plugins.LpnNative, r = N.pending || {}; N.pending = null; return r; },
         addListener: (ev, fn) => { window.Capacitor.Plugins.LpnNative.listeners[ev] = fn; return { remove() {} }; } },
       App: { exited: 0, back: null, addListener: (ev, fn) => { if (ev === "backButton") window.Capacitor.Plugins.App.back = fn; return { remove() {} }; },
@@ -183,9 +189,10 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   await open({ action: "manifest" });
   s = await page.evaluate(() => !document.getElementById("cmpBody").hidden);
   check("the Manifest check shortcut opens the Manifest check", s === true, s);
+  await page.evaluate(() => { window.Capacitor.Plugins.LpnNative.calls = []; });
   await open({ action: "scan" });
-  s = await page.evaluate(async () => { await new Promise(r => setTimeout(r, 500)); const out = !document.getElementById("scanbox").hidden; stopScan(); return out; });
-  check("the Scan shortcut starts Live scan", s === true, s);
+  s = await page.evaluate(async () => { await new Promise(r => setTimeout(r, 300)); return { calls: window.Capacitor.Plugins.LpnNative.calls.filter(c => c[0] === "scanner").length, web: scanning }; });
+  check("the Scan shortcut starts Live scan (the phone's own camera scanner)", s.calls === 1 && !s.web, s);
   // Back, with the predictive back gesture.
   s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); N.calls = [];
     const bar = document.getElementById("apkSaved"); if (bar) bar.remove(); // a Saved bar left by an earlier check (Back closes it first)
@@ -213,11 +220,44 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     return { first: first && first.id, head: first && first.querySelector("h3").textContent, on, off, back, files: !!document.getElementById("apkFilesBtn") }; });
   check("Settings starts with an Android app section, where the volume button can be switched off and on", s.first === "apkSet" && s.head === "Android app" && s.on === true && s.off.stored === "off" && JSON.stringify(s.off.calls) === '[["vol",false]]' && s.back === "on", s);
   // Volume-down starts and stops Live scan; not while a panel is open.
-  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); localStorage.setItem("lpnapkcam", "1");
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); localStorage.setItem("lpnapkcam", "1"); localStorage.setItem("lpnapkcamscan", "off"); // the scanner inside the app
     N.listeners.volumeDown(); for (let i = 0; i < 30 && !scanning; i++) await wait(100); const started = scanning && !document.getElementById("scanbox").hidden;
     N.listeners.volumeDown(); await wait(200); const stopped = !scanning && document.getElementById("scanbox").hidden;
-    openHelp("guide", "How to use this app"); N.listeners.volumeDown(); await wait(300); const inPanel = scanning; closeHelp(); if (scanning) stopScan(); return { started, stopped, inPanel }; });
+    openHelp("guide", "How to use this app"); N.listeners.volumeDown(); await wait(300); const inPanel = scanning; closeHelp(); if (scanning) stopScan(); localStorage.removeItem("lpnapkcamscan"); return { started, stopped, inPanel }; });
   check("volume-down starts Live scan and stops it again, but does nothing while a panel is open", s.started && s.stopped && !s.inPanel, s);
+  // The phone's own camera scanner: what it reads goes through the app's checks, and it shows the result.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); if (scanning) stopScan(); rows = []; document.getElementById("expect").value = "20"; save(); render(); N.calls = [];
+    document.getElementById("scan").click(); await wait(200); const started = N.calls.filter(c => c[0] === "scanner").length, web = scanning;
+    N.listeners.nativeScan({ values: ["00350123450000000017", "VLT004040401"] }); await wait(100); const first = { rows: rows.map(r => r.lpn).join(), status: N.calls.filter(c => c[0] === "status").pop() };
+    N.calls = []; lastAt = 0; N.listeners.nativeScan({ values: ["VLT004040401"] }); await wait(100); const dup = { status: N.calls.filter(c => c[0] === "status").pop(), pending: !!pendingAdd, bar: !document.getElementById("chkBar").hidden };
+    N.listeners.nativeScanClosed({ reason: "check" }); hideCheck(); return { started, web, first, dup, flag: window.LPN_APK_NATIVESCAN }; });
+  check("Live scan opens the phone's own camera scanner, and a pallet it reads is added with the count shown in the scanner", s.started === 1 && !s.web && s.first.rows === "VLT004040401" && /^Added: VLT004040401 \(.+\) · 1 of 20$/.test(s.first.status[1]) && !s.first.status[2], s);
+  check("a pallet that needs a check closes the scanner, so it can be answered in the app", s.dup.pending && s.dup.bar && !!s.dup.status && s.dup.status[2] === true && /already logged/.test(s.dup.status[1]), s);
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative; localStorage.setItem("lpnapkcamscan", "off"); N.calls = []; document.getElementById("scan").click(); await new Promise(r => setTimeout(r, 800));
+    const out = { native: N.calls.filter(c => c[0] === "scanner").length, web: scanning }; if (scanning) stopScan(); localStorage.removeItem("lpnapkcamscan"); return out; });
+  check("with the phone's scanner switched off in Settings, Live scan uses the one inside the app", s.native === 0 && s.web, s);
+  // Spoken count.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); rows = []; save(); render(); N.calls = [];
+    addValue("VLT004040411"); const off = N.calls.filter(c => c[0] === "speak").length;
+    localStorage.setItem("lpnapkspeak", "on"); addValue("VLT004040412"); document.getElementById("lpn").value = "VLT004040412"; add(); lastAdded = null; await wait(50);
+    document.getElementById("lpn").value = "VLT004040412"; add(); await wait(100); const said = N.calls.filter(c => c[0] === "speak").map(c => c[1]); hideCheck(); localStorage.removeItem("lpnapkspeak"); return { off, said }; });
+  check("with Say the count on, the count is said after each pallet and a warning is named (off by default)", s.off === 0 && s.said[0] === "2 of 20" && s.said.includes("Already logged"), s);
+  // Low battery.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)); rows = [{ lpn: "VLT004040421", type: "BB", fsdu: false }]; exported = null; save(); render();
+    window.__batt = { level: 40, charging: false }; await LPN_APK_BATTERY(); const high = !!document.querySelector(".apkask");
+    window.__batt = { level: 14, charging: true }; await LPN_APK_BATTERY(); const charging = !!document.querySelector(".apkask");
+    window.__batt = { level: 14, charging: false }; await LPN_APK_BATTERY(); const a = document.querySelector(".apkask"), low = a ? { q: a.querySelector(".apkasktitle").textContent, b: [...a.querySelectorAll("button")].map(x => x.textContent).join() } : null;
+    if (a) a.remove(); await LPN_APK_BATTERY(); const again = !!document.querySelector(".apkask"); window.__batt = null; return { high, charging, low, again }; });
+  check("at 15% battery or less (not charging) with pallets not exported, it offers to export or back up, once", !s.high && !s.charging && s.low && s.low.q === "Battery at 14%. Export or back up the log now, so nothing is lost if the phone runs out." && s.low.b === "Download (Excel),Back up,Cancel" && !s.again, s);
+  // The phone's colours.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)); openHelp("settings", "Settings"); await wait(200); const b = document.getElementById("apkColours"), shown = b && !b.hidden; b.click(); await wait(100);
+    const out = { shown, bg: getComputedStyle(document.documentElement).getPropertyValue("--bg").trim(), saved: JSON.parse(localStorage.getItem("lpntheme") || "{}") }; document.getElementById("setReset").click(); closeHelp(); return out; });
+  check("Use the phone's colours takes Android's wallpaper colours for the app (Reset goes back)", s.shown && s.bg === "#1a1c1e" && s.saved.bg === "#1a1c1e" && s.saved.ac === "#9ecaff", s);
+  // A scanner connecting or dropping off.
+  s = await page.evaluate(() => { const N = window.Capacitor.Plugins.LpnNative; N.listeners.scanner({ connected: true, name: "CS3070" }); const on = document.getElementById("apkToast").textContent;
+    N.listeners.scanner({ connected: false, name: "CS3070" }); return { on, off: document.getElementById("apkToast").textContent }; });
+  check("a Bluetooth or USB scanner connecting or dropping off is shown", s.on === "Scanner connected: CS3070." && s.off === "Scanner disconnected: CS3070. Scans won’t reach the app until it reconnects.", s);
+
   // Exported files.
   s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); if (scanning) stopScan(); N.calls = []; window.__share = [];
     window.__dir = [{ name: "LPN-log-2026-11-18.xlsx", type: "file", size: 9000, mtime: 1763460000000, uri: "file:///docs/a.xlsx" }, { name: "LPN-log-2026-11-19.pdf", type: "file", size: 52000, mtime: 1763550000000, uri: "file:///docs/b.pdf" }, { name: "sub", type: "directory" }];

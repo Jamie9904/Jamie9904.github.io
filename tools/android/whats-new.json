@@ -1,6 +1,11 @@
 {
   "_about": "Shown once on each phone after it installs a new Android update (not on a first install). Replace the list with what this update changes, in plain words, each time an Android update is approved and built.",
   "items": [
+    "Live scan uses the phone's own camera scanner: it locks on faster, you can tap the picture to focus, and it zooms in by itself on small or distant barcodes. A pallet that needs a check takes you back to the app to answer it. (You can switch back to the old scanner in Settings.)",
+    "Say the count out loud after each pallet, such as “14 of 20”, and “already logged” for a repeat. Turn it on in Settings › Android app.",
+    "At 15% battery with pallets not yet exported, the app offers to export or back up before the phone runs out.",
+    "Use the phone's colours: on Android 12 and later, the app can take its colours from your wallpaper (Settings › Android app).",
+    "When a Bluetooth or USB scanner connects or drops off, the app says so.",
     "Your log now has room to grow: the app keeps its data in its own storage instead of the browser's (which was capped at about 10 MB). Settings shows how much it's using.",
     "Save to…: put a copy of an exported file in any folder or in Drive, from the Saved bar or Exported files.",
     "Back follows your swipe on Android 13 and later: an open panel eases back as you swipe, and leaving the app shows Android's own animation.",
