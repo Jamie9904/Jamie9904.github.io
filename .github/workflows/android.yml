@@ -82,6 +82,22 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back virtualscene
           script: sh tools/android/shots.sh
+      - name: Keep the screenshots on the draft release "Android screenshots" (replaced each run)
+        if: github.event_name == 'workflow_dispatch' && inputs.shots
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -d shots ] && [ "$(ls shots | wc -l)" -gt 0 ] || { echo "no screenshots"; exit 0; }
+          (cd shots && zip -q ../android-screenshots.zip *.png)
+          id=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate -q '.[] | select(.draft and .name == "Android screenshots") | .id' | sort -n | head -n 1)
+          if [ -z "$id" ]; then
+            gh release create android-screenshots --repo "$GITHUB_REPOSITORY" --draft --title "Android screenshots" \
+              --notes "Screenshots of the Android app on a virtual phone, from the latest Android app run started by hand. Replaced each run." android-screenshots.zip
+          else
+            for a in $(gh api "repos/$GITHUB_REPOSITORY/releases/$id/assets" -q '.[].id'); do gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$a"; done
+            gh api -X POST -H "Content-Type: application/zip" --input android-screenshots.zip "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$id/assets?name=android-screenshots.zip" -q .name
+          fi
       - uses: actions/upload-artifact@v5
         if: github.event_name == 'workflow_dispatch' && inputs.shots
         with:
