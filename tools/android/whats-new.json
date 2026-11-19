@@ -3,6 +3,7 @@
   "items": [
     "The pallet type buttons in the camera scanner use the same colours as on the main screen: BB, FMCG, FPP and Mixed each outlined in their colour, and the chosen one filled with it.",
     "The camera scanner's buttons always show their whole label (Remove last was cut off on some phones).",
-    "When you reach the expected number of pallets, the camera scanner says “all in” and Done turns green."
+    "When you reach the expected number of pallets, the camera scanner says “all in” and Done turns green.",
+    "Questions now slide up as proper bottom sheets over a dimmed page, and the camera scanner's top strip, status bar and buttons match the app's look."
   ]
 }

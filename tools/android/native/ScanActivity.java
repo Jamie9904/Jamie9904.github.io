@@ -146,6 +146,11 @@ public class ScanActivity extends AppCompatActivity {
         root.addView(frame, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         root.addView(strip, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP));
         root.addView(panel, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM));
+        strip.setPadding(pad, pad + dp(24), pad, pad); // until the real bar sizes arrive
+        panel.setPadding(pad, pad, pad, pad + dp(16));
+        getWindow().setStatusBarColor(Color.parseColor("#0c1830"));
+        getWindow().setNavigationBarColor(Color.parseColor("#0c1830"));
+        androidx.core.view.WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView()).setAppearanceLightStatusBars(false);
         ViewCompat.setOnApplyWindowInsetsListener(strip, (v, insets) -> {
             Insets b = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
             v.setPadding(pad + b.left, pad + b.top, pad + b.right, pad);
@@ -272,10 +277,17 @@ public class ScanActivity extends AppCompatActivity {
     }
 
     /* Shows the page's state: the chosen type, FSDU, the last pallets, whether there's one to remove, button size. */
-    private android.graphics.drawable.Drawable doneTint = null;
-    private ColorStateList doneText = null;
+    /* Remove last, Torch and Done: the app's dark buttons with a light outline, not Android's grey ones. */
+    private void plain(Button b) {
+        android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
+        g.setCornerRadius(dp(10)); g.setStroke(dp(2), Color.parseColor("#9db0d0")); g.setColor(Color.parseColor("#13264a"));
+        b.setBackground(new android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(Color.parseColor("#33ffffff")), g, null));
+        b.setTextColor(new ColorStateList(new int[][] { { -android.R.attr.state_enabled }, {} }, new int[] { Color.parseColor("#6b7d99"), Color.parseColor("#eaf0fa") }));
+        b.setTypeface(android.graphics.Typeface.DEFAULT);
+    }
     private void applyState() {
-        if (doneBtn != null && doneTint == null) { doneTint = doneBtn.getBackground(); doneText = doneBtn.getTextColors(); }
+        if (undoBtn != null) plain(undoBtn);
+        if (torchBtn != null) plain(torchBtn);
         applying = true;
         // Like the main screen: each type outlined in its colour, the chosen one filled with it and dark text.
         for (int i = 0; i < TYPES.length; i++) {
@@ -300,7 +312,7 @@ public class ScanActivity extends AppCompatActivity {
                 doneBtn.setBackground(new android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(Color.parseColor("#33ffffff")), g, null));
                 doneBtn.setTextColor(Color.parseColor("#111111"));
                 doneBtn.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-            } else if (doneTint != null) { doneBtn.setBackground(doneTint); doneBtn.setTextColor(doneText); doneBtn.setTypeface(android.graphics.Typeface.DEFAULT); }
+            } else plain(doneBtn);
         }
         recent.setText(sRecent == null ? "" : sRecent);
         recent.setVisibility(sRecent == null || sRecent.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
