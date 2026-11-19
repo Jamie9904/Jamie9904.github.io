@@ -203,26 +203,44 @@ End-to-end checks in headless Chromium against the real page (582 checks at the 
 
 ## Offline Android app check (`tools/android/check-offline.js`)
 
-On `updates` since 19 Nov 2026 (not on `main` yet). It is not part of `npm test`: the **Android app** workflow runs it after `fetch-libs.js` and `build-www.js` on every push to `updates` and `main` (since commit `5670eb0` on `updates`, that is all a push run does, with no APK) and in the hand-started runs that build the APK, where a failure stops the build. It serves `tools/android/www` on `127.0.0.1` in Chromium (390×844, service workers blocked), aborts and records every request to any other host, and puts stand-ins for Capacitor's Filesystem, Share and App plugins and the app's own `LpnNative` plugin on the page, which record what they are given. It prints `::notice` "Offline app checks: n passed, 0 failed" on GitHub (26 at run 9) and these checks:
+On `updates` since 19 Nov 2026 (not on `main` yet). It is not part of `npm test`: the **Android app** workflow runs it after `fetch-libs.js` and `build-www.js` on every push to `updates` and `main` (since commit `5670eb0` on `updates`, that is all a push run does, with no APK) and in the hand-started runs that build the APK, where a failure stops the build. It serves `tools/android/www` on `127.0.0.1` in Chromium (390×844, service workers blocked), aborts and records every request to any other host, and puts stand-ins for Capacitor's Filesystem, Share and App plugins, the app's own `LpnNative` plugin and its storage (`LpnStore`) on the page, which record what they are given. It prints `::notice` "Offline app checks: n passed, 0 failed" on GitHub (26 at run 9, 52 at run 26) and these checks:
 
 - the page opens as the Android copy (`LPN_APK`), with no service worker;
 - Report a problem and Share this app are off, the features match `tools/android/config.js` exactly, and neither Settings nor the Guide mentions them;
+- nothing about installing (no Install heading or wording in the Guide, no install pop-up button in Settings, the pop-up not shown), the Guide's numbered sections count 1, 2, 3… without a gap, and the Guide says the tools are inside the app;
 - there is no default logo, and Add logo then Remove logo still work;
 - ExcelJS, jsPDF, pdf-lib, pdf.js and ZXing load from `lib/`, and pdf.js reads a PDF made by jsPDF;
 - `appVersion()` gives "LPN Pallet Log v<x.y> (build <n>, Android app)";
-- Export to Excel writes an `.xlsx` (zip, over 4 KB) to `DOCUMENTS/LPN Pallet Log/` and shares it once, with "Saved … in Documents";
+- Export to Excel writes an `.xlsx` (zip, over 4 KB) to `DOCUMENTS/LPN Pallet Log/` and shows the Saved bar with Open and Share (no share menu on its own); Share on the bar shares the `.xlsx` once and Open opens `LPN-log-….xlsx`, and the bar goes;
 - `navigator.share` with a file goes to the share stand-in, and a cancelled share becomes `AbortError`;
 - a photo's barcode is decoded through the `LpnNative` stand-in (a JPEG) and the pallet is added;
+- on a label with several barcodes (a shipping code read first) the LPN is used;
+- the text size follows the phone's: normal stays Normal, a big scale gives `1.25` (also in the page's CSS), a size then chosen in Settings (`1.12`) stays while the phone's setting doesn't change, and a change back gives `1`;
 - `keepAwake(true)` then `keepAwake(false)` reach the native switch as on, then off;
 - Print sends a PDF (starting `JVBER`) named `LPN-log-…` without `.pdf` to the print stand-in, and nothing to the share menu;
 - an opened PDF asks "Open manifest.pdf in the Manifest check as:" with The manifest, The log, Cancel, and The manifest reads both LPNs into the manifest box; an opened CSV becomes the log; a backup made by the app and opened again lands in Settings with the restore question shown; an opened-file error is shown as a toast;
-- the Manifest check shortcut opens it and the Scan shortcut starts Live scan;
-- Back closes the Guide, then on the main screen shows "Press Back again to close the app." and a second Back exits;
-- Settings and the footer show "Android app: Build 66 (Android 9)" (from the stand-in `getInfo()`);
+- shared text with LPNs asks "Found 3 LPNs in the shared text. Use them as:" with Manifest numbers, Pallets in the log, Cancel; as manifest numbers they are added without repeats, as pallets they are added to the log; text with none says "No LPNs found in the shared text.";
+- the Manifest check shortcut opens it and the Scan shortcut starts the phone's own camera scanner (not the page's);
+- Back follows the swipe on an open panel, cancelling puts it back and letting go closes it; on the main screen it shows "Press Back again to close the app." and lets the next Back close the app (`allowExit`);
+- Settings and the footer show "Android app: Build 66 (Android 9)" (from the stand-in `getInfo()`), Settings with " · Data on this phone: …";
+- What's new: no card on a first install (the build is just stored in `lpnapkseen`), the card "What’s new in this Android update" with its items once after an update, and not again;
+- Settings starts with the Android app section; the volume switch is on to start, unticking stores `off` and calls `setVolumeScan(false)`, and ticking it again stores `on`;
+- volume-down starts Live scan and stops it again, and does nothing while a panel is open;
+- Live scan opens the phone's scanner; a pallet it reads is added and the scanner shows "Added: … · 1 of 20"; a repeat closes the scanner with "already logged" so it can be answered in the app; with the switch off, Live scan uses the page's scanner;
+- with Say the count on, "2 of 20" is said after a pallet and "Already logged" for a repeat; nothing is said when it is off (the default);
+- the low-battery question: not when high or charging; at 14% with an unexported log "Battery at 14%. Export or back up the log now, so nothing is lost if the phone runs out." with Download (Excel), Back up, Cancel; only once;
+- Use the phone's colours shows and saves the stand-in's wallpaper colours as the theme;
+- a scanner connecting and disconnecting shows "Scanner connected: CS3070." and "Scanner disconnected: CS3070. Scans won’t reach the app until it reconnects.";
+- Exported files lists two stand-in files newest first (a folder left out) with Open, Share, Save to… and Print for the PDF, and each button reaches the right native call;
+- the camera note shows once before the camera, with Continue only, Back doesn't close it, and the camera opens after it; a refused camera gives the Settings › Apps message;
+- storage: a value saved before is copied into `LpnStore`, read back through `localStorage`, not written to the browser's storage, and Settings shows "Data on this phone";
+- Save to… reaches `saveAs` with the right name, MIME type and data from both the Saved bar and Exported files;
+- the Continue shortcut reads "Continue: 2 pallets" and is removed when the log is cleared, and it puts the cursor in the LPN box even from the Manifest check after the entry bar had slid away;
+- Android-style switches in Settings (`appearance: none`, 44px wide, still `checkbox`) and a ripple on a pressed button (Saved deliveries), without changing its text, and a pressed `?` help button keeps its CSS `position`;
 - every LPN on the manifest photos in `tools/ocr-check` is read right with only the files inside the app, with no extra ones;
 - nothing tried to reach the internet, and there were no script errors.
 
-What it can't show (real Android file saving, share menu, ML Kit, printing, screen-on, intents, shortcuts, icons and the edge-to-edge layout) is listed in [installation](installation.md#what-can-only-be-checked-on-a-phone).
+What it can't show (real Android file saving, share menu, ML Kit, printing, screen-on, intents, shortcuts, icons and the edge-to-edge layout, and since the second update the real camera scanner, volume key, voice, battery, wallpaper colours, input devices, Android's save screen, predictive back animation and native storage) is listed in [installation](installation.md#what-can-only-be-checked-on-a-phone).
 
 ## Photo reading check (`tools/ocr-check`)
 

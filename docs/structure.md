@@ -76,13 +76,14 @@
 ├── tools/android/           the offline Android app (APK): checked on every push and built only by hand by .github/workflows/android.yml (on `updates` since 19 Nov 2026, not on `main` yet; not part of the site or the site zip)
 │   ├── config.js            the Android app's own site settings (same names as config.js; report and shareApp must stay false; every feature in FEATURES needs a line or the build stops)
 │   ├── fetch-libs.js        step 1: downloads every CDN library the app names (checked against the SRI fingerprints) and the photo reader's worker, engines and language data into lib/, with lib/tess.json
-│   ├── build-www.js         step 2: builds www/ from the site's files with checked edits (local libraries, own-files-only security policy, its own config.js, "(build n, Android app)" in exports, no service worker, Android printing first) and adds android.js
-│   ├── android-shim.js      becomes www/android.js: saving to Documents › LPN Pallet Log and the share menu, sharing, ML Kit behind BarcodeDetector, screen on, Android printing, opened files and shortcuts, Back, the build shown in Settings and the footer
-│   ├── check-offline.js     step 3: checks www/ in Chromium with the internet blocked and stand-ins for the native parts (26 checks)
-│   ├── patch-android.js     step 4: permissions, version, native code, ML Kit, file types, shortcuts, icons (themed too) and start-up screen in the Capacitor project
-│   ├── native/              MainActivity.java (edge to edge, intents) and LpnNativePlugin.java (ML Kit barcodes, printing, screen on, opened files and shortcuts)
+│   ├── build-www.js         step 2: builds www/ from the site's files with checked edits (local libraries, own-files-only security policy, its own config.js, "(build n, Android app)" in exports, no service worker, no install section, button or pop-up, the privacy line about tools inside the app, the camera-blocked message, Android printing first) and adds android.js with the What's new list
+│   ├── android-shim.js      becomes www/android.js: storage through LpnStore, saving to Documents › LPN Pallet Log with the Saved bar (Open, Share, Save to…), Exported files, sharing, ML Kit behind BarcodeDetector (LPN first), the phone's camera scanner, screen on, Android printing, opened files, shared text and shortcuts (Continue too), predictive Back, Settings › Android app, What's new, volume-down, spoken count, low battery, scanner messages, text size, camera note, Android-style switches and ripples, the build shown in Settings and the footer
+│   ├── whats-new.json       the list shown once after each Android update ("items": plain sentences; replace it before each approved build)
+│   ├── check-offline.js     step 3: checks www/ in Chromium with the internet blocked and stand-ins for the native parts (52 checks)
+│   ├── patch-android.js     step 4: permissions, no Google backup, predictive back, version, native code, ML Kit, CameraX, the scanner screen, file types and shared text, shortcuts, icons (themed too) and start-up screen in the Capacitor project
+│   ├── native/              MainActivity.java (edge to edge, portrait on phones, text zoom 100, volume-down, intents), LpnNativePlugin.java (ML Kit barcodes, printing, screen on, opened files, shared text and shortcuts, Back, Save to…, Open, voice, battery, phone's colours, scanner devices, Continue shortcut), LpnStore.java (the app's own storage) and ScanActivity.java (the phone's camera scanner)
 │   ├── sign.sh              step 5: signs the APK with the key kept as the draft release "Android signing key" (password: the ANDROID_KEY_PASSWORD secret), making it on the first run
-│   ├── capacitor.config.json  app id io.github.jamie9904.lpnlog, name, web folder www
+│   ├── capacitor.config.json  app id io.github.jamie9904.lpnlog, name, web folder www, the App plugin's Back handler off
 │   ├── package.json         Capacitor 7 packages (android, app, cli, core, filesystem, share)
 │   └── .gitignore           keeps www/, lib/, android/, node_modules/, package-lock.json, *.apk and *.p12 out of git
 ├── tools/release/
@@ -91,7 +92,7 @@
 │   └── photo-ok.sh          confirms manifest photos in tools/ocr-check/photos/ were checked for addresses, names and phone numbers, so the git guard lets them be committed (records their git hash in .git/lpn-photos-ok)
 ├── .github/workflows/
 │   ├── test.yml             runs the checks on every push and pull request (advisories and fingerprints without blocking)
-│   ├── android.yml          checks the offline Android copy on every push to updates and main (not for docs-only changes); builds and signs the APK only when run by hand (Run workflow, or gh workflow run android.yml --ref updates) after the owner approves an Android update; the APK is that run's artifact LPN-Pallet-Log-Android (on `updates`, not on `main` yet)
+│   ├── android.yml          checks the offline Android copy on every push to updates and main (not for docs-only changes); builds and signs the APK only when run by hand (Run workflow, or gh workflow run android.yml --ref updates) after the owner approves an Android update, or only checks it compiles with "Make and sign the APK" unticked (-f apk=false); the APK is that run's artifact LPN-Pallet-Log-Android (on `updates`, not on `main` yet)
 │   ├── feedback-worker.yml  deploys tools/feedback-worker to Cloudflare (by hand, or when it changes on main; skips until its secrets exist)
 │   └── health.yml           weekly health check of the live site, the live demo video, the report system, CDN libraries, advisories, fingerprints, checks and the live site's photo reading
 └── .claude/                 Claude Code automations (development only)

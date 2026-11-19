@@ -298,22 +298,25 @@ Since commit `5670eb0` on `updates` (not on `main` yet):
 
 - **Every push** to `updates` or `main` (except pushes that only change `docs/` or `README.md`) runs only steps 1 to 4 below: it builds the offline copy and checks it with the internet blocked, so a website change that breaks the Android app shows up straight away. No APK is made.
 - **The APK is built and signed only when the owner approves an Android update**, by running the workflow by hand: **Actions → Android app → Run workflow** (choose the branch, normally `updates`), or `gh workflow run android.yml --ref updates`. Steps 5 to 7 only run then (`if: github.event_name == 'workflow_dispatch'`), so several changes go into each APK and phones aren't asked to update after every push.
+- **Compile-only run.** The hand-started run has a tick box **Make and sign the APK** (input `apk`, ticked by default). Unticked (`gh workflow run android.yml --ref updates -f apk=false`) it runs steps 1 to 5 and the Gradle build of step 6, so Android code in `native/`, `patch-android.js` or the Capacitor setup is checked to compile, but it doesn't sign or upload an APK. Use it after changing those files between approved updates.
+- **Before each approved build,** replace the `items` list in `tools/android/whats-new.json` with what that update changes, in plain sentences. Phones show it once after installing the update (not on a first install). `build-www.js` stops unless `items` is a list of strings.
 
 Only one run goes at a time, so the signing key can never be made twice. A full build took about 3 to 10 minutes (45 at most). The steps:
 
 1. `npm install --ignore-scripts` and Playwright's Chromium (Node 22, Java 21).
 2. `node tools/android/fetch-libs.js` downloads every cdnjs, jsDelivr and unpkg file the app's scripts name, checks each against its fingerprint in the `SRI` map in `core.js`, and starts the real photo reader in a browser (as the site does) to catch its worker, engine (both the SIMD and the plain build) and English language data. It writes them to `tools/android/lib/` (17 files, 17.9 MB at run 9).
 3. `node tools/android/build-www.js` builds `tools/android/www/` from the site's files (see [architecture](architecture.md#android-app-toolsandroid) for each change it makes). Each edit must find exactly what it expects in the site's code; if a website change breaks one, the build stops with "The website changed: update tools/android/build-www.js." It also stops if anything still points at a CDN, or if `tools/android/config.js` has a mistake, misses a feature in `FEATURES`, names an unknown one, has a value that isn't `true`/`false`, or turns `report` or `shareApp` on.
-4. `node tools/android/check-offline.js` opens that copy in Chromium with every outside request blocked and runs 26 checks (see [testing](testing.md#offline-android-app-check-toolsandroidcheck-offlinejs)). Any failure stops the build.
-5. Capacitor 7 (`tools/android/package.json`) makes the Android project; `patch-android.js` adds the camera and vibration permissions, the version (`versionCode` = the run number, `versionName` = "Build <n> (Android <run>)", with `<n>` read from `CACHE` in `sw.js`), the Android-only code in `tools/android/native/`, ML Kit barcode scanning 17.3.0 (its model inside the app), the file types the app opens, the **Scan** and **Manifest check** shortcuts, the icon (with a themed version for Android 13+) and a navy start-up screen drawn from `icon-512.png`.
+4. `node tools/android/check-offline.js` opens that copy in Chromium with every outside request blocked and runs 52 checks (26 at run 9; see [testing](testing.md#offline-android-app-check-toolsandroidcheck-offlinejs)). Any failure stops the build.
+5. Capacitor 7 (`tools/android/package.json`) makes the Android project; `patch-android.js` adds the camera and vibration permissions, `android:allowBackup="false"` (the app's data isn't copied into Google's phone backups), `android:enableOnBackInvokedCallback="true"` (Android 13+ predictive back), the version (`versionCode` = the run number, `versionName` = "Build <n> (Android <run>)", with `<n>` read from `CACHE` in `sw.js`), the Android-only code in `tools/android/native/`, ML Kit barcode scanning 17.3.0 (its model inside the app), CameraX 1.3.4 and the phone's camera scanner screen (`ScanActivity`), the file types the app opens (and shared text), the **Scan** and **Manifest check** shortcuts, the icon (with a themed version for Android 13+) and a navy start-up screen drawn from `icon-512.png`.
 6. Gradle builds the release APK and `tools/android/sign.sh` signs it.
-7. The signed APK is uploaded as the run's artifact **LPN-Pallet-Log-Android**, kept for 90 days, named `LPN-Pallet-Log-build-<n>-android-<run>.apk` (run 9: build 66, 36 MB).
+7. The signed APK is uploaded as the run's artifact **LPN-Pallet-Log-Android**, kept for 90 days, named `LPN-Pallet-Log-build-<n>-android-<run>.apk` (run 9: build 66, 36 MB; run 26, GitHub run 44500412882, the second approved update: build 66, 37 MB, 52 offline checks passed, offline copy 23.0 MB).
 
 ### Downloading and installing it
 
 1. On GitHub open **Actions → Android app**, pick the newest run with a green tick that was started by hand ("Manually run" / `workflow_dispatch`; runs started by a push have no APK), and under **Artifacts** download **LPN-Pallet-Log-Android**. GitHub gives it as a `.zip` with the `.apk` inside (you need to be signed in to GitHub).
 2. Put the `.apk` on the phone (for example download it on the phone, or copy it over) and open it. Android asks to allow installing apps from that source (the browser or Files app) the first time: allow it, then tap **Install**. Google Play Protect may warn about an app it doesn't know; it is not from the Play Store.
-3. A newer APK installs over the old one and keeps its data, as long as both were signed with the same key.
+3. A newer APK installs over the old one and keeps its data, as long as both were signed with the same key. The first time an APK from run 26 or later opens, the data the earlier APK kept in the browser's storage is copied into the app's own storage (once).
+4. The app's data is not in Google's phone backups (`allowBackup="false"`): uninstalling the app, or moving to a new phone, starts empty. Keep a copy with **Settings → Download backup** and bring it back with **Restore backup**.
 
 The app has no update banner and no service worker: to update it, install the next APK. A change to its settings file (below) also needs a new APK, built by running the workflow by hand.
 
@@ -325,7 +328,7 @@ Android only installs an update over an app signed with the same key, so every A
 - **The key** (`lpn-android-key.p12`, RSA 4096, valid 100 years) is made by the first build that has the password (in the first APK, run 9, still from a push before `5670eb0`; from now on only hand-started runs sign) and stored as the asset of a **draft** release named "Android signing key" (tag `android-signing-key`). Drafts are only visible to people who can change the repository. Later runs download it from there. If the password doesn't open it, the run fails with "ANDROID_KEY_PASSWORD doesn't open the saved signing key. Put back the password it was made with."; if the draft has lost its file, "Put the backup copy back on it."
 - **Back it up:** download `lpn-android-key.p12` from the draft release and keep it, with the password, somewhere safe outside GitHub.
 - **Never publish or delete that draft release,** and never change the secret to a different password. With the key gone, a new one would be made, and phones would refuse to install the next APK over the old app until it is removed (which deletes its data).
-- The run's notice "APK signed" gives the APK's certificate SHA-256 (run 9: `b028a58a…091a36`), which stays the same as long as the key does.
+- The run's notice "APK signed" gives the APK's certificate SHA-256 (run 9: `b028a58a…091a36`), which stays the same as long as the key does; run 26 gave the same certificate.
 
 ### The app's settings file (`tools/android/config.js`)
 
@@ -344,8 +347,18 @@ It has the same shape and the same feature names as the website's `config.js`, b
 - opening a PDF, spreadsheet, photo and backup from Files or a mail app, and sharing one into the app;
 - the **Scan** and **Manifest check** shortcuts, the themed icon and the start-up screen;
 - the app fits between the status bar and the navigation bar, and above the keyboard;
-- Back closes panels and asks before leaving;
-- photo reading speed on the phone.
+- Back closes panels and asks before leaving; on Android 13+ the panel follows the swipe and leaving shows Android's animation;
+- photo reading speed on the phone;
+- the phone's camera scanner: focus by tapping, automatic zoom on a small barcode, Torch, a repeat closing it to answer in the app, and switching back to the page's scanner in Settings;
+- volume-down starts and stops Live scan (and closes the phone's scanner), and does nothing with the switch off;
+- the Saved bar's Open, Share and Save to…, and Exported files (Open, Share, Save to…, Print);
+- the camera note before Android's first camera prompt;
+- text shared from an email or notes app;
+- the app's text size after changing the phone's;
+- Say the count with the phone's voice, the low-battery question near 15%, Use the phone's colours on Android 12+, and the scanner connected/disconnected messages with a real Bluetooth scanner;
+- the Continue shortcut with its count;
+- after updating from an older APK, the log and settings are still there (copied into the app's own storage) and What's new shows once;
+- the app stays upright on a phone and still turns on a tablet.
 
 ## Optional files
 
