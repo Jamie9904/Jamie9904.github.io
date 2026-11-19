@@ -43,6 +43,8 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     sw: !!(navigator.serviceWorker && navigator.serviceWorker.controller), feats: { report: feat("report"), shareApp: feat("shareApp") } }));
   check("opens with no internet, as the Android copy", s.apk && !s.sw, s);
   check("Report a problem and Share this app are switched off", !s.report && s.feats.report === false && s.feats.shareApp === false, s);
+  s = await page.evaluate(src => { const w = {}; new Function("window", src)(w); const want = w.LPN_CONFIG.features; return Object.keys(want).filter(k => feat(k) !== want[k]); }, fs.readFileSync(path.join(__dirname, "config.js"), "utf8"));
+  check("uses the Android app's own settings (tools/android/config.js), not the website's", s.length === 0, s);
   s = await page.evaluate(() => { openHelp("settings", "Settings"); const t = document.getElementById("panelBody").textContent; closeHelp(); openHelp("guide", "How to use this app"); const g = document.getElementById("panelBody").textContent; closeHelp(); return { share: /Share this app/.test(t) || !!document.getElementById("shareUrl"), report: /Report a problem/.test(t + g) }; });
   check("Settings and the Guide don't offer Share this app or Report a problem", !s.share && !s.report, s);
 

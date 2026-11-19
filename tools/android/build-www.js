@@ -5,7 +5,7 @@
   It is the website's own files with these changes, each checked so a change to the site that breaks one stops the build:
   - library addresses point at the copies in lib/ (the fingerprints in core.js still check them);
   - the page may only load its own files (Content-Security-Policy), so nothing can reach the internet;
-  - Report a problem and Share this app are switched off (config.js), as they need the internet or the website;
+  - its own settings, tools/android/config.js, instead of the website's (Report a problem and Share this app always off);
   - no service worker (everything is already inside the app);
   - the photo reader uses its files in lib/;
   - android.js (saving, sharing and printing on Android) loads first.
@@ -41,9 +41,20 @@ edit("index.html", /<meta http-equiv="Content-Security-Policy" content="[^"]*">/
 edit("index.html", '<script src="config.js"></script>', '<script src="android.js"></script>\n<script src="config.js"></script>');
 // Library addresses -> the copies inside the app.
 for (const f of ["core.js", "scan.js", "export.js", "compare.js"]) edit(f, /https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com)\//, "lib/$1/", "any");
-// Switched off in the Android app.
-edit("config.js", /report: true,/, "report: false,");
-edit("config.js", /shareApp: true,/, "shareApp: false,");
+// The Android app has its own settings (tools/android/config.js), separate from the website's config.js.
+{
+  const src = fs.readFileSync(path.join(__dirname, "config.js"), "utf8");
+  const win = {}; try { new Function("window", src)(win); } catch (e) { fail("tools/android/config.js has a mistake: " + e.message); }
+  const c = win.LPN_CONFIG || {}, feats = c.features || {}, test = c.testing || {};
+  const known = JSON.parse(/const FEATURES=(\[[^\]]*\])/.exec(fs.readFileSync(path.join(ROOT, "core.js"), "utf8"))[1]);
+  const missing = known.filter(k => !(k in feats)), unknown = Object.keys(feats).concat(Object.keys(test)).filter(k => !known.includes(k));
+  const notBool = Object.entries(feats).concat(Object.entries(test)).filter(([, v]) => typeof v !== "boolean").map(([k]) => k);
+  if (missing.length) fail("tools/android/config.js has no line for: " + missing.join(", ") + ". Add each under features (true or false) so the Android app's choice is written down.");
+  if (unknown.length) fail("tools/android/config.js names features the app doesn't have: " + unknown.join(", "));
+  if (notBool.length) fail("tools/android/config.js: use true or false for " + notBool.join(", "));
+  if (feats.report || feats.shareApp) fail("tools/android/config.js: report and shareApp must stay false (they need the internet or the website)");
+  fs.writeFileSync(path.join(WWW, "config.js"), src);
+}
 // No service worker.
 edit("panels.js", 'if("serviceWorker" in navigator){', 'if(false&&"serviceWorker" in navigator){');
 // The photo reader's worker, engine and language data come from lib/.
