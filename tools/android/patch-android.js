@@ -27,6 +27,8 @@ edit(man, /(<manifest[^>]*>)/, `$1
     <uses-feature android:name="android.hardware.camera" android:required="false" />`);
 // The app's data stays on the phone: no copies in Google's backups (the owner keeps backups with Download backup).
 edit(man, /android:allowBackup="true"/, 'android:allowBackup="false"');
+// Android 13+ predictive back: the app's own Back (android.js) gets the swipe's progress, and leaving shows the system animation.
+edit(man, /<application/, '<application android:enableOnBackInvokedCallback="true"');
 edit(path.join(AND, "build.gradle"), /versionCode \d+/, "versionCode " + code);
 edit(path.join(AND, "build.gradle"), /versionName "[^"]*"/, 'versionName "' + name.replace(/"/g, "") + '"');
 

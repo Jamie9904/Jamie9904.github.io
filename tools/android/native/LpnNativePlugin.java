@@ -11,6 +11,17 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
+import android.webkit.WebView;
+import androidx.activity.BackEventCompat;
+import androidx.activity.OnBackPressedCallback;
+import androidx.activity.result.ActivityResult;
+import androidx.core.content.pm.ShortcutInfoCompat;
+import androidx.core.content.pm.ShortcutManagerCompat;
+import androidx.core.graphics.drawable.IconCompat;
+import com.getcapacitor.annotation.ActivityCallback;
+import java.util.Collections;
 import android.os.CancellationSignal;
 import android.os.ParcelFileDescriptor;
 import android.print.PageRange;
@@ -49,7 +60,12 @@ import java.io.OutputStream;
    - setVolumeScan / "volumeDown": the volume-down button starts and stops Live scan;
    - cameraAllowed: whether Android has already let the app use the camera;
    - openFile: opens a file the app saved in Documents › LPN Pallet Log in another app;
-   - fontScale: the phone's text size. */
+   - fontScale: the phone's text size;
+   - storage (LpnStore) in place of the browser's, without its 10 MB limit;
+   - saveAs: Android's own "save to" screen, to put a file in any folder or Drive;
+   - Back with Android's predictive back gesture ("back", "backProgress", "backCancelled"; allowExit lets the next Back
+     close the app with the system animation);
+   - setDelivery: a "Continue" shortcut for the delivery in progress. */
 @CapacitorPlugin(name = "LpnNative")
 public class LpnNativePlugin extends Plugin {
     private static final long MAX_FILE = 40L * 1024 * 1024;
@@ -58,9 +74,76 @@ public class LpnNativePlugin extends Plugin {
     static volatile boolean volumeScan = false;
     private BarcodeScanner scanner = null;
 
+    private OnBackPressedCallback backCb = null;
+    private final Handler main = new Handler(Looper.getMainLooper());
+
     @Override
     public void load() {
         current = this;
+        // The page's storage. Plugins load before the page does, so it's there for the first script.
+        WebView wv = getBridge().getWebView();
+        wv.addJavascriptInterface(new LpnStore(getContext()), "LpnStore");
+        // Smoother scrolling and a renderer Android keeps going while the app is open.
+        wv.getSettings().setOffscreenPreRaster(true);
+        if (android.os.Build.VERSION.SDK_INT >= 26) wv.setRendererPriorityPolicy(WebView.RENDERER_PRIORITY_IMPORTANT, true);
+        // Back: the page decides (close a panel, stop the camera, or ask before leaving), with the swipe's progress.
+        backCb = new OnBackPressedCallback(true) {
+            @Override public void handleOnBackStarted(BackEventCompat e) { notifyListeners("backProgress", new JSObject().put("progress", 0).put("edge", e.getSwipeEdge())); }
+            @Override public void handleOnBackProgressed(BackEventCompat e) { notifyListeners("backProgress", new JSObject().put("progress", e.getProgress()).put("edge", e.getSwipeEdge())); }
+            @Override public void handleOnBackCancelled() { notifyListeners("backCancelled", new JSObject()); }
+            @Override public void handleOnBackPressed() { notifyListeners("back", new JSObject()); }
+        };
+        getActivity().getOnBackPressedDispatcher().addCallback(getActivity(), backCb);
+    }
+
+    /* The next Back within ms closes the app, with Android's own animation. */
+    @PluginMethod
+    public void allowExit(PluginCall call) {
+        final int ms = call.getInt("ms", 2000);
+        main.post(() -> {
+            if (backCb != null) { backCb.setEnabled(false); main.postDelayed(() -> backCb.setEnabled(true), ms); }
+            call.resolve();
+        });
+    }
+
+    @Override
+    protected void handleOnResume() {
+        super.handleOnResume();
+        if (backCb != null) backCb.setEnabled(true);
+    }
+
+    @PluginMethod
+    public void saveAs(PluginCall call) {
+        if (call.getString("data") == null) { call.reject("no file"); return; }
+        Intent i = new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+            .setType(call.getString("mime", "application/octet-stream")).putExtra(Intent.EXTRA_TITLE, call.getString("name", "file"));
+        startActivityForResult(call, i, "saveAsDone");
+    }
+
+    @ActivityCallback
+    private void saveAsDone(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+        if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null || result.getData().getData() == null) { call.resolve(new JSObject().put("saved", false)); return; }
+        try (OutputStream os = getContext().getContentResolver().openOutputStream(result.getData().getData(), "wt")) {
+            os.write(Base64.decode(call.getString("data"), Base64.DEFAULT));
+            call.resolve(new JSObject().put("saved", true));
+        } catch (Exception e) { call.reject(e.getMessage() == null ? "The file couldn’t be saved there." : e.getMessage()); }
+    }
+
+    /* The "Continue" shortcut (long-press the app icon) for the delivery in progress, or none. */
+    @PluginMethod
+    public void setDelivery(PluginCall call) {
+        Context ctx = getContext();
+        try {
+            String label = call.getString("label");
+            if (label == null || label.isEmpty()) ShortcutManagerCompat.removeDynamicShortcuts(ctx, Collections.singletonList("continue"));
+            else ShortcutManagerCompat.pushDynamicShortcut(ctx, new ShortcutInfoCompat.Builder(ctx, "continue")
+                .setShortLabel("Continue").setLongLabel(label.length() > 25 ? label.substring(0, 25) : label)
+                .setIcon(IconCompat.createWithResource(ctx, R.mipmap.ic_launcher))
+                .setIntent(new Intent("io.github.jamie9904.lpnlog.CONTINUE").setClassName(ctx, MainActivity.class.getName()))
+                .setRank(0).build());
+            call.resolve();
+        } catch (Exception e) { call.reject(e.getMessage() == null ? "shortcut failed" : e.getMessage()); }
     }
 
     /* Called by MainActivity for the intent that opened the app, and for later ones. */
@@ -69,6 +152,7 @@ public class LpnNativePlugin extends Plugin {
         String action = intent.getAction();
         if ("io.github.jamie9904.lpnlog.SCAN".equals(action)) { setPending(new JSObject().put("action", "scan")); return; }
         if ("io.github.jamie9904.lpnlog.MANIFEST".equals(action)) { setPending(new JSObject().put("action", "manifest")); return; }
+        if ("io.github.jamie9904.lpnlog.CONTINUE".equals(action)) { setPending(new JSObject().put("action", "continue")); return; }
         // Text shared into the app (for example manifest numbers from an email).
         if (Intent.ACTION_SEND.equals(action) && intent.getParcelableExtra(Intent.EXTRA_STREAM) == null && intent.getStringExtra(Intent.EXTRA_TEXT) != null) {
             String t = intent.getStringExtra(Intent.EXTRA_TEXT);

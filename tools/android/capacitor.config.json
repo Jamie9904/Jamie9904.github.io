@@ -6,5 +6,10 @@
     "allowMixedContent": false,
     "captureInput": false,
     "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "App": {
+      "disableBackButtonHandler": true
+    }
   }
 }

@@ -30,7 +30,11 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   page.on("console", m => { if (m.type() === "error" && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
   // Stand-ins for the Android app's file saving and share menu.
   await page.addInitScript(() => {
-    try { localStorage.setItem("lpninstallshown", "1"); } catch (e) {}
+    try { localStorage.setItem("lpninstallshown", "1"); localStorage.setItem("lpnmigtest", "from before"); } catch (e) {}
+    // The app's own storage (native/LpnStore.java), standing in for the phone's.
+    window.__realLS = window.localStorage; const m = new Map(); let mig = false;
+    window.LpnStore = { get: k => m.has(k) ? m.get(k) : null, set: (k, v) => { m.set(k, v); return true; }, remove: k => { m.delete(k); }, clear: () => m.clear(),
+      keys: () => JSON.stringify([...m.keys()]), size: () => [...m].reduce((n, [k, v]) => n + k.length + v.length, 0), migrated: () => mig, markMigrated: () => { mig = true; }, _map: m };
     window.__fs = []; window.__share = [];
     window.Capacitor = { isNativePlatform: () => true, Plugins: {
       Filesystem: { writeFile: async o => { window.__fs.push({ path: o.path, directory: o.directory, size: o.data.length, head: o.data.slice(0, 8) }); return { uri: "file:///data/" + o.directory + "/" + o.path }; } },
@@ -43,6 +47,9 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
         setVolumeScan: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["vol", o.on]); },
         cameraAllowed: async () => ({ allowed: window.__camAllowed !== false }),
         openFile: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["open", o.name]); },
+        allowExit: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["exit", o.ms]); },
+        saveAs: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["saveAs", o.name, o.mime, o.data.slice(0, 5)]); return { saved: true }; },
+        setDelivery: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["delivery", o.label]); },
         takePending: async () => { const N = window.Capacitor.Plugins.LpnNative, r = N.pending || {}; N.pending = null; return r; },
         addListener: (ev, fn) => { window.Capacitor.Plugins.LpnNative.listeners[ev] = fn; return { remove() {} }; } },
       App: { exited: 0, back: null, addListener: (ev, fn) => { if (ev === "backButton") window.Capacitor.Plugins.App.back = fn; return { remove() {} }; },
@@ -102,7 +109,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   });
   const xl = s.fs.find(f => f.directory === "DOCUMENTS");
   check("Export to Excel keeps the file in Documents › LPN Pallet Log and shows Saved with Open and Share",
-    !!xl && /^LPN Pallet Log\/.+\.xlsx$/.test(xl.path) && xl.size > 4000 && xl.head.startsWith("UEsD") && /Saved .+\.xlsx in Documents/.test(s.msg) && /^Saved LPN-log-.+\.xlsx in Documents › LPN Pallet Log\.$/.test(s.bar || "") && s.btns === "Open,Share,✕" && s.sharedBefore === 0, s);
+    !!xl && /^LPN Pallet Log\/.+\.xlsx$/.test(xl.path) && xl.size > 4000 && xl.head.startsWith("UEsD") && /Saved .+\.xlsx in Documents/.test(s.msg) && /^Saved LPN-log-.+\.xlsx in Documents › LPN Pallet Log\.$/.test(s.bar || "") && s.btns === "Open,Share,Save to…,✕" && s.sharedBefore === 0, s);
   check("Share on that bar opens the share menu with the file, and Open opens it in another app", s.share.length === 1 && /\.xlsx$/.test(s.share[0][0]) && s.gone && s.open.length === 1 && /^LPN-log-.+\.xlsx$/.test(s.open[0][1]), s);
   // Sharing a file (Email PDF and others) goes to Android's share menu.
   s = await page.evaluate(async () => { window.__share = []; const f = new File(["hi"], "test.pdf", { type: "application/pdf" }); const ok = navigator.canShare({ files: [f] }); await navigator.share({ files: [f], title: "t", text: "x" }); return { ok, share: window.__share }; });
@@ -179,13 +186,15 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   await open({ action: "scan" });
   s = await page.evaluate(async () => { await new Promise(r => setTimeout(r, 500)); const out = !document.getElementById("scanbox").hidden; stopScan(); return out; });
   check("the Scan shortcut starts Live scan", s === true, s);
-  // Back button.
-  s = await page.evaluate(async () => { const App = window.Capacitor.Plugins.App; App.exited = 0; const wait = ms => new Promise(r => setTimeout(r, ms));
-    openHelp("guide", "How to use this app"); await wait(100); App.back({ canGoBack: history.length > 1 && !document.getElementById("panel").hidden }); await wait(300);
-    const closed = document.getElementById("panel").hidden;
-    App.back({ canGoBack: false }); const t1 = document.getElementById("apkToast").textContent, e1 = App.exited;
-    App.back({ canGoBack: false }); return { closed, t1, e1, e2: App.exited }; });
-  check("Back closes an open panel; on the main screen it asks first, and a second Back closes the app", s.closed && s.t1 === "Press Back again to close the app." && s.e1 === 0 && s.e2 === 1, s);
+  // Back, with the predictive back gesture.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); N.calls = [];
+    openHelp("guide", "How to use this app"); await wait(100); const panel = document.getElementById("panel");
+    N.listeners.backProgress({ progress: 0.5 }); const during = panel.style.transform;
+    N.listeners.backCancelled(); const cancelled = panel.style.transform, stillOpen = !panel.hidden;
+    N.listeners.backProgress({ progress: 0.8 }); N.listeners.back(); await wait(300); const closed = panel.hidden;
+    N.listeners.back(); const t = document.getElementById("apkToast").textContent; return { during, cancelled, stillOpen, closed, t, calls: N.calls }; });
+  check("Back follows the swipe on an open panel, cancelling puts it back, letting go closes it; on the main screen the next Back closes the app",
+    /translateX\(24px\) scale\(0\.970\)/.test(s.during) && s.cancelled === "" && s.stillOpen && s.closed && s.t === "Press Back again to close the app." && JSON.stringify(s.calls) === '[["exit",2000]]', s);
   // Which build this is.
   s = await page.evaluate(async () => { openHelp("settings", "Settings"); await new Promise(r => setTimeout(r, 100)); const v = document.getElementById("apkVer"); const out = { set: v && v.textContent, foot: (document.getElementById("apkFoot") || {}).textContent }; closeHelp(); return out; });
   check("Settings and the footer say which Android build this is", s.set === "Android app: Build 66 (Android 9)" && s.foot === " · Android app: Build 66 (Android 9)", s);
@@ -217,20 +226,51 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     btn("Print").click(); await wait(100); btn("Share").click(); await wait(100); btn("Open").click(); await wait(100);
     const out = { title: document.getElementById("panelTitle").textContent, items, calls: N.calls.filter(c => c[0] !== "decode"), share: window.__share.map(x => x.files) };
     window.__dir = []; closeHelp(); return out; });
-  check("Exported files lists the saved files newest first, to open, share or print (PDFs) again", s.title === "Exported files" && s.items.length === 2 && s.items[0].name === "LPN-log-2026-11-19.pdf" && s.items[0].btns === "Open,Share,Print" && s.items[1].btns === "Open,Share"
+  check("Exported files lists the saved files newest first, to open, share or print (PDFs) again", s.title === "Exported files" && s.items.length === 2 && s.items[0].name === "LPN-log-2026-11-19.pdf" && s.items[0].btns === "Open,Share,Save to…,Print" && s.items[1].btns === "Open,Share,Save to…"
     && JSON.stringify(s.calls) === '[["print","LPN-log-2026-11-19","JVBER"],["open","LPN-log-2026-11-19.pdf"]]' && JSON.stringify(s.share) === '[["file:///docs/b.pdf"]]', s);
   // The camera: explained once, before Android asks.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), App = window.Capacitor.Plugins.App; localStorage.removeItem("lpnapkcam"); window.__camAllowed = false;
     const inp = document.getElementById("file"), real = inp.click; let picked = 0; inp.click = () => { picked++; };
     document.getElementById("photo").click(); await wait(100);
     const a = document.querySelector(".apkask"), q = { text: a && a.textContent, btns: a ? [...a.querySelectorAll("button")].map(b => b.textContent).join() : "", picked };
-    App.back({ canGoBack: false }); q.afterBack = !!document.querySelector(".apkask");
+    window.Capacitor.Plugins.LpnNative.listeners.back(); q.afterBack = !!document.querySelector(".apkask");
     document.querySelector(".apkask button").click(); await wait(100); q.pickedAfter = picked; q.kept = localStorage.getItem("lpnapkcam");
     document.getElementById("photo").click(); await wait(100); q.again = !!document.querySelector(".apkask"); q.pickedAgain = picked;
     inp.click = real; window.__camAllowed = true; return q; });
   check("before Android first asks for the camera, the app says what it's for (once, Continue only)", /uses the camera to scan pallet barcodes/.test(s.text || "") && s.btns === "Continue" && s.picked === 0 && s.afterBack && s.pickedAfter === 1 && s.kept === "1" && !s.again && s.pickedAgain === 2, s);
   s = await page.evaluate(async () => (await (await fetch("scan.js")).text()).includes("Allow the camera for LPN Pallet Log in your phone’s Settings › Apps"));
   check("if the camera is refused, the message says where Android keeps the setting", s === true, s);
+
+  // Storage: the app's own, without the browser's limit; what was saved before is copied across once.
+  s = await page.evaluate(async () => { const st = window.LpnStore._map; rows = [{ lpn: "VLT004040201", type: "BB", fsdu: false }]; save();
+    openHelp("settings", "Settings"); await new Promise(r => setTimeout(r, 100)); const v = document.getElementById("apkVer").textContent; closeHelp();
+    return { flag: window.LPN_APK_STORE === true, copied: st.get("lpnmigtest"), inStore: /VLT004040201/.test(st.get("lpnlog") || ""), inBrowser: /VLT004040201/.test(window.__realLS.getItem("lpnlog") || ""), viaApp: localStorage.getItem("lpnmigtest"), v }; });
+  check("the app keeps its data in its own storage (no 10 MB limit), copied across from before, and Settings shows how much", s.flag && s.copied === "from before" && s.inStore && !s.inBrowser && s.viaApp === "from before" && /Data on this phone: \d/.test(s.v), s);
+  // Save to…
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); N.calls = []; rows = [{ lpn: "VLT004040265", type: "BB", fsdu: false }]; document.getElementById("expect").value = ""; save(); render();
+    document.getElementById("dl").click(); for (let i = 0; i < 100 && !document.getElementById("apkSaved"); i++) await wait(100);
+    [...document.querySelectorAll("#apkSaved button")].find(b => b.textContent === "Save to…").click(); await wait(200);
+    window.__dir = [{ name: "LPN-log-2026-11-19.pdf", type: "file", size: 52000, mtime: 1763550000000, uri: "file:///docs/b.pdf" }];
+    document.getElementById("apkFilesBtn").click(); await wait(200); [...document.querySelectorAll(".apkfiles button")].find(b => b.textContent === "Save to…").click(); await wait(200);
+    window.__dir = []; closeHelp(); return N.calls.filter(c => c[0] === "saveAs"); });
+  check("Save to… hands the file to Android's own save screen, from the Saved bar and from Exported files", s.length === 2 && /^LPN-log-.+\.xlsx$/.test(s[0][1]) && s[0][2] === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" && s[0][3] === "UEsDB"
+    && s[1][1] === "LPN-log-2026-11-19.pdf" && s[1][2] === "application/pdf" && s[1][3] === "JVBER", s);
+  // The Continue shortcut follows the delivery.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); rows = []; save(); await wait(1300); N.calls = [];
+    addValue("VLT004040301"); addValue("VLT004040302"); await wait(1300); const two = N.calls.filter(c => c[0] === "delivery").map(c => c[1]);
+    rows = []; save(); await wait(1300); const none = N.calls.filter(c => c[0] === "delivery").map(c => c[1]); return { two, none }; });
+  check("the Continue shortcut says how many pallets the delivery has, and goes when the log is cleared", s.two.join() === "Continue: 2 pallets" && s.none.join("|") === "Continue: 2 pallets|", s);
+  await open({ action: "continue" });
+  s = await page.evaluate(() => document.activeElement && document.activeElement.id);
+  check("the Continue shortcut goes back to the LPN box", s === "lpn", s);
+  // Android-style controls.
+  s = await page.evaluate(async () => { openHelp("settings", "Settings"); await new Promise(r => setTimeout(r, 100)); const c = document.querySelector("#panelBody label.chk > input[type=checkbox]"), cs = getComputedStyle(c);
+    const out = { appearance: cs.appearance, w: cs.width, role: c.type }; closeHelp();
+    const b = document.getElementById("histBtn"), r = b.getBoundingClientRect(); b.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, clientX: r.left + 5, clientY: r.top + 5 }));
+    out.ripple = !!b.querySelector(".apkripple"); out.text = b.textContent;
+    const q = document.querySelector(".helpq"), before = getComputedStyle(q).position; q.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true })); out.helpq = [before, getComputedStyle(q).position];
+    return out; });
+  check("Android-style switches in Settings (still checkboxes) and a ripple where a button is pressed, without changing buttons' text or position", s.appearance === "none" && s.w === "44px" && s.role === "checkbox" && s.ripple && s.text === "Saved deliveries" && s.helpq[0] === s.helpq[1], s);
 
   // Photo reading with only the files inside the app.
   const photos = load(OCR).filter(p => p.want && p.want.length);

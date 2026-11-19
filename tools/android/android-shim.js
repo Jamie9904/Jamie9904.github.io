@@ -12,6 +12,30 @@
 (function () {
   "use strict";
   window.LPN_APK = true;
+
+  /* Storage: the app's own (LpnStore, native/LpnStore.java) instead of the browser's, which Android caps at about 10 MB.
+     The first time, everything already saved is copied across; the browser's copy is left as it was. */
+  const S = window.LpnStore;
+  if (S && typeof S.get === "function") {
+    try {
+      if (!S.migrated()) {
+        const old = window.localStorage;
+        for (let i = 0; i < old.length; i++) { const k = old.key(i); if (k !== null) S.set(k, old.getItem(k)); }
+        S.markMigrated();
+      }
+      const keys = () => { try { return JSON.parse(S.keys()); } catch (e) { return []; } };
+      const store = {
+        getItem: k => { const v = S.get(String(k)); return v === undefined ? null : v; },
+        setItem: (k, v) => { if (!S.set(String(k), String(v))) { const e = new Error("The phone is out of space, so this couldn’t be saved."); e.name = "QuotaExceededError"; throw e; } },
+        removeItem: k => { S.remove(String(k)); },
+        clear: () => { S.clear(); },
+        key: i => { const k = keys()[i]; return k === undefined ? null : k; },
+        get length() { return keys().length; }
+      };
+      Object.defineProperty(window, "localStorage", { value: store, configurable: true });
+      window.LPN_APK_STORE = true;
+    } catch (e) {}
+  }
   // The photo reader's files inside the app (filled in by build-www.js), as full addresses.
   const t = /*TESS*/null;
   if (t) window.LPN_TESS = { workerPath: new URL(t.workerPath, location.href).href, corePath: new URL(t.corePath, location.href).href, langPath: new URL(t.langPath, location.href).href, workerBlobURL: false };
@@ -40,6 +64,13 @@
     // Couldn't keep a copy (older Android): straight to the share menu, to save or send it.
     try { await shareFile(blob, name); } catch (e) { say("Couldn’t save " + name + ": " + ((e && e.message) || e)); }
   };
+  /* Save to…: Android's own save screen, to put a copy in any folder or in Drive. */
+  const MIME = { xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", xls: "application/vnd.ms-excel", pdf: "application/pdf", csv: "text/csv", json: "application/json" };
+  async function saveTo(data, name, mime) {
+    const ext = (String(name).match(/\.([a-z0-9]+)$/i) || [])[1] || "";
+    const r = await P().LpnNative.saveAs({ data, name: clean(name), mime: mime || MIME[ext.toLowerCase()] || "application/octet-stream" });
+    if (r && r.saved) say("Saved a copy of " + name + " where you chose.");
+  }
   /* After saving: a bar at the bottom with Open and Share, so the file needn't be looked for. */
   let barT = 0;
   function savedBar(blob, name) {
@@ -51,6 +82,7 @@
     const btn = (label, fn, cls) => { const x = document.createElement("button"); x.type = "button"; x.textContent = label; if (cls) x.className = cls; x.onclick = fn; row.appendChild(x); return x; };
     btn("Open", async () => { done(); try { await P().LpnNative.openFile({ name: clean(name) }); } catch (e) { say((e && e.message) || "No app on this phone can open that file."); } }, "p");
     btn("Share", async () => { done(); try { await shareFile(blob, name); } catch (e) { say("Couldn’t share " + name + ": " + ((e && e.message) || e)); } });
+    btn("Save to…", async () => { done(); try { await saveTo(await b64(blob), name, blob.type); } catch (e) { say("Couldn’t save " + name + " there: " + ((e && e.message) || e)); } });
     btn("✕", done).setAttribute("aria-label", "Close");
     document.body.appendChild(b);
     // Stays while it's being used; otherwise goes after 12 seconds.
@@ -91,6 +123,27 @@
     + ".apksaved{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:1000;padding:12px 14px;border-radius:12px;background:#1f2a41;color:#fff;box-shadow:0 6px 24px rgba(0,0,0,.4)}.apksaved p{margin:0 0 8px;overflow-wrap:anywhere}"
     + ".apkfiles{list-style:none;padding:0;margin:8px 0}.apkfiles li{padding:10px 0;border-bottom:1px solid var(--rule,#223a63)}.apkfname{margin:0;font-weight:700;overflow-wrap:anywhere}.apkfiles .note{margin:2px 0 8px}";
   document.head.appendChild(css);
+  /* Android-style controls (the app's own colours): a ripple where a button is pressed, and switches for the on/off
+     settings. They still work as checkboxes for TalkBack and the keyboard. */
+  const mat = document.createElement("style");
+  mat.textContent = "button{-webkit-tap-highlight-color:transparent}.apkripwrap{position:absolute;inset:0;overflow:hidden;border-radius:inherit;pointer-events:none}"
+    + ".apkripple{position:absolute;border-radius:50%;pointer-events:none;background:currentColor;opacity:.22;transform:scale(0);animation:apkrip .45s ease-out forwards}"
+    + "@keyframes apkrip{to{transform:scale(1);opacity:0}}@media (prefers-reduced-motion:reduce){.apkripple{display:none}}"
+    + "#panelBody label.chk{align-items:center}"
+    + "#panelBody label.chk>input[type=checkbox]{appearance:none;-webkit-appearance:none;flex:0 0 auto;width:44px;height:26px;margin:0 12px 0 0;border-radius:13px;background:var(--rule,#223a63);border:2px solid var(--mu,#9db0d0);position:relative;cursor:pointer;transition:background .15s,border-color .15s}"
+    + "#panelBody label.chk>input[type=checkbox]::after{content:'';position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--mu,#9db0d0);transition:transform .15s,background .15s}"
+    + "#panelBody label.chk>input[type=checkbox]:checked{background:var(--ac,#ff8a2a);border-color:var(--ac,#ff8a2a)}"
+    + "#panelBody label.chk>input[type=checkbox]:checked::after{transform:translateX(18px);background:#fff}"
+    + "#panelBody label.chk>input[type=checkbox]:focus-visible{outline:2px solid var(--ink,#eaf0fa);outline-offset:2px}";
+  document.head.appendChild(mat);
+  document.addEventListener("pointerdown", e => {
+    const b = e.target && e.target.closest && e.target.closest("button"); if (!b || b.disabled) return;
+    const r = b.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2, s = document.createElement("span");
+    if (getComputedStyle(b).position === "static") b.style.position = "relative"; // the ripple sits inside the button; its tap area isn't clipped
+    const w = document.createElement("span"); w.className = "apkripwrap"; w.setAttribute("aria-hidden", "true");
+    s.className = "apkripple"; s.style.width = s.style.height = d + "px"; s.style.left = (e.clientX - r.left - d / 2) + "px"; s.style.top = (e.clientY - r.top - d / 2) + "px";
+    w.appendChild(s); b.appendChild(w); setTimeout(() => w.remove(), 500);
+  }, { passive: true });
   let toastT = 0;
   function toast(t) {
     let e = $("apkToast");
@@ -180,6 +233,7 @@
       $(id).click(); return;
     }
     if (r.action === "manifest") { openManifest(); return; }
+    if (r.action === "continue") { if (typeof closeHelp === "function") closeHelp(); const l = $("lpn"); if (l && has("palletLog")) { l.scrollIntoView({ block: "center" }); l.focus(); } return; }
     if (typeof r.text === "string") { sharedText(r.text); return; }
     if (!r.file) return;
     const bin = atob(r.file.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
@@ -204,6 +258,27 @@
     toast("This app can’t open " + name + ".");
   }
   window.LPN_APK_OPENED = opened;
+
+  /* Back, with Android's predictive back gesture: while you swipe, an open panel or question eases back with your
+     finger; letting go closes it (cancelling puts it back). On the main screen the first Back asks, and the next one
+     within 2 seconds closes the app with Android's own animation. */
+  const openPanel = () => ["panel", "fbBox", "instBox"].map($).find(e => e && !e.hidden) || null;
+  const backTarget = () => { const a = document.querySelector(".apkask"); return (a && !a.dataset.keep && a) || openPanel(); };
+  function backMove(p) { const t = backTarget(); if (!t) return; t.style.transition = "none"; t.style.transform = "translateX(" + Math.round(p * 48) + "px) scale(" + (1 - p * 0.06).toFixed(3) + ")"; t.style.opacity = String(1 - p * 0.25); }
+  function backReset() { [document.querySelector(".apkask"), openPanel()].forEach(t => { if (t) { t.style.transition = "transform .15s, opacity .15s"; t.style.transform = ""; t.style.opacity = ""; } }); }
+  function back() {
+    backReset();
+    const a = document.querySelector(".apkask"); if (a) { if (!a.dataset.keep) a.remove(); return; }
+    const sv = $("apkSaved"); if (sv) { sv.remove(); return; }
+    if (openPanel()) { history.back(); return; }
+    const m = $("expMenu"); if (m && !m.hidden) { m.hidden = true; const b = $("expBtn"); if (b) b.setAttribute("aria-expanded", "false"); return; }
+    const sb = $("scanbox"); if (sb && !sb.hidden && typeof stopScan === "function") { stopScan(); return; }
+    toast("Press Back again to close the app.");
+    N().allowExit({ ms: 2000 }).catch(() => {});
+  }
+  if (N()) {
+    try { N().addListener("back", back); N().addListener("backProgress", e => backMove(Math.max(0, Math.min(1, Number(e && e.progress) || 0)))); N().addListener("backCancelled", backReset); } catch (e) {}
+  }
   /* Text shared into the app: the LPNs in it, as manifest numbers or as pallets for the log (with the usual checks). */
   function sharedText(text) {
     // LPN-shaped numbers only; not PO or SO (order) numbers, and only the Manifest check's prefixes when some are set.
@@ -236,15 +311,6 @@
 
   // Back: closes what's open (panels go back through the page's own history); on the main screen it asks first.
   if (A()) {
-    let last = 0;
-    try { A().addListener("backButton", ({ canGoBack }) => {
-      const a = document.querySelector(".apkask"); if (a) { if (!a.dataset.keep) a.remove(); return; }
-      if (canGoBack) { history.back(); return; }
-      const sb = $("scanbox"); if (sb && !sb.hidden && typeof stopScan === "function") { stopScan(); return; }
-      const now = Date.now();
-      if (now - last < 2000) { A().exitApp(); return; }
-      last = now; toast("Press Back again to close the app.");
-    }); } catch (e) {}
     // Which Android build this is (footer), and what's new after an Android update.
     A().getInfo().then(i => {
       const v = "Android app: " + i.version; window.LPN_APK_VER = v;
@@ -261,7 +327,7 @@
         + (has("liveScan") ? '<label class="chk"><input type="checkbox" id="apkVol"><span>Volume-down button starts and stops Live scan (volume-up still changes the volume)</span></label>' : "")
         + '<div class="row"><button type="button" id="apkFilesSet">Exported files</button></div>';
       $("panelBody").prepend(box);
-      $("apkVer").textContent = window.LPN_APK_VER || "Android app";
+      $("apkVer").textContent = (window.LPN_APK_VER || "Android app") + (window.LPN_APK_STORE ? " · Data on this phone: " + mb(S.size()) : "");
       if ($("apkVol")) { $("apkVol").checked = volOn(); $("apkVol").onchange = () => { try { localStorage.setItem("lpnapkvol", $("apkVol").checked ? "on" : "off"); } catch (e) {} syncVol(); }; }
       $("apkFilesSet").onclick = () => showFiles();
     };
@@ -284,6 +350,21 @@
     const main = document.querySelector("main"); if (main) main.prepend(c);
   }
   window.LPN_APK_WHATSNEW = whatsNew;
+  const mb = n => n >= 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB";
+
+  /* The "Continue" shortcut (long-press the app icon) follows the delivery in progress: "Continue: 14 pallets". */
+  let contT = 0, contLast = null;
+  function syncContinue() {
+    if (!N() || typeof rows === "undefined") return;
+    const n = has("palletLog") ? rows.length : 0, label = n ? "Continue: " + n + (n === 1 ? " pallet" : " pallets") : "";
+    if (label === contLast) return; contLast = label;
+    N().setDelivery({ label }).catch(() => {});
+  }
+  window.LPN_APK_CONTINUE = syncContinue;
+  if (N()) window.addEventListener("load", () => {
+    syncContinue();
+    if (typeof window.save === "function") { const orig = window.save; window.save = function () { const r = orig.apply(this, arguments); clearTimeout(contT); contT = setTimeout(syncContinue, 1000); return r; }; }
+  });
 
   /* Volume-down: starts Live scan, or stops it. On unless switched off in Settings, and only with Live scan on. */
   const volOn = () => { try { return localStorage.getItem("lpnapkvol") !== "off"; } catch (e) { return true; } };
@@ -334,6 +415,7 @@
       const btn = (label, fn) => { const b = document.createElement("button"); b.type = "button"; b.textContent = label; b.setAttribute("aria-label", label + " " + f.name); b.onclick = () => fn().catch(e => msg(((e && e.message) || "That didn’t work") + ".")); row.appendChild(b); };
       btn("Open", async () => { msg(""); await N().openFile({ name: f.name }); });
       btn("Share", async () => { msg(""); try { await P().Share.share({ title: f.name, files: [f.uri], dialogTitle: "Send " + f.name }); } catch (e) { if (!cancelled(e)) throw e; } });
+      btn("Save to…", async () => { msg(""); const r = await P().Filesystem.readFile({ path: "LPN Pallet Log/" + f.name, directory: "DOCUMENTS" }); await saveTo(r.data, f.name); });
       if (/\.pdf$/i.test(f.name)) btn("Print", async () => { msg(""); const r = await P().Filesystem.readFile({ path: "LPN Pallet Log/" + f.name, directory: "DOCUMENTS" }); await N().printPdf({ data: r.data, name: f.name.replace(/\.pdf$/i, "") }); });
       li.appendChild(row); ul.appendChild(li);
     });
