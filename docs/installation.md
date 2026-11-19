@@ -213,6 +213,7 @@ The procedures Claude Code follows (for example `release-lpn`, `lpn-write-check`
 ```js
 window.LPN_CONFIG = {
   features: {
+    palletLog: true,       // the pallet log: Delivery, the LPN box and scanning, the log, Export, Start new delivery and Saved deliveries. Off leaves only the Manifest check
     report: true,          // Report a problem button, and the report links in Settings, the Guide and the Manifest check
     manifestCheck: true,   // the whole Manifest check section
     manifestPhotos: true,  // reading manifests, printed logs and printed LPNs on labels from photos (PDFs and typing still work)
@@ -235,14 +236,14 @@ window.LPN_CONFIG = {
     tallySheet: true       // Blank tally sheet in the Export menu, a paper sheet to fill in by hand
   },
   testing: {
-    report: false, manifestCheck: true, manifestPhotos: false, liveScan: false, scanByPhoto: false,
+    palletLog: false, report: false, manifestCheck: true, manifestPhotos: false, liveScan: false, scanByPhoto: false,
     photoUpload: false, torch: false, damage: false, refused: false, noLpn: false, fppDesc: false, shareMissing: false,
     findLpn: false, shareApp: false, exportReminder: false, historyVideo: false, twoPhones: false, tallySheet: false
   }
 };
 ```
 
-(In the repository each `testing` entry is on its own line.) These are the current values: every feature is on, and the Manifest check is currently marked as in testing (`testing.manifestCheck: true`, set by the site owner on 2 Nov 2026), so everyone sees its "In testing" note. `welcome` and `whatsNew` have no `testing` entry, because the cards carry no note. The comment on `report` in the file still says "Report button"; since build 58 the button itself says **Report a problem**.
+(In the repository each `testing` entry is on its own line.) These are the values on `updates` (on `main`, the live site, there is no `palletLog` line yet: it was added on `updates` after build 66 was released and is not live). Every feature is on, and the Manifest check is currently marked as in testing (`testing.manifestCheck: true`, set by the site owner on 2 Nov 2026), so everyone sees its "In testing" note. `welcome` and `whatsNew` have no `testing` entry, because the cards carry no note. The comment on `report` in the file still says "Report button"; since build 58 the button itself says **Report a problem**.
 
 ### How to change it
 
@@ -259,6 +260,7 @@ The preferred way, by the user's decision, is to ask Claude to change the settin
 
 | Name | When `false` |
 |---|---|
+| `palletLog` (on `updates`, still build 66, not live yet) | Only the Manifest check is left, and it starts open: no Delivery, Add a pallet or Pallet log card (so no Export, Start new delivery, Saved deliveries or Share log), no reminder card and no ↓ Latest; in the Manifest check no **Use current log**, saved-delivery picker or live-count note. Live scan, Scan by photo, Upload photo, the Torch, damage, refused, No LPN, FPP descriptions, the export reminder, Share log, the tally sheet, Find an LPN and the welcome card are switched off with it, whatever their own lines say. Settings leaves out **Logging** and **Test a handheld scanner**; Simple view, the keyboard shortcuts and Ctrl+Z do nothing; the Guide keeps four sections (Check against the manifest, Install, Settings and good to know, privacy). The log and saved deliveries stay on the phone. With `manifestCheck` off as well, the page only says "The pallet log and the Manifest check are both switched off in this copy of the app." Marked as in testing, the note "In testing: The pallet log may not always work yet…" shows at the top of the Pallet log card. See [usage](usage.md#pallet-log-switch-palletlog-on-updates-not-live-yet). |
 | `report` | No **Report** button, report box, or report links in Settings, the Guide and the Manifest check (**Report a problem with these photos**); reports already waiting on a phone are not sent. The Guide's privacy section says there's no Report button in this copy, so nothing leaves the phone. **Download problem report** stays. |
 | `manifestCheck` | The Manifest check card is hidden, and manifest numbers already saved on a phone are ignored: no live tracking or "not on the manifest" warnings in the Pallet log. |
 | `manifestPhotos` | The photo buttons for manifests and printed logs and the prefix presets are hidden; the step is labelled "2. Manifest PDFs". PDFs and typed numbers still work, and the prefix list is ignored (no numbers are left out because of their prefix). **Upload photo** also stops reading the LPN printed on a label when no barcode is found (it just says "No barcode found…"; in build 63 this applied to **Scan by photo**), Scan by photo doesn't offer **Read the printed LPN** (build 65; in build 64 its no-barcode message no longer pointed to Upload photo), and the Guide's sentences about reading the printed LPN and that part of the changelog bullet are left out. |
@@ -278,17 +280,71 @@ The preferred way, by the user's decision, is to ask Claude to change the settin
 | `tallySheet` (build 66) | No **Blank tally sheet** in the Export menu, and its Guide paragraph (section 6) and changelog bullet are left out. Marked as in testing, the note "In testing: The blank tally sheet may not always work yet…" shows in the Export menu, under **Blank tally sheet** (before the tweak in commit `eb6d023`, also build 66, no note showed). |
 | `historyVideo` (build 65) | No build history video at the top of the Changelog, and the Guide line about it (section 9) and its changelog bullet are left out. Marked as in testing, the note "In testing: The build history video may not always work yet…" shows under its button. |
 
-The Guide and Settings leave out the lines for switched-off features, and the Guide's numbered sections are renumbered so there are no gaps (with everything off it has 9 sections).
+The Guide and Settings leave out the lines for switched-off features, and the Guide's numbered sections are renumbered so there are no gaps (with everything off it has 9 sections on the live site; on `updates`, where everything off includes `palletLog`, it has 3: Install, Settings and good to know, and privacy).
 
 If `config.js` is missing or has a mistake (for example a stray comma), the browser reports a script error for it and the app opens with every feature on and no notes.
 
 ### Adding a switch for a new feature
 
-`.claude/CLAUDE.md` (section "Site settings") gives the steps: add the name to `FEATURES` in `core.js` and to `config.js`, hide the feature's controls with `feat("name")` (in `applySite()` in `panels.js` or where the control is made), mark its Guide and Settings lines with `data-f="name"` (or `data-nf="name"` for wording used only when it is off), and add its note with `testNote("name", element)`, with a wording for it in `testNote()`.
+`.claude/CLAUDE.md` (section "Site settings") gives the steps: add the name to `FEATURES` in `core.js`, to `config.js` and (on `updates`) to the Android app's `tools/android/config.js` (the APK build stops and names any feature missing there), hide the feature's controls with `feat("name")` (in `applySite()` in `panels.js` or where the control is made), mark its Guide and Settings lines with `data-f="name"` (or `data-nf="name"` for wording used only when it is off), and add its note with `testNote("name", element)`, with a wording for it in `testNote()`.
+
+## Android app (offline APK)
+
+On the `updates` branch since 19 Nov 2026 (not on `main` yet). `tools/android/` turns the website's own files into an Android app that never needs the internet, and `.github/workflows/android.yml` (workflow name **Android app**) builds it on GitHub. Nothing is built on your computer and nothing in it is part of the website or the site zip.
+
+### When it is built
+
+On every push to `updates` or `main` (except pushes that only change `docs/` or `README.md`), and by hand from **Actions → Android app → Run workflow**. Only one runs at a time, so the signing key can never be made twice. A run takes about 3 to 10 minutes (45 at most). Its steps:
+
+1. `npm install --ignore-scripts` and Playwright's Chromium (Node 22, Java 21).
+2. `node tools/android/fetch-libs.js` downloads every cdnjs, jsDelivr and unpkg file the app's scripts name, checks each against its fingerprint in the `SRI` map in `core.js`, and starts the real photo reader in a browser (as the site does) to catch its worker, engine (both the SIMD and the plain build) and English language data. It writes them to `tools/android/lib/` (17 files, 17.9 MB at run 9).
+3. `node tools/android/build-www.js` builds `tools/android/www/` from the site's files (see [architecture](architecture.md#android-app-toolsandroid) for each change it makes). Each edit must find exactly what it expects in the site's code; if a website change breaks one, the build stops with "The website changed: update tools/android/build-www.js." It also stops if anything still points at a CDN, or if `tools/android/config.js` has a mistake, misses a feature in `FEATURES`, names an unknown one, has a value that isn't `true`/`false`, or turns `report` or `shareApp` on.
+4. `node tools/android/check-offline.js` opens that copy in Chromium with every outside request blocked and runs 26 checks (see [testing](testing.md#offline-android-app-check-toolsandroidcheck-offlinejs)). Any failure stops the build.
+5. Capacitor 7 (`tools/android/package.json`) makes the Android project; `patch-android.js` adds the camera and vibration permissions, the version (`versionCode` = the run number, `versionName` = "Build <n> (Android <run>)", with `<n>` read from `CACHE` in `sw.js`), the Android-only code in `tools/android/native/`, ML Kit barcode scanning 17.3.0 (its model inside the app), the file types the app opens, the **Scan** and **Manifest check** shortcuts, the icon (with a themed version for Android 13+) and a navy start-up screen drawn from `icon-512.png`.
+6. Gradle builds the release APK and `tools/android/sign.sh` signs it.
+7. The signed APK is uploaded as the run's artifact **LPN-Pallet-Log-Android**, kept for 90 days, named `LPN-Pallet-Log-build-<n>-android-<run>.apk` (run 9: build 66, 36 MB).
+
+### Downloading and installing it
+
+1. On GitHub open **Actions → Android app**, pick the newest run with a green tick, and under **Artifacts** download **LPN-Pallet-Log-Android**. GitHub gives it as a `.zip` with the `.apk` inside (you need to be signed in to GitHub).
+2. Put the `.apk` on the phone (for example download it on the phone, or copy it over) and open it. Android asks to allow installing apps from that source (the browser or Files app) the first time: allow it, then tap **Install**. Google Play Protect may warn about an app it doesn't know; it is not from the Play Store.
+3. A newer APK installs over the old one and keeps its data, as long as both were signed with the same key.
+
+The app has no update banner and no service worker: to update it, install the next APK. A change to its settings file (below) also needs a new APK.
+
+### Signing
+
+Android only installs an update over an app signed with the same key, so every APK is signed with one key, kept in this repository:
+
+- **The password** is the repository secret `ANDROID_KEY_PASSWORD` (**Settings → Secrets and variables → Actions**), at least 12 characters, set by the repository owner. Without it the run still passes, but it shows the warning "APK not signed" and uploads no APK. Too short a password is an error.
+- **The key** (`lpn-android-key.p12`, RSA 4096, valid 100 years) is made by the first run that has the password and stored as the asset of a **draft** release named "Android signing key" (tag `android-signing-key`). Drafts are only visible to people who can change the repository. Later runs download it from there. If the password doesn't open it, the run fails with "ANDROID_KEY_PASSWORD doesn't open the saved signing key. Put back the password it was made with."; if the draft has lost its file, "Put the backup copy back on it."
+- **Back it up:** download `lpn-android-key.p12` from the draft release and keep it, with the password, somewhere safe outside GitHub.
+- **Never publish or delete that draft release,** and never change the secret to a different password. With the key gone, a new one would be made, and phones would refuse to install the next APK over the old app until it is removed (which deletes its data).
+- The run's notice "APK signed" gives the APK's certificate SHA-256 (run 9: `b028a58a…091a36`), which stays the same as long as the key does.
+
+### The app's settings file (`tools/android/config.js`)
+
+It has the same shape and the same feature names as the website's `config.js`, but is separate: a feature switched off on the website stays on in the app, and the other way round. Edit it the same way (only the `true`/`false` values). Rules the build enforces: every name in `FEATURES` must have a line under `features` (so a new website feature can't slip into the app unnoticed), no unknown names, only `true` or `false`, and `report` and `shareApp` must stay `false` (they need the internet or the website). At the time of writing every feature is on except those two, and the Manifest check is marked as in testing, as on the website. A change reaches phones only when the next APK (built after the push) is installed.
+
+### What can only be checked on a phone
+
+`check-offline.js` stands in for Android's file saving, share menu, ML Kit, print screen, screen-on switch, opened files, shortcuts and Back button, so it only shows the page hands them the right things. Try these on a real phone after installing a new APK:
+
+- it installs (and installs over the previous APK, keeping the log);
+- Live scan, Scan by photo and Upload photo read real labels with ML Kit, and Share log codes are read off another phone;
+- the camera permission prompt, the torch and zoom;
+- an export lands in **Documents › LPN Pallet Log** and the share menu sends it; Email PDF reaches the mail app;
+- Print opens Android's print screen and prints A4;
+- the screen stays on with **Keep the screen on** ticked;
+- opening a PDF, spreadsheet, photo and backup from Files or a mail app, and sharing one into the app;
+- the **Scan** and **Manifest check** shortcuts, the themed icon and the start-up screen;
+- the app fits between the status bar and the navigation bar, and above the keyboard;
+- Back closes panels and asks before leaving;
+- photo reading speed on the phone.
 
 ## Optional files
 
-- `logo.png`: used as the default logo in the header and on exports. Users can override it per device in **Settings → Logo**.
+- `logo.png`: used as the default logo in the header and on exports (on the website only: the Android app doesn't carry it). Users can override it per device in **Settings → Logo**.
 - `presets.json`: named lists of LPN prefixes for the manifest check, for example:
 
   ```json

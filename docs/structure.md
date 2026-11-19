@@ -2,7 +2,7 @@
 
 ```
 .
-├── config.js                site settings (build 53): `window.LPN_CONFIG` with `features` (switch a feature off for everyone) and `testing` (add an "in testing" note); loaded before core.js, in the offline shell
+├── config.js                site settings (build 53; on `updates` it also has `palletLog`, not live yet): `window.LPN_CONFIG` with `features` (switch a feature off for everyone) and `testing` (add an "in testing" note); loaded before core.js, in the offline shell
 ├── index.html               page markup: header, Delivery, Add a pallet, Pallet log, Manifest check, panels, report box, install box, banners
 ├── styles.css               all CSS: theme tokens, components, phone/tablet/desktop layouts, print rules
 ├── core.js                  site settings (`FEATURES`, `SITE`, `feat()`, `testNote()`, `siteHtml()`), state, persistence, tidying of saved data, table, validation, add flow, undo (the last 10 changes since build 62), received-pallet counts (`typeCounts()`, leaving out refused pallets; the type and FSDU totals are filter buttons since build 66), `mergePallets()` (adds pallets from another phone, build 66), library loader and fingerprints (SRI), helpers
@@ -14,7 +14,7 @@
 ├── sw.js                    service worker (offline shell + library cache)
 ├── manifest.webmanifest     install metadata (name, colours, icons)
 ├── icon-192.png, icon-512.png, apple-touch-icon.png
-├── logo.png                 default logo for the header and exports (optional)
+├── logo.png                 default logo for the header and exports (optional; not in the Android app)
 ├── presets.json             shared LPN prefix presets (optional)
 ├── media/
 │   ├── demo.mp4             narrated demo video for the Guide (720×1280, about 47 seconds, about 1.7 MB; re-recorded for v4.0 in build 52, again in build 59 to show the Report a problem button, in build 65 to show the four-button scan row, and in build 66 to show Share log, the four-item Export menu, the totals and ↓ Latest, then again for the later build 66 additions (the mute button by LPN number, − and + by Expected pallets); loaded only when tapped, not cached)
@@ -39,7 +39,7 @@
 │   ├── groups/              the checks, one self-contained file per area (since build 52)
 │   │   ├── 01-layout.js … 06-real-export.js     layout; phone flows and Settings; Excel export; version note, PDF safety and spreadsheet import; saved data from outside and fingerprints; real export libraries and library versions
 │   │   ├── 07-security-policy.js … 12-report.js security policy; demo video and the Changelog's build history video (build 65); manifest photos and problem report; accessibility; feedback Worker; Report a problem or idea
-│   │   └── 13-photo-notes.js … 23-offline.js    photo notes; Find an LPN and turned photos; damaged pallets and Share this app; welcome card; offline store; real photo reading (GitHub only); site settings (config.js, build 53); pallets with no LPN and FPP descriptions (20-no-lpn.js, builds 55 and 56); data saved by older builds (21-old-data.js, after build 55); refused pallets, the reminder about a delivery not exported and the site name on exports (22-refused-reminder-site.js, build 62; Scan by photo reading the printed LPN added in build 63, moved to Upload photo in build 64; Read the printed LPN and several photos in build 65); Share log and the blank tally sheet (225-two-phones-tally.js, build 66); Back button, no pull-to-refresh, totals as filters and ↓ Latest (226-small-touches.js, build 66); pasting a list, the mute button, clearing the search, copying an LPN and tidied typed LPNs (227-paste-mute-search-copy.js, build 66); − and + by Expected pallets, the type badge in the Added note, keyboard shortcuts, the seal keypad and trailer capitals (228-expected-badge-keys.js, build 66); ? help buttons, Simple view, the empty log, double scans and the delivery fold (229-help-simple-empty-double-fold.js, build 66); offline (23-offline.js since build 62). The runner sorts names as text, so 225- to 229- run after 22- and before 23-offline.js
+│   │   └── 13-photo-notes.js … 23-offline.js    photo notes; Find an LPN and turned photos; damaged pallets and Share this app; welcome card; offline store; real photo reading (GitHub only); site settings (config.js, build 53); pallets with no LPN and FPP descriptions (20-no-lpn.js, builds 55 and 56); data saved by older builds (21-old-data.js, after build 55); refused pallets, the reminder about a delivery not exported and the site name on exports (22-refused-reminder-site.js, build 62; Scan by photo reading the printed LPN added in build 63, moved to Upload photo in build 64; Read the printed LPN and several photos in build 65); Share log and the blank tally sheet (225-two-phones-tally.js, build 66); Back button, no pull-to-refresh, totals as filters and ↓ Latest (226-small-touches.js, build 66); pasting a list, the mute button, clearing the search, copying an LPN and tidied typed LPNs (227-paste-mute-search-copy.js, build 66); − and + by Expected pallets, the type badge in the Added note, keyboard shortcuts, the seal keypad and trailer capitals (228-expected-badge-keys.js, build 66); ? help buttons, Simple view, the empty log, double scans and the delivery fold (229-help-simple-empty-double-fold.js, build 66; on `updates` also the Manifest date starting as today); the pallet log switch (230-pallet-log-switch.js, on `updates`, still build 66, not live yet); offline (23-offline.js since build 62). The runner sorts names as text, so 225- to 230- run after 22- and before 23-offline.js
 │   ├── fixtures/old/build-N/  files saved by builds 19, 30, 46, 49, 54 and 64 (build 64 since build 65) with their own code: storage.json, backup.json, cells.json, keywords.txt, log.xlsx, log.pdf, expect.json (read by groups/21-old-data.js)
 │   ├── advisories.js        asks osv.dev about security advisories for the pinned libraries
 │   ├── advisories-accepted.json  advisories checked and found not to affect the app, with reasons
@@ -73,12 +73,25 @@
 │   ├── worker.mjs           POST /report: checks, limits (Limits Durable Object), GitHub issue and photo
 │   ├── wrangler.toml        Worker name, repo, allowed origin, Durable Object binding
 │   └── README.md            one-time set-up steps
+├── tools/android/           the offline Android app (APK), built on GitHub by .github/workflows/android.yml (on `updates` since 19 Nov 2026, not on `main` yet; not part of the site or the site zip)
+│   ├── config.js            the Android app's own site settings (same names as config.js; report and shareApp must stay false; every feature in FEATURES needs a line or the build stops)
+│   ├── fetch-libs.js        step 1: downloads every CDN library the app names (checked against the SRI fingerprints) and the photo reader's worker, engines and language data into lib/, with lib/tess.json
+│   ├── build-www.js         step 2: builds www/ from the site's files with checked edits (local libraries, own-files-only security policy, its own config.js, "(build n, Android app)" in exports, no service worker, Android printing first) and adds android.js
+│   ├── android-shim.js      becomes www/android.js: saving to Documents › LPN Pallet Log and the share menu, sharing, ML Kit behind BarcodeDetector, screen on, Android printing, opened files and shortcuts, Back, the build shown in Settings and the footer
+│   ├── check-offline.js     step 3: checks www/ in Chromium with the internet blocked and stand-ins for the native parts (26 checks)
+│   ├── patch-android.js     step 4: permissions, version, native code, ML Kit, file types, shortcuts, icons (themed too) and start-up screen in the Capacitor project
+│   ├── native/              MainActivity.java (edge to edge, intents) and LpnNativePlugin.java (ML Kit barcodes, printing, screen on, opened files and shortcuts)
+│   ├── sign.sh              step 5: signs the APK with the key kept as the draft release "Android signing key" (password: the ANDROID_KEY_PASSWORD secret), making it on the first run
+│   ├── capacitor.config.json  app id io.github.jamie9904.lpnlog, name, web folder www
+│   ├── package.json         Capacitor 7 packages (android, app, cli, core, filesystem, share)
+│   └── .gitignore           keeps www/, lib/, android/, node_modules/, package-lock.json, *.apk and *.p12 out of git
 ├── tools/release/
 │   ├── ship.sh              puts updates live and checks it: Checks, Pages, health check, download copy (development only)
 │   ├── bump.sh              raises CACHE in sw.js to the live number plus one, only if it isn't already higher (development only)
 │   └── photo-ok.sh          confirms manifest photos in tools/ocr-check/photos/ were checked for addresses, names and phone numbers, so the git guard lets them be committed (records their git hash in .git/lpn-photos-ok)
 ├── .github/workflows/
 │   ├── test.yml             runs the checks on every push and pull request (advisories and fingerprints without blocking)
+│   ├── android.yml          builds, checks and signs the offline Android app on every push to updates and main (not for docs-only changes) and by hand; the APK is the run's artifact LPN-Pallet-Log-Android (on `updates`, not on `main` yet)
 │   ├── feedback-worker.yml  deploys tools/feedback-worker to Cloudflare (by hand, or when it changes on main; skips until its secrets exist)
 │   └── health.yml           weekly health check of the live site, the live demo video, the report system, CDN libraries, advisories, fingerprints, checks and the live site's photo reading
 └── .claude/                 Claude Code automations (development only)
@@ -130,6 +143,7 @@
 - `tools/ocr-check/` only reads the app files and its own photos; `tests/groups/18-real-photo.js` loads `check.js` to read the photos on GitHub, and `health.yml` runs it with `--url=` against the live site.
 - `tools/old-data/` reads older builds from git history and writes only into `tests/fixtures/old/`, which only `tests/groups/21-old-data.js` reads.
 - `tools/feedback-worker/` runs on Cloudflare, not on GitHub Pages; the app only talks to it through `FEEDBACK_URL` in `panels.js` (`https://lpn-feedback.jamie9904.workers.dev/report` since build 43). `tests/groups/11-feedback-worker.js` imports `worker.mjs` to check it.
+- `tools/android/` (on `updates`) only reads the site's files; everything it makes (`lib/`, `www/`, the Android project, the APK) stays in ignored folders on GitHub's machine, and the APK is uploaded as a run artifact. The app doesn't use it, and it is not in the site zip. Its `config.js` is separate from the site's: changing it doesn't change the website.
 - `tools/release/ship.sh` only runs git and `gh` commands and copies files to the download folder; `tools/release/bump.sh` only changes the `CACHE` line in `sw.js`; `tools/release/photo-ok.sh` only adds lines to `.git/lpn-photos-ok`. Nothing in the app or the checks uses them.
 - `.github/`, `.claude/` and `.mcp.json` are on `main` but not published: Jekyll, which GitHub Pages uses to build the site, leaves out files and folders whose names start with a dot.
 - `docs/`, and the version of `README.md` that goes with it, live only on the `docs` branch (`main` has its own `README.md`). Pages publishes from `main`, so they are not on the site. The git guard in `.claude/hooks/lpn_git_guard.py` blocks committing `docs/` files on `main` and merging or pushing `docs` into `main`.
