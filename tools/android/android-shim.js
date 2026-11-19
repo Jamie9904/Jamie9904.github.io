@@ -121,7 +121,7 @@
   const css = document.createElement("style");
   css.textContent = ".apktoast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:calc(100vw - 32px);padding:10px 16px;border-radius:12px;background:#1f2a41;color:#fff;font-size:.95rem;z-index:1000;box-shadow:0 4px 16px rgba(0,0,0,.35)}"
     + ".apkask{position:fixed;top:0;right:0;bottom:0;left:0;z-index:1000;background:rgba(0,0,0,.45);display:flex;align-items:flex-end}"
-    + ".apksheet{width:100%;margin:0;border-radius:18px 18px 0 0;padding:28px 16px 18px;position:relative;box-shadow:0 -6px 24px rgba(0,0,0,.35);animation:apkup .2s ease-out}"
+    + ".apksheet{width:100%;margin:0;background:var(--paper,#13264a);color:var(--ink,#eaf0fa);border-top:2px solid var(--ac,#ff8a2a);border-radius:18px 18px 0 0;padding:28px 16px 18px;position:relative;box-shadow:0 -6px 24px rgba(0,0,0,.35);animation:apkup .2s ease-out}"
     + ".apksheet::before{content:'';position:absolute;top:10px;left:50%;width:36px;height:4px;margin-left:-18px;border-radius:2px;background:var(--mu,#9db0d0);opacity:.6}"
     + "@keyframes apkup{from{transform:translateY(40px);opacity:.4}}@media (prefers-reduced-motion:reduce){.apksheet{animation:none}}.apkask .apkasktitle{margin:0 0 10px;font-weight:700}"
     + ".apksaved{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:1000;padding:12px 14px;border-radius:12px;background:#1f2a41;color:#fff;box-shadow:0 6px 24px rgba(0,0,0,.4)}.apksaved p{margin:0 0 8px;overflow-wrap:anywhere}"
