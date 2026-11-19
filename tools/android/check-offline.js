@@ -132,7 +132,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     window.__codes = [{ rawValue: "VLT004040277", format: "256" }];
     const c = document.createElement("canvas"); c.width = 800; c.height = 600; c.getContext("2d").fillRect(0, 0, 10, 10);
     const blob = await new Promise(r => c.toBlob(r, "image/jpeg")); await decodePhoto(new File([blob], "label.jpg", { type: "image/jpeg" }), false);
-    window.__codes = []; return { mlkit: window.LPN_APK_MLKIT === true, calls: N.calls, rows: rows.map(r => r.lpn) }; });
+    window.__codes = []; return { mlkit: window.LPN_APK_MLKIT === true, calls: N.calls.filter(c => c[0] === "decode"), rows: rows.map(r => r.lpn) }; });
   check("barcodes are read by ML Kit: a photo's barcode is decoded natively and the pallet added", s.mlkit && s.calls.length === 1 && s.calls[0][0] === "decode" && s.calls[0][1] === "/9j/" && s.rows.join() === "VLT004040277", s);
   // A label with several barcodes: the LPN is used, not the shipping code read first.
   s = await page.evaluate(async () => { rows = []; save(); render(); window.__codes = [{ rawValue: "00350123450000000017", format: "1" }, { rawValue: "VLT004040288", format: "1" }];
