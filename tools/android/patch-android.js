@@ -49,6 +49,7 @@ ${dataLines}
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
 ${dataLines}
+                <data android:mimeType="text/plain" />
             </intent-filter>
             <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />$2`);
 fs.mkdirSync(path.join(RES, "xml"), { recursive: true });

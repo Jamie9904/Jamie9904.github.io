@@ -86,18 +86,24 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
 
   s = await page.evaluate(async () => { return await appVersion(); });
   check("exports say they were made with the Android app, with the build number", /^LPN Pallet Log v\d+\.\d+ \(build \d+, Android app\)$/.test(s), s);
-  // Excel export: kept in Documents and handed to the share menu.
+  // Excel export: kept in Documents, then a bar with Open and Share (the share menu only when asked).
   s = await page.evaluate(async () => {
     rows = [{ lpn: "VLT004040265", type: "BB", fsdu: false }, { lpn: "RUN001830763", type: "FMCG", fsdu: false }]; save(); render();
     document.getElementById("recv").value = "Jamie"; document.getElementById("expect").value = "2"; save();
-    window.__fs = []; window.__share = [];
+    window.__fs = []; window.__share = []; const N = window.Capacitor.Plugins.LpnNative; N.calls = [];
     document.getElementById("dl").click();
-    for (let i = 0; i < 100 && !window.__share.length; i++) await new Promise(r => setTimeout(r, 100));
-    return { fs: window.__fs, share: window.__share.map(x => ({ title: x.title, files: x.files })), msg: document.getElementById("msg").textContent };
+    for (let i = 0; i < 100 && !document.getElementById("apkSaved"); i++) await new Promise(r => setTimeout(r, 100));
+    const bar = document.getElementById("apkSaved"), out = { fs: window.__fs, msg: document.getElementById("msg").textContent, bar: bar && bar.querySelector("p").textContent, btns: bar ? [...bar.querySelectorAll("button")].map(b => b.textContent).join() : "", sharedBefore: window.__share.length };
+    bar.querySelector("button:nth-child(2)").click(); for (let i = 0; i < 30 && !window.__share.length; i++) await new Promise(r => setTimeout(r, 100));
+    out.share = window.__share.map(x => x.files); out.gone = !document.getElementById("apkSaved");
+    document.getElementById("dl").click(); for (let i = 0; i < 100 && !document.getElementById("apkSaved"); i++) await new Promise(r => setTimeout(r, 100));
+    document.querySelector("#apkSaved button").click(); await new Promise(r => setTimeout(r, 100)); out.open = N.calls.filter(c => c[0] === "open");
+    return out;
   });
   const xl = s.fs.find(f => f.directory === "DOCUMENTS");
-  check("Export to Excel keeps the file in Documents › LPN Pallet Log and opens the share menu with it",
-    !!xl && /^LPN Pallet Log\/.+\.xlsx$/.test(xl.path) && xl.size > 4000 && xl.head.startsWith("UEsD") && s.share.length === 1 && /\.xlsx$/.test(s.share[0].files[0]) && /Saved .+\.xlsx in Documents/.test(s.msg), s);
+  check("Export to Excel keeps the file in Documents › LPN Pallet Log and shows Saved with Open and Share",
+    !!xl && /^LPN Pallet Log\/.+\.xlsx$/.test(xl.path) && xl.size > 4000 && xl.head.startsWith("UEsD") && /Saved .+\.xlsx in Documents/.test(s.msg) && /^Saved LPN-log-.+\.xlsx in Documents › LPN Pallet Log\.$/.test(s.bar || "") && s.btns === "Open,Share,✕" && s.sharedBefore === 0, s);
+  check("Share on that bar opens the share menu with the file, and Open opens it in another app", s.share.length === 1 && /\.xlsx$/.test(s.share[0][0]) && s.gone && s.open.length === 1 && /^LPN-log-.+\.xlsx$/.test(s.open[0][1]), s);
   // Sharing a file (Email PDF and others) goes to Android's share menu.
   s = await page.evaluate(async () => { window.__share = []; const f = new File(["hi"], "test.pdf", { type: "application/pdf" }); const ok = navigator.canShare({ files: [f] }); await navigator.share({ files: [f], title: "t", text: "x" }); return { ok, share: window.__share }; });
   check("sharing a file uses Android's share menu", s.ok && s.share.length === 1 && /share\/test\.pdf$/.test(s.share[0].files[0]) && s.share[0].text === "x", s);
@@ -112,6 +118,18 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     const blob = await new Promise(r => c.toBlob(r, "image/jpeg")); await decodePhoto(new File([blob], "label.jpg", { type: "image/jpeg" }), false);
     window.__codes = []; return { mlkit: window.LPN_APK_MLKIT === true, calls: N.calls, rows: rows.map(r => r.lpn) }; });
   check("barcodes are read by ML Kit: a photo's barcode is decoded natively and the pallet added", s.mlkit && s.calls.length === 1 && s.calls[0][0] === "decode" && s.calls[0][1] === "/9j/" && s.rows.join() === "VLT004040277", s);
+  // A label with several barcodes: the LPN is used, not the shipping code read first.
+  s = await page.evaluate(async () => { rows = []; save(); render(); window.__codes = [{ rawValue: "00350123450000000017", format: "1" }, { rawValue: "VLT004040288", format: "1" }];
+    const c = document.createElement("canvas"); c.width = 600; c.height = 400; const blob = await new Promise(r => c.toBlob(r, "image/jpeg"));
+    await decodePhoto(new File([blob], "label.jpg", { type: "image/jpeg" }), false); window.__codes = []; return rows.map(r => r.lpn).join(); });
+  check("on a label with several barcodes the LPN is the one used", s === "VLT004040288", s);
+  // The phone's text size.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, out = {}; cfg.size = "1"; saveCfg(); applyCfg();
+    localStorage.removeItem("lpnapkfont"); N.fontScale = async () => ({ scale: 1 }); await LPN_APK_FONT(); out.normal = cfg.size;
+    N.fontScale = async () => ({ scale: 1.3 }); await LPN_APK_FONT(); out.big = cfg.size; out.css = getComputedStyle(document.documentElement).getPropertyValue("--ts").trim();
+    cfg.size = "1.12"; saveCfg(); await LPN_APK_FONT(); out.kept = cfg.size;
+    N.fontScale = async () => ({ scale: 1 }); await LPN_APK_FONT(); out.back = cfg.size; return out; });
+  check("text size follows the phone's when that changes, and a choice made in Settings stays until it changes again", s.normal === "1" && s.big === "1.25" && s.css === "1.25" && s.kept === "1.12" && s.back === "1", s);
   // Keep the screen on, natively.
   s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative; await keepAwake(false); N.calls = []; await keepAwake(true); await keepAwake(false); return N.calls; });
   check("keeping the screen on uses the app's own switch (on, then off)", JSON.stringify(s) === '[["awake",true],["awake",false]]', s);
@@ -140,6 +158,19 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   await open({ error: "The file is too large to open (over 40 MB)." });
   s = await page.evaluate(() => { const t = document.getElementById("apkToast"); return t && !t.hidden && t.textContent; });
   check("a file that can't be opened says why", s === "The file is too large to open (over 40 MB).", s);
+  // Text shared into the app: the LPNs in it, as manifest numbers or pallets.
+  await page.evaluate(() => { rows = []; save(); render(); document.getElementById("cmpNums").value = "VLT004040265"; });
+  await open({ text: "Hi, the manifest for today: VLT004040265, run 001830763 and QUB-001899210. PO 4500123456." });
+  s = await page.evaluate(() => { const a = document.querySelector(".apkask"); return { q: a && a.querySelector(".apkasktitle").textContent, btns: a ? [...a.querySelectorAll("button")].map(b => b.textContent).join() : "" }; });
+  check("text shared into the app finds the LPNs in it and asks how to use them", s.q === "Found 3 LPNs in the shared text. Use them as:" && s.btns === "Manifest numbers,Pallets in the log,Cancel", s);
+  s = await page.evaluate(async () => { document.querySelector(".apkask button").click(); await new Promise(r => setTimeout(r, 100)); return document.getElementById("cmpNums").value; });
+  check("as manifest numbers they're added to the Manifest check, without repeats", s === "VLT004040265\nRUN001830763\nQUB001899210", s);
+  await open({ text: "RUN001830763 and VLT004040266" });
+  s = await page.evaluate(async () => { [...document.querySelectorAll(".apkask button")].find(b => b.textContent === "Pallets in the log").click(); await new Promise(r => setTimeout(r, 200)); return rows.map(r => r.lpn).join(); });
+  check("as pallets they're added to the log, like pasting a list", s === "RUN001830763,VLT004040266", s);
+  await open({ text: "Thanks, see you tomorrow" });
+  s = await page.evaluate(() => document.getElementById("apkToast").textContent);
+  check("text with no LPNs says so", s === "No LPNs found in the shared text.", s);
   // Home-screen shortcuts.
   await page.evaluate(() => { document.getElementById("cmpToggle").click(); }); // fold the Manifest check again
   await open({ action: "manifest" });

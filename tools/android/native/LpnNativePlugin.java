@@ -48,7 +48,8 @@ import java.io.OutputStream;
    - takePending: a file opened or shared into the app, or a home-screen shortcut (Scan, Manifest check);
    - setVolumeScan / "volumeDown": the volume-down button starts and stops Live scan;
    - cameraAllowed: whether Android has already let the app use the camera;
-   - openFile: opens a file the app saved in Documents › LPN Pallet Log in another app. */
+   - openFile: opens a file the app saved in Documents › LPN Pallet Log in another app;
+   - fontScale: the phone's text size. */
 @CapacitorPlugin(name = "LpnNative")
 public class LpnNativePlugin extends Plugin {
     private static final long MAX_FILE = 40L * 1024 * 1024;
@@ -68,6 +69,12 @@ public class LpnNativePlugin extends Plugin {
         String action = intent.getAction();
         if ("io.github.jamie9904.lpnlog.SCAN".equals(action)) { setPending(new JSObject().put("action", "scan")); return; }
         if ("io.github.jamie9904.lpnlog.MANIFEST".equals(action)) { setPending(new JSObject().put("action", "manifest")); return; }
+        // Text shared into the app (for example manifest numbers from an email).
+        if (Intent.ACTION_SEND.equals(action) && intent.getParcelableExtra(Intent.EXTRA_STREAM) == null && intent.getStringExtra(Intent.EXTRA_TEXT) != null) {
+            String t = intent.getStringExtra(Intent.EXTRA_TEXT);
+            setPending(new JSObject().put("text", t.length() > 200000 ? t.substring(0, 200000) : t));
+            return;
+        }
         Uri uri = null;
         if (Intent.ACTION_VIEW.equals(action)) uri = intent.getData();
         else if (Intent.ACTION_SEND.equals(action)) uri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
@@ -115,6 +122,12 @@ public class LpnNativePlugin extends Plugin {
     public void setVolumeScan(PluginCall call) {
         volumeScan = Boolean.TRUE.equals(call.getBoolean("on", false));
         call.resolve();
+    }
+
+    /* The phone's text size (1 = normal), so the app can start at a matching Text size. */
+    @PluginMethod
+    public void fontScale(PluginCall call) {
+        call.resolve(new JSObject().put("scale", getContext().getResources().getConfiguration().fontScale));
     }
 
     @PluginMethod

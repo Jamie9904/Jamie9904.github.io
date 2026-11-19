@@ -40,6 +40,8 @@ public class MainActivity extends BridgeActivity {
             v.setPadding(b.left, b.top, b.right, Math.max(b.bottom, ime.bottom));
             return WindowInsetsCompat.CONSUMED;
         });
+        // The page sets its own text size from the phone's (Settings › Text size), so Android mustn't enlarge it again.
+        if (getBridge() != null && getBridge().getWebView() != null) getBridge().getWebView().getSettings().setTextZoom(100);
         LpnNativePlugin.takeIntent(this, getIntent());
     }
 

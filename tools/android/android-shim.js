@@ -29,12 +29,34 @@
     try { await P().Filesystem.writeFile({ path: "LPN Pallet Log/" + clean(name), data: await b64(blob), directory: "DOCUMENTS", recursive: true }); return true; }
     catch (e) { return false; }
   }
+  const shareFile = async (blob, name) => {
+    try { await P().Share.share({ title: name, files: [await toCache(blob, name)], dialogTitle: "Send or save " + name }); }
+    catch (e) { if (!cancelled(e)) throw e; }
+  };
   window.LPN_APK_SAVE = async function (blob, name) {
     const kept = await keep(blob, name);
     say(kept ? "Saved " + name + " in Documents › LPN Pallet Log." : "");
-    try { await P().Share.share({ title: name, files: [await toCache(blob, name)], dialogTitle: "Send or save " + name }); }
-    catch (e) { if (!cancelled(e) && !kept) say("Couldn’t save " + name + ": " + ((e && e.message) || e)); }
+    if (kept) { savedBar(blob, name); return; }
+    // Couldn't keep a copy (older Android): straight to the share menu, to save or send it.
+    try { await shareFile(blob, name); } catch (e) { say("Couldn’t save " + name + ": " + ((e && e.message) || e)); }
   };
+  /* After saving: a bar at the bottom with Open and Share, so the file needn't be looked for. */
+  let barT = 0;
+  function savedBar(blob, name) {
+    let b = document.getElementById("apkSaved"); if (b) b.remove();
+    b = document.createElement("div"); b.id = "apkSaved"; b.className = "apksaved"; b.setAttribute("role", "status");
+    const t = document.createElement("p"); t.textContent = "Saved " + name + " in Documents › LPN Pallet Log."; b.appendChild(t);
+    const row = document.createElement("div"); row.className = "row"; b.appendChild(row);
+    const done = () => { clearTimeout(barT); b.remove(); };
+    const btn = (label, fn, cls) => { const x = document.createElement("button"); x.type = "button"; x.textContent = label; if (cls) x.className = cls; x.onclick = fn; row.appendChild(x); return x; };
+    btn("Open", async () => { done(); try { await P().LpnNative.openFile({ name: clean(name) }); } catch (e) { say((e && e.message) || "No app on this phone can open that file."); } }, "p");
+    btn("Share", async () => { done(); try { await shareFile(blob, name); } catch (e) { say("Couldn’t share " + name + ": " + ((e && e.message) || e)); } });
+    btn("✕", done).setAttribute("aria-label", "Close");
+    document.body.appendChild(b);
+    // Stays while it's being used; otherwise goes after 12 seconds.
+    const later = () => { clearTimeout(barT); barT = setTimeout(() => { if (!b.contains(document.activeElement)) done(); else later(); }, 12000); };
+    later();
+  }
 
   // Downloads: the app saves files by clicking a hidden link with a download name.
   const click = HTMLAnchorElement.prototype.click;
@@ -66,6 +88,7 @@
   const css = document.createElement("style");
   css.textContent = ".apktoast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:calc(100vw - 32px);padding:10px 16px;border-radius:12px;background:#1f2a41;color:#fff;font-size:.95rem;z-index:1000;box-shadow:0 4px 16px rgba(0,0,0,.35)}"
     + ".apkask{position:fixed;left:12px;right:12px;bottom:12px;z-index:1000;margin:0;box-shadow:0 6px 24px rgba(0,0,0,.4)}.apkask .apkasktitle{margin:0 0 10px;font-weight:700}"
+    + ".apksaved{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:1000;padding:12px 14px;border-radius:12px;background:#1f2a41;color:#fff;box-shadow:0 6px 24px rgba(0,0,0,.4)}.apksaved p{margin:0 0 8px;overflow-wrap:anywhere}"
     + ".apkfiles{list-style:none;padding:0;margin:8px 0}.apkfiles li{padding:10px 0;border-bottom:1px solid var(--rule,#223a63)}.apkfname{margin:0;font-weight:700;overflow-wrap:anywhere}.apkfiles .note{margin:2px 0 8px}";
   document.head.appendChild(css);
   let toastT = 0;
@@ -92,7 +115,9 @@
       async detect(src) {
         const c = still(src); if (!c) return [];
         const r = await N().decodeBarcodes({ data: c.toDataURL("image/jpeg", 0.85).split(",")[1] });
-        return ((r && r.barcodes) || []).map(b => ({ rawValue: b.rawValue, format: String(b.format) }));
+        // A label can have several barcodes (an LPN and a shipping code): the LPN comes first, so it's the one used.
+        const rank = v => /^LPNM\d+ /.test(v) ? 0 : typeof lpnDigitsOk === "function" && lpnDigitsOk(tidyLpn(v)) ? 1 : /^[A-Z]{1,3}\d+$/i.test(String(v).replace(/[\s-]+/g, "")) ? 2 : 3;
+        return ((r && r.barcodes) || []).map((b, i) => ({ rawValue: b.rawValue, format: String(b.format), i })).sort((a, b) => rank(a.rawValue) - rank(b.rawValue) || a.i - b.i).map(({ rawValue, format }) => ({ rawValue, format }));
       }
     };
     window.LPN_APK_MLKIT = true;
@@ -155,6 +180,7 @@
       $(id).click(); return;
     }
     if (r.action === "manifest") { openManifest(); return; }
+    if (typeof r.text === "string") { sharedText(r.text); return; }
     if (!r.file) return;
     const bin = atob(r.file.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
     const name = r.file.name || "file", mime = r.file.mime || "", file = new File([u], name, { type: mime });
@@ -178,6 +204,30 @@
     toast("This app can’t open " + name + ".");
   }
   window.LPN_APK_OPENED = opened;
+  /* Text shared into the app: the LPNs in it, as manifest numbers or as pallets for the log (with the usual checks). */
+  function sharedText(text) {
+    // LPN-shaped numbers only; not PO or SO (order) numbers, and only the Manifest check's prefixes when some are set.
+    const found = [], pf = typeof getPfx === "function" ? getPfx() : [];
+    for (const m of String(text).matchAll(/\b[A-Za-z]{1,3}[ -]?\d{6,12}\b/g)) {
+      const v = tidyLpn(m[0]), p = (v.match(/^[A-Z]+/) || [""])[0];
+      if (!lpnDigitsOk(v) || /^(PO|SO)$/.test(p) || (pf.length && !pf.includes(p)) || found.includes(v)) continue;
+      found.push(v);
+    }
+    if (!found.length) { toast("No LPNs found in the shared text."); return; }
+    const n = found.length + (found.length === 1 ? " LPN" : " LPNs"), choices = [];
+    if (has("manifestCheck")) choices.push(["Manifest numbers", () => {
+      if (!openManifest()) return;
+      const box = $("cmpNums"), have = box.value.split(/\r?\n/).map(x => x.trim()).filter(Boolean), add = found.filter(v => !have.includes(v));
+      box.value = have.concat(add).join("\n"); box.dispatchEvent(new Event("input", { bubbles: true }));
+      toast(add.length ? "Added " + add.length + " to the manifest numbers." : "Those are already in the manifest numbers.");
+    }]);
+    if (has("palletLog")) choices.push(["Pallets in the log", () => {
+      if (typeof closeHelp === "function") closeHelp();
+      addPasted(found.join("\n")); const l = $("lpn"); if (l) l.scrollIntoView({ block: "center" });
+    }]);
+    if (!choices.length) { toast("This app can’t use shared LPNs."); return; }
+    ask("Found " + n + " in the shared text. Use " + (found.length === 1 ? "it" : "them") + " as:", choices);
+  }
   if (N()) {
     const take = async () => { try { opened(await N().takePending()); } catch (e) {} };
     try { N().addListener("opened", take); } catch (e) {}
@@ -240,12 +290,26 @@
   function syncVol() { if (N()) N().setVolumeScan({ on: volOn() && has("liveScan") && has("palletLog") }).catch(() => {}); }
   if (N()) {
     window.addEventListener("load", syncVol);
+    window.addEventListener("load", followFont);
     try { N().addListener("volumeDown", () => {
       const main = document.querySelector("main"); if (main && main.inert) return; // a panel or box is open
       if (typeof scanning !== "undefined" && scanning && typeof stopScan === "function") { stopScan(); return; }
       opened({ action: "scan" });
     }); } catch (e) {}
   }
+
+  /* Text size: follows the phone's when that changes (Large or Extra large for big text), and can still be changed in Settings. */
+  async function followFont() {
+    if (!N() || typeof cfg === "undefined") return;
+    let scale = 1; try { scale = Number((await N().fontScale()).scale) || 1; } catch (e) { return; }
+    const key = String(Math.round(scale * 100)); let last = null; try { last = localStorage.getItem("lpnapkfont"); } catch (e) {}
+    if (last === key) return; // the phone's setting hasn't changed: leave whatever was chosen in Settings
+    try { localStorage.setItem("lpnapkfont", key); } catch (e) {}
+    const size = scale >= 1.3 ? "1.25" : scale >= 1.12 ? "1.12" : "1";
+    if (last === null && size === "1") return; // first open at normal size: nothing to change
+    if (cfg.size !== size) { cfg.size = size; saveCfg(); applyCfg(); }
+  }
+  window.LPN_APK_FONT = followFont;
 
   /* Exported files: what the app saved in Documents › LPN Pallet Log, newest first, to open, share or print again. */
   async function showFiles() {
