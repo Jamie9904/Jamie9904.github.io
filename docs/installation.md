@@ -292,9 +292,14 @@ If `config.js` is missing or has a mistake (for example a stray comma), the brow
 
 On the `updates` branch since 19 Nov 2026 (not on `main` yet). `tools/android/` turns the website's own files into an Android app that never needs the internet, and `.github/workflows/android.yml` (workflow name **Android app**) builds it on GitHub. Nothing is built on your computer and nothing in it is part of the website or the site zip.
 
-### When it is built
+### When it is checked and when it is built
 
-On every push to `updates` or `main` (except pushes that only change `docs/` or `README.md`), and by hand from **Actions → Android app → Run workflow**. Only one runs at a time, so the signing key can never be made twice. A run takes about 3 to 10 minutes (45 at most). Its steps:
+Since commit `5670eb0` on `updates` (not on `main` yet):
+
+- **Every push** to `updates` or `main` (except pushes that only change `docs/` or `README.md`) runs only steps 1 to 4 below: it builds the offline copy and checks it with the internet blocked, so a website change that breaks the Android app shows up straight away. No APK is made.
+- **The APK is built and signed only when the owner approves an Android update**, by running the workflow by hand: **Actions → Android app → Run workflow** (choose the branch, normally `updates`), or `gh workflow run android.yml --ref updates`. Steps 5 to 7 only run then (`if: github.event_name == 'workflow_dispatch'`), so several changes go into each APK and phones aren't asked to update after every push.
+
+Only one run goes at a time, so the signing key can never be made twice. A full build took about 3 to 10 minutes (45 at most). The steps:
 
 1. `npm install --ignore-scripts` and Playwright's Chromium (Node 22, Java 21).
 2. `node tools/android/fetch-libs.js` downloads every cdnjs, jsDelivr and unpkg file the app's scripts name, checks each against its fingerprint in the `SRI` map in `core.js`, and starts the real photo reader in a browser (as the site does) to catch its worker, engine (both the SIMD and the plain build) and English language data. It writes them to `tools/android/lib/` (17 files, 17.9 MB at run 9).
@@ -306,25 +311,25 @@ On every push to `updates` or `main` (except pushes that only change `docs/` or 
 
 ### Downloading and installing it
 
-1. On GitHub open **Actions → Android app**, pick the newest run with a green tick, and under **Artifacts** download **LPN-Pallet-Log-Android**. GitHub gives it as a `.zip` with the `.apk` inside (you need to be signed in to GitHub).
+1. On GitHub open **Actions → Android app**, pick the newest run with a green tick that was started by hand ("Manually run" / `workflow_dispatch`; runs started by a push have no APK), and under **Artifacts** download **LPN-Pallet-Log-Android**. GitHub gives it as a `.zip` with the `.apk` inside (you need to be signed in to GitHub).
 2. Put the `.apk` on the phone (for example download it on the phone, or copy it over) and open it. Android asks to allow installing apps from that source (the browser or Files app) the first time: allow it, then tap **Install**. Google Play Protect may warn about an app it doesn't know; it is not from the Play Store.
 3. A newer APK installs over the old one and keeps its data, as long as both were signed with the same key.
 
-The app has no update banner and no service worker: to update it, install the next APK. A change to its settings file (below) also needs a new APK.
+The app has no update banner and no service worker: to update it, install the next APK. A change to its settings file (below) also needs a new APK, built by running the workflow by hand.
 
 ### Signing
 
 Android only installs an update over an app signed with the same key, so every APK is signed with one key, kept in this repository:
 
-- **The password** is the repository secret `ANDROID_KEY_PASSWORD` (**Settings → Secrets and variables → Actions**), at least 12 characters, set by the repository owner. Without it the run still passes, but it shows the warning "APK not signed" and uploads no APK. Too short a password is an error.
-- **The key** (`lpn-android-key.p12`, RSA 4096, valid 100 years) is made by the first run that has the password and stored as the asset of a **draft** release named "Android signing key" (tag `android-signing-key`). Drafts are only visible to people who can change the repository. Later runs download it from there. If the password doesn't open it, the run fails with "ANDROID_KEY_PASSWORD doesn't open the saved signing key. Put back the password it was made with."; if the draft has lost its file, "Put the backup copy back on it."
+- **The password** is the repository secret `ANDROID_KEY_PASSWORD` (**Settings → Secrets and variables → Actions**), at least 12 characters, set by the repository owner. Without it a hand-started run still passes, but it shows the warning "APK not signed" and uploads no APK. Too short a password is an error.
+- **The key** (`lpn-android-key.p12`, RSA 4096, valid 100 years) is made by the first build that has the password (in the first APK, run 9, still from a push before `5670eb0`; from now on only hand-started runs sign) and stored as the asset of a **draft** release named "Android signing key" (tag `android-signing-key`). Drafts are only visible to people who can change the repository. Later runs download it from there. If the password doesn't open it, the run fails with "ANDROID_KEY_PASSWORD doesn't open the saved signing key. Put back the password it was made with."; if the draft has lost its file, "Put the backup copy back on it."
 - **Back it up:** download `lpn-android-key.p12` from the draft release and keep it, with the password, somewhere safe outside GitHub.
 - **Never publish or delete that draft release,** and never change the secret to a different password. With the key gone, a new one would be made, and phones would refuse to install the next APK over the old app until it is removed (which deletes its data).
 - The run's notice "APK signed" gives the APK's certificate SHA-256 (run 9: `b028a58a…091a36`), which stays the same as long as the key does.
 
 ### The app's settings file (`tools/android/config.js`)
 
-It has the same shape and the same feature names as the website's `config.js`, but is separate: a feature switched off on the website stays on in the app, and the other way round. Edit it the same way (only the `true`/`false` values). Rules the build enforces: every name in `FEATURES` must have a line under `features` (so a new website feature can't slip into the app unnoticed), no unknown names, only `true` or `false`, and `report` and `shareApp` must stay `false` (they need the internet or the website). At the time of writing every feature is on except those two, and the Manifest check is marked as in testing, as on the website. A change reaches phones only when the next APK (built after the push) is installed.
+It has the same shape and the same feature names as the website's `config.js`, but is separate: a feature switched off on the website stays on in the app, and the other way round. Edit it the same way (only the `true`/`false` values). Rules the build enforces: every name in `FEATURES` must have a line under `features` (so a new website feature can't slip into the app unnoticed), no unknown names, only `true` or `false`, and `report` and `shareApp` must stay `false` (they need the internet or the website). At the time of writing every feature is on except those two, and the Manifest check is marked as in testing, as on the website. A change reaches phones only when the next APK is built (by running the workflow by hand, as above) and installed.
 
 ### What can only be checked on a phone
 

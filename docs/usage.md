@@ -531,7 +531,7 @@ Either card can be switched off for everyone in the site settings (`welcome`, `w
 
 ## Android app (offline APK)
 
-Since 19 Nov 2026 there is also an Android app: an APK made from the same files as the website, with every library and the photo reader inside it, so it works with no internet at all. It is built from the `updates` branch (the website changes it carries, such as the pallet log switch and today's Manifest date, are not live on the website yet) and its first signed copy is **Build 66 (Android 9)**. How it is built, signed and installed: [installation](installation.md#android-app-offline-apk).
+Since 19 Nov 2026 there is also an Android app: an APK made from the same files as the website, with every library and the photo reader inside it, so it works with no internet at all. Each push checks it, but a new APK is only built when the owner approves an Android update and runs the build by hand, so one APK carries several changes. It is built from the `updates` branch (the website changes it carries, such as the pallet log switch and today's Manifest date, are not live on the website yet) and its first signed copy is **Build 66 (Android 9)**. How it is built, signed and installed: [installation](installation.md#android-app-offline-apk).
 
 **What is the same.** Logging, the Manifest check (photos, PDFs, spreadsheets), exports, Saved deliveries, backups, Share log, the Guide and Settings all work as on the website, with the Android app's own site settings (`tools/android/config.js`).
 
@@ -548,7 +548,7 @@ Since 19 Nov 2026 there is also an Android app: an APK made from the same files 
 - **Keep the screen on** (Settings) is done by the app itself, so it works without the browser's screen lock.
 - **The screen:** on newer phones the app fits between the status bar and the navigation bar (and stays above the keyboard), with both bars in the app's navy and light icons. It starts with a plain navy screen and its icon, and on Android 13 and newer the icon can follow the phone's themed icon colours.
 - **Settings and the footer** show which Android build this is, for example "Android app: Build 66 (Android 9)": the website build it was made from, then the number of the GitHub run that built it.
-- **No update banner.** There is no service worker; the app changes only when a newer APK is installed over it.
+- **No update banner.** There is no service worker; the app changes only when a newer APK is installed over it, and new APKs are only made when the owner approves an Android update.
 
 **Opening and sharing files into the app.** The app is offered when you open or share a PDF, an Excel file (`.xlsx` or `.xls`), a CSV, a backup (`.json`) or a photo from another app (Files, Gmail, WhatsApp and so on). Files over 40 MB are refused with "The file is too large to open (over 40 MB)."
 
@@ -744,6 +744,7 @@ Colours (Follow phone, two colours drive the whole theme, with a contrast warnin
 | Android app: where did my export go? | A copy is in **Documents › LPN Pallet Log** on the phone (open it with the Files app), and the share menu that opened can send it on. |
 | Android app: no **Report a problem** or **Share this app** | They are always off in the Android app, as they need the internet or the website. Use **Settings → Download problem report** and send the file. |
 | Android app: a feature is on (or off) here but not on the website | The app has its own settings file (`tools/android/config.js`); a change there arrives only with the next APK. |
+| Android app: a change that is on the website isn't in the app | Pushes only check the Android copy; a new APK is built only when the owner approves an Android update (the workflow run by hand). Install that APK when it comes. |
 | Android app: "The file is too large to open (over 40 MB)." | Files opened or shared into the app can be at most 40 MB. |
 | Android app: "This app can’t open …" | Only PDFs, Excel and CSV files, backups (`.json`) and photos can be opened in the app. |
 | Android app: the phone won't install the new APK over the old one ("App not installed" or a conflict) | Every APK must be signed with the same key. Check the APK came from this repository's **Android app** run; if the key was lost or replaced, the old app has to be removed first, which deletes its data, so take a backup in it first. |

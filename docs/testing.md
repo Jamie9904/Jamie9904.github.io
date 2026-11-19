@@ -203,7 +203,7 @@ End-to-end checks in headless Chromium against the real page (582 checks at the 
 
 ## Offline Android app check (`tools/android/check-offline.js`)
 
-On `updates` since 19 Nov 2026 (not on `main` yet). It is not part of `npm test`: the **Android app** workflow runs it after `fetch-libs.js` and `build-www.js`, and a failure stops the APK build. It serves `tools/android/www` on `127.0.0.1` in Chromium (390×844, service workers blocked), aborts and records every request to any other host, and puts stand-ins for Capacitor's Filesystem, Share and App plugins and the app's own `LpnNative` plugin on the page, which record what they are given. It prints `::notice` "Offline app checks: n passed, 0 failed" on GitHub (26 at run 9) and these checks:
+On `updates` since 19 Nov 2026 (not on `main` yet). It is not part of `npm test`: the **Android app** workflow runs it after `fetch-libs.js` and `build-www.js` on every push to `updates` and `main` (since commit `5670eb0` on `updates`, that is all a push run does, with no APK) and in the hand-started runs that build the APK, where a failure stops the build. It serves `tools/android/www` on `127.0.0.1` in Chromium (390×844, service workers blocked), aborts and records every request to any other host, and puts stand-ins for Capacitor's Filesystem, Share and App plugins and the app's own `LpnNative` plugin on the page, which record what they are given. It prints `::notice` "Offline app checks: n passed, 0 failed" on GitHub (26 at run 9) and these checks:
 
 - the page opens as the Android copy (`LPN_APK`), with no service worker;
 - Report a problem and Share this app are off, the features match `tools/android/config.js` exactly, and neither Settings nor the Guide mentions them;

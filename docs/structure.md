@@ -73,7 +73,7 @@
 │   ├── worker.mjs           POST /report: checks, limits (Limits Durable Object), GitHub issue and photo
 │   ├── wrangler.toml        Worker name, repo, allowed origin, Durable Object binding
 │   └── README.md            one-time set-up steps
-├── tools/android/           the offline Android app (APK), built on GitHub by .github/workflows/android.yml (on `updates` since 19 Nov 2026, not on `main` yet; not part of the site or the site zip)
+├── tools/android/           the offline Android app (APK): checked on every push and built only by hand by .github/workflows/android.yml (on `updates` since 19 Nov 2026, not on `main` yet; not part of the site or the site zip)
 │   ├── config.js            the Android app's own site settings (same names as config.js; report and shareApp must stay false; every feature in FEATURES needs a line or the build stops)
 │   ├── fetch-libs.js        step 1: downloads every CDN library the app names (checked against the SRI fingerprints) and the photo reader's worker, engines and language data into lib/, with lib/tess.json
 │   ├── build-www.js         step 2: builds www/ from the site's files with checked edits (local libraries, own-files-only security policy, its own config.js, "(build n, Android app)" in exports, no service worker, Android printing first) and adds android.js
@@ -91,7 +91,7 @@
 │   └── photo-ok.sh          confirms manifest photos in tools/ocr-check/photos/ were checked for addresses, names and phone numbers, so the git guard lets them be committed (records their git hash in .git/lpn-photos-ok)
 ├── .github/workflows/
 │   ├── test.yml             runs the checks on every push and pull request (advisories and fingerprints without blocking)
-│   ├── android.yml          builds, checks and signs the offline Android app on every push to updates and main (not for docs-only changes) and by hand; the APK is the run's artifact LPN-Pallet-Log-Android (on `updates`, not on `main` yet)
+│   ├── android.yml          checks the offline Android copy on every push to updates and main (not for docs-only changes); builds and signs the APK only when run by hand (Run workflow, or gh workflow run android.yml --ref updates) after the owner approves an Android update; the APK is that run's artifact LPN-Pallet-Log-Android (on `updates`, not on `main` yet)
 │   ├── feedback-worker.yml  deploys tools/feedback-worker to Cloudflare (by hand, or when it changes on main; skips until its secrets exist)
 │   └── health.yml           weekly health check of the live site, the live demo video, the report system, CDN libraries, advisories, fingerprints, checks and the live site's photo reading
 └── .claude/                 Claude Code automations (development only)
