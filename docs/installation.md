@@ -361,7 +361,7 @@ It has the same shape and the same feature names as the website's `config.js`, b
 - Scan by photo opens the camera app (not the photo picker), and Upload photo still opens the picker;
 - the buzzes with Vibrate on (one short for added, a double for a warning) at full strength, and the light tap on Add, Scan and the type buttons;
 - in the camera scanner: the tall aiming frame and its green and orange flashes, the type buttons, FSDU, Remove last and the last three pallets, and the bigger buttons with **Bigger buttons, for gloves** on;
-- after Android 43: in the camera scanner, "all in" and a green Done at the expected count and "more than expected" above it, the type buttons in the main screen's colours, every button label whole on a narrow phone, the dark outlined Remove last, Torch and Done, the space above the message and the navy bars; and the questions' sheet full width and solid (the screenshot run shows most of these, but not a real barcode being read);
+- after Android 48: in the camera scanner, "all in" and a green Done at the expected count and "more than expected" above it, the type buttons in the main screen's colours, every button label whole on a narrow phone, the dark outlined Remove last, Torch and Done, the space above the message and the navy bars; and the questions' sheet full width and solid (the screenshot run shows most of these, but not a real barcode being read);
 - Carry on scanning when the app opens with a delivery in progress;
 - the status and navigation bars in the app's colours, with dark icons on a light theme;
 - the Saved bar and messages above the entry bar, and the questions as bottom sheets (tap outside to close);
