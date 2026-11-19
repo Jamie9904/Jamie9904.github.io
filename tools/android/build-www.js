@@ -56,9 +56,11 @@ for (const f of ["core.js", "scan.js", "export.js", "compare.js"]) edit(f, /http
   if (feats.report || feats.shareApp) fail("tools/android/config.js: report and shareApp must stay false (they need the internet or the website)");
   fs.writeFileSync(path.join(WWW, "config.js"), src);
 }
-// Exports say they were made with the Android app: "LPN Pallet Log v4.0 (build 66, Android app)".
-// (sw.js is copied only so the app can read its build number; it isn't started.)
-edit("export.js", 'const out="LPN Pallet Log"+(v?" "+v:"")+(b?" (build "+b+")":"");', 'const out="LPN Pallet Log"+(v?" "+v:"")+(b?" (build "+b+", Android app)":" (Android app)");');
+// Exports say they were made with the Android app and its own build number (tools/android/build.json),
+// not the website's: "LPN Pallet Log (Android APK build 1)".
+const APK_BUILD = (() => { let b; try { b = JSON.parse(fs.readFileSync(path.join(__dirname, "build.json"), "utf8")).build; } catch (e) { fail("tools/android/build.json is missing or isn't valid JSON"); }
+  if (!Number.isInteger(b) || b < 1) fail("tools/android/build.json: build must be a whole number from 1"); return b; })();
+edit("export.js", "  if(appVer)return appVer;\n", '  appVer="LPN Pallet Log (Android APK build ' + APK_BUILD + ')";return appVer;\n');
 // Nothing about installing: the Android app is already installed (Guide section, Settings, and the first-visit pop-up).
 edit("panels.js", /<h3>\d+\. Install it on your phone<\/h3>[\s\S]*?(?=<h3>\d+\. Settings and good to know<\/h3>)/, "");
 edit("panels.js", '<h3>Install</h3>\n<p>Add this page to your home screen so it opens like an app.</p>\n<div class="row"><button id="showInstall">Show the install pop-up</button></div>\n', "");

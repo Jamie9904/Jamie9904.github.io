@@ -358,7 +358,7 @@
   if (A()) {
     // Which Android build this is (footer), and what's new after an Android update.
     A().getInfo().then(i => {
-      const v = "Android app: " + i.version; window.LPN_APK_VER = v;
+      const v = /^Android APK build \d+$/.test(i.version || "") ? i.version : "Android app: " + i.version; window.LPN_APK_VER = v;
       const f = $("verText"); if (f && !$("apkFoot")) { const s = document.createElement("span"); s.id = "apkFoot"; s.textContent = " · " + v; f.after(s); }
       whatsNew(String(i.build || ""));
     }).catch(() => {});

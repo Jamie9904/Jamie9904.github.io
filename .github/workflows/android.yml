@@ -53,8 +53,10 @@ jobs:
         run: |
           npm install --no-audit --no-fund
           npx cap add android
-          build=$(sed -n 's/^const CACHE="lpn-log-v\([0-9]*\)".*/\1/p' ../../sw.js)
-          node patch-android.js "${{ github.run_number }}" "Build $build (Android ${{ github.run_number }})"
+          # The version code (hidden; it must go up so each APK installs over the last) is the run number;
+          # the name people see is the Android app's own build number from build.json.
+          apk=$(node -p 'require("./build.json").build')
+          node patch-android.js "${{ github.run_number }}" "Android APK build $apk"
           npx cap sync android
       - name: Build the APK
         if: github.event_name == 'workflow_dispatch' # only when the owner approves an Android update
@@ -112,8 +114,8 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          build=$(sed -n 's/^const CACHE="lpn-log-v\([0-9]*\)".*/\1/p' sw.js)
-          name="LPN-Pallet-Log-build-$build-android-${{ github.run_number }}.apk"
+          apk=$(node -p 'require("./tools/android/build.json").build')
+          name="LPN-Pallet-Log-Android-APK-build-$apk.apk"
           set +e; sh tools/android/sign.sh tools/android/android/app/build/outputs/apk/release/app-release-unsigned.apk "$name"; rc=$?; set -e
           if [ $rc -eq 3 ]; then echo "signed=no" >> "$GITHUB_OUTPUT"; exit 0; fi
           [ $rc -eq 0 ] || exit $rc

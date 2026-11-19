@@ -1,9 +1,6 @@
 {
   "_about": "Shown once on each phone after it installs a new Android update (not on a first install). Replace the list with what this update changes, in plain words, each time an Android update is approved and built.",
   "items": [
-    "The pallet type buttons in the camera scanner use the same colours as on the main screen: BB, FMCG, FPP and Mixed each outlined in their colour, and the chosen one filled with it.",
-    "The camera scanner's buttons always show their whole label (Remove last was cut off on some phones).",
-    "When you reach the expected number of pallets, the camera scanner says “all in” and Done turns green.",
-    "Questions now slide up as proper bottom sheets over a dimmed page, and the camera scanner's top strip, status bar and buttons match the app's look."
+    "The Android app now has its own build numbers, starting again at build 1. Exported Excel and PDF files say “LPN Pallet Log (Android APK build 1)” at the bottom instead of the website's build, and Settings shows the same number."
   ]
 }

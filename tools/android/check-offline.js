@@ -62,7 +62,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
         takePending: async () => { const N = window.Capacitor.Plugins.LpnNative, r = N.pending || {}; N.pending = null; return r; },
         addListener: (ev, fn) => { window.Capacitor.Plugins.LpnNative.listeners[ev] = fn; return { remove() {} }; } },
       App: { exited: 0, back: null, addListener: (ev, fn) => { if (ev === "backButton") window.Capacitor.Plugins.App.back = fn; return { remove() {} }; },
-        getInfo: async () => ({ version: "Build 66 (Android 9)", build: "9" }), exitApp: () => { window.Capacitor.Plugins.App.exited++; } } } };
+        getInfo: async () => ({ version: "Android APK build 9", build: "60" }), exitApp: () => { window.Capacitor.Plugins.App.exited++; } } } };
     window.__fsData = {};
     window.Capacitor.Plugins.Filesystem.readdir = async o => ({ files: window.__dir || [] });
     window.Capacitor.Plugins.Filesystem.readFile = async o => ({ data: "JVBERi0xLjM=" });
@@ -101,7 +101,8 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("a PDF is read with the reader inside the app", s.pages === 1 && /VLT004040265/.test(s.text), s);
 
   s = await page.evaluate(async () => { return await appVersion(); });
-  check("exports say they were made with the Android app, with the build number", /^LPN Pallet Log v\d+\.\d+ \(build \d+, Android app\)$/.test(s), s);
+  const apkBuild = JSON.parse(fs.readFileSync(path.join(__dirname, "build.json"), "utf8")).build;
+  check("exports say \"LPN Pallet Log (Android APK build N)\" with the Android app's own build number, not the website's", s === "LPN Pallet Log (Android APK build " + apkBuild + ")", s);
   // Excel export: kept in Documents, then a bar with Open and Share (the share menu only when asked).
   s = await page.evaluate(async () => {
     rows = [{ lpn: "VLT004040265", type: "BB", fsdu: false }, { lpn: "RUN001830763", type: "FMCG", fsdu: false }]; save(); render();
@@ -214,7 +215,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     /translateX\(24px\) scale\(0\.97\)/.test(s.during) && s.cancelled === "" && s.stillOpen && s.closed && s.t === "Press Back again to close the app." && JSON.stringify(s.calls) === '[["exit",2000]]', s);
   // Which build this is.
   s = await page.evaluate(async () => { openHelp("settings", "Settings"); await new Promise(r => setTimeout(r, 100)); const v = document.getElementById("apkVer"); const out = { set: v && v.textContent, foot: (document.getElementById("apkFoot") || {}).textContent }; closeHelp(); return out; });
-  check("Settings and the footer say which Android build this is", /^Android app: Build 66 \(Android 9\)( · Data on this phone: .+)?$/.test(s.set || "") && s.foot === " · Android app: Build 66 (Android 9)", s);
+  check("Settings and the footer say which Android build this is", /^Android APK build 9( · Data on this phone: .+)?$/.test(s.set || "") && s.foot === " · Android APK build 9", s);
 
   // What's new after an Android update: not on a first install, once after an update.
   s = await page.evaluate(() => { const card = () => document.getElementById("apkNew"); localStorage.removeItem("lpnapkseen");
