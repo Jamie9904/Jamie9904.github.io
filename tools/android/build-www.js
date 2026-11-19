@@ -40,7 +40,7 @@ edit("index.html", /<meta http-equiv="Content-Security-Policy" content="[^"]*">/
   `<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; child-src 'self' blob:; connect-src 'self' blob: data:; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-src blob:; object-src blob:; base-uri 'none'; form-action 'none'">`);
 edit("index.html", '<script src="config.js"></script>', '<script src="android.js"></script>\n<script src="config.js"></script>');
 // Library addresses -> the copies inside the app.
-for (const f of ["core.js", "scan.js", "export.js", "compare.js"]) edit(f, /https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com)\//, "lib/$1/", "any");
+for (const f of ["core.js", "scan.js", "export.js", "compare.js"]) edit(f, /https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com)\//, "./lib/$1/", "any"); // "./": pdf.js is loaded with import(), which needs it
 // The Android app has its own settings (tools/android/config.js), separate from the website's config.js.
 {
   const src = fs.readFileSync(path.join(__dirname, "config.js"), "utf8");

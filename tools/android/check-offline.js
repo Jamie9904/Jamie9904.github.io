@@ -50,7 +50,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
 
   s = await page.evaluate(async () => { const out = {};
     for (const [k, f] of Object.entries({ excel: () => loadExcel(), pdf: () => loadJsPdf(), pdflib: () => loadPdfLib(), pdfread: () => loadPdfJs(),
-      barcode: () => loadScript("lib/cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js", () => window.ZXing) }))
+      barcode: () => loadScript("./lib/cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js", () => window.ZXing) }))
       try { await f(); out[k] = true; } catch (e) { out[k] = String(e.message || e); }
     return out; });
   check("the Excel, PDF, PDF reading and barcode libraries load from inside the app", Object.values(s).every(v => v === true), s);
