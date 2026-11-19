@@ -735,9 +735,9 @@ $("cmpGo").onclick=async()=>{
     cmpMsg("Couldn’t create the document: "+((err&&err.message)||"error"));
   }
 };
-try{$("cmpDate").value=localStorage.getItem("lpncmpdate")||""}catch(e){}
-if(!$("cmpDate").value)$("cmpDate").value=new Date().toISOString().slice(0,10);
-$("cmpDate").onchange=()=>{try{localStorage.setItem("lpncmpdate",$("cmpDate").value)}catch(e){}};
+// The manifest date starts as today's date (on this phone's clock) each time the app opens; it can still be changed.
+$("cmpDate").value=localToday();
+try{localStorage.removeItem("lpncmpdate")}catch(e){} // the date older builds remembered
 /* ---- prefix presets ---- */
 const PRESET_URL="presets.json";
 const BUILTIN={"Standard":"RUN, QUB, VLT, RBY, IM, MDW, V, R, Q, M"};
