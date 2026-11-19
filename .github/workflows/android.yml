@@ -1,7 +1,9 @@
 # Builds the offline Android app (APK) of the LPN Pallet Log from the same files as the website.
 # The APK never needs the internet: the libraries are inside it, and Report a problem and Share this app are off.
-# It runs on every push to updates and main (and by hand), checks the offline copy with the internet blocked,
-# then builds and signs the APK. Download it from the run's "Artifacts" (LPN-Pallet-Log-Android).
+# Every push to updates and main checks the offline copy with the internet blocked (no APK).
+# The APK itself is only built and signed when the owner approves a new Android update: run this workflow by hand
+# (Actions > Android app > Run workflow, or: gh workflow run android.yml --ref updates). Download it from that run's
+# "Artifacts" (LPN-Pallet-Log-Android).
 # Signing needs the ANDROID_KEY_PASSWORD secret; see tools/android/sign.sh.
 name: Android app
 on:
@@ -36,6 +38,7 @@ jobs:
       - name: Check the offline copy with the internet blocked
         run: node tools/android/check-offline.js
       - name: Android project
+        if: github.event_name == 'workflow_dispatch' # only when the owner approves an Android update
         working-directory: tools/android
         run: |
           npm install --no-audit --no-fund
@@ -44,9 +47,11 @@ jobs:
           node patch-android.js "${{ github.run_number }}" "Build $build (Android ${{ github.run_number }})"
           npx cap sync android
       - name: Build the APK
+        if: github.event_name == 'workflow_dispatch' # only when the owner approves an Android update
         working-directory: tools/android/android
         run: ./gradlew --no-daemon --stacktrace assembleRelease
       - name: Sign the APK
+        if: github.event_name == 'workflow_dispatch' # only when the owner approves an Android update
         id: sign
         env:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
@@ -58,8 +63,8 @@ jobs:
           if [ $rc -eq 3 ]; then echo "signed=no" >> "$GITHUB_OUTPUT"; exit 0; fi
           [ $rc -eq 0 ] || exit $rc
           echo "signed=yes" >> "$GITHUB_OUTPUT"; echo "name=$name" >> "$GITHUB_OUTPUT"
-      - uses: actions/upload-artifact@v4
-        if: steps.sign.outputs.signed == 'yes'
+      - uses: actions/upload-artifact@v5
+        if: github.event_name == 'workflow_dispatch' && steps.sign.outputs.signed == 'yes'
         with:
           name: LPN-Pallet-Log-Android
           path: ${{ steps.sign.outputs.name }}
