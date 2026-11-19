@@ -59,6 +59,13 @@ for (const f of ["core.js", "scan.js", "export.js", "compare.js"]) edit(f, /http
 // Exports say they were made with the Android app: "LPN Pallet Log v4.0 (build 66, Android app)".
 // (sw.js is copied only so the app can read its build number; it isn't started.)
 edit("export.js", 'const out="LPN Pallet Log"+(v?" "+v:"")+(b?" (build "+b+")":"");', 'const out="LPN Pallet Log"+(v?" "+v:"")+(b?" (build "+b+", Android app)":" (Android app)");');
+// Nothing about installing: the Android app is already installed (Guide section, Settings, and the first-visit pop-up).
+edit("panels.js", /<h3>\d+\. Install it on your phone<\/h3>[\s\S]*?(?=<h3>\d+\. Settings and good to know<\/h3>)/, "");
+edit("panels.js", '<h3>Install</h3>\n<p>Add this page to your home screen so it opens like an app.</p>\n<div class="row"><button id="showInstall">Show the install pop-up</button></div>\n', "");
+edit("panels.js", "if(installed||seen)return;", "if(installed||seen||window.LPN_APK)return;");
+// The tools are inside the app, not downloaded.
+edit("panels.js", "<li>The Excel, PDF and photo reading tools are downloaded from public code servers the first time they’re needed. Your data isn’t sent to them. Like any website, they see your internet address.</li>",
+  "<li>The Excel, PDF, barcode and photo reading tools are inside this app, so nothing is downloaded and the app never needs the internet.</li>");
 // No service worker.
 edit("panels.js", 'if("serviceWorker" in navigator){', 'if(false&&"serviceWorker" in navigator){');
 // The photo reader's worker, engine and language data come from lib/.

@@ -58,6 +58,9 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("uses the Android app's own settings (tools/android/config.js), not the website's", s.length === 0, s);
   s = await page.evaluate(() => { openHelp("settings", "Settings"); const t = document.getElementById("panelBody").textContent; closeHelp(); openHelp("guide", "How to use this app"); const g = document.getElementById("panelBody").textContent; closeHelp(); return { share: /Share this app/.test(t) || !!document.getElementById("shareUrl"), report: /Report a problem/.test(t + g) }; });
   check("Settings and the Guide don't offer Share this app or Report a problem", !s.share && !s.report, s);
+  s = await page.evaluate(() => { openHelp("settings", "Settings"); const t = document.getElementById("panelBody").textContent; closeHelp(); openHelp("guide", "How to use this app"); const g = document.getElementById("panelBody").textContent, heads = [...document.querySelectorAll("#panelBody h3")].map(h => h.textContent); closeHelp();
+    return { set: /Show the install pop-up|home screen/.test(t), guide: heads.some(h => /Install/.test(h)) || /Install app|Add to Home Screen|public code servers/.test(g), nums: heads.filter(h => /^\d+\. /.test(h)).map(h => parseInt(h)), tools: /inside this app, so nothing is downloaded/.test(g), pop: !document.getElementById("instBox").hidden }; });
+  check("nothing about installing (Guide, Settings or the first-visit pop-up), and the Guide says the tools are inside the app", !s.set && !s.guide && !s.pop && s.tools && s.nums.every((n, i) => n === i + 1), s);
 
   s = await page.evaluate(async () => { const before = { logo: logo, shown: !document.getElementById("logoImg").hidden, btn: document.getElementById("logoBtn").textContent };
     const c = document.createElement("canvas"); c.width = 40; c.height = 20; const x = c.getContext("2d"); x.fillStyle = "#c00"; x.fillRect(0, 0, 40, 20);
