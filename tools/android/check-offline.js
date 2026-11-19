@@ -108,8 +108,8 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative; await keepAwake(false); N.calls = []; await keepAwake(true); await keepAwake(false); return N.calls; });
   check("keeping the screen on uses the app's own switch (on, then off)", JSON.stringify(s) === '[["awake",true],["awake",false]]', s);
   // Print: Android's print screen, with the PDF.
-  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative; N.calls = []; window.__share = []; rows = [{ lpn: "VLT004040265", type: "BB", fsdu: false }]; save(); render();
-    document.getElementById("prn").click(); for (let i = 0; i < 100 && !N.calls.length; i++) await new Promise(r => setTimeout(r, 100)); return { calls: N.calls, shared: window.__share.length }; });
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative; N.calls = []; window.__share = []; rows = [{ lpn: "VLT004040265", type: "BB", fsdu: false }]; document.getElementById("expect").value = ""; save(); render();
+    document.getElementById("prn").click(); for (let i = 0; i < 100 && !N.calls.length; i++) await new Promise(r => setTimeout(r, 100)); return { calls: N.calls, shared: window.__share.length, msg: document.getElementById("dlmsg").textContent }; });
   check("Print opens Android's print screen with the PDF (not the share menu)", s.calls.length === 1 && s.calls[0][0] === "print" && /^LPN-log-/.test(s.calls[0][1]) && !/\.pdf$/.test(s.calls[0][1]) && s.calls[0][2] === "JVBER" && s.shared === 0, s);
   // Files opened or shared into the app.
   const open = r => page.evaluate(async r => { const N = window.Capacitor.Plugins.LpnNative; N.pending = r; await N.listeners.opened(); await new Promise(x => setTimeout(x, 300)); }, r);
