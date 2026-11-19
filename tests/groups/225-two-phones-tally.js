@@ -101,12 +101,12 @@ module.exports = async ({ browser, URL0 }) => {
   p = await page(browser, 375);
   await p.goto(URL0); await p.waitForTimeout(300);
   s = await p.evaluate(async () => {
-    const calls = [], texts = []; let props = null;
+    const calls = [], texts = []; let props = null, pages = 1;
     const doc = new Proxy({}, { get(t, k) {
       if (k === "autoTable") return o => { calls.push(o); return doc; };
       if (k === "internal") return { pageSize: { getWidth: () => 210, getHeight: () => 297 } };
       if (k === "lastAutoTable") return { finalY: 90 };
-      if (k === "getTextWidth") return () => 50; if (k === "getNumberOfPages") return () => 1;
+      if (k === "getTextWidth") return () => 50; if (k === "getNumberOfPages") return () => pages; if (k === "addPage") return () => { pages++; return doc; };
       if (k === "output") return () => new ArrayBuffer(4); if (k === "then") return undefined;
       if (k === "text") return t => { texts.push(String(t)); return doc; };
       if (k === "setProperties") return o => { props = o; return doc; };
@@ -116,27 +116,30 @@ module.exports = async ({ browser, URL0 }) => {
     rows = []; save(); render();
     document.getElementById("expBtn").click(); const btn = document.getElementById("tallyBtn"), vis = !btn.hidden && btn.getBoundingClientRect().height >= 40;
     await btn.onclick();
-    const main = calls[1] || {};
-    return { app: texts.filter(t => /LPN Pallet Log|\bapp\b|build \d/i.test(t)).concat(JSON.stringify(props || {}).match(/LPN Pallet Log|\bapp\b/i) || []), texts, dated: texts.some(t => /^Printed /.test(t)), footer: texts.some(t => /^Page 1 of 1$/.test(t)), vis, printed, msg: document.getElementById("dlmsg").textContent, details: JSON.stringify(calls[0] && calls[0].body), head: main.head && main.head[0], n: main.body ? main.body.length : 0, last: main.body && main.body[main.body.length - 1][0].content, first: main.body && main.body[0] };
+    const main = calls[1] || {}, back = calls[2] || {};
+    return { back: { n: back.body ? back.body.length : 0, first: back.body && back.body[0], last: back.body && back.body[back.body.length - 1][0].content, head: back.head && back.head[0] }, frontLast: main.body && main.body[main.body.length - 1][0],
+      pageNums: texts.filter(t => /^Page \d of \d$/.test(t)), cont: texts.includes("Continued on the back.") && texts.includes("Goods-in tally sheet (continued)"), app: texts.filter(t => /LPN Pallet Log|\bapp\b|build \d/i.test(t)).concat(JSON.stringify(props || {}).match(/LPN Pallet Log|\bapp\b/i) || []), texts, dated: texts.some(t => /^Printed /.test(t)), footer: texts.some(t => /^Page 1 of 2$/.test(t)) && texts.some(t => /^Page 2 of 2$/.test(t)), vis, printed, msg: document.getElementById("dlmsg").textContent, details: JSON.stringify(calls[0] && calls[0].body), head: main.head && main.head[0], n: main.body ? main.body.length : 0, last: main.body && main.body[main.body.length - 1][0].content, first: main.body && main.body[0] };
   });
   check("the blank tally sheet doesn't mention the app (footer, wording or file details)", s.app.length === 0 && s.texts.includes("Write down each pallet as it comes off the trailer."), s.app);
   check("the Export menu has Blank tally sheet, which works with an empty log; its footer has no printed date", !s.dated && s.footer && s.vis && s.printed === "LPN-tally-sheet.pdf" && !/Add at least one/.test(s.msg), s);
   check("the tally sheet has spaces for the date, receiver, trailer, expected pallets and seals", ["Date", "Received by", "Trailer number", "Expected pallets", "Seal in", "Seal out"].every(w => s.details.includes('"' + w + '"')), s.details);
-  check("the tally sheet has numbered empty rows with a column per pallet type, FSDU and notes, and a totals row", JSON.stringify(s.head) === JSON.stringify(["#", "LPN", "BB", "FMCG", "FPP", "Mixed", "FSDU", "Notes (damage, refused)"]) && s.n >= 20 && s.last === "Totals" && s.first[0] === "1" && s.first.slice(1).every(c => c === ""), s);
-  // If a sheet runs onto a second page, it is made again with one row fewer until it fits.
+  check("the tally sheet's front has numbered empty rows from 1, with a column per pallet type, FSDU and notes, and says it carries on over the back", JSON.stringify(s.head) === JSON.stringify(["#", "LPN", "BB", "FMCG", "FPP", "Mixed", "FSDU", "Notes (damage, refused)"]) && s.n >= 20 && s.first[0] === "1" && s.first.slice(1).every(c => c === "") && s.frontLast === String(s.n) && s.cont, s);
+  check("the back (for double-sided printing) carries on the numbers from the front and ends with the totals for both sides", JSON.stringify(s.back.head) === JSON.stringify(s.head) && s.back.first[0] === String(s.n + 1) && s.back.n >= 25 && s.back.last === "Totals (both sides)" && JSON.stringify(s.pageNums) === '["Page 1 of 2","Page 2 of 2"]', { back: s.back, n: s.n, pageNums: s.pageNums });
+  // If a page's table runs over, the sheet is made again with fewer rows on that page until each side fits.
   s = await p.evaluate(async () => {
-    const made = []; let rowsIn = 0;
-    const mk = () => { const doc = new Proxy({}, { get(t, k) {
-      if (k === "autoTable") return o => { if (o.head) rowsIn = o.body.length - 1; return doc; };
+    const made = [];
+    const mk = () => { let base = 1, pages = 1, rows1 = 0, rows2 = 0; const doc = new Proxy({}, { get(t, k) {
+      if (k === "autoTable") return o => { if (o.head) { if (base === 1) { rows1 = o.body.length; pages = rows1 > 18 ? 2 : 1; } else { rows2 = o.body.length - 1; pages = base + (rows2 > 30 ? 1 : 0); } } return doc; };
+      if (k === "addPage") return () => { base++; pages = base; return doc; };
       if (k === "internal") return { pageSize: { getWidth: () => 210, getHeight: () => 297 } };
       if (k === "lastAutoTable") return { finalY: 90 }; if (k === "getTextWidth") return () => 50;
-      if (k === "getNumberOfPages") return () => (rowsIn > 18 ? 2 : 1);
-      if (k === "output") return () => { made.push(rowsIn); return new ArrayBuffer(4); }; if (k === "then") return undefined;
+      if (k === "getNumberOfPages") return () => pages;
+      if (k === "output") return () => { made.push(rows1 + "+" + rows2); return new ArrayBuffer(4); }; if (k === "then") return undefined;
       return () => doc; } }); return doc; };
     const J = function () { return mk(); }; J.API = { autoTable() {} }; window.jspdf = { jsPDF: J };
     await buildTallyPdf(); return made;
   });
-  check("a tally sheet that runs onto a second page is made again with fewer rows until it fits", s.length >= 2 && s[s.length - 1] === 18 && s[0] > 18, s);
+  check("a tally sheet whose front or back runs over is made again with fewer rows on that side until both fit", s.length === 1 && s[0] === "18+30", s);
   s = await p.evaluate(() => { SITE.on.tallySheet = false; applySite(); const r = document.getElementById("tallyBtn").hidden; SITE.on.tallySheet = true; SITE.on.twoPhones = false; applySite(); r && (window.__p = document.getElementById("phonesBtn").hidden); SITE.on.twoPhones = true; return { tally: r, phones: window.__p }; });
   check("each has its own switch in the site settings", s.tally && s.phones, s);
   // Marked as in testing: a note in the Share log panel, and one in the Export menu under Blank tally sheet.
@@ -153,10 +156,15 @@ module.exports = async ({ browser, URL0 }) => {
     await p.goto(URL0); await p.waitForTimeout(300);
     s = await p.evaluate(async () => {
       await loadPdfJs(); const buf = await buildTallyPdf(); const pdf = await openPdf(new Uint8Array(buf.slice(0)));
-      const pg = await pdf.getPage(1); const words = (await pg.getTextContent()).items.map(i => i.str.trim()).filter(Boolean);
-      return { printed: words.some(w => /^Printed /.test(w)), pages: pdf.numPages, size: buf.byteLength, title: words.includes("Goods-in tally sheet"), totals: words.includes("Totals"), nums: words.filter(w => /^\d+$/.test(w)).map(Number), head: words.includes("Notes (damage, refused)") };
+      const read = async n => (await (await pdf.getPage(n)).getTextContent()).items.map(i => i.str.trim()).filter(Boolean);
+      const w1 = await read(1), w2 = pdf.numPages > 1 ? await read(2) : [], nums = w => w.filter(x => /^\d+$/.test(x)).map(Number);
+      const n1 = nums(w1), n2 = nums(w2);
+      return { printed: w1.concat(w2).some(w => /^Printed /.test(w)), app: w1.concat(w2).filter(w => /LPN Pallet Log|\bapp\b/i.test(w)), pages: pdf.numPages, title: w1.includes("Goods-in tally sheet"), cont: w2.includes("Goods-in tally sheet (continued)"),
+        head: w1.includes("Notes (damage, refused)") && w2.includes("Notes (damage, refused)"), totals: !w1.includes("Totals (both sides)") && w2.includes("Totals (both sides)"), back: w1.includes("Continued on the back."),
+        first1: Math.min(...n1), last1: Math.max(...n1), first2: Math.min(...n2.filter(x => x > 1)), last2: Math.max(...n2) };
     });
-    check("real jsPDF: the tally sheet is one A4 page with its title, numbered rows and totals", s.pages === 1 && !s.printed && s.title && s.totals && s.head && s.nums.includes(1) && s.nums.includes(20), s);
+    check("real jsPDF: the tally sheet is two A4 pages (front and back) with no printed date and no mention of the app", s.pages === 2 && !s.printed && s.app.length === 0 && s.title && s.cont && s.head && s.back, s);
+    check("real jsPDF: the back carries on the numbers from the front and has the totals", s.first1 === 1 && s.last1 >= 20 && s.first2 === s.last1 + 1 && s.last2 >= s.last1 + 25 && s.totals, s);
     check("no script errors", p.errors.length === 0, p.errors);
     await p.ctx.close();
   }

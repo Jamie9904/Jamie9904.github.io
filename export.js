@@ -222,17 +222,18 @@ async function buildLogPdf(d){
 /* A blank tally sheet to fill in by hand (Export menu): the delivery details with space to write, then numbered
    rows with a box for each pallet type, FSDU and a note, and a totals row. One A4 page; print more as needed. */
 async function buildTallyPdf(){
-  // Rows are counted from where the table starts; if a font or a tall logo still pushes it onto a second page,
-  // the sheet is made again with one row fewer, so it always prints on one page.
-  let n=0;
-  for(let tries=0;tries<8;tries++){
-    const r=await tallyPdf(n);
-    if(r.pages<=1||r.rows<=10)return r.buf;
-    n=r.rows-1;
+  // Two pages, to print double-sided: the front has the delivery details and the first rows, the back carries on
+  // with the next numbers and ends with the totals for both sides. Rows are counted from where each table starts;
+  // if a font or a tall logo still pushes a table onto another page, the sheet is made again with fewer rows.
+  let a=0,b=0;
+  for(let tries=0;tries<12;tries++){
+    const r=await tallyPdf(a,b);
+    if(r.ok)return r.buf;
+    if(r.page===1)a=Math.max(10,r.rows-1);else{a=r.rows1;b=Math.max(10,r.rows-1)}
   }
-  return (await tallyPdf(10)).buf;
+  return (await tallyPdf(10,10)).buf;
 }
-async function tallyPdf(want){
+async function tallyPdf(want1,want2){
   await loadJsPdf();await appVersion();
   const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:"portrait"});
   doc.setProperties({title:"Blank tally sheet",subject:"Goods-in tally sheet"});
@@ -247,20 +248,33 @@ async function tallyPdf(want){
   }));
   // Row heights: 10 pt text with 1.5 mm padding top and bottom is under 7.4 mm, so every row is 7.4 mm; the
   // one-line header is about 8 mm.
-  const ph=doc.internal.pageSize.getHeight(),top=doc.lastAutoTable.finalY+6,rowH=7.4,headH=8.2;
-  const n=want||Math.max(10,Math.floor((ph-16-top-headH-rowH)/rowH));
-  const body=Array.from({length:n},(x,i)=>[String(i+1),"","","","","","",""]);
-  body.push([{content:"Totals",colSpan:2,styles:{fontStyle:"bold",halign:"right",fillColor:PDF_HEAD}},"","","","","",{content:"",styles:{fillColor:PDF_HEAD}}]);
-  doc.autoTable(Object.assign({},PDF_BASE,PDF_PLAIN,{
-    startY:top,margin:{left:L,right:10,top:12,bottom:16},
+  const ph=doc.internal.pageSize.getHeight(),rowH=7.4,headH=8.2;
+  const rowsFrom=(from,n)=>Array.from({length:n},(x,i)=>[String(from+i),"","","","","","",""]);
+  const table=(startY,body)=>doc.autoTable(Object.assign({},PDF_BASE,PDF_PLAIN,{
+    startY:startY,margin:{left:L,right:10,top:12,bottom:16},
     head:[["#","LPN","BB","FMCG","FPP","Mixed","FSDU","Notes (damage, refused)"]],
     body:body,
     styles:Object.assign({},PDF_BASE.styles,{minCellHeight:rowH,fontSize:10,cellPadding:{top:1.5,bottom:1.5,left:2.2,right:2.2}}),
     headStyles:Object.assign({},PDF_BASE.headStyles,{fontSize:9,halign:"center"}),
     columnStyles:{0:{cellWidth:10,halign:"center",textColor:90},1:{cellWidth:56},2:{cellWidth:14},3:{cellWidth:14},4:{cellWidth:14},5:{cellWidth:14},6:{cellWidth:14},7:{cellWidth:54}}
   }));
+  // Front: rows 1 to n1, then "Continued on the back." (room is kept for that line).
+  const top1=doc.lastAutoTable.finalY+6;
+  const n1=want1||Math.max(10,Math.floor((ph-16-top1-headH-6)/rowH));
+  table(top1,rowsFrom(1,n1));
+  if(doc.getNumberOfPages()>1)return {ok:false,page:1,rows:n1};
+  doc.setFont("helvetica","italic");doc.setFontSize(9);doc.setTextColor(90);
+  doc.text("Continued on the back.",L,doc.lastAutoTable.finalY+4.5);doc.setTextColor(0);
+  // Back: the next numbers, then the totals for both sides.
+  doc.addPage();
+  const top2=pdfTitle(doc,L,8,"Goods-in tally sheet (continued)","Carry on from the front. The totals are for both sides.");
+  const n2=want2||Math.max(10,Math.floor((ph-16-top2-headH-rowH)/rowH));
+  const body=rowsFrom(n1+1,n2);
+  body.push([{content:"Totals (both sides)",colSpan:2,styles:{fontStyle:"bold",halign:"right",fillColor:PDF_HEAD}},"","","","","",{content:"",styles:{fillColor:PDF_HEAD}}]);
+  table(top2,body);
+  if(doc.getNumberOfPages()>2)return {ok:false,page:2,rows:n2,rows1:n1};
   pdfFooter(doc,0,true,true);
-  return {buf:doc.output("arraybuffer"),pages:doc.getNumberOfPages(),rows:n};
+  return {ok:true,buf:doc.output("arraybuffer"),pages:doc.getNumberOfPages(),rows1:n1,rows2:n2};
 }
 async function buildCmpPdf(res,cnt,manCount,d,logCopy){
   await loadJsPdf();await appVersion();
