@@ -200,7 +200,9 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     N.listeners.backProgress({ progress: 0.5 }); const during = panel.style.transform;
     N.listeners.backCancelled(); const cancelled = panel.style.transform, stillOpen = !panel.hidden;
     N.listeners.backProgress({ progress: 0.8 }); N.listeners.back(); await wait(300); const closed = panel.hidden;
-    N.listeners.back(); const t = document.getElementById("apkToast").textContent; return { during, cancelled, stillOpen, closed, t, calls: N.calls }; });
+    const before = { scanning, scanbox: !document.getElementById("scanbox").hidden, menu: !document.getElementById("expMenu").hidden, saved: !!document.getElementById("apkSaved") };
+    if (scanning || before.scanbox) stopScan(); N.calls = [];
+    N.listeners.back(); const t = document.getElementById("apkToast").textContent; return { during, cancelled, stillOpen, closed, t, calls: N.calls, before }; });
   check("Back follows the swipe on an open panel, cancelling puts it back, letting go closes it; on the main screen the next Back closes the app",
     /translateX\(24px\) scale\(0\.97\)/.test(s.during) && s.cancelled === "" && s.stillOpen && s.closed && s.t === "Press Back again to close the app." && JSON.stringify(s.calls) === '[["exit",2000]]', s);
   // Which build this is.
