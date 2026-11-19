@@ -2,7 +2,8 @@
 # The APK never needs the internet: the libraries are inside it, and Report a problem and Share this app are off.
 # Every push to updates and main checks the offline copy with the internet blocked (no APK).
 # The APK itself is only built and signed when the owner approves a new Android update: run this workflow by hand
-# (Actions > Android app > Run workflow, or: gh workflow run android.yml --ref updates). Download it from that run's
+# (Actions > Android app > Run workflow, or: gh workflow run android.yml --ref updates). With "Make and sign the APK"
+# unticked (gh workflow run android.yml --ref updates -f apk=false) it only checks the Android code compiles: no APK. Download it from that run's
 # "Artifacts" (LPN-Pallet-Log-Android).
 # Signing needs the ANDROID_KEY_PASSWORD secret; see tools/android/sign.sh.
 name: Android app
@@ -11,6 +12,11 @@ on:
     branches: [main, updates]
     paths-ignore: ["docs/**", "README.md"]
   workflow_dispatch:
+    inputs:
+      apk:
+        description: "Make and sign the APK (untick to only check that the Android code compiles)"
+        type: boolean
+        default: true
 permissions:
   contents: write # only to keep the signing key as a draft release (tools/android/sign.sh)
 concurrency:
@@ -51,7 +57,7 @@ jobs:
         working-directory: tools/android/android
         run: ./gradlew --no-daemon --stacktrace assembleRelease
       - name: Sign the APK
-        if: github.event_name == 'workflow_dispatch' # only when the owner approves an Android update
+        if: github.event_name == 'workflow_dispatch' && inputs.apk # only when the owner approves an Android update
         id: sign
         env:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
@@ -64,7 +70,7 @@ jobs:
           [ $rc -eq 0 ] || exit $rc
           echo "signed=yes" >> "$GITHUB_OUTPUT"; echo "name=$name" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v5
-        if: github.event_name == 'workflow_dispatch' && steps.sign.outputs.signed == 'yes'
+        if: github.event_name == 'workflow_dispatch' && inputs.apk && steps.sign.outputs.signed == 'yes'
         with:
           name: LPN-Pallet-Log-Android
           path: ${{ steps.sign.outputs.name }}
