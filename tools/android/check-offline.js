@@ -65,6 +65,8 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     const doc = await window.pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise; const pg = await doc.getPage(1); const tc = await pg.getTextContent(); return { pages: doc.numPages, text: tc.items.map(i => i.str).join(" ") }; });
   check("a PDF is read with the reader inside the app", s.pages === 1 && /VLT004040265/.test(s.text), s);
 
+  s = await page.evaluate(async () => { return await appVersion(); });
+  check("exports say they were made with the Android app, with the build number", /^LPN Pallet Log v\d+\.\d+ \(build \d+, Android app\)$/.test(s), s);
   // Excel export: kept in Documents and handed to the share menu.
   s = await page.evaluate(async () => {
     rows = [{ lpn: "VLT004040265", type: "BB", fsdu: false }, { lpn: "RUN001830763", type: "FMCG", fsdu: false }]; save(); render();

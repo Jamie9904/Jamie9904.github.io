@@ -21,7 +21,7 @@ if (!fs.existsSync(path.join(LIB, "tess.json"))) fail("run fetch-libs.js first")
 
 fs.rmSync(WWW, { recursive: true, force: true });
 fs.mkdirSync(WWW, { recursive: true });
-const FILES = ["index.html", "config.js", "core.js", "qr.js", "scan.js", "export.js", "compare.js", "panels.js", "styles.css", "manifest.webmanifest", "presets.json", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
+const FILES = ["index.html", "config.js", "core.js", "qr.js", "scan.js", "export.js", "compare.js", "panels.js", "styles.css", "manifest.webmanifest", "presets.json", "sw.js", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 for (const f of FILES) fs.copyFileSync(path.join(ROOT, f), path.join(WWW, f));
 for (const d of ["fonts", "media"]) fs.cpSync(path.join(ROOT, d), path.join(WWW, d), { recursive: true });
 fs.rmSync(path.join(WWW, "media", "share-qr.svg"), { force: true }); // the QR code to the website (Share this app is off)
@@ -56,6 +56,9 @@ for (const f of ["core.js", "scan.js", "export.js", "compare.js"]) edit(f, /http
   if (feats.report || feats.shareApp) fail("tools/android/config.js: report and shareApp must stay false (they need the internet or the website)");
   fs.writeFileSync(path.join(WWW, "config.js"), src);
 }
+// Exports say they were made with the Android app: "LPN Pallet Log v4.0 (build 66, Android app)".
+// (sw.js is copied only so the app can read its build number; it isn't started.)
+edit("export.js", 'const out="LPN Pallet Log"+(v?" "+v:"")+(b?" (build "+b+")":"");', 'const out="LPN Pallet Log"+(v?" "+v:"")+(b?" (build "+b+", Android app)":" (Android app)");');
 // No service worker.
 edit("panels.js", 'if("serviceWorker" in navigator){', 'if(false&&"serviceWorker" in navigator){');
 // The photo reader's worker, engine and language data come from lib/.
