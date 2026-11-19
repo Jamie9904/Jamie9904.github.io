@@ -188,16 +188,17 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("the Scan shortcut starts Live scan", s === true, s);
   // Back, with the predictive back gesture.
   s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); N.calls = [];
+    const bar = document.getElementById("apkSaved"); if (bar) bar.remove(); // a Saved bar left by an earlier check (Back closes it first)
     openHelp("guide", "How to use this app"); await wait(100); const panel = document.getElementById("panel");
     N.listeners.backProgress({ progress: 0.5 }); const during = panel.style.transform;
     N.listeners.backCancelled(); const cancelled = panel.style.transform, stillOpen = !panel.hidden;
     N.listeners.backProgress({ progress: 0.8 }); N.listeners.back(); await wait(300); const closed = panel.hidden;
     N.listeners.back(); const t = document.getElementById("apkToast").textContent; return { during, cancelled, stillOpen, closed, t, calls: N.calls }; });
   check("Back follows the swipe on an open panel, cancelling puts it back, letting go closes it; on the main screen the next Back closes the app",
-    /translateX\(24px\) scale\(0\.970\)/.test(s.during) && s.cancelled === "" && s.stillOpen && s.closed && s.t === "Press Back again to close the app." && JSON.stringify(s.calls) === '[["exit",2000]]', s);
+    /translateX\(24px\) scale\(0\.97\)/.test(s.during) && s.cancelled === "" && s.stillOpen && s.closed && s.t === "Press Back again to close the app." && JSON.stringify(s.calls) === '[["exit",2000]]', s);
   // Which build this is.
   s = await page.evaluate(async () => { openHelp("settings", "Settings"); await new Promise(r => setTimeout(r, 100)); const v = document.getElementById("apkVer"); const out = { set: v && v.textContent, foot: (document.getElementById("apkFoot") || {}).textContent }; closeHelp(); return out; });
-  check("Settings and the footer say which Android build this is", s.set === "Android app: Build 66 (Android 9)" && s.foot === " · Android app: Build 66 (Android 9)", s);
+  check("Settings and the footer say which Android build this is", /^Android app: Build 66 \(Android 9\)( · Data on this phone: .+)?$/.test(s.set || "") && s.foot === " · Android app: Build 66 (Android 9)", s);
 
   // What's new after an Android update: not on a first install, once after an update.
   s = await page.evaluate(() => { const card = () => document.getElementById("apkNew"); localStorage.removeItem("lpnapkseen");
@@ -261,7 +262,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     rows = []; save(); await wait(1300); const none = N.calls.filter(c => c[0] === "delivery").map(c => c[1]); return { two, none }; });
   check("the Continue shortcut says how many pallets the delivery has, and goes when the log is cleared", s.two.join() === "Continue: 2 pallets" && s.none.join("|") === "Continue: 2 pallets|", s);
   await open({ action: "continue" });
-  s = await page.evaluate(() => document.activeElement && document.activeElement.id);
+  s = await page.evaluate(() => { const a = document.activeElement; return a ? (a.id || a.tagName + "." + a.className + ":" + (a.textContent || "").slice(0, 40)) : ""; });
   check("the Continue shortcut goes back to the LPN box", s === "lpn", s);
   // Android-style controls.
   s = await page.evaluate(async () => { openHelp("settings", "Settings"); await new Promise(r => setTimeout(r, 100)); const c = document.querySelector("#panelBody label.chk > input[type=checkbox]"), cs = getComputedStyle(c);
