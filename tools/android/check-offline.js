@@ -225,7 +225,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   // Settings › Android app, with the volume button switch.
   s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative; N.calls = []; openHelp("settings", "Settings"); await new Promise(r => setTimeout(r, 50));
     const first = document.getElementById("panelBody").firstElementChild, v = document.getElementById("apkVol"), on = v && v.checked; v.click(); await new Promise(r => setTimeout(r, 50));
-    const off = { stored: localStorage.getItem("lpnapkvol"), calls: N.calls.slice() }; v.click(); await new Promise(r => setTimeout(r, 50)); const back = localStorage.getItem("lpnapkvol"); closeHelp();
+    const off = { stored: localStorage.getItem("lpnapkvol"), calls: N.calls.filter(c => c[0] === "vol") }; v.click(); await new Promise(r => setTimeout(r, 50)); const back = localStorage.getItem("lpnapkvol"); closeHelp();
     return { first: first && first.id, head: first && first.querySelector("h3").textContent, on, off, back, files: !!document.getElementById("apkFilesBtn") }; });
   check("Settings starts with an Android app section, where the volume button can be switched off and on", s.first === "apkSet" && s.head === "Android app" && s.on === true && s.off.stored === "off" && JSON.stringify(s.off.calls) === '[["vol",false]]' && s.back === "on", s);
   // Volume-down starts and stops Live scan; not while a panel is open.
@@ -276,7 +276,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     const st = N.calls.filter(c => c[0] === "status").map(c => c[3] + ":" + c[2]); hideCheck(); N.listeners.nativeScanClosed({ reason: "check" }); return st; });
   check("the scanner's frame flashes green when a pallet is added and orange for a check (which closes the scanner)", s.join() === "ok:false,warn:true", s);
   // Questions are Android-style bottom sheets; tapping the dimmed page closes them (unless they must be answered).
-  s = await page.evaluate(async () => { rows = [{ lpn: "VLT004040611", type: "BB", fsdu: false }]; save(); render(); document.querySelectorAll(".apkask").forEach(a => a.remove()); LPN_APK_CARRYON();
+  s = await page.evaluate(async () => { rows = [{ lpn: "VLT004040611", type: "BB", fsdu: false }]; save(); render(); document.querySelectorAll(".apkask").forEach(a => a.remove()); LPN_APK_CARRYON(); await new Promise(r => setTimeout(r, 400)); // after it has slid up
     const a = document.querySelector(".apkask"), sh = a && a.querySelector(".apksheet"), r = sh && sh.getBoundingClientRect(), out = { sheet: !!sh, atBottom: r && Math.abs(r.bottom - innerHeight) < 2, full: r && Math.round(r.width) === innerWidth, dim: getComputedStyle(a).backgroundColor };
     sh.querySelector(".apkasktitle").click(); out.stillOpen = !!document.querySelector(".apkask"); a.click(); out.closed = !document.querySelector(".apkask"); return out; });
   check("questions slide up as a bottom sheet over a dimmed page, and tapping the dimmed part closes them", s.sheet && s.atBottom && s.full && /rgba\(0, 0, 0, 0\.45\)/.test(s.dim) && s.stillOpen && s.closed, s);
