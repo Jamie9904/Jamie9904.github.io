@@ -129,7 +129,7 @@ public class ScanActivity extends AppCompatActivity {
         fsduBox.setOnCheckedChangeListener((v, on) -> { if (applying) return; sFsdu = on; LpnNativePlugin.scanEvent("scanFsdu", new com.getcapacitor.JSObject().put("on", on)); });
         row.addView(fsduBox, new LinearLayout.LayoutParams(0, dp(52), 1f));
         undoBtn = button("Remove last");
-        undoBtn.setMaxLines(2);
+        undoBtn.setContentDescription("Remove last pallet");
         undoBtn.setOnClickListener(v -> LpnNativePlugin.scanEvent("scanUndo", new com.getcapacitor.JSObject()));
         row.addView(undoBtn, gap(new LinearLayout.LayoutParams(0, dp(52), 1.2f)));
         torchBtn = button("Torch");
@@ -215,6 +215,11 @@ public class ScanActivity extends AppCompatActivity {
         b.setText(text);
         b.setAllCaps(false);
         b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+        // Labels always fit: little side padding, two lines if needed, and the text shrinks a little on narrow phones.
+        b.setPadding(dp(4), 0, dp(4), 0);
+        b.setMinWidth(0); b.setMinimumWidth(0);
+        b.setMaxLines(2);
+        androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(b, 11, 17, 1, TypedValue.COMPLEX_UNIT_SP);
         return b;
     }
 
@@ -286,7 +291,10 @@ public class ScanActivity extends AppCompatActivity {
         recent.setVisibility(sRecent == null || sRecent.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
         undoBtn.setEnabled(sCanUndo);
         int h = dp(sBig ? 66 : 52);
-        for (Button b : allBtns) { ViewGroup.LayoutParams lp = b.getLayoutParams(); if (lp != null) { lp.height = h; b.setLayoutParams(lp); } b.setTextSize(TypedValue.COMPLEX_UNIT_SP, sBig ? 20 : 17); }
+        for (Button b : allBtns) {
+            ViewGroup.LayoutParams lp = b.getLayoutParams(); if (lp != null) { lp.height = h; b.setLayoutParams(lp); }
+            androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(b, 11, sBig ? 20 : 17, 1, TypedValue.COMPLEX_UNIT_SP);
+        }
         fsduBox.setTextSize(TypedValue.COMPLEX_UNIT_SP, sBig ? 20 : 17);
         applying = false;
     }
