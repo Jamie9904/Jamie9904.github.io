@@ -289,6 +289,12 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     theme = { bg: "#f2f2f2", ac: "#0b3d91" }; applyTheme(); await wait(50); const light = N.calls.filter(c => c[0] === "bars").pop();
     theme = { bg: "#0c1830", ac: "#ff8a2a" }; applyTheme(); await wait(50); const dark = N.calls.filter(c => c[0] === "bars").pop(); return { light, dark }; });
   check("the status and navigation bars take the app's background colour, with dark icons on a light theme", s.light && s.light[1] === "#f2f2f2" && s.light[2] === true && s.dark && s.dark[1] === "#0c1830" && s.dark[2] === false, s);
+  // All in: at the expected count the scanner says so and Done stands out.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); rows = []; document.getElementById("expect").value = "2"; save(); render(); N.calls = [];
+    const orig = N.scanStatus; N.scanStatus = async o => { N.calls.push(["st", o.text, o.state && o.state.allIn]); return orig(o); };
+    lastAt = 0; N.listeners.nativeScan({ values: ["VLT004040701"] }); await wait(50); lastAt = 0; N.listeners.nativeScan({ values: ["VLT004040702"] }); await wait(50); lastAt = 0; N.listeners.nativeScan({ values: ["VLT004040703"] }); await wait(50);
+    N.scanStatus = orig; const st = N.calls.filter(c => c[0] === "st"); N.listeners.nativeScanClosed({ reason: "done" }); document.getElementById("expect").value = "20"; save(); return st.map(c => c[1] + "|" + c[2]); });
+  check("at the expected count the scanner says 'all in' and highlights Done; over it, 'more than expected'", /· 1 of 2\|false$/.test(s[0]) && /· 2 of 2, all in\|true$/.test(s[1]) && /· 3 of 2, more than expected\|true$/.test(s[2]), s);
   // Spoken count.
   s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); rows = []; save(); render(); N.calls = [];
     addValue("VLT004040411"); const off = N.calls.filter(c => c[0] === "speak").length;

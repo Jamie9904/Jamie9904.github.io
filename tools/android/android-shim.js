@@ -272,6 +272,12 @@
       $(id).click(); return;
     }
     if (r.action === "manifest") { openManifest(); return; }
+    if (r.action === "show") { // the screenshot check on GitHub (tools/android/shots.sh)
+      if (r.what === "settings") { if (typeof closeHelp === "function") closeHelp(); openHelp("settings", "Settings"); }
+      else if (r.what === "carry") carryOn();
+      else if (r.what === "big-on" || r.what === "big-off") { try { localStorage.setItem("lpnapkbig", r.what === "big-on" ? "on" : "off"); } catch (e) {} applyBig(); }
+      return;
+    }
     if (r.action === "continue") { if (typeof closeHelp === "function") closeHelp(); const l = $("lpn"); if (l && has("palletLog")) { toLog(); quietFocus(l); } return; }
     if (typeof r.text === "string") { sharedText(r.text); return; }
     if (!r.file) return;
@@ -406,7 +412,9 @@
   window.LPN_APK_NATIVESCAN = false;
   // What the scanner shows besides the last message: type, FSDU, the last three pallets, bigger buttons.
   const typeColours = () => { const cs = getComputedStyle(document.documentElement); return ["--bb", "--fm", "--fp", "--mx"].map(v => cs.getPropertyValue(v).trim()).filter(c => /^#[0-9a-f]{6}$/i.test(c)).join(","); };
-  const scanState = () => ({ type: ($("type") || {}).value || "BB", fsdu: !!($("fsdu") || {}).checked, canUndo: rows.length > 0, big: pref("lpnapkbig", false), colours: typeColours(),
+  const expected = () => parseInt(($("expect") || {}).value, 10);
+  const allIn = () => { const ex = expected(); return ex > 0 && rows.length >= ex; };
+  const scanState = () => ({ allIn: allIn(), type: ($("type") || {}).value || "BB", fsdu: !!($("fsdu") || {}).checked, canUndo: rows.length > 0, big: pref("lpnapkbig", false), colours: typeColours(),
     recent: rows.slice(-3).reverse().map(r => r.lpn + " · " + r.type + (r.fsdu ? " + FSDU" : "")).join("\n") });
   function pushScan(text) { if (N()) N().scanStatus(text ? { text, state: scanState() } : { state: scanState() }).catch(() => {}); }
   window.LPN_APK_SCANSTATE = scanState;
@@ -425,7 +433,11 @@
         onCode(v);
         const said = ($("smsg") || {}).textContent || "";
         if (pendingAdd) N().scanStatus({ text: (($("chkTxt") || {}).textContent || said) + " Answer it in the app.", close: true, flash: "warn" });
-        else N().scanStatus({ text: /^LPNM/.test(v) ? said : said + " · " + countText(), state: scanState(), flash: /^Added/.test(said) ? "ok" : undefined });
+        else {
+          const ex = expected(), n = rows.length, done = /^Added/.test(said) && ex > 0 && n >= ex;
+          const tail = done ? (n === ex ? countText() + ", all in" : countText() + ", more than expected") : countText();
+          N().scanStatus({ text: /^LPNM/.test(v) ? said : said + " · " + tail, state: scanState(), flash: /^Added/.test(said) ? "ok" : undefined });
+        }
       });
       // The scanner's own buttons change the page's controls, and the scanner shows the result.
       N().addListener("scanType", e => { const b = document.querySelector('#tyb button[data-t="' + e.type + '"]'); if (b) b.click(); pushScan(); });

@@ -17,6 +17,10 @@ on:
         description: "Make and sign the APK (untick to only check that the Android code compiles)"
         type: boolean
         default: true
+      shots:
+        description: "Screenshots on a virtual Android phone (about 10 minutes more)"
+        type: boolean
+        default: true
 permissions:
   contents: write # only to keep the signing key as a draft release (tools/android/sign.sh)
 concurrency:
@@ -56,6 +60,35 @@ jobs:
         if: github.event_name == 'workflow_dispatch' # only when the owner approves an Android update
         working-directory: tools/android/android
         run: ./gradlew --no-daemon --stacktrace assembleRelease
+      - name: Build a test copy for the screenshots
+        if: github.event_name == 'workflow_dispatch' && inputs.shots
+        working-directory: tools/android/android
+        run: ./gradlew --no-daemon assembleDebug
+      - name: Let the virtual phone use the processor
+        if: github.event_name == 'workflow_dispatch' && inputs.shots
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Screenshots on a virtual Android phone
+        if: github.event_name == 'workflow_dispatch' && inputs.shots
+        continue-on-error: true # the pictures help; a slow emulator mustn't stop an APK the owner asked for
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back virtualscene
+          script: sh tools/android/shots.sh
+      - uses: actions/upload-artifact@v5
+        if: github.event_name == 'workflow_dispatch' && inputs.shots
+        with:
+          name: android-screenshots
+          path: shots/
+          if-no-files-found: warn
+          retention-days: 14
       - name: Sign the APK
         if: github.event_name == 'workflow_dispatch' && inputs.apk # only when the owner approves an Android update
         id: sign

@@ -162,7 +162,7 @@ public class LpnNativePlugin extends Plugin {
             String[] cols = null;
             String cs = st.getString("colours"); // "#dba56c,#6fa8ff,#a9c95a,#c79bf0" for BB, FMCG, FPP, Mixed
             if (cs != null && cs.split(",").length == 4) cols = cs.split(",");
-            ScanActivity.setState(st.getString("type"), Boolean.TRUE.equals(st.getBool("fsdu")), st.getString("recent"), Boolean.TRUE.equals(st.getBool("canUndo")), Boolean.TRUE.equals(st.getBool("big")), cols);
+            ScanActivity.setState(st.getString("type"), Boolean.TRUE.equals(st.getBool("fsdu")), st.getString("recent"), Boolean.TRUE.equals(st.getBool("canUndo")), Boolean.TRUE.equals(st.getBool("big")), cols, Boolean.TRUE.equals(st.getBool("allIn")));
         }
         if (call.getString("text") != null || call.getString("flash") != null || Boolean.TRUE.equals(call.getBoolean("close", false))) ScanActivity.show(call.getString("text"), Boolean.TRUE.equals(call.getBoolean("close", false)), call.getString("flash"));
         call.resolve();
@@ -310,6 +310,8 @@ public class LpnNativePlugin extends Plugin {
         if ("io.github.jamie9904.lpnlog.SCAN".equals(action)) { setPending(new JSObject().put("action", "scan")); return; }
         if ("io.github.jamie9904.lpnlog.MANIFEST".equals(action)) { setPending(new JSObject().put("action", "manifest")); return; }
         if ("io.github.jamie9904.lpnlog.CONTINUE".equals(action)) { setPending(new JSObject().put("action", "continue")); return; }
+        // Used by the screenshot check on GitHub (tools/android/shots.sh) to open a screen: settings, carry, big-on, big-off.
+        if ("io.github.jamie9904.lpnlog.SHOW".equals(action)) { String w = intent.getStringExtra("what"); setPending(new JSObject().put("action", "show").put("what", w == null ? "" : w)); return; }
         // Text shared into the app (for example manifest numbers from an email).
         if (Intent.ACTION_SEND.equals(action) && intent.getParcelableExtra(Intent.EXTRA_STREAM) == null && intent.getStringExtra(Intent.EXTRA_TEXT) != null) {
             String t = intent.getStringExtra(Intent.EXTRA_TEXT);

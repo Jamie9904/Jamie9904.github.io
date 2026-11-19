@@ -71,7 +71,8 @@ public class ScanActivity extends AppCompatActivity {
     private boolean applying = false;
     // The page's state (type, FSDU, last pallets, bigger buttons), kept so it shows as soon as the scanner opens.
     static volatile String sType = "BB", sRecent = "";
-    static volatile boolean sFsdu = false, sCanUndo = false, sBig = false;
+    static volatile boolean sFsdu = false, sCanUndo = false, sBig = false, sAllIn = false;
+    private Button doneBtn;
     // The pallet type colours from the main screen (styles.css --bb, --fm, --fp, --mx), sent by the page; these are the same values.
     static volatile String[] sColours = { "#dba56c", "#6fa8ff", "#a9c95a", "#c79bf0" };
 
@@ -137,6 +138,7 @@ public class ScanActivity extends AppCompatActivity {
         torchBtn.setVisibility(android.view.View.GONE);
         row.addView(torchBtn, gap(new LinearLayout.LayoutParams(0, dp(52), 1f)));
         Button done = button("Done");
+        doneBtn = done;
         done.setOnClickListener(v -> finish());
         row.addView(done, gap(new LinearLayout.LayoutParams(0, dp(52), 1f)));
         panel.addView(row);
@@ -270,7 +272,10 @@ public class ScanActivity extends AppCompatActivity {
     }
 
     /* Shows the page's state: the chosen type, FSDU, the last pallets, whether there's one to remove, button size. */
+    private android.graphics.drawable.Drawable doneTint = null;
+    private ColorStateList doneText = null;
     private void applyState() {
+        if (doneBtn != null && doneTint == null) { doneTint = doneBtn.getBackground(); doneText = doneBtn.getTextColors(); }
         applying = true;
         // Like the main screen: each type outlined in its colour, the chosen one filled with it and dark text.
         for (int i = 0; i < TYPES.length; i++) {
@@ -287,6 +292,16 @@ public class ScanActivity extends AppCompatActivity {
             typeBtns[i].setSelected(on);
         }
         fsduBox.setChecked(sFsdu);
+        // All the expected pallets are in: Done stands out in green.
+        if (doneBtn != null) {
+            if (sAllIn) {
+                android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
+                g.setCornerRadius(dp(10)); g.setColor(Color.parseColor("#3ccf6e"));
+                doneBtn.setBackground(new android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(Color.parseColor("#33ffffff")), g, null));
+                doneBtn.setTextColor(Color.parseColor("#111111"));
+                doneBtn.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            } else if (doneTint != null) { doneBtn.setBackground(doneTint); doneBtn.setTextColor(doneText); doneBtn.setTypeface(android.graphics.Typeface.DEFAULT); }
+        }
         recent.setText(sRecent == null ? "" : sRecent);
         recent.setVisibility(sRecent == null || sRecent.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
         undoBtn.setEnabled(sCanUndo);
@@ -299,8 +314,9 @@ public class ScanActivity extends AppCompatActivity {
         applying = false;
     }
 
-    static void setState(String type, boolean fsdu, String recentText, boolean canUndo, boolean big, String[] colours) {
+    static void setState(String type, boolean fsdu, String recentText, boolean canUndo, boolean big, String[] colours, boolean allIn) {
         if (type != null) sType = type;
+        sAllIn = allIn;
         if (colours != null && colours.length == TYPES.length) sColours = colours;
         sFsdu = fsdu; sRecent = recentText; sCanUndo = canUndo; sBig = big;
         ScanActivity a = current;
