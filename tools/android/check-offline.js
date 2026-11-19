@@ -34,7 +34,18 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     window.__fs = []; window.__share = [];
     window.Capacitor = { isNativePlatform: () => true, Plugins: {
       Filesystem: { writeFile: async o => { window.__fs.push({ path: o.path, directory: o.directory, size: o.data.length, head: o.data.slice(0, 8) }); return { uri: "file:///data/" + o.directory + "/" + o.path }; } },
-      Share: { share: async o => { window.__share.push(o); } } } };
+      Share: { share: async o => { window.__share.push(o); } },
+      // The app's own Android helpers (tools/android/native) and Capacitor's App plugin.
+      LpnNative: { calls: [], pending: null, listeners: {},
+        decodeBarcodes: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["decode", o.data.slice(0, 4), o.data.length]); return { barcodes: window.__codes || [] }; },
+        keepAwake: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["awake", o.on]); },
+        printPdf: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["print", o.name, o.data.slice(0, 5)]); },
+        takePending: async () => { const N = window.Capacitor.Plugins.LpnNative, r = N.pending || {}; N.pending = null; return r; },
+        addListener: (ev, fn) => { window.Capacitor.Plugins.LpnNative.listeners[ev] = fn; return { remove() {} }; } },
+      App: { exited: 0, back: null, addListener: (ev, fn) => { if (ev === "backButton") window.Capacitor.Plugins.App.back = fn; return { remove() {} }; },
+        getInfo: async () => ({ version: "Build 66 (Android 9)", build: "9" }), exitApp: () => { window.Capacitor.Plugins.App.exited++; } } } };
+    window.__fsData = {};
+    const w = window.Capacitor.Plugins.Filesystem.writeFile; window.Capacitor.Plugins.Filesystem.writeFile = async o => { window.__fsData[o.path] = o.data; return w(o); };
   });
   await page.goto("http://127.0.0.1:" + srv.address().port + "/index.html"); await page.waitForTimeout(800);
   console.log("Offline Android app");
@@ -84,6 +95,61 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("sharing a file uses Android's share menu", s.ok && s.share.length === 1 && /share\/test\.pdf$/.test(s.share[0].files[0]) && s.share[0].text === "x", s);
   s = await page.evaluate(async () => { window.Capacitor.Plugins.Share.share = async () => { throw new Error("Share canceled"); }; try { await navigator.share({ text: "x" }); return "no error"; } catch (e) { return e.name; } });
   check("closing the share menu counts as cancelled, not as an error", s === "AbortError", s);
+
+  await page.evaluate(() => { window.Capacitor.Plugins.Share.share = async o => { window.__share.push(o); }; });
+  // Barcodes go to ML Kit (stood in for here) through the page's own BarcodeDetector path.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative; N.calls = []; rows = []; save(); render();
+    window.__codes = [{ rawValue: "VLT004040277", format: "256" }];
+    const c = document.createElement("canvas"); c.width = 800; c.height = 600; c.getContext("2d").fillRect(0, 0, 10, 10);
+    const blob = await new Promise(r => c.toBlob(r, "image/jpeg")); await decodePhoto(new File([blob], "label.jpg", { type: "image/jpeg" }), false);
+    window.__codes = []; return { mlkit: window.LPN_APK_MLKIT === true, calls: N.calls, rows: rows.map(r => r.lpn) }; });
+  check("barcodes are read by ML Kit: a photo's barcode is decoded natively and the pallet added", s.mlkit && s.calls.length === 1 && s.calls[0][0] === "decode" && s.calls[0][1] === "/9j/" && s.rows.join() === "VLT004040277", s);
+  // Keep the screen on, natively.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative; await keepAwake(false); N.calls = []; await keepAwake(true); await keepAwake(false); return N.calls; });
+  check("keeping the screen on uses the app's own switch (on, then off)", JSON.stringify(s) === '[["awake",true],["awake",false]]', s);
+  // Print: Android's print screen, with the PDF.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative; N.calls = []; window.__share = []; rows = [{ lpn: "VLT004040265", type: "BB", fsdu: false }]; save(); render();
+    document.getElementById("prn").click(); for (let i = 0; i < 100 && !N.calls.length; i++) await new Promise(r => setTimeout(r, 100)); return { calls: N.calls, shared: window.__share.length }; });
+  check("Print opens Android's print screen with the PDF (not the share menu)", s.calls.length === 1 && s.calls[0][0] === "print" && /^LPN-log-/.test(s.calls[0][1]) && !/\.pdf$/.test(s.calls[0][1]) && s.calls[0][2] === "JVBER" && s.shared === 0, s);
+  // Files opened or shared into the app.
+  const open = r => page.evaluate(async r => { const N = window.Capacitor.Plugins.LpnNative; N.pending = r; await N.listeners.opened(); await new Promise(x => setTimeout(x, 300)); }, r);
+  const pdfB64 = await page.evaluate(() => { const d = new window.jspdf.jsPDF(); d.text("VLT004040265", 20, 20); d.text("RUN001830763", 20, 30); return btoa(d.output()); });
+  await open({ file: { name: "manifest.pdf", mime: "application/pdf", data: pdfB64 } });
+  s = await page.evaluate(() => { const a = document.querySelector(".apkask"); return { q: a && a.textContent, btns: a ? [...a.querySelectorAll("button")].map(b => b.textContent) : [] }; });
+  check("a PDF opened into the app asks whether it's the manifest or the log", /Open manifest\.pdf in the Manifest check as:/.test(s.q || "") && s.btns.join() === "The manifest,The log,Cancel", s);
+  s = await page.evaluate(async () => { document.querySelector(".apkask button").click(); for (let i = 0; i < 100 && !/RUN001830763/.test(document.getElementById("cmpNums").value); i++) await new Promise(r => setTimeout(r, 100));
+    return { nums: document.getElementById("cmpNums").value, open: !document.getElementById("cmpBody").hidden }; });
+  check("choosing The manifest reads it into the Manifest check", s.open && /VLT004040265/.test(s.nums) && /RUN001830763/.test(s.nums), s);
+  await open({ file: { name: "log.csv", mime: "text/csv", data: Buffer.from("LPN\nVLT004040299\nRUN001830700\n").toString("base64") } });
+  s = await page.evaluate(async () => { for (let i = 0; i < 50 && !/VLT004040299/.test(document.getElementById("cmpLogNums").value); i++) await new Promise(r => setTimeout(r, 100)); return document.getElementById("cmpLogNums").value; });
+  check("a spreadsheet or CSV opened into the app becomes the log in the Manifest check", /VLT004040299/.test(s) && /RUN001830700/.test(s), s);
+  s = await page.evaluate(async () => { window.__fsData = {}; openHelp("settings", "Settings"); document.getElementById("bkDl").click(); for (let i = 0; i < 50 && !Object.keys(window.__fsData).some(k => /\.json$/.test(k)); i++) await new Promise(r => setTimeout(r, 100)); closeHelp();
+    const k = Object.keys(window.__fsData).find(k => /^LPN Pallet Log\/.+\.json$/.test(k)); return { k, data: k && window.__fsData[k] }; });
+  await open({ file: { name: s.k ? s.k.split("/").pop() : "backup.json", mime: "application/json", data: s.data || "" } });
+  s = await page.evaluate(async () => { for (let i = 0; i < 50 && document.getElementById("bkAsk") && document.getElementById("bkAsk").hidden; i++) await new Promise(r => setTimeout(r, 100));
+    const out = { title: document.getElementById("panelTitle").textContent, ask: !!document.getElementById("bkAsk") && !document.getElementById("bkAsk").hidden }; closeHelp(); return out; });
+  check("a backup file opened into the app goes to Restore backup in Settings, which asks before replacing anything", s.title === "Settings" && s.ask, s);
+  await open({ error: "The file is too large to open (over 40 MB)." });
+  s = await page.evaluate(() => { const t = document.getElementById("apkToast"); return t && !t.hidden && t.textContent; });
+  check("a file that can't be opened says why", s === "The file is too large to open (over 40 MB).", s);
+  // Home-screen shortcuts.
+  await page.evaluate(() => { document.getElementById("cmpToggle").click(); }); // fold the Manifest check again
+  await open({ action: "manifest" });
+  s = await page.evaluate(() => !document.getElementById("cmpBody").hidden);
+  check("the Manifest check shortcut opens the Manifest check", s === true, s);
+  await open({ action: "scan" });
+  s = await page.evaluate(async () => { await new Promise(r => setTimeout(r, 500)); const out = !document.getElementById("scanbox").hidden; stopScan(); return out; });
+  check("the Scan shortcut starts Live scan", s === true, s);
+  // Back button.
+  s = await page.evaluate(async () => { const App = window.Capacitor.Plugins.App; App.exited = 0; const wait = ms => new Promise(r => setTimeout(r, ms));
+    openHelp("guide", "How to use this app"); await wait(100); App.back({ canGoBack: history.length > 1 && !document.getElementById("panel").hidden }); await wait(300);
+    const closed = document.getElementById("panel").hidden;
+    App.back({ canGoBack: false }); const t1 = document.getElementById("apkToast").textContent, e1 = App.exited;
+    App.back({ canGoBack: false }); return { closed, t1, e1, e2: App.exited }; });
+  check("Back closes an open panel; on the main screen it asks first, and a second Back closes the app", s.closed && s.t1 === "Press Back again to close the app." && s.e1 === 0 && s.e2 === 1, s);
+  // Which build this is.
+  s = await page.evaluate(async () => { openHelp("settings", "Settings"); await new Promise(r => setTimeout(r, 100)); const v = document.getElementById("apkVer"); const out = { set: v && v.textContent, foot: (document.getElementById("apkFoot") || {}).textContent }; closeHelp(); return out; });
+  check("Settings and the footer say which Android build this is", s.set === "Android app: Build 66 (Android 9)" && s.foot === " · Android app: Build 66 (Android 9)", s);
 
   // Photo reading with only the files inside the app.
   const photos = load(OCR).filter(p => p.want && p.want.length);

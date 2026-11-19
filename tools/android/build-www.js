@@ -63,8 +63,10 @@ edit("export.js", 'const out="LPN Pallet Log"+(v?" "+v:"")+(b?" (build "+b+")":"
 edit("panels.js", 'if("serviceWorker" in navigator){', 'if(false&&"serviceWorker" in navigator){');
 // The photo reader's worker, engine and language data come from lib/.
 edit("compare.js", 'Tesseract.createWorker("eng")', 'Tesseract.createWorker("eng",1,window.LPN_TESS)');
-// Android can't print a PDF from inside the app, so Print saves it and opens the share menu instead (as when printing fails).
+// The page's own way of printing (a hidden frame) doesn't work inside the app: skip it, so a failed print saves and shares.
 edit("compare.js", "fr.onload=()=>{try{fr.contentWindow.focus();", "fr.onload=()=>{try{if(window.LPN_APK)throw 0;fr.contentWindow.focus();");
+// Print opens Android's own print screen first (android.js); if that can't, the PDF is saved and shared as above.
+edit("compare.js", "async function printBuf(buf,fname,m){", "async function printBuf(buf,fname,m){if(window.LPN_APK_PRINT&&await window.LPN_APK_PRINT(buf,fname)){m.textContent=\"\";return}");
 
 const tess = JSON.parse(fs.readFileSync(path.join(LIB, "tess.json"), "utf8"));
 fs.writeFileSync(path.join(WWW, "android.js"), fs.readFileSync(path.join(__dirname, "android-shim.js"), "utf8").replace("/*TESS*/null", JSON.stringify(tess)));
