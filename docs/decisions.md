@@ -1137,9 +1137,9 @@ Approved and built as GitHub run 44525475542 (37 MB, signed with the same certif
 - **A light tap only on the main buttons**, and only with Vibrate on, so the feedback means "pressed" for the buttons used all day without buzzing on every control.
 - **Continue without the keyboard.** The Continue shortcut is mostly used with a handheld scanner, which types into the focused box; the on-screen keyboard would only cover the page. `inputmode="none"` keeps the focus (so scans land) without the keyboard, and the box's own `inputmode` comes back on the first tap or when focus leaves.
 
-## After the third Android update (on `updates`, not in an APK yet)
+## After the third Android update (in Android 57)
 
-Commits `dd3023e` to `d4f92a2`. They go into the next approved APK; `tools/android/whats-new.json` already lists them.
+Commits `dd3023e` to `d4f92a2`, added after the Android 48 APK and built into **Android 57** (GitHub run 44557179403, from `d4f92a2`), whose What's new listed them.
 
 - **"All in" in the camera scanner.** Inside the scanner the count was only part of a line of text. Saying "all in" at exactly the expected count, and turning **Done** solid green, shows the trailer is finished at a glance and points to the button to press next. Going over says "more than expected" instead, so an extra pallet isn't taken as finished; Done stays green then, as `allIn` is "at least the expected count". The page works it out (from `#expect` and the rows) and sends it with the rest of the scanner's state, so the scanner keeps no count of its own and Remove last puts Done back.
 - **Type buttons in the main screen's colours.** The scanner used orange for the chosen type, unlike the main screen, where each type has its own colour. The page sends its own `--bb`, `--fm`, `--fp`, `--mx` values, so the two stay the same; the scanner has the same values built in for before the first message.
@@ -1148,3 +1148,11 @@ Commits `dd3023e` to `d4f92a2`. They go into the next approved APK; `tools/andro
 - **`inset` spelled out.** The app's WebView ignored the CSS shorthand `inset:0`, so the bottom sheet's cover wasn't the full screen and the sheet wasn't full width at the bottom. `top`, `right`, `bottom` and `left` are written out instead, in the ripple too.
 - **A solid sheet.** The sheet relied on `.card` for its background, and the page showed through it. It now has its own background, text colour and accent top line from the theme, and the offline check makes sure the background has no transparency.
 - **Screenshots on a virtual phone, by hand only.** The offline check runs in desktop Chromium, so it can't show how the native screens (the camera scanner, the bars, the edge-to-edge layout) look on a phone. A hand-started run now takes screenshots on GitHub's Android emulator at a normal and a small width, with and without Bigger buttons, to look over before an APK goes to the owner. It adds about 10 minutes, so it is a tick box (on by default) and never runs on pushes. It is `continue-on-error`: a slow emulator mustn't stop an APK the owner asked for. The pictures are also kept on a draft release because run artifacts can't be downloaded from cloud sessions, while release files can.
+
+## The Android app's own build number (Android APK build 1, on `updates`)
+
+Commit `a26741f` on `updates`. APK names used to be "Build 66 (Android 57)": the website build the copy was made from, then the GitHub run number.
+
+- **One number for the app, shown everywhere.** The run number goes up with every hand-started run, including compile-only and screenshot runs, so it jumped (43, 48, 57) and said nothing about how many APKs people had installed. `tools/android/build.json` holds a build number of the app's own, started again at 1 and raised by 1 before each approved APK build (with `whats-new.json`). Settings, the footer, the APK's version name and its file name (`LPN-Pallet-Log-Android-APK-build-<n>.apk`) all use it.
+- **Exports name the Android build, not the website's.** The website's version and build ("v4.0 (build 66, …)") describe the website, which moves on separately; on a printed sheet made on a phone, "LPN Pallet Log (Android APK build 1)" tells you which APK made it. The number is written in by `build-www.js`, so the app no longer reads `sw.js` for it.
+- **The hidden version code stays the run number.** Android only installs an update over an app with a higher version code; the previous APK had 57, so starting the code again at 1 would have stopped the new APK from installing. Keeping the run number there (it always goes up) means each APK still installs over the last one and keeps its data, and What's new, which compares version codes, still shows once after each update.

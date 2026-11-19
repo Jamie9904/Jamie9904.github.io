@@ -210,7 +210,7 @@ On `updates` since 19 Nov 2026 (not on `main` yet). It is not part of `npm test`
 - nothing about installing (no Install heading or wording in the Guide, no install pop-up button in Settings, the pop-up not shown), the Guide's numbered sections count 1, 2, 3… without a gap, and the Guide says the tools are inside the app;
 - there is no default logo, and Add logo then Remove logo still work;
 - ExcelJS, jsPDF, pdf-lib, pdf.js and ZXing load from `lib/`, and pdf.js reads a PDF made by jsPDF;
-- `appVersion()` gives "LPN Pallet Log v<x.y> (build <n>, Android app)";
+- `appVersion()` gives exactly "LPN Pallet Log (Android APK build <n>)" with `<n>` read from `tools/android/build.json`, not the website's version or build (before commit `a26741f` it checked for "LPN Pallet Log v<x.y> (build <n>, Android app)");
 - Export to Excel writes an `.xlsx` (zip, over 4 KB) to `DOCUMENTS/LPN Pallet Log/` and shows the Saved bar with Open and Share (no share menu on its own), since run 43 with the bar's bottom edge at or above the top of the docked entry bar (`LPN_APK_DOCKH()` more than 0); Share on the bar shares the `.xlsx` once and Open opens `LPN-log-….xlsx`, and the bar goes;
 - `navigator.share` with a file goes to the share stand-in, and a cancelled share becomes `AbortError`;
 - a photo's barcode is decoded through the `LpnNative` stand-in (a JPEG) and the pallet is added (since run 43 only the `decode` calls are counted, as buzzes go to the stand-in too);
@@ -223,7 +223,7 @@ On `updates` since 19 Nov 2026 (not on `main` yet). It is not part of `npm test`
 - shared text with LPNs asks "Found 3 LPNs in the shared text. Use them as:" with Manifest numbers, Pallets in the log, Cancel; as manifest numbers they are added without repeats, as pallets they are added to the log; text with none says "No LPNs found in the shared text.";
 - the Manifest check shortcut opens it and the Scan shortcut starts the phone's own camera scanner (not the page's);
 - Back follows the swipe on an open panel, cancelling puts it back and letting go closes it; on the main screen it shows "Press Back again to close the app." and lets the next Back close the app (`allowExit`);
-- Settings and the footer show "Android app: Build 66 (Android 9)" (from the stand-in `getInfo()`), Settings with " · Data on this phone: …";
+- Settings and the footer show "Android APK build 9" (the stand-in `getInfo()` gives that version name with version code 60), Settings with " · Data on this phone: …" and the footer " · Android APK build 9";
 - What's new: no card on a first install (the build is just stored in `lpnapkseen`), the card "What’s new in this Android update" with its items once after an update, and not again;
 - Settings starts with the Android app section; the volume switch is on to start, unticking stores `off` and calls `setVolumeScan(false)` (since run 43 only the volume calls are compared, as the light tap is recorded too), and ticking it again stores `on`;
 - volume-down starts Live scan and stops it again, and does nothing while a panel is open;
