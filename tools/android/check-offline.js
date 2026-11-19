@@ -243,6 +243,31 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative; localStorage.setItem("lpnapkcamscan", "off"); N.calls = []; document.getElementById("scan").click(); await new Promise(r => setTimeout(r, 800));
     const out = { native: N.calls.filter(c => c[0] === "scanner").length, web: scanning }; if (scanning) stopScan(); localStorage.removeItem("lpnapkcamscan"); return out; });
   check("with the phone's scanner switched off in Settings, Live scan uses the one inside the app", s.native === 0 && s.web, s);
+  // In the scanner: the pallet type, FSDU, Remove last and the last three pallets.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)), st = () => N.calls.filter(c => c[0] === "state").pop();
+    const orig = N.scanStatus; N.scanStatus = async o => { if (o.state) N.calls.push(["state", o.state]); return orig(o); };
+    rows = []; save(); render(); document.querySelector('#tyb button[data-t="BB"]').click(); N.calls = [];
+    document.getElementById("scan").click(); await wait(200); const open = st() && st()[1];
+    N.listeners.scanType({ type: "FPP" }); await wait(50); const typed = { page: document.getElementById("type").value, sent: st()[1].type };
+    N.listeners.scanFsdu({ on: true }); await wait(50); const fsdu = { page: document.getElementById("fsdu").checked, sent: st()[1].fsdu };
+    lastAt = 0; N.listeners.nativeScan({ values: ["VLT004040501"] }); await wait(50); lastAt = 0; N.listeners.nativeScan({ values: ["VLT004040502"] }); await wait(50);
+    const after = st()[1], added = rows.map(r => r.lpn + ":" + r.type + ":" + r.fsdu).join();
+    N.listeners.scanUndo(); await wait(50); const undo = { rows: rows.map(r => r.lpn).join(), status: N.calls.filter(c => c[0] === "status").pop(), state: st()[1] };
+    N.listeners.nativeScanClosed({ reason: "done" }); N.scanStatus = orig; return { open, typed, fsdu, after, added, undo }; });
+  check("the scanner gets the pallet type, FSDU and last pallets when it opens", !!s.open && s.open.type === "BB" && s.open.fsdu === false && s.open.canUndo === false, s.open);
+  check("the type and FSDU buttons in the scanner change the app's own (FSDU clears after the next pallet, as usual)", s.typed.page === "FPP" && s.typed.sent === "FPP" && s.fsdu.page && s.fsdu.sent && s.added === "VLT004040501:FPP:true,VLT004040502:FPP:false", s);
+  check("the scanner shows the last pallets, newest first", s.after.recent === "VLT004040502 · FPP\nVLT004040501 · FPP + FSDU" && s.after.canUndo, s.after);
+  check("Remove last in the scanner removes the last pallet (with Undo in the app)", s.undo.rows === "VLT004040501" && /^Removed VLT004040502 · 1 of 20\. Undo is in the app\.$/.test(s.undo.status[1]) && s.undo.state.recent === "VLT004040501 · FPP + FSDU", s.undo);
+  // Carry on scanning.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative; document.querySelectorAll(".apkask").forEach(a => a.remove()); N.calls = []; LPN_APK_CARRYON(); const a = document.querySelector(".apkask");
+    const out = { q: a && a.querySelector(".apkasktitle").textContent, b: a ? [...a.querySelectorAll("button")].map(x => x.textContent).join() : "" }; a.querySelector("button").click(); await new Promise(r => setTimeout(r, 300));
+    out.started = N.calls.filter(c => c[0] === "scanner").length; N.listeners.nativeScanClosed({ reason: "done" }); rows = []; save(); render(); LPN_APK_CARRYON(); out.empty = !!document.querySelector(".apkask"); return out; });
+  check("with a delivery in progress, opening the app offers Carry on scanning, which opens the scanner", s.q === "Delivery in progress: 1 of 20." && s.b === "Carry on scanning,Cancel" && s.started === 1 && !s.empty, s);
+  // Bigger buttons.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)); openHelp("settings", "Settings"); await wait(100); const c = document.getElementById("apkBig"); c.click(); await wait(50); closeHelp();
+    const h = id => Math.round(document.getElementById(id).getBoundingClientRect().height), out = { on: document.documentElement.classList.contains("apkbig"), add: h("add"), wide: document.documentElement.scrollWidth <= innerWidth };
+    openHelp("settings", "Settings"); await wait(100); document.getElementById("apkBig").click(); await wait(50); closeHelp(); out.off = !document.documentElement.classList.contains("apkbig"); return out; });
+  check("Bigger buttons makes Add and the other main buttons at least 60 px tall, without the page getting wider", s.on && s.add >= 60 && s.wide && s.off, s);
   // Spoken count.
   s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); rows = []; save(); render(); N.calls = [];
     addValue("VLT004040411"); const off = N.calls.filter(c => c[0] === "speak").length;

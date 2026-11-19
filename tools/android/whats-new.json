@@ -2,6 +2,9 @@
   "_about": "Shown once on each phone after it installs a new Android update (not on a first install). Replace the list with what this update changes, in plain words, each time an Android update is approved and built.",
   "items": [
     "Scan by photo opens the camera again, to take a photo of the label. Upload photo still lets you choose photos you've already taken.",
-    "Stronger, clearer buzzes: one short buzz when a pallet is added and a double buzz for a warning, so you can tell without looking (Settings › Vibrate)."
+    "Stronger, clearer buzzes: one short buzz when a pallet is added and a double buzz for a warning, so you can tell without looking (Settings › Vibrate).",
+    "In the camera scanner: change the pallet type, tick FSDU, and Remove last, without closing the camera. The last three pallets show under the picture.",
+    "Opening the app with a delivery in progress offers Carry on scanning.",
+    "Bigger buttons, for gloves: a switch in Settings › Android app makes Add, Scan, the pallet types and Undo bigger, in the app and in the camera scanner."
   ]
 }

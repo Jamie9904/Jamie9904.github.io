@@ -149,9 +149,15 @@ public class LpnNativePlugin extends Plugin {
         if (current != null) current.notifyListeners("nativeScanClosed", new JSObject().put("reason", reason));
     }
 
+    static void scanEvent(String name, JSObject data) {
+        if (current != null) current.notifyListeners(name, data);
+    }
+
     @PluginMethod
     public void scanStatus(PluginCall call) {
-        ScanActivity.show(call.getString("text"), Boolean.TRUE.equals(call.getBoolean("close", false)));
+        JSObject st = call.getObject("state");
+        if (st != null) ScanActivity.setState(st.getString("type"), Boolean.TRUE.equals(st.getBool("fsdu")), st.getString("recent"), Boolean.TRUE.equals(st.getBool("canUndo")), Boolean.TRUE.equals(st.getBool("big")));
+        if (call.getString("text") != null || Boolean.TRUE.equals(call.getBoolean("close", false))) ScanActivity.show(call.getString("text"), Boolean.TRUE.equals(call.getBoolean("close", false)));
         call.resolve();
     }
 

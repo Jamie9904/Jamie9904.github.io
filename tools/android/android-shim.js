@@ -342,6 +342,7 @@
         + (has("liveScan") ? '<label class="chk"><input type="checkbox" id="apkVol"><span>Volume-down button starts and stops Live scan (volume-up still changes the volume)</span></label>'
           + '<label class="chk"><input type="checkbox" id="apkCam"><span>Live scan with the phone’s own camera scanner (faster, with tap-to-focus and automatic zoom). Untick to use the one inside the app.</span></label>' : "")
         + (has("palletLog") ? '<label class="chk"><input type="checkbox" id="apkSpeak"><span>Say the count out loud after each pallet (and “already logged” or “check” for a warning)</span></label>' : "")
+        + (has("palletLog") ? '<label class="chk"><input type="checkbox" id="apkBig"><span>Bigger buttons, for gloves (Add, Scan, the pallet types, Undo, and in the camera scanner)</span></label>' : "")
         + '<div class="row"><button type="button" id="apkColours" hidden>Use the phone’s colours</button></div>' 
         + '<div class="row"><button type="button" id="apkFilesSet">Exported files</button></div>';
       $("panelBody").prepend(box);
@@ -349,7 +350,8 @@
       if ($("apkVol")) { $("apkVol").checked = volOn(); $("apkVol").onchange = () => { try { localStorage.setItem("lpnapkvol", $("apkVol").checked ? "on" : "off"); } catch (e) {} syncVol(); }; }
       $("apkFilesSet").onclick = () => showFiles();
       const sw = (id, key, def) => { const c = $(id); if (!c) return; c.checked = pref(key, def); c.onchange = () => { try { localStorage.setItem(key, c.checked ? "on" : "off"); } catch (e) {} }; };
-      sw("apkCam", "lpnapkcamscan", true); sw("apkSpeak", "lpnapkspeak", false);
+      sw("apkCam", "lpnapkcamscan", true); sw("apkSpeak", "lpnapkspeak", false); sw("apkBig", "lpnapkbig", false);
+      if ($("apkBig")) $("apkBig").addEventListener("change", applyBig);
       if (N()) N().phoneColours().then(c => { const b = $("apkColours"); if (!b || !c || !c.available) return; b.hidden = false;
         b.onclick = () => { theme = { bg: c.bg, ac: c.ac }; applyTheme(); saveTheme(); closeHelp(); openHelp("settings", "Settings"); toast("Using your phone’s colours. Reset to default colours (in Settings) goes back."); }; }).catch(() => {});
     };
@@ -378,13 +380,18 @@
      the page's own scan handling (onCode: same checks, beeps and Share log codes); the scanner shows the result. A
      warning closes the scanner, so the check can be answered in the app. */
   window.LPN_APK_NATIVESCAN = false;
+  // What the scanner shows besides the last message: type, FSDU, the last three pallets, bigger buttons.
+  const scanState = () => ({ type: ($("type") || {}).value || "BB", fsdu: !!($("fsdu") || {}).checked, canUndo: rows.length > 0, big: pref("lpnapkbig", false),
+    recent: rows.slice(-3).reverse().map(r => r.lpn + " · " + r.type + (r.fsdu ? " + FSDU" : "")).join("\n") });
+  function pushScan(text) { if (N()) N().scanStatus(text ? { text, state: scanState() } : { state: scanState() }).catch(() => {}); }
+  window.LPN_APK_SCANSTATE = scanState;
   const countText = () => { const n = rows.length, ex = parseInt(($("expect") || {}).value, 10); return ex > 0 ? n + " of " + ex : n + (n === 1 ? " pallet" : " pallets"); };
   if (N()) {
     document.addEventListener("click", e => {
       const b = e.target && e.target.closest && e.target.closest("#scan");
       if (!b || !pref("lpnapkcamscan", true)) return;
       e.preventDefault(); e.stopImmediatePropagation();
-      cameraOk().then(() => N().startScanner()).then(() => { window.LPN_APK_NATIVESCAN = true; }).catch(() => { if (typeof startScan === "function") { $("video").hidden = false; startScan(); } });
+      cameraOk().then(() => { pushScan(); return N().startScanner(); }).then(() => { window.LPN_APK_NATIVESCAN = true; }).catch(() => { if (typeof startScan === "function") { $("video").hidden = false; startScan(); } });
     }, true);
     try {
       N().addListener("nativeScan", e => {
@@ -393,7 +400,14 @@
         onCode(v);
         const said = ($("smsg") || {}).textContent || "";
         if (pendingAdd) N().scanStatus({ text: (($("chkTxt") || {}).textContent || said) + " Answer it in the app.", close: true });
-        else N().scanStatus({ text: /^LPNM/.test(v) ? said : said + " · " + countText() });
+        else N().scanStatus({ text: /^LPNM/.test(v) ? said : said + " · " + countText(), state: scanState() });
+      });
+      // The scanner's own buttons change the page's controls, and the scanner shows the result.
+      N().addListener("scanType", e => { const b = document.querySelector('#tyb button[data-t="' + e.type + '"]'); if (b) b.click(); pushScan(); });
+      N().addListener("scanFsdu", e => { const f = $("fsdu"); if (f) f.checked = !!e.on; pushScan(); });
+      N().addListener("scanUndo", () => {
+        if (!rows.length) { pushScan("There’s nothing to remove."); return; }
+        const last = rows[rows.length - 1].lpn; $("undoLast").click(); pushScan("Removed " + last + " · " + countText() + ". Undo is in the app.");
       });
       N().addListener("nativeScanClosed", e => {
         window.LPN_APK_NATIVESCAN = false;
@@ -402,6 +416,22 @@
       });
     } catch (e) {}
   }
+
+  /* Bigger buttons, for gloves (Settings › Android app). */
+  function applyBig() { document.documentElement.classList.toggle("apkbig", pref("lpnapkbig", false) && has("palletLog")); }
+  window.addEventListener("load", applyBig);
+  const bigCss = document.createElement("style");
+  bigCss.textContent = "html.apkbig #add,html.apkbig #scanBtn,html.apkbig #undoLast,html.apkbig #tyb button,html.apkbig #btnrow button,html.apkbig #noLpn{min-height:60px;font-size:1.15rem}"
+    + "html.apkbig #fsdu{width:30px;height:30px}html.apkbig #tyb button{min-width:64px}";
+  document.head.appendChild(bigCss);
+
+  /* Carry on: opening the app with a delivery in progress offers to go straight back to scanning. */
+  function carryOn() {
+    if (!N() || !has("palletLog") || !has("liveScan") || !rows.length || window.LPN_APK_NATIVESCAN || (typeof scanning !== "undefined" && scanning) || document.querySelector(".apkask") || ($("panel") && !$("panel").hidden)) return;
+    ask("Delivery in progress: " + countText() + ".", [["Carry on scanning", () => opened({ action: "scan" })]]);
+  }
+  window.LPN_APK_CARRYON = carryOn;
+  if (N()) window.addEventListener("load", () => setTimeout(() => { try { carryOn(); } catch (e) {} }, 1200));
 
   /* The count out loud after each pallet, and a word for a warning (Settings › Android app). */
   function sayIt(t) { if (N() && pref("lpnapkspeak", false)) N().speak({ text: t }).catch(() => {}); }

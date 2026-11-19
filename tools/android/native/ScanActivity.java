@@ -2,6 +2,8 @@ package io.github.jamie9904.lpnlog;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
+import android.widget.CheckBox;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.util.TypedValue;
@@ -45,7 +47,9 @@ import java.util.concurrent.Executors;
 
 /* Live scan with the phone's own camera: CameraX gives ML Kit the live picture (faster than stills from the page),
    with tap-to-focus, automatic zoom for small or distant barcodes, and the torch. What's read goes to the page
-   (LpnNativePlugin "nativeScan"), which adds the pallet with the usual checks and sends back what to show here. */
+   (LpnNativePlugin "nativeScan"), which adds the pallet with the usual checks and sends back what to show here.
+   The pallet type, FSDU and Remove last work here too (they change the page's own controls), with the last three
+   pallets shown, so the camera needn't be closed during a delivery. */
 public class ScanActivity extends AppCompatActivity {
     static volatile ScanActivity current = null;
     private PreviewView preview;
@@ -58,6 +62,16 @@ public class ScanActivity extends AppCompatActivity {
     private volatile long lastAt = 0;
     private boolean torch = false;
     private String closeReason = "done";
+    private static final String[] TYPES = { "BB", "FMCG", "FPP", "Mixed" };
+    private final Button[] typeBtns = new Button[TYPES.length];
+    private CheckBox fsduBox;
+    private Button undoBtn;
+    private TextView recent;
+    private final List<Button> allBtns = new ArrayList<>();
+    private boolean applying = false;
+    // The page's state (type, FSDU, last pallets, bigger buttons), kept so it shows as soon as the scanner opens.
+    static volatile String sType = "BB", sRecent = "";
+    static volatile boolean sFsdu = false, sCanUndo = false, sBig = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,6 +93,40 @@ public class ScanActivity extends AppCompatActivity {
         status.setText("Point the camera at a pallet barcode. Tap the picture to focus.");
         status.setAccessibilityLiveRegion(android.view.View.ACCESSIBILITY_LIVE_REGION_POLITE);
         panel.addView(status);
+        recent = new TextView(this);
+        recent.setTextColor(Color.parseColor("#9db0d0"));
+        recent.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        recent.setPadding(0, dp(6), 0, 0);
+        panel.addView(recent);
+        LinearLayout types = new LinearLayout(this);
+        types.setOrientation(LinearLayout.HORIZONTAL);
+        types.setPadding(0, dp(10), 0, 0);
+        for (int i = 0; i < TYPES.length; i++) {
+            final String t = TYPES[i];
+            Button b = button(t);
+            b.setContentDescription("Pallet type " + t);
+            b.setOnClickListener(v -> { sType = t; applyState(); LpnNativePlugin.scanEvent("scanType", new com.getcapacitor.JSObject().put("type", t)); });
+            typeBtns[i] = b;
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(52), 1f);
+            if (i > 0) lp.setMarginStart(dp(6));
+            types.addView(b, lp);
+        }
+        panel.addView(types);
+        LinearLayout row2 = new LinearLayout(this);
+        row2.setOrientation(LinearLayout.HORIZONTAL);
+        row2.setGravity(Gravity.CENTER_VERTICAL);
+        row2.setPadding(0, dp(8), 0, 0);
+        fsduBox = new CheckBox(this);
+        fsduBox.setText("FSDU");
+        fsduBox.setTextColor(Color.WHITE);
+        fsduBox.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+        fsduBox.setButtonTintList(ColorStateList.valueOf(Color.parseColor("#ff8a2a")));
+        fsduBox.setOnCheckedChangeListener((v, on) -> { if (applying) return; sFsdu = on; LpnNativePlugin.scanEvent("scanFsdu", new com.getcapacitor.JSObject().put("on", on)); });
+        row2.addView(fsduBox, new LinearLayout.LayoutParams(0, dp(52), 1f));
+        undoBtn = button("Remove last");
+        undoBtn.setOnClickListener(v -> LpnNativePlugin.scanEvent("scanUndo", new com.getcapacitor.JSObject()));
+        row2.addView(undoBtn, new LinearLayout.LayoutParams(0, dp(52), 1f));
+        panel.addView(row2);
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setPadding(0, dp(12), 0, 0);
@@ -108,6 +156,7 @@ public class ScanActivity extends AppCompatActivity {
             }
             return true;
         });
+        applyState();
         exec = Executors.newSingleThreadExecutor();
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) startCamera();
         else ActivityCompat.requestPermissions(this, new String[] { Manifest.permission.CAMERA }, 7);
@@ -117,6 +166,7 @@ public class ScanActivity extends AppCompatActivity {
 
     private Button button(String text) {
         Button b = new Button(this);
+        allBtns.add(b);
         b.setText(text);
         b.setAllCaps(false);
         b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
@@ -167,6 +217,32 @@ public class ScanActivity extends AppCompatActivity {
             last = key; lastAt = now;
             LpnNativePlugin.scanned(values);
         }).addOnCompleteListener(t -> img.close());
+    }
+
+    /* Shows the page's state: the chosen type, FSDU, the last pallets, whether there's one to remove, button size. */
+    private void applyState() {
+        applying = true;
+        for (int i = 0; i < TYPES.length; i++) {
+            boolean on = TYPES[i].equals(sType);
+            typeBtns[i].setBackgroundTintList(on ? ColorStateList.valueOf(Color.parseColor("#ff8a2a")) : null);
+            typeBtns[i].setTextColor(on ? Color.parseColor("#0c1830") : Color.BLACK);
+            typeBtns[i].setSelected(on);
+        }
+        fsduBox.setChecked(sFsdu);
+        recent.setText(sRecent == null ? "" : sRecent);
+        recent.setVisibility(sRecent == null || sRecent.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
+        undoBtn.setEnabled(sCanUndo);
+        int h = dp(sBig ? 66 : 52);
+        for (Button b : allBtns) { ViewGroup.LayoutParams lp = b.getLayoutParams(); if (lp != null) { lp.height = h; b.setLayoutParams(lp); } b.setTextSize(TypedValue.COMPLEX_UNIT_SP, sBig ? 20 : 17); }
+        fsduBox.setTextSize(TypedValue.COMPLEX_UNIT_SP, sBig ? 20 : 17);
+        applying = false;
+    }
+
+    static void setState(String type, boolean fsdu, String recentText, boolean canUndo, boolean big) {
+        if (type != null) sType = type;
+        sFsdu = fsdu; sRecent = recentText; sCanUndo = canUndo; sBig = big;
+        ScanActivity a = current;
+        if (a != null) a.runOnUiThread(a::applyState);
     }
 
     /* What the page says about the last scan ("Added …", a warning). close: back to the app (to answer a warning). */
