@@ -101,7 +101,7 @@ module.exports = async ({ browser, URL0 }) => {
   p = await page(browser, 375);
   await p.goto(URL0); await p.waitForTimeout(300);
   s = await p.evaluate(async () => {
-    const calls = [], texts = [];
+    const calls = [], texts = []; let props = null;
     const doc = new Proxy({}, { get(t, k) {
       if (k === "autoTable") return o => { calls.push(o); return doc; };
       if (k === "internal") return { pageSize: { getWidth: () => 210, getHeight: () => 297 } };
@@ -109,6 +109,7 @@ module.exports = async ({ browser, URL0 }) => {
       if (k === "getTextWidth") return () => 50; if (k === "getNumberOfPages") return () => 1;
       if (k === "output") return () => new ArrayBuffer(4); if (k === "then") return undefined;
       if (k === "text") return t => { texts.push(String(t)); return doc; };
+      if (k === "setProperties") return o => { props = o; return doc; };
       return () => doc; } });
     const J = function () { return doc; }; J.API = { autoTable() {} }; window.jspdf = { jsPDF: J };
     let printed = null; window.printBuf = async (buf, name) => { printed = name; };
@@ -116,8 +117,9 @@ module.exports = async ({ browser, URL0 }) => {
     document.getElementById("expBtn").click(); const btn = document.getElementById("tallyBtn"), vis = !btn.hidden && btn.getBoundingClientRect().height >= 40;
     await btn.onclick();
     const main = calls[1] || {};
-    return { dated: texts.some(t => /^Printed /.test(t)), footer: texts.some(t => /^Page 1 of 1$/.test(t)), vis, printed, msg: document.getElementById("dlmsg").textContent, details: JSON.stringify(calls[0] && calls[0].body), head: main.head && main.head[0], n: main.body ? main.body.length : 0, last: main.body && main.body[main.body.length - 1][0].content, first: main.body && main.body[0] };
+    return { app: texts.filter(t => /LPN Pallet Log|\bapp\b|build \d/i.test(t)).concat(JSON.stringify(props || {}).match(/LPN Pallet Log|\bapp\b/i) || []), texts, dated: texts.some(t => /^Printed /.test(t)), footer: texts.some(t => /^Page 1 of 1$/.test(t)), vis, printed, msg: document.getElementById("dlmsg").textContent, details: JSON.stringify(calls[0] && calls[0].body), head: main.head && main.head[0], n: main.body ? main.body.length : 0, last: main.body && main.body[main.body.length - 1][0].content, first: main.body && main.body[0] };
   });
+  check("the blank tally sheet doesn't mention the app (footer, wording or file details)", s.app.length === 0 && s.texts.includes("Write down each pallet as it comes off the trailer."), s.app);
   check("the Export menu has Blank tally sheet, which works with an empty log; its footer has no printed date", !s.dated && s.footer && s.vis && s.printed === "LPN-tally-sheet.pdf" && !/Add at least one/.test(s.msg), s);
   check("the tally sheet has spaces for the date, receiver, trailer, expected pallets and seals", ["Date", "Received by", "Trailer number", "Expected pallets", "Seal in", "Seal out"].every(w => s.details.includes('"' + w + '"')), s.details);
   check("the tally sheet has numbered empty rows with a column per pallet type, FSDU and notes, and a totals row", JSON.stringify(s.head) === JSON.stringify(["#", "LPN", "BB", "FMCG", "FPP", "Mixed", "FSDU", "Notes (damage, refused)"]) && s.n >= 20 && s.last === "Totals" && s.first[0] === "1" && s.first.slice(1).every(c => c === ""), s);
