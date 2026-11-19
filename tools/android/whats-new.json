@@ -22,6 +22,7 @@
     "Before Android first asks about the camera, the app says what it's for.",
     "Your log stays on this phone only: it's no longer copied into Google's phone backups. Use Download backup in Settings to keep a copy.",
     "No install instructions or install pop-up, since the app is already installed.",
+    "The Manifest check's date starts as today's date each time the app opens.",
     "This note after each Android update, so you can see what changed."
   ]
 }
