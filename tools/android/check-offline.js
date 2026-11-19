@@ -51,7 +51,9 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
         saveAs: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["saveAs", o.name, o.mime, o.data.slice(0, 5)]); return { saved: true }; },
         setDelivery: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["delivery", o.label]); },
         startScanner: async () => { window.Capacitor.Plugins.LpnNative.calls.push(["scanner"]); },
-        scanStatus: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["status", o.text, !!o.close]); },
+        scanStatus: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["status", o.text, !!o.close, o.flash]); },
+        setBars: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["bars", o.colour, o.light]); },
+        tap: async () => { window.Capacitor.Plugins.LpnNative.calls.push(["tap"]); },
         speak: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["speak", o.text]); },
         battery: async () => window.__batt || { level: 80, charging: false },
         phoneColours: async () => ({ available: true, bg: "#1a1c1e", ac: "#9ecaff" }),
@@ -107,7 +109,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     window.__fs = []; window.__share = []; const N = window.Capacitor.Plugins.LpnNative; N.calls = [];
     document.getElementById("dl").click();
     for (let i = 0; i < 100 && !document.getElementById("apkSaved"); i++) await new Promise(r => setTimeout(r, 100));
-    const bar = document.getElementById("apkSaved"), out = { fs: window.__fs, msg: document.getElementById("msg").textContent, bar: bar && bar.querySelector("p").textContent, btns: bar ? [...bar.querySelectorAll("button")].map(b => b.textContent).join() : "", sharedBefore: window.__share.length };
+    const bar = document.getElementById("apkSaved"), en = document.querySelector(".card.entry"), clear = bar && en ? bar.getBoundingClientRect().bottom <= en.getBoundingClientRect().top + 1 : false, out = { clear, dock: LPN_APK_DOCKH(), fs: window.__fs, msg: document.getElementById("msg").textContent, bar: bar && bar.querySelector("p").textContent, btns: bar ? [...bar.querySelectorAll("button")].map(b => b.textContent).join() : "", sharedBefore: window.__share.length };
     bar.querySelector("button:nth-child(2)").click(); for (let i = 0; i < 30 && !window.__share.length; i++) await new Promise(r => setTimeout(r, 100));
     out.share = window.__share.map(x => x.files); out.gone = !document.getElementById("apkSaved");
     document.getElementById("dl").click(); for (let i = 0; i < 100 && !document.getElementById("apkSaved"); i++) await new Promise(r => setTimeout(r, 100));
@@ -116,7 +118,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   });
   const xl = s.fs.find(f => f.directory === "DOCUMENTS");
   check("Export to Excel keeps the file in Documents › LPN Pallet Log and shows Saved with Open and Share",
-    !!xl && /^LPN Pallet Log\/.+\.xlsx$/.test(xl.path) && xl.size > 4000 && xl.head.startsWith("UEsD") && /Saved .+\.xlsx in Documents/.test(s.msg) && /^Saved LPN-log-.+\.xlsx in Documents › LPN Pallet Log\.$/.test(s.bar || "") && s.btns === "Open,Share,Save to…,✕" && s.sharedBefore === 0, s);
+    !!xl && /^LPN Pallet Log\/.+\.xlsx$/.test(xl.path) && xl.size > 4000 && xl.head.startsWith("UEsD") && /Saved .+\.xlsx in Documents/.test(s.msg) && /^Saved LPN-log-.+\.xlsx in Documents › LPN Pallet Log\.$/.test(s.bar || "") && s.btns === "Open,Share,Save to…,✕" && s.sharedBefore === 0 && s.clear && s.dock > 0, s);
   check("Share on that bar opens the share menu with the file, and Open opens it in another app", s.share.length === 1 && /\.xlsx$/.test(s.share[0][0]) && s.gone && s.open.length === 1 && /^LPN-log-.+\.xlsx$/.test(s.open[0][1]), s);
   // Sharing a file (Email PDF and others) goes to Android's share menu.
   s = await page.evaluate(async () => { window.__share = []; const f = new File(["hi"], "test.pdf", { type: "application/pdf" }); const ok = navigator.canShare({ files: [f] }); await navigator.share({ files: [f], title: "t", text: "x" }); return { ok, share: window.__share }; });
@@ -268,6 +270,25 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     const h = id => Math.round(document.getElementById(id).getBoundingClientRect().height), out = { on: document.documentElement.classList.contains("apkbig"), add: h("add"), wide: document.documentElement.scrollWidth <= innerWidth };
     openHelp("settings", "Settings"); await wait(100); document.getElementById("apkBig").click(); await wait(50); closeHelp(); out.off = !document.documentElement.classList.contains("apkbig"); return out; });
   check("Bigger buttons makes Add and the other main buttons at least 60 px tall, without the page getting wider", s.on && s.add >= 60 && s.wide && s.off, s);
+  // The scanner's frame flashes green for an added pallet, orange for a check.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); rows = []; save(); render(); N.calls = [];
+    lastAt = 0; N.listeners.nativeScan({ values: ["VLT004040601"] }); await wait(50); lastAt = 0; N.listeners.nativeScan({ values: ["VLT004040601"] }); await wait(50);
+    const st = N.calls.filter(c => c[0] === "status").map(c => c[3] + ":" + c[2]); hideCheck(); N.listeners.nativeScanClosed({ reason: "check" }); return st; });
+  check("the scanner's frame flashes green when a pallet is added and orange for a check (which closes the scanner)", s.join() === "ok:false,warn:true", s);
+  // Questions are Android-style bottom sheets; tapping the dimmed page closes them (unless they must be answered).
+  s = await page.evaluate(async () => { rows = [{ lpn: "VLT004040611", type: "BB", fsdu: false }]; save(); render(); document.querySelectorAll(".apkask").forEach(a => a.remove()); LPN_APK_CARRYON();
+    const a = document.querySelector(".apkask"), sh = a && a.querySelector(".apksheet"), r = sh && sh.getBoundingClientRect(), out = { sheet: !!sh, atBottom: r && Math.abs(r.bottom - innerHeight) < 2, full: r && Math.round(r.width) === innerWidth, dim: getComputedStyle(a).backgroundColor };
+    sh.querySelector(".apkasktitle").click(); out.stillOpen = !!document.querySelector(".apkask"); a.click(); out.closed = !document.querySelector(".apkask"); return out; });
+  check("questions slide up as a bottom sheet over a dimmed page, and tapping the dimmed part closes them", s.sheet && s.atBottom && s.full && /rgba\(0, 0, 0, 0\.45\)/.test(s.dim) && s.stillOpen && s.closed, s);
+  // A light tap on the main buttons, with Vibrate on.
+  s = await page.evaluate(() => { const N = window.Capacitor.Plugins.LpnNative, fire = id => document.getElementById(id).dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    N.calls = []; cfg.vibrate = true; fire("add"); fire("histBtn"); const on = N.calls.filter(c => c[0] === "tap").length; cfg.vibrate = false; fire("add"); const off = N.calls.filter(c => c[0] === "tap").length - on; cfg.vibrate = true; return { on, off }; });
+  check("a light tap on the main buttons (Add, types, Scan…), not others, and none with Vibrate off", s.on === 1 && s.off === 0, s);
+  // The status and navigation bars follow the app's colours.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); N.calls = [];
+    theme = { bg: "#f2f2f2", ac: "#0b3d91" }; applyTheme(); await wait(50); const light = N.calls.filter(c => c[0] === "bars").pop();
+    theme = { bg: "#0c1830", ac: "#ff8a2a" }; applyTheme(); await wait(50); const dark = N.calls.filter(c => c[0] === "bars").pop(); return { light, dark }; });
+  check("the status and navigation bars take the app's background colour, with dark icons on a light theme", s.light && s.light[1] === "#f2f2f2" && s.light[2] === true && s.dark && s.dark[1] === "#0c1830" && s.dark[2] === false, s);
   // Spoken count.
   s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); rows = []; save(); render(); N.calls = [];
     addValue("VLT004040411"); const off = N.calls.filter(c => c[0] === "speak").length;
@@ -337,8 +358,9 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   await page.evaluate(async () => { const b = document.getElementById("cmpBody"); if (b.hidden) document.getElementById("cmpToggle").click(); document.getElementById("cmpCard").scrollIntoView({ block: "start" }); window.dispatchEvent(new Event("scroll")); await new Promise(r => setTimeout(r, 200)); });
   const slid = await page.evaluate(() => document.body.classList.contains("cmpfocus"));
   await open({ action: "continue" });
-  s = await page.evaluate(() => { const a = document.activeElement; return a ? (a.id || a.tagName + "." + a.className + ":" + (a.textContent || "").slice(0, 40)) : ""; });
-  check("the Continue shortcut goes back to the LPN box, even from the Manifest check where the entry bar had slid away", s === "lpn" && slid, { focus: s, slid });
+  s = await page.evaluate(() => { const a = document.activeElement, l = document.getElementById("lpn"); const out = { f: a ? (a.id || a.tagName + "." + a.className + ":" + (a.textContent || "").slice(0, 40)) : "", mode: l.getAttribute("inputmode") };
+    l.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true })); out.after = l.getAttribute("inputmode"); return out; });
+  check("the Continue shortcut goes back to the LPN box (without the keyboard until it's tapped), even from the Manifest check where the entry bar had slid away", s.f === "lpn" && s.mode === "none" && s.after !== "none" && slid, { s, slid });
   // Android-style controls.
   s = await page.evaluate(async () => { openHelp("settings", "Settings"); await new Promise(r => setTimeout(r, 100)); const c = document.querySelector("#panelBody label.chk > input[type=checkbox]"), cs = getComputedStyle(c);
     const out = { appearance: cs.appearance, w: cs.width, role: c.type }; closeHelp();

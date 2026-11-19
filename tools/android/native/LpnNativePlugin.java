@@ -82,7 +82,9 @@ import java.io.OutputStream;
    - battery: the battery level, for the low-battery reminder;
    - phoneColours: the colours Android 12+ takes from the wallpaper;
    - "scanner": a Bluetooth or USB scanner (or keyboard) connecting or disconnecting;
-   - vibrate: the page's buzzes (one short for added, a double for a warning) at full strength. */
+   - vibrate: the page's buzzes (one short for added, a double for a warning) at full strength;
+   - setBars: the status and navigation bars in the app's background colour, with dark icons on light colours;
+   - tap: a light tap on the main buttons (Android's own keyboard-style feedback). */
 @CapacitorPlugin(name = "LpnNative")
 public class LpnNativePlugin extends Plugin {
     private static final long MAX_FILE = 40L * 1024 * 1024;
@@ -157,7 +159,7 @@ public class LpnNativePlugin extends Plugin {
     public void scanStatus(PluginCall call) {
         JSObject st = call.getObject("state");
         if (st != null) ScanActivity.setState(st.getString("type"), Boolean.TRUE.equals(st.getBool("fsdu")), st.getString("recent"), Boolean.TRUE.equals(st.getBool("canUndo")), Boolean.TRUE.equals(st.getBool("big")));
-        if (call.getString("text") != null || Boolean.TRUE.equals(call.getBoolean("close", false))) ScanActivity.show(call.getString("text"), Boolean.TRUE.equals(call.getBoolean("close", false)));
+        if (call.getString("text") != null || call.getString("flash") != null || Boolean.TRUE.equals(call.getBoolean("close", false))) ScanActivity.show(call.getString("text"), Boolean.TRUE.equals(call.getBoolean("close", false)), call.getString("flash"));
         call.resolve();
     }
 
@@ -196,6 +198,29 @@ public class LpnNativePlugin extends Plugin {
             else v.vibrate(t, -1);
             call.resolve();
         } catch (Exception e) { call.resolve(); }
+    }
+
+    @PluginMethod
+    public void setBars(PluginCall call) {
+        final String colour = call.getString("colour", "#0c1830");
+        final boolean light = Boolean.TRUE.equals(call.getBoolean("light", false));
+        getActivity().runOnUiThread(() -> {
+            try {
+                int c = android.graphics.Color.parseColor(colour);
+                getActivity().getWindow().getDecorView().setBackgroundColor(c);
+                android.view.View content = getActivity().findViewById(android.R.id.content);
+                if (content != null) content.setBackgroundColor(c);
+                androidx.core.view.WindowInsetsControllerCompat bars = androidx.core.view.WindowCompat.getInsetsController(getActivity().getWindow(), getActivity().getWindow().getDecorView());
+                bars.setAppearanceLightStatusBars(light);
+                bars.setAppearanceLightNavigationBars(light);
+                call.resolve();
+            } catch (Exception e) { call.reject("bad colour"); }
+        });
+    }
+
+    @PluginMethod
+    public void tap(PluginCall call) {
+        main.post(() -> { getBridge().getWebView().performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP); call.resolve(); });
     }
 
     @PluginMethod

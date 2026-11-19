@@ -82,25 +82,28 @@ public class ScanActivity extends AppCompatActivity {
         root.setBackgroundColor(Color.BLACK);
         preview = new PreviewView(this);
         root.addView(preview, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        // Top: a slim strip with the message and the last pallets. Bottom: the buttons. Between: the camera picture with
+        // a tall, narrow aiming frame, as LPN barcodes run upright on the label.
+        int pad = dp(14);
+        LinearLayout strip = new LinearLayout(this);
+        strip.setOrientation(LinearLayout.VERTICAL);
+        strip.setBackgroundColor(Color.parseColor("#D90c1830"));
+        status = new TextView(this);
+        status.setTextColor(Color.WHITE);
+        status.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+        status.setText("Line the barcode up in the frame. Tap the picture to focus.");
+        status.setAccessibilityLiveRegion(android.view.View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        strip.addView(status);
+        recent = new TextView(this);
+        recent.setTextColor(Color.parseColor("#9db0d0"));
+        recent.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        recent.setPadding(0, dp(4), 0, 0);
+        strip.addView(recent);
         LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
         panel.setBackgroundColor(Color.parseColor("#E60c1830"));
-        int pad = dp(16);
-        panel.setPadding(pad, pad, pad, pad);
-        status = new TextView(this);
-        status.setTextColor(Color.WHITE);
-        status.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
-        status.setText("Point the camera at a pallet barcode. Tap the picture to focus.");
-        status.setAccessibilityLiveRegion(android.view.View.ACCESSIBILITY_LIVE_REGION_POLITE);
-        panel.addView(status);
-        recent = new TextView(this);
-        recent.setTextColor(Color.parseColor("#9db0d0"));
-        recent.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-        recent.setPadding(0, dp(6), 0, 0);
-        panel.addView(recent);
         LinearLayout types = new LinearLayout(this);
         types.setOrientation(LinearLayout.HORIZONTAL);
-        types.setPadding(0, dp(10), 0, 0);
         for (int i = 0; i < TYPES.length; i++) {
             final String t = TYPES[i];
             Button b = button(t);
@@ -112,41 +115,46 @@ public class ScanActivity extends AppCompatActivity {
             types.addView(b, lp);
         }
         panel.addView(types);
-        LinearLayout row2 = new LinearLayout(this);
-        row2.setOrientation(LinearLayout.HORIZONTAL);
-        row2.setGravity(Gravity.CENTER_VERTICAL);
-        row2.setPadding(0, dp(8), 0, 0);
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, dp(8), 0, 0);
         fsduBox = new CheckBox(this);
         fsduBox.setText("FSDU");
         fsduBox.setTextColor(Color.WHITE);
-        fsduBox.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+        fsduBox.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         fsduBox.setButtonTintList(ColorStateList.valueOf(Color.parseColor("#ff8a2a")));
         fsduBox.setOnCheckedChangeListener((v, on) -> { if (applying) return; sFsdu = on; LpnNativePlugin.scanEvent("scanFsdu", new com.getcapacitor.JSObject().put("on", on)); });
-        row2.addView(fsduBox, new LinearLayout.LayoutParams(0, dp(52), 1f));
+        row.addView(fsduBox, new LinearLayout.LayoutParams(0, dp(52), 1f));
         undoBtn = button("Remove last");
+        undoBtn.setMaxLines(2);
         undoBtn.setOnClickListener(v -> LpnNativePlugin.scanEvent("scanUndo", new com.getcapacitor.JSObject()));
-        row2.addView(undoBtn, new LinearLayout.LayoutParams(0, dp(52), 1f));
-        panel.addView(row2);
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setPadding(0, dp(12), 0, 0);
+        row.addView(undoBtn, gap(new LinearLayout.LayoutParams(0, dp(52), 1.2f)));
         torchBtn = button("Torch");
         torchBtn.setOnClickListener(v -> { if (camera != null) { torch = !torch; camera.getCameraControl().enableTorch(torch); torchBtn.setText(torch ? "Torch off" : "Torch"); } });
         torchBtn.setVisibility(android.view.View.GONE);
+        row.addView(torchBtn, gap(new LinearLayout.LayoutParams(0, dp(52), 1f)));
         Button done = button("Done");
         done.setOnClickListener(v -> finish());
-        row.addView(torchBtn, new LinearLayout.LayoutParams(0, dp(52), 1f));
-        LinearLayout.LayoutParams dl = new LinearLayout.LayoutParams(0, dp(52), 1f);
-        dl.setMarginStart(dp(12));
-        row.addView(done, dl);
+        row.addView(done, gap(new LinearLayout.LayoutParams(0, dp(52), 1f)));
         panel.addView(row);
-        FrameLayout.LayoutParams pl = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM);
-        root.addView(panel, pl);
+        frame = new FrameView(this, strip, panel, getResources().getDisplayMetrics().density);
+        root.addView(frame, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        root.addView(strip, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP));
+        root.addView(panel, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM));
+        ViewCompat.setOnApplyWindowInsetsListener(strip, (v, insets) -> {
+            Insets b = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+            v.setPadding(pad + b.left, pad + b.top, pad + b.right, pad);
+            return insets;
+        });
         ViewCompat.setOnApplyWindowInsetsListener(panel, (v, insets) -> {
             Insets b = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(pad + b.left, pad, pad + b.right, pad + b.bottom);
             return insets;
         });
+        android.view.View.OnLayoutChangeListener redraw = (v, l, t, r, bt, ol, ot, or, ob) -> frame.invalidate();
+        strip.addOnLayoutChangeListener(redraw);
+        panel.addOnLayoutChangeListener(redraw);
         setContentView(root);
         preview.setOnTouchListener((v, e) -> {
             if (e.getAction() == MotionEvent.ACTION_UP && camera != null) {
@@ -160,6 +168,41 @@ public class ScanActivity extends AppCompatActivity {
         exec = Executors.newSingleThreadExecutor();
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) startCamera();
         else ActivityCompat.requestPermissions(this, new String[] { Manifest.permission.CAMERA }, 7);
+    }
+
+    private LinearLayout.LayoutParams gap(LinearLayout.LayoutParams lp) { lp.setMarginStart(dp(6)); return lp; }
+
+    /* The dimmed picture with a clear, tall aiming frame between the top strip and the buttons. It flashes green when
+       a pallet is added and orange when it needs a check. Touches pass through to the picture (tap-to-focus). */
+    private FrameView frame;
+    private static class FrameView extends android.view.View {
+        private final android.graphics.Paint dim = new android.graphics.Paint(), line = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        private final android.view.View top, bottom;
+        private final float d;
+        private int colour = Color.WHITE;
+        FrameView(android.content.Context c, android.view.View top, android.view.View bottom, float density) {
+            super(c); this.top = top; this.bottom = bottom; d = density;
+            dim.setColor(Color.parseColor("#73000000"));
+            line.setStyle(android.graphics.Paint.Style.STROKE);
+            setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+        }
+        void flash(int c) {
+            colour = c; invalidate();
+            postDelayed(() -> { colour = Color.WHITE; invalidate(); }, 650);
+        }
+        @Override protected void onDraw(android.graphics.Canvas cv) {
+            float t = top.getBottom() + 16 * d, b = bottom.getTop() - 16 * d, h = Math.max(0, b - t);
+            float fh = h * 0.9f, fw = Math.min(getWidth() * 0.5f, fh * 0.42f), cx = getWidth() / 2f, cy = t + h / 2f;
+            android.graphics.RectF f = new android.graphics.RectF(cx - fw / 2, cy - fh / 2, cx + fw / 2, cy + fh / 2);
+            android.graphics.Path p = new android.graphics.Path();
+            p.setFillType(android.graphics.Path.FillType.EVEN_ODD);
+            p.addRect(0, 0, getWidth(), getHeight(), android.graphics.Path.Direction.CW);
+            p.addRoundRect(f, 18 * d, 18 * d, android.graphics.Path.Direction.CW);
+            cv.drawPath(p, dim);
+            line.setColor(colour);
+            line.setStrokeWidth((colour == Color.WHITE ? 3 : 7) * d);
+            cv.drawRoundRect(f, 18 * d, 18 * d, line);
+        }
     }
 
     private int dp(int v) { return Math.round(v * getResources().getDisplayMetrics().density); }
@@ -246,10 +289,15 @@ public class ScanActivity extends AppCompatActivity {
     }
 
     /* What the page says about the last scan ("Added …", a warning). close: back to the app (to answer a warning). */
-    static void show(String text, boolean close) {
+    static void show(String text, boolean close, String flash) {
         ScanActivity a = current;
         if (a == null) return;
-        a.runOnUiThread(() -> { if (text != null) a.status.setText(text); if (close) { a.closeReason = "check"; a.finish(); } });
+        a.runOnUiThread(() -> {
+            if (text != null) a.status.setText(text);
+            if (a.frame != null && "ok".equals(flash)) a.frame.flash(Color.parseColor("#3ccf6e"));
+            if (a.frame != null && "warn".equals(flash)) a.frame.flash(Color.parseColor("#ff8a2a"));
+            if (close) { a.closeReason = "check"; a.frame.postDelayed(a::finish, "warn".equals(flash) ? 500 : 0); }
+        });
     }
 
     @Override

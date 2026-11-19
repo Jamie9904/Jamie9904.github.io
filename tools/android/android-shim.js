@@ -84,6 +84,7 @@
     btn("Share", async () => { done(); try { await shareFile(blob, name); } catch (e) { say("Couldn’t share " + name + ": " + ((e && e.message) || e)); } });
     btn("Save to…", async () => { done(); try { await saveTo(await b64(blob), name, blob.type); } catch (e) { say("Couldn’t save " + name + " there: " + ((e && e.message) || e)); } });
     btn("✕", done).setAttribute("aria-label", "Close");
+    b.style.bottom = (12 + dockH()) + "px";
     document.body.appendChild(b);
     // Stays while it's being used; otherwise goes after 12 seconds.
     const later = () => { clearTimeout(barT); barT = setTimeout(() => { if (!b.contains(document.activeElement)) done(); else later(); }, 12000); };
@@ -119,7 +120,10 @@
   // Styles for the two small things this file adds: a short message at the bottom, and a question (Open a PDF as…).
   const css = document.createElement("style");
   css.textContent = ".apktoast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:calc(100vw - 32px);padding:10px 16px;border-radius:12px;background:#1f2a41;color:#fff;font-size:.95rem;z-index:1000;box-shadow:0 4px 16px rgba(0,0,0,.35)}"
-    + ".apkask{position:fixed;left:12px;right:12px;bottom:12px;z-index:1000;margin:0;box-shadow:0 6px 24px rgba(0,0,0,.4)}.apkask .apkasktitle{margin:0 0 10px;font-weight:700}"
+    + ".apkask{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.45);display:flex;align-items:flex-end}"
+    + ".apksheet{width:100%;margin:0;border-radius:18px 18px 0 0;padding:28px 16px 18px;position:relative;box-shadow:0 -6px 24px rgba(0,0,0,.35);animation:apkup .2s ease-out}"
+    + ".apksheet::before{content:'';position:absolute;top:10px;left:50%;width:36px;height:4px;margin-left:-18px;border-radius:2px;background:var(--mu,#9db0d0);opacity:.6}"
+    + "@keyframes apkup{from{transform:translateY(40px);opacity:.4}}@media (prefers-reduced-motion:reduce){.apksheet{animation:none}}.apkask .apkasktitle{margin:0 0 10px;font-weight:700}"
     + ".apksaved{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:1000;padding:12px 14px;border-radius:12px;background:#1f2a41;color:#fff;box-shadow:0 6px 24px rgba(0,0,0,.4)}.apksaved p{margin:0 0 8px;overflow-wrap:anywhere}"
     + ".apkfiles{list-style:none;padding:0;margin:8px 0}.apkfiles li{padding:10px 0;border-bottom:1px solid var(--rule,#223a63)}.apkfname{margin:0;font-weight:700;overflow-wrap:anywhere}.apkfiles .note{margin:2px 0 8px}";
   document.head.appendChild(css);
@@ -138,16 +142,26 @@
   document.head.appendChild(mat);
   document.addEventListener("pointerdown", e => {
     const b = e.target && e.target.closest && e.target.closest("button"); if (!b || b.disabled) return;
+    // A light tap on the main buttons, like Android's keyboard (with Vibrate on in Settings).
+    if (N() && typeof cfg !== "undefined" && cfg.vibrate && b.matches("#add,#tyb button,#scanBtn,#scan,#photo,#upload,#undoLast,#noLpn")) N().tap().catch(() => {});
     const r = b.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2, s = document.createElement("span");
     if (getComputedStyle(b).position === "static") b.style.position = "relative"; // the ripple sits inside the button; its tap area isn't clipped
     const w = document.createElement("span"); w.className = "apkripwrap"; w.setAttribute("aria-hidden", "true");
     s.className = "apkripple"; s.style.width = s.style.height = d + "px"; s.style.left = (e.clientX - r.left - d / 2) + "px"; s.style.top = (e.clientY - r.top - d / 2) + "px";
     w.appendChild(s); b.appendChild(w); setTimeout(() => w.remove(), 500);
   }, { passive: true });
+  // On a phone the entry bar (Add, Scan) is fixed at the bottom: messages and the Saved bar sit just above it.
+  function dockH() {
+    const en = document.querySelector(".card.entry");
+    if (!en || en.hidden || document.body.classList.contains("cmpfocus") || getComputedStyle(en).position !== "fixed") return 0;
+    return Math.round(en.getBoundingClientRect().height);
+  }
+  window.LPN_APK_DOCKH = dockH;
   let toastT = 0;
   function toast(t) {
     let e = $("apkToast");
     if (!e) { e = document.createElement("div"); e.id = "apkToast"; e.className = "apktoast"; e.setAttribute("role", "status"); e.setAttribute("aria-live", "polite"); document.body.appendChild(e); }
+    e.style.bottom = (16 + dockH()) + "px";
     e.textContent = t; e.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { e.hidden = true; }, 3000);
   }
   window.LPN_APK_TOAST = toast;
@@ -219,9 +233,12 @@
   }
   function ask(title, choices, noCancel) {
     const old = document.querySelector(".apkask"); if (old) old.remove();
-    const d = document.createElement("div"); d.className = "apkask card"; d.setAttribute("role", "dialog"); d.setAttribute("aria-modal", "true"); d.setAttribute("aria-label", title);
-    const h = document.createElement("p"); h.className = "apkasktitle"; h.textContent = title; d.appendChild(h);
-    const row = document.createElement("div"); row.className = "row"; d.appendChild(row);
+    // An Android-style bottom sheet over a dimmed page: tapping the dimmed part closes it (unless it must be answered).
+    const d = document.createElement("div"); d.className = "apkask"; d.setAttribute("role", "dialog"); d.setAttribute("aria-modal", "true"); d.setAttribute("aria-label", title);
+    const sheet = document.createElement("div"); sheet.className = "apksheet card"; d.appendChild(sheet);
+    d.addEventListener("click", e => { if (e.target === d && !d.dataset.keep) d.remove(); });
+    const h = document.createElement("p"); h.className = "apkasktitle"; h.textContent = title; sheet.appendChild(h);
+    const row = document.createElement("div"); row.className = "row"; sheet.appendChild(row);
     if (noCancel) d.dataset.keep = "1"; // Back doesn't close it: it must be answered
     choices.concat(noCancel ? [] : [["Cancel", null]]).forEach(([label, fn], i) => {
       const b = document.createElement("button"); b.type = "button"; b.textContent = label; if (i === 0) b.className = "p";
@@ -231,6 +248,13 @@
   }
   /* Back to the log: on a phone the entry bar slides away while the open Manifest check fills the screen, so bring
      the log into view and the bar back before using it. */
+  /* Focus a box without the on-screen keyboard (a handheld scanner still types into it); a tap on it brings the keyboard. */
+  function quietFocus(el) {
+    const had = el.getAttribute("inputmode");
+    el.setAttribute("inputmode", "none"); el.focus();
+    const back = () => { if (had === null) el.removeAttribute("inputmode"); else el.setAttribute("inputmode", had); el.removeEventListener("pointerdown", back); el.removeEventListener("blur", back); };
+    el.addEventListener("pointerdown", back); el.addEventListener("blur", back);
+  }
   function toLog() {
     const lc = $("logCard"); if (lc && !lc.hidden) lc.scrollIntoView({ block: "start" });
     document.body.classList.remove("cmpfocus"); const en = document.querySelector(".card.entry"); if (en) en.inert = false;
@@ -248,7 +272,7 @@
       $(id).click(); return;
     }
     if (r.action === "manifest") { openManifest(); return; }
-    if (r.action === "continue") { if (typeof closeHelp === "function") closeHelp(); const l = $("lpn"); if (l && has("palletLog")) { toLog(); l.focus(); } return; }
+    if (r.action === "continue") { if (typeof closeHelp === "function") closeHelp(); const l = $("lpn"); if (l && has("palletLog")) { toLog(); quietFocus(l); } return; }
     if (typeof r.text === "string") { sharedText(r.text); return; }
     if (!r.file) return;
     const bin = atob(r.file.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
@@ -399,8 +423,8 @@
         if (pendingAdd) { N().scanStatus({ text: "Answer the check in the app first.", close: true }); return; }
         onCode(v);
         const said = ($("smsg") || {}).textContent || "";
-        if (pendingAdd) N().scanStatus({ text: (($("chkTxt") || {}).textContent || said) + " Answer it in the app.", close: true });
-        else N().scanStatus({ text: /^LPNM/.test(v) ? said : said + " · " + countText(), state: scanState() });
+        if (pendingAdd) N().scanStatus({ text: (($("chkTxt") || {}).textContent || said) + " Answer it in the app.", close: true, flash: "warn" });
+        else N().scanStatus({ text: /^LPNM/.test(v) ? said : said + " · " + countText(), state: scanState(), flash: /^Added/.test(said) ? "ok" : undefined });
       });
       // The scanner's own buttons change the page's controls, and the scanner shows the result.
       N().addListener("scanType", e => { const b = document.querySelector('#tyb button[data-t="' + e.type + '"]'); if (b) b.click(); pushScan(); });
@@ -416,6 +440,22 @@
       });
     } catch (e) {}
   }
+
+  /* The status and navigation bars take the app's background colour, with dark icons on a light one. */
+  function syncBars() {
+    if (!N()) return;
+    const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#0c1830";
+    const m = /^#?([0-9a-f]{6})$/i.exec(bg); if (!m) return;
+    const c = [0, 2, 4].map(i => parseInt(m[1].substr(i, 2), 16) / 255).map(v => v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4));
+    const lum = .2126 * c[0] + .7152 * c[1] + .0722 * c[2];
+    N().setBars({ colour: "#" + m[1], light: lum > 0.4 }).catch(() => {});
+  }
+  window.LPN_APK_BARS = syncBars;
+  if (N()) window.addEventListener("load", () => {
+    syncBars();
+    if (typeof window.applyTheme === "function") { const orig = window.applyTheme; window.applyTheme = function () { const r = orig.apply(this, arguments); setTimeout(syncBars, 0); return r; }; }
+    try { matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => setTimeout(syncBars, 50)); } catch (e) {}
+  });
 
   /* Bigger buttons, for gloves (Settings › Android app). */
   function applyBig() { document.documentElement.classList.toggle("apkbig", pref("lpnapkbig", false) && has("palletLog")); }
