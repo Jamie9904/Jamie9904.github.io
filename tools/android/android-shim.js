@@ -405,7 +405,8 @@
      warning closes the scanner, so the check can be answered in the app. */
   window.LPN_APK_NATIVESCAN = false;
   // What the scanner shows besides the last message: type, FSDU, the last three pallets, bigger buttons.
-  const scanState = () => ({ type: ($("type") || {}).value || "BB", fsdu: !!($("fsdu") || {}).checked, canUndo: rows.length > 0, big: pref("lpnapkbig", false),
+  const typeColours = () => { const cs = getComputedStyle(document.documentElement); return ["--bb", "--fm", "--fp", "--mx"].map(v => cs.getPropertyValue(v).trim()).filter(c => /^#[0-9a-f]{6}$/i.test(c)).join(","); };
+  const scanState = () => ({ type: ($("type") || {}).value || "BB", fsdu: !!($("fsdu") || {}).checked, canUndo: rows.length > 0, big: pref("lpnapkbig", false), colours: typeColours(),
     recent: rows.slice(-3).reverse().map(r => r.lpn + " · " + r.type + (r.fsdu ? " + FSDU" : "")).join("\n") });
   function pushScan(text) { if (N()) N().scanStatus(text ? { text, state: scanState() } : { state: scanState() }).catch(() => {}); }
   window.LPN_APK_SCANSTATE = scanState;

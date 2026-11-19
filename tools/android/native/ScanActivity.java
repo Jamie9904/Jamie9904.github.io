@@ -72,6 +72,8 @@ public class ScanActivity extends AppCompatActivity {
     // The page's state (type, FSDU, last pallets, bigger buttons), kept so it shows as soon as the scanner opens.
     static volatile String sType = "BB", sRecent = "";
     static volatile boolean sFsdu = false, sCanUndo = false, sBig = false;
+    // The pallet type colours from the main screen (styles.css --bb, --fm, --fp, --mx), sent by the page; these are the same values.
+    static volatile String[] sColours = { "#dba56c", "#6fa8ff", "#a9c95a", "#c79bf0" };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -265,10 +267,18 @@ public class ScanActivity extends AppCompatActivity {
     /* Shows the page's state: the chosen type, FSDU, the last pallets, whether there's one to remove, button size. */
     private void applyState() {
         applying = true;
+        // Like the main screen: each type outlined in its colour, the chosen one filled with it and dark text.
         for (int i = 0; i < TYPES.length; i++) {
             boolean on = TYPES[i].equals(sType);
-            typeBtns[i].setBackgroundTintList(on ? ColorStateList.valueOf(Color.parseColor("#ff8a2a")) : null);
-            typeBtns[i].setTextColor(on ? Color.parseColor("#0c1830") : Color.BLACK);
+            int c;
+            try { c = Color.parseColor(sColours[i]); } catch (Exception e) { c = Color.GRAY; }
+            android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
+            g.setCornerRadius(dp(10));
+            g.setStroke(dp(2), c);
+            g.setColor(on ? c : Color.parseColor("#13264a"));
+            typeBtns[i].setBackground(new android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(Color.parseColor("#33ffffff")), g, null));
+            typeBtns[i].setTextColor(on ? Color.parseColor("#111111") : Color.parseColor("#eaf0fa"));
+            typeBtns[i].setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
             typeBtns[i].setSelected(on);
         }
         fsduBox.setChecked(sFsdu);
@@ -281,8 +291,9 @@ public class ScanActivity extends AppCompatActivity {
         applying = false;
     }
 
-    static void setState(String type, boolean fsdu, String recentText, boolean canUndo, boolean big) {
+    static void setState(String type, boolean fsdu, String recentText, boolean canUndo, boolean big, String[] colours) {
         if (type != null) sType = type;
+        if (colours != null && colours.length == TYPES.length) sColours = colours;
         sFsdu = fsdu; sRecent = recentText; sCanUndo = canUndo; sBig = big;
         ScanActivity a = current;
         if (a != null) a.runOnUiThread(a::applyState);

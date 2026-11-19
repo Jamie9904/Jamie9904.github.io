@@ -1,17 +1,6 @@
 {
   "_about": "Shown once on each phone after it installs a new Android update (not on a first install). Replace the list with what this update changes, in plain words, each time an Android update is approved and built.",
   "items": [
-    "Scan by photo opens the camera again, to take a photo of the label. Upload photo still lets you choose photos you've already taken.",
-    "Stronger, clearer buzzes: one short buzz when a pallet is added and a double buzz for a warning, so you can tell without looking (Settings › Vibrate).",
-    "In the camera scanner: change the pallet type, tick FSDU, and Remove last, without closing the camera. The last three pallets show under the picture.",
-    "Opening the app with a delivery in progress offers Carry on scanning.",
-    "Bigger buttons, for gloves: a switch in Settings › Android app makes Add, Scan, the pallet types and Undo bigger, in the app and in the camera scanner.",
-    "The camera scanner has a tall aiming frame for the upright LPN barcodes, flashes green when a pallet is added and orange when it needs a check, and leaves more of the picture clear.",
-    "The status and navigation bars follow the app's colours, with dark icons on light colours.",
-    "The Saved bar and short messages sit above the Add and Scan bar instead of covering it.",
-    "Questions (such as Carry on scanning or the battery reminder) slide up from the bottom; tap outside to close them.",
-    "A light tap when you press Add, Scan or a pallet type (with Vibrate on).",
-    "The Continue shortcut goes to the LPN box without popping up the keyboard; tap the box when you want to type.",
-    "The blank tally sheet no longer mentions the app, and has a back page (print double-sided) with the numbers carrying on from the front."
+    "The pallet type buttons in the camera scanner use the same colours as on the main screen: BB, FMCG, FPP and Mixed each outlined in their colour, and the chosen one filled with it."
   ]
 }

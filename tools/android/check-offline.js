@@ -256,7 +256,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     const after = st()[1], added = rows.map(r => r.lpn + ":" + r.type + ":" + r.fsdu).join();
     N.listeners.scanUndo(); await wait(50); const undo = { rows: rows.map(r => r.lpn).join(), status: N.calls.filter(c => c[0] === "status").pop(), state: st()[1] };
     N.listeners.nativeScanClosed({ reason: "done" }); N.scanStatus = orig; return { open, typed, fsdu, after, added, undo }; });
-  check("the scanner gets the pallet type, FSDU and last pallets when it opens", !!s.open && s.open.type === "BB" && s.open.fsdu === false && s.open.canUndo === false, s.open);
+  check("the scanner gets the pallet type, FSDU, last pallets and the main screen's type colours when it opens", !!s.open && s.open.type === "BB" && s.open.fsdu === false && s.open.canUndo === false && s.open.colours === "#dba56c,#6fa8ff,#a9c95a,#c79bf0", s.open);
   check("the type and FSDU buttons in the scanner change the app's own (FSDU clears after the next pallet, as usual)", s.typed.page === "FPP" && s.typed.sent === "FPP" && s.fsdu.page && s.fsdu.sent && s.added === "VLT004040501:FPP:true,VLT004040502:FPP:false", s);
   check("the scanner shows the last pallets, newest first", s.after.recent === "VLT004040502 · FPP\nVLT004040501 · FPP + FSDU" && s.after.canUndo, s.after);
   check("Remove last in the scanner removes the last pallet (with Undo in the app)", s.undo.rows === "VLT004040501" && /^Removed VLT004040502 · 1 of 20\. Undo is in the app\.$/.test(s.undo.status[1]) && s.undo.state.recent === "VLT004040501 · FPP + FSDU", s.undo);
