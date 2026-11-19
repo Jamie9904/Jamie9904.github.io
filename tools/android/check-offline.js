@@ -261,9 +261,12 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     addValue("VLT004040301"); addValue("VLT004040302"); await wait(1300); const two = N.calls.filter(c => c[0] === "delivery").map(c => c[1]);
     rows = []; save(); await wait(1300); const none = N.calls.filter(c => c[0] === "delivery").map(c => c[1]); return { two, none }; });
   check("the Continue shortcut says how many pallets the delivery has, and goes when the log is cleared", s.two.join() === "Continue: 2 pallets" && s.none.join("|") === "Continue: 2 pallets|", s);
+  // From the Manifest check scrolled to the top (where the entry bar slides away on a phone).
+  await page.evaluate(async () => { const b = document.getElementById("cmpBody"); if (b.hidden) document.getElementById("cmpToggle").click(); document.getElementById("cmpCard").scrollIntoView({ block: "start" }); window.dispatchEvent(new Event("scroll")); await new Promise(r => setTimeout(r, 200)); });
+  const slid = await page.evaluate(() => document.body.classList.contains("cmpfocus"));
   await open({ action: "continue" });
   s = await page.evaluate(() => { const a = document.activeElement; return a ? (a.id || a.tagName + "." + a.className + ":" + (a.textContent || "").slice(0, 40)) : ""; });
-  check("the Continue shortcut goes back to the LPN box", s === "lpn", s);
+  check("the Continue shortcut goes back to the LPN box, even from the Manifest check where the entry bar had slid away", s === "lpn" && slid, { focus: s, slid });
   // Android-style controls.
   s = await page.evaluate(async () => { openHelp("settings", "Settings"); await new Promise(r => setTimeout(r, 100)); const c = document.querySelector("#panelBody label.chk > input[type=checkbox]"), cs = getComputedStyle(c);
     const out = { appearance: cs.appearance, w: cs.width, role: c.type }; closeHelp();

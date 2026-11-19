@@ -221,11 +221,18 @@
     });
     document.body.appendChild(d); row.querySelector("button").focus();
   }
+  /* Back to the log: on a phone the entry bar slides away while the open Manifest check fills the screen, so bring
+     the log into view and the bar back before using it. */
+  function toLog() {
+    const lc = $("logCard"); if (lc && !lc.hidden) lc.scrollIntoView({ block: "start" });
+    document.body.classList.remove("cmpfocus"); const en = document.querySelector(".card.entry"); if (en) en.inert = false;
+  }
   function opened(r) {
     if (!r) return;
     if (r.error) { toast(r.error); return; }
     if (r.action === "scan") {
       if (typeof closeHelp === "function") closeHelp();
+      if (has("palletLog")) toLog();
       const id = has("liveScan") ? "scan" : has("scanByPhoto") ? "photo" : "";
       if (!id) { const l = $("lpn"); if (l) l.focus(); return; }
       const row = $("btnrow"), sb = $("scanBtn");
@@ -233,7 +240,7 @@
       $(id).click(); return;
     }
     if (r.action === "manifest") { openManifest(); return; }
-    if (r.action === "continue") { if (typeof closeHelp === "function") closeHelp(); const l = $("lpn"); if (l && has("palletLog")) { l.scrollIntoView({ block: "center" }); l.focus(); } return; }
+    if (r.action === "continue") { if (typeof closeHelp === "function") closeHelp(); const l = $("lpn"); if (l && has("palletLog")) { toLog(); l.focus(); } return; }
     if (typeof r.text === "string") { sharedText(r.text); return; }
     if (!r.file) return;
     const bin = atob(r.file.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
