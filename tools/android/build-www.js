@@ -66,6 +66,9 @@ edit("panels.js", "if(installed||seen)return;", "if(installed||seen||window.LPN_
 // The tools are inside the app, not downloaded.
 edit("panels.js", "<li>The Excel, PDF and photo reading tools are downloaded from public code servers the first time they’re needed. Your data isn’t sent to them. Like any website, they see your internet address.</li>",
   "<li>The Excel, PDF, barcode and photo reading tools are inside this app, so nothing is downloaded and the app never needs the internet.</li>");
+// Camera refused: say where Android keeps the setting (the website's text talks about browser settings and https).
+edit("scan.js", '"Camera access was blocked. Allow camera permission for this site in your browser settings, make sure the page is opened over https"',
+  '"Camera access was blocked. Allow the camera for LPN Pallet Log in your phone’s Settings › Apps"');
 // No service worker.
 edit("panels.js", 'if("serviceWorker" in navigator){', 'if(false&&"serviceWorker" in navigator){');
 // The photo reader's worker, engine and language data come from lib/.
@@ -76,7 +79,9 @@ edit("compare.js", "fr.onload=()=>{try{fr.contentWindow.focus();", "fr.onload=()
 edit("compare.js", "async function printBuf(buf,fname,m){", "async function printBuf(buf,fname,m){if(window.LPN_APK_PRINT&&await window.LPN_APK_PRINT(buf,fname)){m.textContent=\"\";return}");
 
 const tess = JSON.parse(fs.readFileSync(path.join(LIB, "tess.json"), "utf8"));
-fs.writeFileSync(path.join(WWW, "android.js"), fs.readFileSync(path.join(__dirname, "android-shim.js"), "utf8").replace("/*TESS*/null", JSON.stringify(tess)));
+const notes = JSON.parse(fs.readFileSync(path.join(__dirname, "whats-new.json"), "utf8"));
+if (!Array.isArray(notes.items) || notes.items.some(t => typeof t !== "string")) fail("tools/android/whats-new.json: items must be a list of sentences");
+fs.writeFileSync(path.join(WWW, "android.js"), fs.readFileSync(path.join(__dirname, "android-shim.js"), "utf8").replace("/*TESS*/null", JSON.stringify(tess)).replace("/*NOTES*/[]", JSON.stringify(notes.items)));
 
 // Nothing may still point at the internet (the website's own address in text is fine).
 const left = [];

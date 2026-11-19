@@ -25,6 +25,8 @@ edit(man, /(<manifest[^>]*>)/, `$1
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />`);
+// The app's data stays on the phone: no copies in Google's backups (the owner keeps backups with Download backup).
+edit(man, /android:allowBackup="true"/, 'android:allowBackup="false"');
 edit(path.join(AND, "build.gradle"), /versionCode \d+/, "versionCode " + code);
 edit(path.join(AND, "build.gradle"), /versionName "[^"]*"/, 'versionName "' + name.replace(/"/g, "") + '"');
 

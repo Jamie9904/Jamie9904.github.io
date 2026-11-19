@@ -2,12 +2,15 @@ package io.github.jamie9904.lpnlog;
 
 import android.app.Activity;
 import android.content.Context;
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.CancellationSignal;
 import android.os.ParcelFileDescriptor;
 import android.print.PageRange;
@@ -18,6 +21,9 @@ import android.print.PrintManager;
 import android.provider.OpenableColumns;
 import android.util.Base64;
 import android.view.WindowManager;
+import android.webkit.MimeTypeMap;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -39,12 +45,16 @@ import java.io.OutputStream;
    - decodeBarcodes: Google's ML Kit barcode reader, on the phone (no internet);
    - printPdf: Android's own print screen;
    - keepAwake: keeps the screen on;
-   - takePending: a file opened or shared into the app, or a home-screen shortcut (Scan, Manifest check). */
+   - takePending: a file opened or shared into the app, or a home-screen shortcut (Scan, Manifest check);
+   - setVolumeScan / "volumeDown": the volume-down button starts and stops Live scan;
+   - cameraAllowed: whether Android has already let the app use the camera;
+   - openFile: opens a file the app saved in Documents › LPN Pallet Log in another app. */
 @CapacitorPlugin(name = "LpnNative")
 public class LpnNativePlugin extends Plugin {
     private static final long MAX_FILE = 40L * 1024 * 1024;
     private static JSObject pending = null;
     private static LpnNativePlugin current = null;
+    static volatile boolean volumeScan = false;
     private BarcodeScanner scanner = null;
 
     @Override
@@ -95,6 +105,38 @@ public class LpnNativePlugin extends Plugin {
     private static synchronized void setPending(JSObject o) {
         pending = o;
         if (current != null) current.notifyListeners("opened", new JSObject(), true);
+    }
+
+    static void volumeDown() {
+        if (current != null) current.notifyListeners("volumeDown", new JSObject());
+    }
+
+    @PluginMethod
+    public void setVolumeScan(PluginCall call) {
+        volumeScan = Boolean.TRUE.equals(call.getBoolean("on", false));
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void cameraAllowed(PluginCall call) {
+        boolean ok = ContextCompat.checkSelfPermission(getContext(), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+        call.resolve(new JSObject().put("allowed", ok));
+    }
+
+    @PluginMethod
+    public void openFile(PluginCall call) {
+        String name = call.getString("name");
+        if (name == null || name.contains("/") || name.contains("..")) { call.reject("no file"); return; }
+        try {
+            File f = new File(new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS), "LPN Pallet Log"), name);
+            if (!f.exists()) { call.reject("That file is no longer there."); return; }
+            Uri u = FileProvider.getUriForFile(getContext(), getContext().getPackageName() + ".fileprovider", f);
+            String ext = name.contains(".") ? name.substring(name.lastIndexOf('.') + 1).toLowerCase() : "";
+            String mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext);
+            Intent i = new Intent(Intent.ACTION_VIEW).setDataAndType(u, mime == null ? "*/*" : mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            getActivity().startActivity(Intent.createChooser(i, name));
+            call.resolve();
+        } catch (Exception e) { call.reject(e.getMessage() == null ? "No app on this phone can open that file." : e.getMessage()); }
     }
 
     @PluginMethod

@@ -65,7 +65,8 @@
   // Styles for the two small things this file adds: a short message at the bottom, and a question (Open a PDF as…).
   const css = document.createElement("style");
   css.textContent = ".apktoast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:calc(100vw - 32px);padding:10px 16px;border-radius:12px;background:#1f2a41;color:#fff;font-size:.95rem;z-index:1000;box-shadow:0 4px 16px rgba(0,0,0,.35)}"
-    + ".apkask{position:fixed;left:12px;right:12px;bottom:12px;z-index:1000;margin:0;box-shadow:0 6px 24px rgba(0,0,0,.4)}.apkask .apkasktitle{margin:0 0 10px;font-weight:700}";
+    + ".apkask{position:fixed;left:12px;right:12px;bottom:12px;z-index:1000;margin:0;box-shadow:0 6px 24px rgba(0,0,0,.4)}.apkask .apkasktitle{margin:0 0 10px;font-weight:700}"
+    + ".apkfiles{list-style:none;padding:0;margin:8px 0}.apkfiles li{padding:10px 0;border-bottom:1px solid var(--rule,#223a63)}.apkfname{margin:0;font-weight:700;overflow-wrap:anywhere}.apkfiles .note{margin:2px 0 8px}";
   document.head.appendChild(css);
   let toastT = 0;
   function toast(t) {
@@ -130,12 +131,13 @@
     const dt = new DataTransfer(); dt.items.add(file); inp.files = dt.files;
     inp.dispatchEvent(new Event("change", { bubbles: true }));
   }
-  function ask(title, choices) {
+  function ask(title, choices, noCancel) {
     const old = document.querySelector(".apkask"); if (old) old.remove();
     const d = document.createElement("div"); d.className = "apkask card"; d.setAttribute("role", "dialog"); d.setAttribute("aria-modal", "true"); d.setAttribute("aria-label", title);
     const h = document.createElement("p"); h.className = "apkasktitle"; h.textContent = title; d.appendChild(h);
     const row = document.createElement("div"); row.className = "row"; d.appendChild(row);
-    choices.concat([["Cancel", null]]).forEach(([label, fn], i) => {
+    if (noCancel) d.dataset.keep = "1"; // Back doesn't close it: it must be answered
+    choices.concat(noCancel ? [] : [["Cancel", null]]).forEach(([label, fn], i) => {
       const b = document.createElement("button"); b.type = "button"; b.textContent = label; if (i === 0) b.className = "p";
       b.onclick = () => { d.remove(); if (fn) fn(); }; row.appendChild(b);
     });
@@ -186,19 +188,116 @@
   if (A()) {
     let last = 0;
     try { A().addListener("backButton", ({ canGoBack }) => {
-      const a = document.querySelector(".apkask"); if (a) { a.remove(); return; }
+      const a = document.querySelector(".apkask"); if (a) { if (!a.dataset.keep) a.remove(); return; }
       if (canGoBack) { history.back(); return; }
       const sb = $("scanbox"); if (sb && !sb.hidden && typeof stopScan === "function") { stopScan(); return; }
       const now = Date.now();
       if (now - last < 2000) { A().exitApp(); return; }
       last = now; toast("Press Back again to close the app.");
     }); } catch (e) {}
-    // Which Android build this is: in Settings and the footer.
+    // Which Android build this is (footer), and what's new after an Android update.
     A().getInfo().then(i => {
       const v = "Android app: " + i.version; window.LPN_APK_VER = v;
       const f = $("verText"); if (f && !$("apkFoot")) { const s = document.createElement("span"); s.id = "apkFoot"; s.textContent = " · " + v; f.after(s); }
-      const add = () => { if ($("panelTitle") && $("panelTitle").textContent === "Settings" && !$("apkVer")) { const p = document.createElement("p"); p.className = "note"; p.id = "apkVer"; p.textContent = v; $("panelBody").prepend(p); } };
-      new MutationObserver(add).observe($("panelBody"), { childList: true }); add();
+      whatsNew(String(i.build || ""));
     }).catch(() => {});
   }
+  // Settings › Android app: which build this is, the volume button, and the exported files.
+  if (P()) {
+    const add = () => {
+      if (!$("panelTitle") || $("panelTitle").textContent !== "Settings" || $("apkSet")) return;
+      const box = document.createElement("div"); box.id = "apkSet";
+      box.innerHTML = '<h3>Android app</h3><p class="note" id="apkVer"></p>'
+        + (has("liveScan") ? '<label class="chk"><input type="checkbox" id="apkVol"><span>Volume-down button starts and stops Live scan (volume-up still changes the volume)</span></label>' : "")
+        + '<div class="row"><button type="button" id="apkFilesSet">Exported files</button></div>';
+      $("panelBody").prepend(box);
+      $("apkVer").textContent = window.LPN_APK_VER || "Android app";
+      if ($("apkVol")) { $("apkVol").checked = volOn(); $("apkVol").onchange = () => { try { localStorage.setItem("lpnapkvol", $("apkVol").checked ? "on" : "off"); } catch (e) {} syncVol(); }; }
+      $("apkFilesSet").onclick = () => showFiles();
+    };
+    if ($("panelBody")) new MutationObserver(add).observe($("panelBody"), { childList: true });
+  }
+
+  /* What's new: after each Android update (not on a first install), once, a card with tools/android/whats-new.json. */
+  const NOTES = /*NOTES*/[];
+  function whatsNew(build) {
+    let seen = null; try { seen = localStorage.getItem("lpnapkseen"); } catch (e) {}
+    const done = () => { try { localStorage.setItem("lpnapkseen", build); } catch (e) {} };
+    if (!build) return;
+    if (seen === null || seen === build || !NOTES.length) { done(); return; }
+    const old = $("apkNew"); if (old) old.remove();
+    const c = document.createElement("div"); c.className = "hello"; c.id = "apkNew"; c.setAttribute("role", "region"); c.setAttribute("aria-label", "What's new in this Android update");
+    const h = document.createElement("p"); h.innerHTML = "<b>What’s new in this Android update</b>"; c.appendChild(h);
+    const ul = document.createElement("ul"); NOTES.forEach(t => { const li = document.createElement("li"); li.textContent = t; ul.appendChild(li); }); c.appendChild(ul);
+    const row = document.createElement("div"); row.className = "row"; const b = document.createElement("button"); b.type = "button"; b.className = "p"; b.textContent = "OK";
+    b.onclick = () => { done(); c.remove(); }; row.appendChild(b); c.appendChild(row);
+    const main = document.querySelector("main"); if (main) main.prepend(c);
+  }
+  window.LPN_APK_WHATSNEW = whatsNew;
+
+  /* Volume-down: starts Live scan, or stops it. On unless switched off in Settings, and only with Live scan on. */
+  const volOn = () => { try { return localStorage.getItem("lpnapkvol") !== "off"; } catch (e) { return true; } };
+  function syncVol() { if (N()) N().setVolumeScan({ on: volOn() && has("liveScan") && has("palletLog") }).catch(() => {}); }
+  if (N()) {
+    window.addEventListener("load", syncVol);
+    try { N().addListener("volumeDown", () => {
+      const main = document.querySelector("main"); if (main && main.inert) return; // a panel or box is open
+      if (typeof scanning !== "undefined" && scanning && typeof stopScan === "function") { stopScan(); return; }
+      opened({ action: "scan" });
+    }); } catch (e) {}
+  }
+
+  /* Exported files: what the app saved in Documents › LPN Pallet Log, newest first, to open, share or print again. */
+  async function showFiles() {
+    if (typeof HELP === "undefined") return;
+    HELP.apkfiles = '<p class="note">Files this app saved in <b>Documents › LPN Pallet Log</b>, newest first. They stay on this phone; delete them in the Files app.</p><div id="apkFiles"><p class="note">Looking…</p></div><div class="msg" id="apkFilesMsg" role="status" aria-live="polite"></div>';
+    if (typeof closeHelp === "function") closeHelp();
+    openHelp("apkfiles", "Exported files");
+    const box = $("apkFiles"), msg = t => { $("apkFilesMsg").textContent = t; };
+    let files = [];
+    try { files = ((await P().Filesystem.readdir({ path: "LPN Pallet Log", directory: "DOCUMENTS" })).files || []).filter(f => f.type !== "directory"); } catch (e) {}
+    files.sort((a, b) => (b.mtime || 0) - (a.mtime || 0));
+    box.innerHTML = "";
+    if (!files.length) { box.innerHTML = '<p class="note">No exported files yet. Files appear here after Download (Excel), Email PDF or saving a backup.</p>'; return; }
+    const when = t => { if (!t) return ""; const d = new Date(Number(t)); return (typeof ukDate === "function" ? ukDate(d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0")) : d.toDateString()) + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
+    const kb = n => n > 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB";
+    const ul = document.createElement("ul"); ul.className = "apkfiles";
+    files.slice(0, 100).forEach(f => {
+      const li = document.createElement("li");
+      const t = document.createElement("p"); t.className = "apkfname"; t.textContent = f.name; li.appendChild(t);
+      const d = document.createElement("p"); d.className = "note"; d.textContent = [when(f.mtime), f.size ? kb(f.size) : ""].filter(Boolean).join(" · "); li.appendChild(d);
+      const row = document.createElement("div"); row.className = "row";
+      const btn = (label, fn) => { const b = document.createElement("button"); b.type = "button"; b.textContent = label; b.setAttribute("aria-label", label + " " + f.name); b.onclick = () => fn().catch(e => msg(((e && e.message) || "That didn’t work") + ".")); row.appendChild(b); };
+      btn("Open", async () => { msg(""); await N().openFile({ name: f.name }); });
+      btn("Share", async () => { msg(""); try { await P().Share.share({ title: f.name, files: [f.uri], dialogTitle: "Send " + f.name }); } catch (e) { if (!cancelled(e)) throw e; } });
+      if (/\.pdf$/i.test(f.name)) btn("Print", async () => { msg(""); const r = await P().Filesystem.readFile({ path: "LPN Pallet Log/" + f.name, directory: "DOCUMENTS" }); await N().printPdf({ data: r.data, name: f.name.replace(/\.pdf$/i, "") }); });
+      li.appendChild(row); ul.appendChild(li);
+    });
+    box.appendChild(ul);
+  }
+  window.LPN_APK_FILES = showFiles;
+  if (P()) {
+    const h = $("histBtn");
+    if (h && !$("apkFilesBtn")) { const b = document.createElement("button"); b.type = "button"; b.id = "apkFilesBtn"; b.textContent = "Exported files"; b.onclick = () => showFiles(); h.after(b); }
+  }
+
+  /* The camera: before Android first asks, a line saying what it's for. */
+  const explained = () => { try { return localStorage.getItem("lpnapkcam") === "1"; } catch (e) { return false; } };
+  async function cameraOk() {
+    if (!N() || explained()) return true;
+    try { if ((await N().cameraAllowed()).allowed) { localStorage.setItem("lpnapkcam", "1"); return true; } } catch (e) { return true; }
+    await new Promise(res => ask("LPN Pallet Log uses the camera to scan pallet barcodes and to take photos of labels and manifests. Android will ask you to allow it next.", [["Continue", res]], true));
+    try { localStorage.setItem("lpnapkcam", "1"); } catch (e) {}
+    return true;
+  }
+  if (N() && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    const gum = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+    navigator.mediaDevices.getUserMedia = async c => { if (c && c.video) await cameraOk(); return gum(c); };
+  }
+  if (N()) document.addEventListener("click", e => {
+    const b = e.target && e.target.closest && e.target.closest("#photo");
+    if (!b || explained()) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    cameraOk().then(() => b.click());
+  }, true);
 })();

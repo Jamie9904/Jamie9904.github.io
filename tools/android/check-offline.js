@@ -22,7 +22,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   }).listen(0, "127.0.0.1");
   await new Promise(r => srv.on("listening", r));
   const { chromium } = require("playwright");
-  const b = await chromium.launch(), ctx = await b.newContext({ serviceWorkers: "block", viewport: { width: 390, height: 844 } });
+  const b = await chromium.launch({ args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"] }), ctx = await b.newContext({ serviceWorkers: "block", viewport: { width: 390, height: 844 } });
   const outside = [];
   await ctx.route("**/*", r => { const u = new URL(r.request().url()); if (u.hostname === "127.0.0.1" || /^(data|blob):/.test(u.protocol)) return r.continue(); outside.push(u.href); return r.abort(); });
   const page = await ctx.newPage(), errors = [];
@@ -40,11 +40,16 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
         decodeBarcodes: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["decode", o.data.slice(0, 4), o.data.length]); return { barcodes: window.__codes || [] }; },
         keepAwake: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["awake", o.on]); },
         printPdf: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["print", o.name, o.data.slice(0, 5)]); },
+        setVolumeScan: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["vol", o.on]); },
+        cameraAllowed: async () => ({ allowed: window.__camAllowed !== false }),
+        openFile: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["open", o.name]); },
         takePending: async () => { const N = window.Capacitor.Plugins.LpnNative, r = N.pending || {}; N.pending = null; return r; },
         addListener: (ev, fn) => { window.Capacitor.Plugins.LpnNative.listeners[ev] = fn; return { remove() {} }; } },
       App: { exited: 0, back: null, addListener: (ev, fn) => { if (ev === "backButton") window.Capacitor.Plugins.App.back = fn; return { remove() {} }; },
         getInfo: async () => ({ version: "Build 66 (Android 9)", build: "9" }), exitApp: () => { window.Capacitor.Plugins.App.exited++; } } } };
     window.__fsData = {};
+    window.Capacitor.Plugins.Filesystem.readdir = async o => ({ files: window.__dir || [] });
+    window.Capacitor.Plugins.Filesystem.readFile = async o => ({ data: "JVBERi0xLjM=" });
     const w = window.Capacitor.Plugins.Filesystem.writeFile; window.Capacitor.Plugins.Filesystem.writeFile = async o => { window.__fsData[o.path] = o.data; return w(o); };
   });
   await page.goto("http://127.0.0.1:" + srv.address().port + "/index.html"); await page.waitForTimeout(800);
@@ -153,6 +158,48 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   // Which build this is.
   s = await page.evaluate(async () => { openHelp("settings", "Settings"); await new Promise(r => setTimeout(r, 100)); const v = document.getElementById("apkVer"); const out = { set: v && v.textContent, foot: (document.getElementById("apkFoot") || {}).textContent }; closeHelp(); return out; });
   check("Settings and the footer say which Android build this is", s.set === "Android app: Build 66 (Android 9)" && s.foot === " · Android app: Build 66 (Android 9)", s);
+
+  // What's new after an Android update: not on a first install, once after an update.
+  s = await page.evaluate(() => { const card = () => document.getElementById("apkNew"); localStorage.removeItem("lpnapkseen");
+    LPN_APK_WHATSNEW("9"); const first = { card: !!card(), seen: localStorage.getItem("lpnapkseen") };
+    localStorage.setItem("lpnapkseen", "5"); LPN_APK_WHATSNEW("9"); const upd = { card: !!card(), items: card() ? card().querySelectorAll("li").length : 0, title: card() ? card().textContent.slice(0, 40) : "" };
+    card().querySelector("button").click(); const after = { card: !!card(), seen: localStorage.getItem("lpnapkseen") }; LPN_APK_WHATSNEW("9"); after.again = !!card(); return { first, upd, after }; });
+  check("What's new shows once after an Android update (not on a first install)", !s.first.card && s.first.seen === "9" && s.upd.card && s.upd.items > 0 && /What’s new in this Android update/.test(s.upd.title) && !s.after.card && s.after.seen === "9" && !s.after.again, s);
+  // Settings › Android app, with the volume button switch.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative; N.calls = []; openHelp("settings", "Settings"); await new Promise(r => setTimeout(r, 50));
+    const first = document.getElementById("panelBody").firstElementChild, v = document.getElementById("apkVol"), on = v && v.checked; v.click(); await new Promise(r => setTimeout(r, 50));
+    const off = { stored: localStorage.getItem("lpnapkvol"), calls: N.calls.slice() }; v.click(); await new Promise(r => setTimeout(r, 50)); const back = localStorage.getItem("lpnapkvol"); closeHelp();
+    return { first: first && first.id, head: first && first.querySelector("h3").textContent, on, off, back, files: !!document.getElementById("apkFilesBtn") }; });
+  check("Settings starts with an Android app section, where the volume button can be switched off and on", s.first === "apkSet" && s.head === "Android app" && s.on === true && s.off.stored === "off" && JSON.stringify(s.off.calls) === '[["vol",false]]' && s.back === "on", s);
+  // Volume-down starts and stops Live scan; not while a panel is open.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); localStorage.setItem("lpnapkcam", "1");
+    N.listeners.volumeDown(); for (let i = 0; i < 30 && !scanning; i++) await wait(100); const started = scanning && !document.getElementById("scanbox").hidden;
+    N.listeners.volumeDown(); await wait(200); const stopped = !scanning && document.getElementById("scanbox").hidden;
+    openHelp("guide", "How to use this app"); N.listeners.volumeDown(); await wait(300); const inPanel = scanning; closeHelp(); if (scanning) stopScan(); return { started, stopped, inPanel }; });
+  check("volume-down starts Live scan and stops it again, but does nothing while a panel is open", s.started && s.stopped && !s.inPanel, s);
+  // Exported files.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); N.calls = []; window.__share = [];
+    window.__dir = [{ name: "LPN-log-2026-11-18.xlsx", type: "file", size: 9000, mtime: 1763460000000, uri: "file:///docs/a.xlsx" }, { name: "LPN-log-2026-11-19.pdf", type: "file", size: 52000, mtime: 1763550000000, uri: "file:///docs/b.pdf" }, { name: "sub", type: "directory" }];
+    document.getElementById("apkFilesBtn").click(); await wait(200);
+    const items = [...document.querySelectorAll(".apkfiles li")].map(li => ({ name: li.querySelector(".apkfname").textContent, btns: [...li.querySelectorAll("button")].map(b => b.textContent).join() }));
+    const first = document.querySelectorAll(".apkfiles li")[0], btn = t => [...first.querySelectorAll("button")].find(b => b.textContent === t);
+    btn("Print").click(); await wait(100); btn("Share").click(); await wait(100); btn("Open").click(); await wait(100);
+    const out = { title: document.getElementById("panelTitle").textContent, items, calls: N.calls, share: window.__share.map(x => x.files) };
+    window.__dir = []; closeHelp(); return out; });
+  check("Exported files lists the saved files newest first, to open, share or print (PDFs) again", s.title === "Exported files" && s.items.length === 2 && s.items[0].name === "LPN-log-2026-11-19.pdf" && s.items[0].btns === "Open,Share,Print" && s.items[1].btns === "Open,Share"
+    && JSON.stringify(s.calls) === '[["print","LPN-log-2026-11-19","JVBER"],["open","LPN-log-2026-11-19.pdf"]]' && JSON.stringify(s.share) === '[["file:///docs/b.pdf"]]', s);
+  // The camera: explained once, before Android asks.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), App = window.Capacitor.Plugins.App; localStorage.removeItem("lpnapkcam"); window.__camAllowed = false;
+    const inp = document.getElementById("file"), real = inp.click; let picked = 0; inp.click = () => { picked++; };
+    document.getElementById("photo").click(); await wait(100);
+    const a = document.querySelector(".apkask"), q = { text: a && a.textContent, btns: a ? [...a.querySelectorAll("button")].map(b => b.textContent).join() : "", picked };
+    App.back({ canGoBack: false }); q.afterBack = !!document.querySelector(".apkask");
+    document.querySelector(".apkask button").click(); await wait(100); q.pickedAfter = picked; q.kept = localStorage.getItem("lpnapkcam");
+    document.getElementById("photo").click(); await wait(100); q.again = !!document.querySelector(".apkask"); q.pickedAgain = picked;
+    inp.click = real; window.__camAllowed = true; return q; });
+  check("before Android first asks for the camera, the app says what it's for (once, Continue only)", /uses the camera to scan pallet barcodes/.test(s.text || "") && s.btns === "Continue" && s.picked === 0 && s.afterBack && s.pickedAfter === 1 && s.kept === "1" && !s.again && s.pickedAgain === 2, s);
+  s = await page.evaluate(async () => (await (await fetch("scan.js")).text()).includes("Allow the camera for LPN Pallet Log in your phone’s Settings › Apps"));
+  check("if the camera is refused, the message says where Android keeps the setting", s === true, s);
 
   // Photo reading with only the files inside the app.
   const photos = load(OCR).filter(p => p.want && p.want.length);

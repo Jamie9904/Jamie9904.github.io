@@ -1,0 +1,12 @@
+{
+  "_about": "Shown once on each phone after it installs a new Android update (not on a first install). Replace the list with what this update changes, in plain words, each time an Android update is approved and built.",
+  "items": [
+    "Exported files: a list of the Excel and PDF files the app has saved, to open, share or print again (under Saved deliveries, and in Settings).",
+    "Volume-down starts and stops Live scan. Turn it off in Settings if you'd rather use it for the volume.",
+    "The screen stays upright on phones while you move about.",
+    "Before Android first asks about the camera, the app says what it's for.",
+    "Your log stays on this phone only: it's no longer copied into Google's phone backups. Use Download backup in Settings to keep a copy.",
+    "No install instructions or install pop-up, since the app is already installed.",
+    "This note after each Android update, so you can see what changed."
+  ]
+}
