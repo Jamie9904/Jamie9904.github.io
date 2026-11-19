@@ -4,11 +4,10 @@
   - camera (Live scan, Scan by photo) and vibration permissions;
   - version number;
   - the app's own icon and a plain dark start-up screen instead of Capacitor's.
-  Needs ImageMagick (convert), which GitHub's Ubuntu machines have.
+  The icons are drawn with the browser the checks already use (Playwright), so nothing else needs installing.
 */
 const fs = require("fs");
 const path = require("path");
-const { execFileSync } = require("child_process");
 const AND = path.join(__dirname, "android", "app");
 const RES = path.join(AND, "src", "main", "res");
 const ICON = path.join(__dirname, "..", "..", "icon-512.png");
@@ -27,25 +26,38 @@ edit(man, /(<manifest[^>]*>)/, `$1
 edit(path.join(AND, "build.gradle"), /versionCode \d+/, "versionCode " + code);
 edit(path.join(AND, "build.gradle"), /versionName "[^"]*"/, 'versionName "' + name.replace(/"/g, "") + '"');
 
-const im = (...a) => execFileSync("convert", a);
+// Draws a PNG: a w x h canvas filled with bg (or clear), with the icon centred at size s.
+const pngSize = f => { const b = fs.readFileSync(f); return [b.readUInt32BE(16), b.readUInt32BE(20)]; };
+const jobs = [];
 const DENS = { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
 for (const [d, k] of Object.entries(DENS)) {
   const dir = path.join(RES, "mipmap-" + d); fs.mkdirSync(dir, { recursive: true });
-  const leg = Math.round(48 * k), fg = Math.round(108 * k), inner = Math.round(108 * k * 0.72);
-  im(ICON, "-resize", leg + "x" + leg, path.join(dir, "ic_launcher.png"));
-  im(ICON, "-resize", leg + "x" + leg, path.join(dir, "ic_launcher_round.png"));
-  im("-size", fg + "x" + fg, "xc:none", "(", ICON, "-resize", inner + "x" + inner, ")", "-gravity", "center", "-composite", path.join(dir, "ic_launcher_foreground.png"));
+  const leg = Math.round(48 * k), fg = Math.round(108 * k);
+  jobs.push({ f: path.join(dir, "ic_launcher.png"), w: leg, h: leg, s: leg, bg: null });
+  jobs.push({ f: path.join(dir, "ic_launcher_round.png"), w: leg, h: leg, s: leg, bg: null });
+  jobs.push({ f: path.join(dir, "ic_launcher_foreground.png"), w: fg, h: fg, s: Math.round(fg * 0.72), bg: null });
 }
-const bgXml = path.join(RES, "values", "ic_launcher_background.xml");
-fs.writeFileSync(bgXml, `<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">${BG}</color>\n</resources>\n`);
 // Start-up screen: the dark background with the icon in the middle, at each size Capacitor ships.
-let splash = 0;
 for (const d of fs.readdirSync(RES).filter(d => /^drawable/.test(d))) {
   const f = path.join(RES, d, "splash.png"); if (!fs.existsSync(f)) continue;
-  const [w, h] = String(execFileSync("identify", ["-format", "%w %h", f])).trim().split(" ").map(Number);
-  const s = Math.round(Math.min(w, h) * 0.28);
-  im("-size", w + "x" + h, "xc:" + BG, "(", ICON, "-resize", s + "x" + s, ")", "-gravity", "center", "-composite", f);
-  splash++;
+  const [w, h] = pngSize(f); jobs.push({ f, w, h, s: Math.round(Math.min(w, h) * 0.28), bg: BG });
 }
-if (!splash) fail("found no start-up screen images to replace");
+if (!jobs.some(j => /splash/.test(j.f))) fail("found no start-up screen images to replace");
+fs.writeFileSync(path.join(RES, "values", "ic_launcher_background.xml"), `<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">${BG}</color>\n</resources>\n`);
+(async () => {
+  const { chromium } = require("playwright");
+  const b = await chromium.launch(), page = await b.newPage();
+  const icon = "data:image/png;base64," + fs.readFileSync(ICON).toString("base64");
+  for (const j of jobs) {
+    const data = await page.evaluate(async ({ icon, j }) => {
+      const im = new Image(); im.src = icon; await im.decode();
+      const c = document.createElement("canvas"); c.width = j.w; c.height = j.h; const x = c.getContext("2d");
+      if (j.bg) { x.fillStyle = j.bg; x.fillRect(0, 0, j.w, j.h); }
+      x.imageSmoothingQuality = "high"; x.drawImage(im, Math.round((j.w - j.s) / 2), Math.round((j.h - j.s) / 2), j.s, j.s);
+      return c.toDataURL("image/png").split(",")[1];
+    }, { icon, j });
+    fs.writeFileSync(j.f, Buffer.from(data, "base64"));
+  }
+  await b.close();
 console.log("Android project set up: version " + name + " (" + code + "), camera and vibration allowed, app icon and start-up screen in place");
+})().catch(e => fail(e.stack || e.message));
