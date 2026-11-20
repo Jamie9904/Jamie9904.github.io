@@ -225,6 +225,7 @@ window.LPN_CONFIG = {
     refused: true,         // marking a pallet as refused (sent back with the driver)
     noLpn: true,           // No LPN button, for pallets that arrive without an LPN
     fppDesc: true,         // description box for FPP pallets, to say what is on them (e.g. kitchen roll)
+    palletDesc: true,      // tap any pallet (BB, FMCG, FPP or Mixed) to add a description; it only opens by itself for FPP pallets and No LPN
     shareMissing: true,    // Share missing list in the Manifest check results
     findLpn: true,         // Find an LPN in Saved deliveries
     shareApp: true,        // Share this app (QR code) in Settings
@@ -237,13 +238,14 @@ window.LPN_CONFIG = {
   },
   testing: {
     palletLog: false, report: false, manifestCheck: true, manifestPhotos: false, liveScan: false, scanByPhoto: false,
-    photoUpload: false, torch: false, damage: false, refused: false, noLpn: false, fppDesc: false, shareMissing: false,
+    photoUpload: false, torch: false, damage: false, refused: false, noLpn: false, fppDesc: false, palletDesc: false,
+    shareMissing: false,
     findLpn: false, shareApp: false, exportReminder: false, historyVideo: false, twoPhones: false, tallySheet: false
   }
 };
 ```
 
-(In the repository each `testing` entry is on its own line.) These are the values on `updates` (on `main`, the live site, there is no `palletLog` line yet: it was added on `updates` after build 66 was released and is not live). Every feature is on, and the Manifest check is currently marked as in testing (`testing.manifestCheck: true`, set by the site owner on 2 Nov 2026), so everyone sees its "In testing" note. `welcome` and `whatsNew` have no `testing` entry, because the cards carry no note. The comment on `report` in the file still says "Report button"; since build 58 the button itself says **Report a problem**.
+(In the repository each `testing` entry is on its own line.) These are the values on `updates` (on `main`, the live site, there are no `palletLog` and `palletDesc` lines yet: they were added on `updates` after build 66 was released and are not live; `tools/android/config.js`, the Android app's own copy, has `palletDesc` on too, with no testing note, but no APK carries it yet). Every feature is on, and the Manifest check is currently marked as in testing (`testing.manifestCheck: true`, set by the site owner on 2 Nov 2026), so everyone sees its "In testing" note. `welcome` and `whatsNew` have no `testing` entry, because the cards carry no note. The comment on `report` in the file still says "Report button"; since build 58 the button itself says **Report a problem**.
 
 ### How to change it
 
@@ -271,6 +273,7 @@ The preferred way, by the user's decision, is to ask Claude to change the settin
 | `refused` (build 62) | No **Refused (sent back)** button when an LPN is tapped, and its Guide paragraph, the "and refused pallets" words in the Guide's totals sentence, the Saved deliveries help sentence and the changelog bullet are left out. Pallets already marked refused keep the mark, stay out of the totals and still go on the exports as refused. Marked as in testing, the note "In testing: Marking pallets as refused may not always work yet…" shows under the button. |
 | `noLpn` (build 55) | No **No LPN** button, and its Guide lines and changelog bullet are left out. Pallets already logged as "No LPN n" stay, keep their descriptions and still go on the exports. Marked as in testing, the note "In testing: Logging pallets with no LPN may not always work yet…" shows in a No LPN pallet's description row. |
 | `fppDesc` (build 56) | Logging an FPP pallet doesn't open its Description box, and tapping an FPP pallet doesn't offer one (a pallet that already has a description still shows it, and descriptions still go on the exports). The Guide's **FPP pallet:** paragraph and its changelog bullet are left out. Marked as in testing, the note "In testing: Descriptions for FPP pallets may not always work yet…" shows in an FPP pallet's description row. |
+| `palletDesc` (on `updates`, still build 66, not live yet) | Tapping a BB, FMCG or Mixed pallet gives no **Description** box (one that already has a description still shows it, and descriptions still go on the exports). FPP pallets (while `fppDesc` is on) and No LPN pallets still get the box, and it still opens by itself after logging them. The Guide's "or add a description" words, its **Description on any pallet:** paragraph and the changelog bullet are left out. Marked as in testing, the note "In testing: Descriptions on any pallet may not always work yet…" shows in the description row of a tapped pallet (an FPP pallet shows the `fppDesc` note instead when that is marked too). |
 | `shareMissing` | No **Share missing list** button in the check results. |
 | `findLpn` | No **Find an LPN** box in Saved deliveries. |
 | `shareApp` | No **Share this app** section in Settings. |
