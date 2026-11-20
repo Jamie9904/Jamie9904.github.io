@@ -1015,7 +1015,7 @@ When two people unload one trailer, each logs on their own phone, and the pallet
 
 **Blank tally sheet** (switch `tallySheet`) in the Export menu prints an empty A4 page for writing pallets down by hand, for example when a phone isn't available.
 
-- **One page, always** (until the two-page change on `updates`, below): the number of rows is worked out from the space left under the details; if a font or a tall logo still pushes it onto a second page, `buildTallyPdf()` makes it again with fewer rows. The logo is limited to 18 mm (`pdfBanner()` got a height argument) so it leaves room for rows.
+- **One page, always** (until the two-page change, below, live since `main` `38c031c`): the number of rows is worked out from the space left under the details; if a font or a tall logo still pushes it onto a second page, `buildTallyPdf()` makes it again with fewer rows. The logo is limited to 18 mm (`pdfBanner()` got a height argument) so it leaves room for rows.
 - **Same print path as the log:** it uses `printBuf()`, so where printing isn't available the PDF is saved instead.
 - **Not an export of the log:** it carries no pallets, works with an empty log, and doesn't change the "Exported at" note or ask about the expected count.
 - **Columns match the app:** a box per pallet type, FSDU and a notes column for damage and refused pallets, the same things the app records for each pallet.
@@ -1076,9 +1076,9 @@ These went live on `main` at `7aee2cc`, still as build 66 (see [Small tweaks can
 - **A double scan is ignored only in a narrow case.** A handheld trigger pressed twice sends the same LPN twice within moments, and the "already logged" warning then stops the next scan until it is answered. The second one is ignored only when it is the same LPN, within 2 seconds of being added, and still the newest pallet; a genuine repeat later, or after other pallets, still gets the usual warning. The status line says it was ignored, so it isn't silent. Only the LPN box (Enter or Add) has this rule; Live scan and photos have their own flows.
 - **The fold of the delivery details is remembered.** The details fold after the first pallet to give the log room, but some people want them open (or folded) all the time. A tap on the summary line stores the choice on the phone (`lpndelfold`), used after a reload and at the first pallet of the next delivery. Until it is tapped, the old behaviour stays. Like other `lpn*` keys it goes into backups.
 
-## Pallet log switch, today's Manifest date and the Android app (on `updates`, still build 66, not live yet)
+## Pallet log switch, today's Manifest date and the Android app (still build 66, live since `main` `38c031c`)
 
-These changes are on the `updates` branch and keep build number 66; `main` (the live site) doesn't have them yet.
+These changes were made on the `updates` branch and kept build number 66; they went live when `main` was moved to `38c031c` (20 Nov 2026).
 
 - **`palletLog` switches off the log, not just its buttons.** A copy of the app that is only for checking manifests shouldn't show an empty Delivery card, a scan bar and an Export menu that lead nowhere. So with it off, everything that only makes sense with a log is hidden, the Manifest check starts open, and the Manifest check's own ways of getting a log from this phone (Use current log, saved deliveries) are hidden, leaving files, photos and typing.
 - **Switches that depend on the log are forced off in `SITE`, in one place.** Rather than every feature checking `palletLog` too, `SITE` turns the dependent switches off when it is worked out, so `feat("liveScan")` and the rest are simply false and their existing hiding code does the work. Switches that still make sense without a log (Manifest check, photos, Share missing list, report, Share this app, what's new, history video) keep their own setting.
@@ -1110,9 +1110,9 @@ These changes are on the `updates` branch and keep build number 66; `main` (the 
 - **What's new written by hand for each APK.** Android updates collect several changes, so the list in `whats-new.json` is replaced before each approved build; it isn't shown on a first install, where there is nothing to compare with.
 - **Compile-only runs.** Native code can't be checked by `check-offline.js`, so a hand-started run with the APK unticked compiles it without making an APK that phones would be asked to install.
 
-## Blank tally sheet: no app name, and a back page (on `updates`, still build 66, not live yet)
+## Blank tally sheet: no app name, and a back page (still build 66, live since `main` `38c031c`)
 
-Two commits on `updates` (`b050e1c`, `6cd079d`), kept as build 66 like the other additions, with a Changelog bullet under v4.0 and a changed Guide paragraph.
+Two commits made on `updates` (`b050e1c`, `6cd079d`), kept as build 66 like the other additions, with a Changelog bullet under v4.0 and a changed Guide paragraph.
 
 - **No mention of the app.** The sheet is for writing pallets down by hand, away from the app, so it should read as a plain goods-in sheet (the Changelog's words). The subtitle no longer tells people to type or scan the LPNs "into the app" ("Write down each pallet as it comes off the trailer."), the footer leaves out the version (`pdfFooter()`'s new `noApp` argument, only set by the tally sheet) and the PDF's subject says "Goods-in tally sheet". The file name `LPN-tally-sheet.pdf` and the Export menu's wording didn't change; those are seen only in the app. The Guide still says to type or scan the LPNs into the app afterwards.
 - **Two pages, for double-sided printing, instead of one.** A back page roughly doubles the rows on one sheet of paper (the checks expect at least 20 on the front and 25 on the back). The back carries on the numbers so the two sides read as one list, and the totals are only on the back and cover both sides, so there is one total to copy and no adding up of two.
@@ -1149,17 +1149,17 @@ Commits `dd3023e` to `d4f92a2`, added after the Android 48 APK and built into **
 - **A solid sheet.** The sheet relied on `.card` for its background, and the page showed through it. It now has its own background, text colour and accent top line from the theme, and the offline check makes sure the background has no transparency.
 - **Screenshots on a virtual phone, by hand only.** The offline check runs in desktop Chromium, so it can't show how the native screens (the camera scanner, the bars, the edge-to-edge layout) look on a phone. A hand-started run now takes screenshots on GitHub's Android emulator at a normal and a small width, with and without Bigger buttons, to look over before an APK goes to the owner. It adds about 10 minutes, so it is a tick box (on by default) and never runs on pushes. It is `continue-on-error`: a slow emulator mustn't stop an APK the owner asked for. The pictures are also kept on a draft release because run artifacts can't be downloaded from cloud sessions, while release files can.
 
-## The Android app's own build number (Android APK build 1, on `updates`)
+## The Android app's own build number (Android APK build 1)
 
-Commit `a26741f` on `updates`. APK names used to be "Build 66 (Android 57)": the website build the copy was made from, then the GitHub run number.
+Commit `a26741f`, made on `updates` and on `main` since `38c031c`. APK names used to be "Build 66 (Android 57)": the website build the copy was made from, then the GitHub run number.
 
 - **One number for the app, shown everywhere.** The run number goes up with every hand-started run, including compile-only and screenshot runs, so it jumped (43, 48, 57) and said nothing about how many APKs people had installed. `tools/android/build.json` holds a build number of the app's own, started again at 1 and raised by 1 before each approved APK build (with `whats-new.json`). Settings, the footer, the APK's version name and its file name (`LPN-Pallet-Log-Android-APK-build-<n>.apk`) all use it.
 - **Exports name the Android build, not the website's.** The website's version and build ("v4.0 (build 66, …)") describe the website, which moves on separately; on a printed sheet made on a phone, "LPN Pallet Log (Android APK build 1)" tells you which APK made it. The number is written in by `build-www.js`, so the app no longer reads `sw.js` for it.
 - **The hidden version code stays the run number.** Android only installs an update over an app with a higher version code; the previous APK had 57, so starting the code again at 1 would have stopped the new APK from installing. Keeping the run number there (it always goes up) means each APK still installs over the last one and keeps its data, and What's new, which compares version codes, still shows once after each update.
 
-## Descriptions on any pallet (`palletDesc`, on `updates`, still build 66, not live yet)
+## Descriptions on any pallet (`palletDesc`, still build 66, live since `main` `38c031c`)
 
-Commits `073db40` to `17a595e` on `updates`; not live and not yet in an APK (the current APK is Android APK build 1).
+Commits `073db40` to `17a595e`, made on `updates` and live since `main` `38c031c`. In the Android app it comes with Android APK build 2, built from run 65 (44743751786; `38c031c` raised `tools/android/build.json` to 2 and made descriptions on any pallet the only What's new line).
 
 - **Offered on tap, not opened by itself.** Any pallet can now carry a description, but the box still only opens by itself after an FPP pallet (`fppDesc`) or a No LPN pallet, where a description is usually wanted. For BB, FMCG and Mixed pallets it appears only when the LPN is tapped, and the cursor stays in the LPN box, so logging those pallets works exactly as before.
 - **Its own switch.** `palletDesc` is separate from `fppDesc` and `noLpn`, so a site can switch descriptions on other pallets off (or mark them as in testing) without losing the FPP and No LPN boxes. With it off, a pallet that already has a description still shows it, like the other switches that keep data already on the phone.
