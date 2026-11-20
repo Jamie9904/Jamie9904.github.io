@@ -125,6 +125,18 @@ module.exports = async ({ browser, URL0 }) => {
   await p.keyboard.type("VLT004040307"); await p.keyboard.press("Enter"); await p.waitForTimeout(250);
   s.rows = await p.evaluate(() => rows.map(r => r.lpn + "|" + r.type + "|" + (r.desc || "")));
   check("other types don't open it, Enter leaves it blank, and an LPN scanned into it is logged as the next pallet", !s.bb.open && s.bb.focus === "lpn" && s.blank.desc === undefined && s.blank.focus === "lpn" && s.rows[3] === "VLT004040299|FPP|" && /^VLT004040307\|/.test(s.rows[4]), s);
+  // Any pallet (BB, FMCG, Mixed) gets the description box when its LPN is tapped (palletDesc), saved with Enter.
+  s = await p.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = [];
+    if (document.activeElement) document.activeElement.blur(); await wait(100); // close what the check before left open
+    rows = [{ lpn: "VLT004040315", type: "BB", fsdu: false }, { lpn: "VLT004040323", type: "FMCG", fsdu: false }, { lpn: "VLT004040331", type: "Mixed", fsdu: false }]; save(); render();
+    await wait(50);
+    for (let i = 0; i < 3; i++) { document.querySelectorAll("#body .lpnedit")[i].click(); await wait(100);
+      const d = document.querySelector(".descline input"); if (!d) { out.push("none"); continue; }
+      const first = document.activeElement.closest(".descline") ? "desc" : "lpnbox"; d.focus(); d.value = "Desc " + rows[i].type; d.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })); await wait(100);
+      out.push(first + "|" + d.placeholder + "|" + (rows[i].desc || "")); }
+    return { out, tags: [...document.querySelectorAll("#body .desctag")].map(t => t.textContent).join(",") }; });
+  check("tapping a BB, FMCG or Mixed pallet offers a description box (the LPN box keeps focus), and Enter saves it under the LPN",
+    s.out.join() === "lpnbox|Optional: what’s on it, labels, PO number|Desc BB,lpnbox|Optional: what’s on it, labels, PO number|Desc FMCG,lpnbox|Optional: what’s on it, labels, PO number|Desc Mixed" && s.tags === "Desc BB,Desc FMCG,Desc Mixed", s);
   // Changing a pallet's type to FPP in the table offers the box when it's tapped; during Live scan it doesn't open by itself.
   s = await p.evaluate(async () => {
     rows = [{ lpn: "VLT004040265", type: "BB", fsdu: false }]; save(); render();

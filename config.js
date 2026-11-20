@@ -23,6 +23,7 @@ window.LPN_CONFIG = {
     refused: true,         // marking a pallet as refused (sent back with the driver)
     noLpn: true,           // No LPN button, for pallets that arrive without an LPN
     fppDesc: true,         // description box for FPP pallets, to say what is on them (e.g. kitchen roll)
+    palletDesc: true,      // tap any pallet (BB, FMCG, FPP or Mixed) to add a description; it only opens by itself for FPP pallets and No LPN
     shareMissing: true,    // Share missing list in the Manifest check results
     findLpn: true,         // Find an LPN in Saved deliveries
     shareApp: true,        // Share this app (QR code) in Settings
@@ -46,6 +47,7 @@ window.LPN_CONFIG = {
     refused: false,
     noLpn: false,
     fppDesc: false,
+    palletDesc: false,
     shareMissing: false,
     findLpn: false,
     shareApp: false,

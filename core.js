@@ -2,7 +2,7 @@
 const FIRST_OPEN=(()=>{try{for(let i=0;i<localStorage.length;i++){if(/^lpn/.test(localStorage.key(i)))return false}return true}catch(e){return false}})();
 /* Site settings from config.js (loaded before this file): which features are shown, and which carry a note that
    they are still being tested. A missing or broken config.js means every feature on and no notes. */
-const FEATURES=["palletLog","report","manifestCheck","manifestPhotos","liveScan","scanByPhoto","photoUpload","torch","damage","refused","noLpn","fppDesc","exportReminder","historyVideo","twoPhones","tallySheet","shareMissing","findLpn","shareApp","welcome","whatsNew"];
+const FEATURES=["palletLog","report","manifestCheck","manifestPhotos","liveScan","scanByPhoto","photoUpload","torch","damage","refused","noLpn","fppDesc","palletDesc","exportReminder","historyVideo","twoPhones","tallySheet","shareMissing","findLpn","shareApp","welcome","whatsNew"];
 /* Pallets that arrived without an LPN are logged as "No LPN 1", "No LPN 2", … (numbered within the delivery). */
 const isNoLpn=v=>/^No LPN \d+$/i.test(String(v==null?"":v).trim());
 const SITE=(()=>{
@@ -10,7 +10,7 @@ const SITE=(()=>{
   const own=(o,k)=>o&&typeof o==="object"&&Object.prototype.hasOwnProperty.call(o,k)?o[k]:undefined; // only the file's own settings
   FEATURES.forEach(k=>{on[k]=own(f,k)!==false;test[k]=on[k]&&own(t,k)===true});
   // With the pallet log off, the parts that only work with it are off too (only the Manifest check is left).
-  if(!on.palletLog)["liveScan","scanByPhoto","photoUpload","torch","damage","refused","noLpn","fppDesc","exportReminder","twoPhones","tallySheet","findLpn","welcome"].forEach(k=>{on[k]=false;test[k]=false});
+  if(!on.palletLog)["liveScan","scanByPhoto","photoUpload","torch","damage","refused","noLpn","fppDesc","palletDesc","exportReminder","twoPhones","tallySheet","findLpn","welcome"].forEach(k=>{on[k]=false;test[k]=false});
   return {on,test};
 })();
 const feat=k=>SITE.on[k]!==false;
@@ -18,7 +18,7 @@ const feat=k=>SITE.on[k]!==false;
 function testNote(k,el,where){
   if(!SITE.test[k]||!el)return null;
   const n=document.createElement("p");n.className="note testnote";n.dataset.test=k;
-  const what={palletLog:"The pallet log",noLpn:"Logging pallets with no LPN",refused:"Marking pallets as refused",exportReminder:"The reminder about deliveries not exported",historyVideo:"The build history video",twoPhones:"Sharing the log",tallySheet:"The blank tally sheet",fppDesc:"Descriptions for FPP pallets",manifestCheck:"The Manifest check",manifestPhotos:"Reading photos",liveScan:"Live scan",scanByPhoto:"Scan by photo",photoUpload:"Upload photo",torch:"The torch",damage:"Marking damage",shareMissing:"Share missing list",findLpn:"Find an LPN",shareApp:"Share this app"}[k];
+  const what={palletLog:"The pallet log",noLpn:"Logging pallets with no LPN",refused:"Marking pallets as refused",exportReminder:"The reminder about deliveries not exported",historyVideo:"The build history video",twoPhones:"Sharing the log",tallySheet:"The blank tally sheet",fppDesc:"Descriptions for FPP pallets",palletDesc:"Descriptions on any pallet",manifestCheck:"The Manifest check",manifestPhotos:"Reading photos",liveScan:"Live scan",scanByPhoto:"Scan by photo",photoUpload:"Upload photo",torch:"The torch",damage:"Marking damage",shareMissing:"Share missing list",findLpn:"Find an LPN",shareApp:"Share this app"}[k];
   n.textContent=k==="report"?"In testing: reports may not always arrive yet, so for anything urgent also use Download problem report in Settings."
     :"In testing: "+what+" may not always work yet, so check what it gives you"+(feat("report")?", and use Report a problem if something goes wrong.":".");
   el.insertAdjacentElement(where||"beforeend",n);return n;
@@ -158,7 +158,7 @@ function render(){
       // LPN box (phones would otherwise close the edit before the tap lands).
       // (with damage switched off in config.js, an empty row stands in, so the rest works the same)
       // (with damage switched off in config.js and no description to edit, an empty row stands in, so the rest works the same)
-      const wantDesc=noL||!!r.desc||(r.type==="FPP"&&feat("fppDesc")),useRow=feat("damage")||feat("refused")||wantDesc;
+      const wantDesc=noL||!!r.desc||(r.type==="FPP"&&feat("fppDesc"))||feat("palletDesc"),useRow=feat("damage")||feat("refused")||wantDesc;
       const dr=useRow?dmgRow(r,(g,key)=>{dmgPick=g;finish(true,key)},{damage:feat("damage"),desc:wantDesc,auto:fromAdd,save:key=>finish(true,key),refuse:feat("refused")?((v,key)=>{refPick=v;finish(true,key)}):null}):document.createElement("tr");if(useRow)tr.after(dr);
       if(focusDesc&&dr._desc){focusDesc=false;dr._desc.focus()}else{focusDesc=false;inp.focus();inp.select()}
       // Keep the choices clear of the entry bar on phones (the page keeps room for it when scrolling).
@@ -242,11 +242,11 @@ function dmgRow(r,pick,opt){
   opt=opt||{damage:true};
   const tr=document.createElement("tr");tr.className="dmgrow";
   const td=document.createElement("td");td.colSpan=5;tr.appendChild(td);
-  // Description (for pallets with no LPN, FPP pallets, or any pallet that already has one): saved when the edit closes.
+  // Description (for pallets with no LPN, FPP pallets, any pallet when palletDesc is on, or any pallet that already has one): saved when the edit closes.
   if(opt.desc){
     const dl=document.createElement("div");dl.className="descline";
     const id="desc"+Math.random().toString(36).slice(2,8),lb=document.createElement("label");lb.htmlFor=id;lb.textContent="Description";
-    const di=document.createElement("input");di.id=id;di.maxLength=60;di.value=r.desc||"";const fpp=r.type==="FPP"&&!isNoLpn(r.lpn);di.placeholder=fpp?"What’s on it, e.g. kitchen roll":"Optional: wrap, labels, PO number";
+    const di=document.createElement("input");di.id=id;di.maxLength=60;di.value=r.desc||"";const fpp=r.type==="FPP"&&!isNoLpn(r.lpn);di.placeholder=fpp?"What’s on it, e.g. kitchen roll":isNoLpn(r.lpn)?"Optional: wrap, labels, PO number":"Optional: what’s on it, labels, PO number";
     di.setAttribute("aria-label","Description for "+r.lpn);
     // A handheld scanner can type the next pallet's code here (the box opens by itself after No LPN or an FPP pallet). If a
     // fresh description is one word with digits typed at scanner speed (under 35 ms a character; people take 100 ms or
@@ -258,7 +258,7 @@ function dmgRow(r,pick,opt){
       if(!r.desc&&fast&&!/\s/.test(raw)&&/\d{4}/.test(raw)){di.value="";opt.save&&opt.save(false);$("lpn").value=raw;add();return}
       opt.save&&opt.save(true)}};
     dl.append(lb,di);td.appendChild(dl);tr._desc=di;
-    const tn=isNoLpn(r.lpn)?testNote("noLpn",td):fpp&&feat("fppDesc")?testNote("fppDesc",td):null;
+    const tn=isNoLpn(r.lpn)?testNote("noLpn",td):fpp&&feat("fppDesc")?testNote("fppDesc",td):feat("palletDesc")?testNote("palletDesc",td):null;
     // Screen readers hear why focus moved here (the "Added" message can be cut off by the move) and how to carry on.
     const say=[];
     if(opt.auto){const h=document.createElement("span");h.className="srhint";h.id=id+"h";
