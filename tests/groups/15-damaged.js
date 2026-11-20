@@ -17,11 +17,13 @@ module.exports = async ({ browser, URL0 }) => {
     check("choosing Wet marks the pallet damaged, shows it in the log and saves it", s.dmg === "Wet" && s.tag === "Damaged: Wet" && s.saved === "Wet" && !s.open && /Marked VLT004040265 as damaged \(Wet\)/.test(s.undo), s);
     // Keyboard: Enter on the LPN, Tab to the choices, Other with typed text.
     await q.focus('#body .lpnedit[data-i="1"]'); await q.keyboard.press("Enter"); await q.waitForTimeout(50);
+    // (the Description box comes first, as every tapped pallet now has one, then the damage choices)
+    await q.keyboard.press("Tab"); const first = await q.evaluate(() => document.activeElement.getAttribute("aria-label"));
     await q.keyboard.press("Tab"); s = await q.evaluate(() => document.activeElement.textContent);
     await q.click(".dmgbox button:has-text('Other')"); await q.waitForTimeout(50);
     await q.keyboard.type("Torn label"); await q.keyboard.press("Enter"); await q.waitForTimeout(100);
     const s2 = await q.evaluate(() => ({ dmg: rows[1].dmg, focus: document.activeElement.className, label: document.querySelector('#body .lpnedit[data-i="1"]').getAttribute("aria-label") }));
-    check("keyboard: Tab from the LPN box goes to the damage choices; Other takes typed text and focus comes back", s === "None" && s2.dmg === "Torn label" && s2.focus === "lpnedit" && /damaged: Torn label/.test(s2.label), { s, s2 });
+    check("keyboard: Tab from the LPN box goes to the Description box, then the damage choices; Other takes typed text and focus comes back", first === "Description for RUN0001830763" && s === "None" && s2.dmg === "Torn label" && s2.focus === "lpnedit" && /damaged: Torn label/.test(s2.label), { first, s, s2 });
     // Tab past the last choice: the change is kept and focus stays on that pallet.
     await q.focus('#body .lpnedit[data-i="0"]'); await q.keyboard.press("Enter");
     // Wait until the editor is open with the LPN box focused before tabbing (a busy machine can be slower than 50 ms).

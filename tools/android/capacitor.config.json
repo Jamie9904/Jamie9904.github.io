@@ -1,0 +1,15 @@
+{
+  "appId": "io.github.jamie9904.lpnlog",
+  "appName": "LPN Pallet Log",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": false,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "App": {
+      "disableBackButtonHandler": true
+    }
+  }
+}

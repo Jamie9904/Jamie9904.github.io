@@ -1,0 +1,129 @@
+# Builds the offline Android app (APK) of the LPN Pallet Log from the same files as the website.
+# The APK never needs the internet: the libraries are inside it, and Report a problem and Share this app are off.
+# Every push to updates and main checks the offline copy with the internet blocked (no APK).
+# The APK itself is only built and signed when the owner approves a new Android update: run this workflow by hand
+# (Actions > Android app > Run workflow, or: gh workflow run android.yml --ref updates). With "Make and sign the APK"
+# unticked (gh workflow run android.yml --ref updates -f apk=false) it only checks the Android code compiles: no APK. Download it from that run's
+# "Artifacts" (LPN-Pallet-Log-Android).
+# Signing needs the ANDROID_KEY_PASSWORD secret; see tools/android/sign.sh.
+name: Android app
+on:
+  push:
+    branches: [main, updates]
+    paths-ignore: ["docs/**", "README.md"]
+  workflow_dispatch:
+    inputs:
+      apk:
+        description: "Make and sign the APK (untick to only check that the Android code compiles)"
+        type: boolean
+        default: true
+      shots:
+        description: "Screenshots on a virtual Android phone (about 10 minutes more)"
+        type: boolean
+        default: true
+permissions:
+  contents: write # only to keep the signing key as a draft release (tools/android/sign.sh)
+concurrency:
+  group: android-app # one at a time, so the signing key is only ever made once
+  cancel-in-progress: false
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm install --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - name: Library files for the offline app
+        run: node tools/android/fetch-libs.js
+      - name: Build the offline copy of the app
+        run: node tools/android/build-www.js
+      - name: Check the offline copy with the internet blocked
+        run: node tools/android/check-offline.js
+      - name: Android project
+        if: github.event_name == 'workflow_dispatch' # only when the owner approves an Android update
+        working-directory: tools/android
+        run: |
+          npm install --no-audit --no-fund
+          npx cap add android
+          # The version code (hidden; it must go up so each APK installs over the last) is the run number;
+          # the name people see is the Android app's own build number from build.json.
+          apk=$(node -p 'require("./build.json").build')
+          node patch-android.js "${{ github.run_number }}" "Android APK build $apk"
+          npx cap sync android
+      - name: Build the APK
+        if: github.event_name == 'workflow_dispatch' # only when the owner approves an Android update
+        working-directory: tools/android/android
+        run: ./gradlew --no-daemon --stacktrace assembleRelease
+      - name: Build a test copy for the screenshots
+        if: github.event_name == 'workflow_dispatch' && inputs.shots
+        working-directory: tools/android/android
+        run: ./gradlew --no-daemon assembleDebug
+      - name: Let the virtual phone use the processor
+        if: github.event_name == 'workflow_dispatch' && inputs.shots
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Screenshots on a virtual Android phone
+        if: github.event_name == 'workflow_dispatch' && inputs.shots
+        continue-on-error: true # the pictures help; a slow emulator mustn't stop an APK the owner asked for
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back virtualscene
+          script: sh tools/android/shots.sh
+      - name: Keep the screenshots on the draft release "Android screenshots" (replaced each run)
+        if: github.event_name == 'workflow_dispatch' && inputs.shots
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -d shots ] && [ "$(ls shots | wc -l)" -gt 0 ] || { echo "no screenshots"; exit 0; }
+          (cd shots && zip -q ../android-screenshots.zip *.png)
+          id=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate -q '.[] | select(.draft and .name == "Android screenshots") | .id' | sort -n | head -n 1)
+          if [ -z "$id" ]; then
+            gh release create android-screenshots --repo "$GITHUB_REPOSITORY" --draft --title "Android screenshots" \
+              --notes "Screenshots of the Android app on a virtual phone, from the latest Android app run started by hand. Replaced each run." android-screenshots.zip
+          else
+            for a in $(gh api "repos/$GITHUB_REPOSITORY/releases/$id/assets" -q '.[].id'); do gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$a"; done
+            gh api -X POST -H "Content-Type: application/zip" --input android-screenshots.zip "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$id/assets?name=android-screenshots.zip" -q .name
+          fi
+      - uses: actions/upload-artifact@v5
+        if: github.event_name == 'workflow_dispatch' && inputs.shots
+        with:
+          name: android-screenshots
+          path: shots/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Sign the APK
+        if: github.event_name == 'workflow_dispatch' && inputs.apk # only when the owner approves an Android update
+        id: sign
+        env:
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          apk=$(node -p 'require("./tools/android/build.json").build')
+          name="LPN-Pallet-Log-Android-APK-build-$apk.apk"
+          set +e; sh tools/android/sign.sh tools/android/android/app/build/outputs/apk/release/app-release-unsigned.apk "$name"; rc=$?; set -e
+          if [ $rc -eq 3 ]; then echo "signed=no" >> "$GITHUB_OUTPUT"; exit 0; fi
+          [ $rc -eq 0 ] || exit $rc
+          echo "signed=yes" >> "$GITHUB_OUTPUT"; echo "name=$name" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v5
+        if: github.event_name == 'workflow_dispatch' && inputs.apk && steps.sign.outputs.signed == 'yes'
+        with:
+          name: LPN-Pallet-Log-Android
+          path: ${{ steps.sign.outputs.name }}
+          if-no-files-found: error
+          retention-days: 90

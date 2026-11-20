@@ -64,6 +64,11 @@ module.exports = async ({ browser, URL0 }) => {
   await p.reload(); await p.waitForTimeout(300);
   s = await p.evaluate(() => document.getElementById("delCard").classList.contains("dcollapsed"));
   check("folded stays folded after a reload", s === true, s);
+  // The Manifest check's date is today's each time the app opens, not the one picked last time.
+  await p.evaluate(() => { const d = document.getElementById("cmpDate"); d.value = "2025-01-02"; d.dispatchEvent(new Event("change")); localStorage.setItem("lpncmpdate", "2025-01-03"); });
+  await p.reload(); await p.waitForTimeout(300);
+  s = await p.evaluate(() => ({ v: document.getElementById("cmpDate").value, today: localToday(), kept: localStorage.getItem("lpncmpdate") }));
+  check("the Manifest check's date starts as today's date when the app opens", s.v === s.today && s.kept === null, s);
   check("no script errors", p.errors.length === 0, p.errors);
   await p.ctx.close();
 };

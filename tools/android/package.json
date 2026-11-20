@@ -1,0 +1,13 @@
+{
+  "name": "lpn-pallet-log-android",
+  "private": true,
+  "description": "The offline Android app (APK) of the LPN Pallet Log, built on GitHub by .github/workflows/android.yml. Not part of the website.",
+  "dependencies": {
+    "@capacitor/android": "^7.4.0",
+    "@capacitor/app": "^7.0.0",
+    "@capacitor/cli": "^7.4.0",
+    "@capacitor/core": "^7.4.0",
+    "@capacitor/filesystem": "^7.1.0",
+    "@capacitor/share": "^7.0.0"
+  }
+}

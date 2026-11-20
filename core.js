@@ -2,13 +2,15 @@
 const FIRST_OPEN=(()=>{try{for(let i=0;i<localStorage.length;i++){if(/^lpn/.test(localStorage.key(i)))return false}return true}catch(e){return false}})();
 /* Site settings from config.js (loaded before this file): which features are shown, and which carry a note that
    they are still being tested. A missing or broken config.js means every feature on and no notes. */
-const FEATURES=["report","manifestCheck","manifestPhotos","liveScan","scanByPhoto","photoUpload","torch","damage","refused","noLpn","fppDesc","exportReminder","historyVideo","twoPhones","tallySheet","shareMissing","findLpn","shareApp","welcome","whatsNew"];
+const FEATURES=["palletLog","report","manifestCheck","manifestPhotos","liveScan","scanByPhoto","photoUpload","torch","damage","refused","noLpn","fppDesc","palletDesc","exportReminder","historyVideo","twoPhones","tallySheet","shareMissing","findLpn","shareApp","welcome","whatsNew"];
 /* Pallets that arrived without an LPN are logged as "No LPN 1", "No LPN 2", … (numbered within the delivery). */
 const isNoLpn=v=>/^No LPN \d+$/i.test(String(v==null?"":v).trim());
 const SITE=(()=>{
   const c=window.LPN_CONFIG&&typeof window.LPN_CONFIG==="object"?window.LPN_CONFIG:{},f=c.features||{},t=c.testing||{},on={},test={};
   const own=(o,k)=>o&&typeof o==="object"&&Object.prototype.hasOwnProperty.call(o,k)?o[k]:undefined; // only the file's own settings
   FEATURES.forEach(k=>{on[k]=own(f,k)!==false;test[k]=on[k]&&own(t,k)===true});
+  // With the pallet log off, the parts that only work with it are off too (only the Manifest check is left).
+  if(!on.palletLog)["liveScan","scanByPhoto","photoUpload","torch","damage","refused","noLpn","fppDesc","palletDesc","exportReminder","twoPhones","tallySheet","findLpn","welcome"].forEach(k=>{on[k]=false;test[k]=false});
   return {on,test};
 })();
 const feat=k=>SITE.on[k]!==false;
@@ -16,7 +18,7 @@ const feat=k=>SITE.on[k]!==false;
 function testNote(k,el,where){
   if(!SITE.test[k]||!el)return null;
   const n=document.createElement("p");n.className="note testnote";n.dataset.test=k;
-  const what={noLpn:"Logging pallets with no LPN",refused:"Marking pallets as refused",exportReminder:"The reminder about deliveries not exported",historyVideo:"The build history video",twoPhones:"Sharing the log",tallySheet:"The blank tally sheet",fppDesc:"Descriptions for FPP pallets",manifestCheck:"The Manifest check",manifestPhotos:"Reading photos",liveScan:"Live scan",scanByPhoto:"Scan by photo",photoUpload:"Upload photo",torch:"The torch",damage:"Marking damage",shareMissing:"Share missing list",findLpn:"Find an LPN",shareApp:"Share this app"}[k];
+  const what={palletLog:"The pallet log",noLpn:"Logging pallets with no LPN",refused:"Marking pallets as refused",exportReminder:"The reminder about deliveries not exported",historyVideo:"The build history video",twoPhones:"Sharing the log",tallySheet:"The blank tally sheet",fppDesc:"Descriptions for FPP pallets",palletDesc:"Descriptions on any pallet",manifestCheck:"The Manifest check",manifestPhotos:"Reading photos",liveScan:"Live scan",scanByPhoto:"Scan by photo",photoUpload:"Upload photo",torch:"The torch",damage:"Marking damage",shareMissing:"Share missing list",findLpn:"Find an LPN",shareApp:"Share this app"}[k];
   n.textContent=k==="report"?"In testing: reports may not always arrive yet, so for anything urgent also use Download problem report in Settings."
     :"In testing: "+what+" may not always work yet, so check what it gives you"+(feat("report")?", and use Report a problem if something goes wrong.":".");
   el.insertAdjacentElement(where||"beforeend",n);return n;
@@ -156,7 +158,7 @@ function render(){
       // LPN box (phones would otherwise close the edit before the tap lands).
       // (with damage switched off in config.js, an empty row stands in, so the rest works the same)
       // (with damage switched off in config.js and no description to edit, an empty row stands in, so the rest works the same)
-      const wantDesc=noL||!!r.desc||(r.type==="FPP"&&feat("fppDesc")),useRow=feat("damage")||feat("refused")||wantDesc;
+      const wantDesc=noL||!!r.desc||(r.type==="FPP"&&feat("fppDesc"))||feat("palletDesc"),useRow=feat("damage")||feat("refused")||wantDesc;
       const dr=useRow?dmgRow(r,(g,key)=>{dmgPick=g;finish(true,key)},{damage:feat("damage"),desc:wantDesc,auto:fromAdd,save:key=>finish(true,key),refuse:feat("refused")?((v,key)=>{refPick=v;finish(true,key)}):null}):document.createElement("tr");if(useRow)tr.after(dr);
       if(focusDesc&&dr._desc){focusDesc=false;dr._desc.focus()}else{focusDesc=false;inp.focus();inp.select()}
       // Keep the choices clear of the entry bar on phones (the page keeps room for it when scrolling).
@@ -165,6 +167,17 @@ function render(){
       // page can't scroll that far, take the note away early unless it is a warning.
       if(fromAdd&&dr._desc){const fl=$("flash");if(fl&&!fl.hidden){const a=dr.getBoundingClientRect(),f=fl.getBoundingClientRect();
         if(f.top<a.bottom&&f.bottom>a.top){window.scrollBy(0,a.bottom-f.top+8);const a2=dr.getBoundingClientRect();if(f.top<a2.bottom&&f.bottom>a2.top&&!fl.classList.contains("warn"))fl.hidden=true}}}
+      // A tapped pallet (its LPN box has focus): the taller row (Description, damage, Refused, Copy LPN) must not push the
+      // pallet's own LPN up under the column header (small phones, Extra large text), and should come clear of the "Added"
+      // note and the Undo bar as far as that allows. If the note still covers it, it goes early unless it is a warning.
+      else if(useRow){const hd=tr.closest("table")&&tr.closest("table").querySelector("th"),
+        room=()=>tr.getBoundingClientRect().top-(hd?Math.max(0,hd.getBoundingClientRect().bottom):0)-4,
+        over=el=>{if(!el||el.hidden)return 0;const a=dr.getBoundingClientRect(),f=el.getBoundingClientRect();return f.height&&f.top<a.bottom&&f.bottom>a.top?a.bottom-f.top+8:0};
+       if(room()<0)window.scrollBy(0,room());
+       [$("flash"),$("undoBar")].forEach(el=>{const need=over(el);if(need)window.scrollBy(0,Math.min(need,Math.max(0,room())));
+         if(el&&el.id==="flash"&&over(el)&&!el.classList.contains("warn"))el.hidden=true})}
+      // A tap on the row's words (the testing note, "Damage:") doesn't close the edit; its boxes and buttons work as usual.
+      if(useRow)dr.addEventListener("pointerdown",e=>{if(!e.target.closest("input,button,select,textarea,label,a"))e.preventDefault()});
       let done=false,dmgPick,refPick;
       const finish=(ok,key)=>{
         if(done)return;done=true;dr.remove();
@@ -240,11 +253,11 @@ function dmgRow(r,pick,opt){
   opt=opt||{damage:true};
   const tr=document.createElement("tr");tr.className="dmgrow";
   const td=document.createElement("td");td.colSpan=5;tr.appendChild(td);
-  // Description (for pallets with no LPN, FPP pallets, or any pallet that already has one): saved when the edit closes.
+  // Description (for pallets with no LPN, FPP pallets, any pallet when palletDesc is on, or any pallet that already has one): saved when the edit closes.
   if(opt.desc){
     const dl=document.createElement("div");dl.className="descline";
     const id="desc"+Math.random().toString(36).slice(2,8),lb=document.createElement("label");lb.htmlFor=id;lb.textContent="Description";
-    const di=document.createElement("input");di.id=id;di.maxLength=60;di.value=r.desc||"";const fpp=r.type==="FPP"&&!isNoLpn(r.lpn);di.placeholder=fpp?"What’s on it, e.g. kitchen roll":"Optional: wrap, labels, PO number";
+    const di=document.createElement("input");di.id=id;di.maxLength=60;di.value=r.desc||"";const fpp=r.type==="FPP"&&!isNoLpn(r.lpn);di.placeholder=fpp?"What’s on it, e.g. kitchen roll":isNoLpn(r.lpn)?"Optional: wrap, labels, PO number":"Optional: contents, labels, PO";
     di.setAttribute("aria-label","Description for "+r.lpn);
     // A handheld scanner can type the next pallet's code here (the box opens by itself after No LPN or an FPP pallet). If a
     // fresh description is one word with digits typed at scanner speed (under 35 ms a character; people take 100 ms or
@@ -256,7 +269,7 @@ function dmgRow(r,pick,opt){
       if(!r.desc&&fast&&!/\s/.test(raw)&&/\d{4}/.test(raw)){di.value="";opt.save&&opt.save(false);$("lpn").value=raw;add();return}
       opt.save&&opt.save(true)}};
     dl.append(lb,di);td.appendChild(dl);tr._desc=di;
-    const tn=isNoLpn(r.lpn)?testNote("noLpn",td):fpp&&feat("fppDesc")?testNote("fppDesc",td):null;
+    const tn=isNoLpn(r.lpn)?testNote("noLpn",td):fpp&&feat("fppDesc")?(testNote("fppDesc",td)||testNote("palletDesc",td)):feat("palletDesc")?testNote("palletDesc",td):null;
     // Screen readers hear why focus moved here (the "Added" message can be cut off by the move) and how to carry on.
     const say=[];
     if(opt.auto){const h=document.createElement("span");h.className="srhint";h.id=id+"h";
@@ -557,7 +570,7 @@ function syncUndo(){const b=$("undoMore");if(!b)return;const e=undoStack[undoSta
    keys come under 50 ms apart) cancels it, so a scanned LPN can't change the type or FSDU by accident. */
 let keyWait=null,keyLast=0;
 document.addEventListener("keydown",e=>{
-  if(!cfg.keys||e.ctrlKey||e.metaKey||e.altKey)return;
+  if(!cfg.keys||!feat("palletLog")||e.ctrlKey||e.metaKey||e.altKey)return;
   const t=e.target;if(t&&(/^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName)||t.isContentEditable))return;
   const main=document.querySelector("main");if(main&&main.inert)return;
   if(!$("expMenu").hidden||document.querySelector(".dmgrow"))return; // not behind an open menu
@@ -574,7 +587,7 @@ document.addEventListener("keydown",e=>{
 });
 document.addEventListener("keydown",e=>{
   // Ctrl+Z (Cmd+Z on a Mac) undoes the newest change, except while typing in a box, where it undoes the typing.
-  if(e.key.toLowerCase()!=="z"||!(e.ctrlKey||e.metaKey)||e.shiftKey||e.altKey)return;
+  if(e.key.toLowerCase()!=="z"||!(e.ctrlKey||e.metaKey)||e.shiftKey||e.altKey||!feat("palletLog"))return;
   const t=e.target;if(t&&/^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName))return;
   // Not while Settings, the Guide or another box is open over the log: the change wouldn't be seen.
   const main=document.querySelector("main");if(main&&main.inert)return;

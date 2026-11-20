@@ -1,6 +1,6 @@
 /* Checks: pallets with no LPN (the No LPN button): numbering, description, real LPN later, manifest, exports, layout.
    Also descriptions for FPP pallets (what is on them), which share the same description box. */
-const { check, page } = require("../lib");
+const { fs, path, ROOT, check, page } = require("../lib");
 module.exports = async ({ browser, URL0 }) => {
   let p, s;
   console.log("Pallets with no LPN");
@@ -125,6 +125,18 @@ module.exports = async ({ browser, URL0 }) => {
   await p.keyboard.type("VLT004040307"); await p.keyboard.press("Enter"); await p.waitForTimeout(250);
   s.rows = await p.evaluate(() => rows.map(r => r.lpn + "|" + r.type + "|" + (r.desc || "")));
   check("other types don't open it, Enter leaves it blank, and an LPN scanned into it is logged as the next pallet", !s.bb.open && s.bb.focus === "lpn" && s.blank.desc === undefined && s.blank.focus === "lpn" && s.rows[3] === "VLT004040299|FPP|" && /^VLT004040307\|/.test(s.rows[4]), s);
+  // Any pallet (BB, FMCG, Mixed) gets the description box when its LPN is tapped (palletDesc), saved with Enter.
+  s = await p.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = [];
+    if (document.activeElement) document.activeElement.blur(); await wait(100); // close what the check before left open
+    rows = [{ lpn: "VLT004040315", type: "BB", fsdu: false }, { lpn: "VLT004040323", type: "FMCG", fsdu: false }, { lpn: "VLT004040331", type: "Mixed", fsdu: false }]; save(); render();
+    await wait(50);
+    for (let i = 0; i < 3; i++) { document.querySelectorAll("#body .lpnedit")[i].click(); await wait(100);
+      const d = document.querySelector(".descline input"); if (!d) { out.push("none"); continue; }
+      const first = document.activeElement.closest(".descline") ? "desc" : "lpnbox"; d.focus(); d.value = "Desc " + rows[i].type; d.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })); await wait(100);
+      out.push(first + "|" + d.placeholder + "|" + (rows[i].desc || "")); }
+    return { out, tags: [...document.querySelectorAll("#body .desctag")].map(t => t.textContent).join(",") }; });
+  check("tapping a BB, FMCG or Mixed pallet offers a description box (the LPN box keeps focus), and Enter saves it under the LPN",
+    s.out.join() === "lpnbox|Optional: contents, labels, PO|Desc BB,lpnbox|Optional: contents, labels, PO|Desc FMCG,lpnbox|Optional: contents, labels, PO|Desc Mixed" && s.tags === "Desc BB,Desc FMCG,Desc Mixed", s);
   // Changing a pallet's type to FPP in the table offers the box when it's tapped; during Live scan it doesn't open by itself.
   s = await p.evaluate(async () => {
     rows = [{ lpn: "VLT004040265", type: "BB", fsdu: false }]; save(); render();
@@ -213,4 +225,49 @@ module.exports = async ({ browser, URL0 }) => {
   check("the FPP description goes on the Excel export and comes back on import", s.xl && s.imp.type === "FPP" && s.imp.desc === "Full pallet of kitchen roll", s);
   check("no script errors", p.errors.length === 0, p.errors);
   await p.ctx.close();
+  // A tapped pallet on a small phone with Extra large text: its LPN box stays below the column header, a pallet tapped
+  // just after adding it isn't covered by the "Added" note, and a tap on the row's words doesn't close the edit.
+  p = await page(browser, 320, { excel: true });
+  await p.setViewportSize({ width: 320, height: 568 });
+  await p.route("**/config.js", r => r.fulfill({ status: 200, contentType: "text/javascript", body: "window.LPN_CONFIG=" + JSON.stringify({ features: {}, testing: { palletDesc: true } }) + ";" }));
+  await p.goto(URL0); await p.waitForTimeout(300);
+  await p.evaluate(() => { cfg.size = "1.25"; applyCfg(); rows = Array.from({ length: 14 }, (_, i) => ({ lpn: "VLT41" + String(1000000 + i), type: "BB", fsdu: false })); save(); render(); });
+  const lpnSeen = () => { const i = document.querySelector("#body .lpnedit input") || document.activeElement, r = i.getBoundingClientRect(), th = document.querySelector("#logCard th, table th").getBoundingClientRect(); return { inBox: i.tagName === "INPUT", top: Math.round(r.top), head: Math.round(th.bottom), row: !!document.querySelector(".descline") }; };
+  await p.evaluate(() => { document.querySelectorAll("#body .lpnedit")[6].scrollIntoView({ block: "center" }); }); await p.waitForTimeout(100);
+  await p.click('#body .lpnedit >> nth=6'); await p.waitForTimeout(200);
+  s = await p.evaluate(lpnSeen);
+  check("on a 320 px phone with Extra large text, tapping a pallet keeps its LPN box below the column header", s.inBox && s.row && s.top >= s.head - 1, s);
+  const note = await p.$('.dmgrow .testnote[data-test="palletDesc"]');
+  if (note) { await note.click(); await p.waitForTimeout(150); }
+  s = { noteThere: !!note, open: await p.evaluate(() => !!document.querySelector(".descline")) };
+  check("a tap on the testing note in the edit row doesn't close the edit", s.noteThere && s.open, s);
+  await p.evaluate(() => document.activeElement && document.activeElement.blur()); await p.waitForTimeout(150);
+  await p.fill("#lpn", "VLT555000111"); await p.press("#lpn", "Enter"); await p.waitForTimeout(150);
+  await p.evaluate(() => { const b = [...document.querySelectorAll("#body .lpnedit")].pop(); b.scrollIntoView({ block: "nearest" }); }); await p.waitForTimeout(50);
+  await p.click('#body .lpnedit >> nth=-1'); await p.waitForTimeout(200);
+  s = await p.evaluate(() => { const a = document.querySelector(".dmgrow").getBoundingClientRect(), fl = document.getElementById("flash"), f = fl.getBoundingClientRect(), ub = document.getElementById("undoBar"), u = ub.getBoundingClientRect();
+    return { covered: !fl.hidden && f.top < a.bottom && f.bottom > a.top, undoCovers: !ub.hidden && u.height > 0 && u.top < a.bottom && u.bottom > a.top }; });
+  check("tapping a pallet just after adding it: the Added note doesn't cover its edit row", !s.covered, s);
+  check("no script errors", p.errors.length === 0, p.errors);
+  await p.ctx.close();
+  // Only palletDesc off: BB, FMCG and Mixed get no box, while FPP and No LPN still do. Undo puts back a BB description.
+  {
+    const src = fs.readFileSync(path.join(ROOT, "config.js"), "utf8");
+    for (const off of [true, false]) {
+      p = await page(browser, 375);
+      if (off) await p.route("**/config.js", r => r.fulfill({ status: 200, contentType: "text/javascript", body: src.replace("palletDesc: true,", "palletDesc: false,") }));
+      await p.goto(URL0); await p.waitForTimeout(300);
+      s = await p.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
+        rows = [{ lpn: "VLT004040315", type: "BB", fsdu: false }, { lpn: "VLT004040323", type: "FMCG", fsdu: false }, { lpn: "VLT004040331", type: "Mixed", fsdu: false }, { lpn: "VLT004040349", type: "FPP", fsdu: false }, { lpn: "No LPN 1", type: "BB", fsdu: false }]; save(); render();
+        for (let i = 0; i < 5; i++) { if (document.activeElement) document.activeElement.blur(); await wait(80); document.querySelectorAll("#body .lpnedit")[i].click(); await wait(100); out[rows[i].type + (i === 4 ? "-nolpn" : "")] = !!document.querySelector(".descline"); }
+        if (document.activeElement) document.activeElement.blur(); await wait(80);
+        if (feat("palletDesc")) { document.querySelectorAll("#body .lpnedit")[0].click(); await wait(100); const d = document.querySelector(".descline input"); d.focus(); d.value = "Blue wrap"; d.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })); await wait(100);
+          out.saved = rows[0].desc; out.undoTxt = document.getElementById("undoTxt").textContent; document.getElementById("undoBtn") ? document.getElementById("undoBtn").click() : undo(); await wait(100); out.undone = rows[0].desc === undefined || rows[0].desc === ""; }
+        return out; });
+      if (off) check("with only palletDesc off, tapping BB, FMCG or Mixed gives no description box, but FPP and No LPN still do", !s.BB && !s.FMCG && !s.Mixed && s.FPP && s["BB-nolpn"], s);
+      else check("Undo takes back a description added to a BB pallet", s.BB && s.saved === "Blue wrap" && /Description saved for VLT004040315/.test(s.undoTxt) && s.undone, s);
+      check("no script errors", p.errors.length === 0, p.errors);
+      await p.ctx.close();
+    }
+  }
 };
