@@ -136,7 +136,7 @@ module.exports = async ({ browser, URL0 }) => {
       out.push(first + "|" + d.placeholder + "|" + (rows[i].desc || "")); }
     return { out, tags: [...document.querySelectorAll("#body .desctag")].map(t => t.textContent).join(",") }; });
   check("tapping a BB, FMCG or Mixed pallet offers a description box (the LPN box keeps focus), and Enter saves it under the LPN",
-    s.out.join() === "lpnbox|Optional: what’s on it, labels, PO number|Desc BB,lpnbox|Optional: what’s on it, labels, PO number|Desc FMCG,lpnbox|Optional: what’s on it, labels, PO number|Desc Mixed" && s.tags === "Desc BB,Desc FMCG,Desc Mixed", s);
+    s.out.join() === "lpnbox|Optional: contents, labels, PO|Desc BB,lpnbox|Optional: contents, labels, PO|Desc FMCG,lpnbox|Optional: contents, labels, PO|Desc Mixed" && s.tags === "Desc BB,Desc FMCG,Desc Mixed", s);
   // Changing a pallet's type to FPP in the table offers the box when it's tapped; during Live scan it doesn't open by itself.
   s = await p.evaluate(async () => {
     rows = [{ lpn: "VLT004040265", type: "BB", fsdu: false }]; save(); render();
@@ -223,6 +223,31 @@ module.exports = async ({ browser, URL0 }) => {
     return { xl: vals.some(v => /VLT004040265: Full pallet of kitchen roll/.test(v)), imp: imp.rows[0] };
   });
   check("the FPP description goes on the Excel export and comes back on import", s.xl && s.imp.type === "FPP" && s.imp.desc === "Full pallet of kitchen roll", s);
+  check("no script errors", p.errors.length === 0, p.errors);
+  await p.ctx.close();
+  // A tapped pallet on a small phone with Extra large text: its LPN box stays below the column header, a pallet tapped
+  // just after adding it isn't covered by the "Added" note, and a tap on the row's words doesn't close the edit.
+  p = await page(browser, 320, { excel: true });
+  await p.setViewportSize({ width: 320, height: 568 });
+  await p.route("**/config.js", r => r.fulfill({ status: 200, contentType: "text/javascript", body: "window.LPN_CONFIG=" + JSON.stringify({ features: {}, testing: { palletDesc: true } }) + ";" }));
+  await p.goto(URL0); await p.waitForTimeout(300);
+  await p.evaluate(() => { cfg.size = "1.25"; applyCfg(); rows = Array.from({ length: 14 }, (_, i) => ({ lpn: "VLT41" + String(1000000 + i), type: "BB", fsdu: false })); save(); render(); });
+  const lpnSeen = () => { const i = document.querySelector("#body .lpnedit input") || document.activeElement, r = i.getBoundingClientRect(), th = document.querySelector("#logCard th, table th").getBoundingClientRect(); return { inBox: i.tagName === "INPUT", top: Math.round(r.top), head: Math.round(th.bottom), row: !!document.querySelector(".descline") }; };
+  await p.evaluate(() => { document.querySelectorAll("#body .lpnedit")[6].scrollIntoView({ block: "center" }); }); await p.waitForTimeout(100);
+  await p.click('#body .lpnedit >> nth=6'); await p.waitForTimeout(200);
+  s = await p.evaluate(lpnSeen);
+  check("on a 320 px phone with Extra large text, tapping a pallet keeps its LPN box below the column header", s.inBox && s.row && s.top >= s.head - 1, s);
+  const note = await p.$('.dmgrow .testnote[data-test="palletDesc"]');
+  if (note) { await note.click(); await p.waitForTimeout(150); }
+  s = { noteThere: !!note, open: await p.evaluate(() => !!document.querySelector(".descline")) };
+  check("a tap on the testing note in the edit row doesn't close the edit", s.noteThere && s.open, s);
+  await p.evaluate(() => document.activeElement && document.activeElement.blur()); await p.waitForTimeout(150);
+  await p.fill("#lpn", "VLT555000111"); await p.press("#lpn", "Enter"); await p.waitForTimeout(150);
+  await p.evaluate(() => { const b = [...document.querySelectorAll("#body .lpnedit")].pop(); b.scrollIntoView({ block: "nearest" }); }); await p.waitForTimeout(50);
+  await p.click('#body .lpnedit >> nth=-1'); await p.waitForTimeout(200);
+  s = await p.evaluate(() => { const a = document.querySelector(".dmgrow").getBoundingClientRect(), fl = document.getElementById("flash"), f = fl.getBoundingClientRect(), ub = document.getElementById("undoBar"), u = ub.getBoundingClientRect();
+    return { covered: !fl.hidden && f.top < a.bottom && f.bottom > a.top, undoCovers: !ub.hidden && u.height > 0 && u.top < a.bottom && u.bottom > a.top }; });
+  check("tapping a pallet just after adding it: the Added note doesn't cover its edit row", !s.covered, s);
   check("no script errors", p.errors.length === 0, p.errors);
   await p.ctx.close();
   // Only palletDesc off: BB, FMCG and Mixed get no box, while FPP and No LPN still do. Undo puts back a BB description.

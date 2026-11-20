@@ -167,6 +167,17 @@ function render(){
       // page can't scroll that far, take the note away early unless it is a warning.
       if(fromAdd&&dr._desc){const fl=$("flash");if(fl&&!fl.hidden){const a=dr.getBoundingClientRect(),f=fl.getBoundingClientRect();
         if(f.top<a.bottom&&f.bottom>a.top){window.scrollBy(0,a.bottom-f.top+8);const a2=dr.getBoundingClientRect();if(f.top<a2.bottom&&f.bottom>a2.top&&!fl.classList.contains("warn"))fl.hidden=true}}}
+      // A tapped pallet (its LPN box has focus): the taller row (Description, damage, Refused, Copy LPN) must not push the
+      // pallet's own LPN up under the column header (small phones, Extra large text), and should come clear of the "Added"
+      // note and the Undo bar as far as that allows. If the note still covers it, it goes early unless it is a warning.
+      else if(useRow){const hd=tr.closest("table")&&tr.closest("table").querySelector("th"),
+        room=()=>tr.getBoundingClientRect().top-(hd?Math.max(0,hd.getBoundingClientRect().bottom):0)-4,
+        over=el=>{if(!el||el.hidden)return 0;const a=dr.getBoundingClientRect(),f=el.getBoundingClientRect();return f.height&&f.top<a.bottom&&f.bottom>a.top?a.bottom-f.top+8:0};
+       if(room()<0)window.scrollBy(0,room());
+       [$("flash"),$("undoBar")].forEach(el=>{const need=over(el);if(need)window.scrollBy(0,Math.min(need,Math.max(0,room())));
+         if(el&&el.id==="flash"&&over(el)&&!el.classList.contains("warn"))el.hidden=true})}
+      // A tap on the row's words (the testing note, "Damage:") doesn't close the edit; its boxes and buttons work as usual.
+      if(useRow)dr.addEventListener("pointerdown",e=>{if(!e.target.closest("input,button,select,textarea,label,a"))e.preventDefault()});
       let done=false,dmgPick,refPick;
       const finish=(ok,key)=>{
         if(done)return;done=true;dr.remove();
@@ -246,7 +257,7 @@ function dmgRow(r,pick,opt){
   if(opt.desc){
     const dl=document.createElement("div");dl.className="descline";
     const id="desc"+Math.random().toString(36).slice(2,8),lb=document.createElement("label");lb.htmlFor=id;lb.textContent="Description";
-    const di=document.createElement("input");di.id=id;di.maxLength=60;di.value=r.desc||"";const fpp=r.type==="FPP"&&!isNoLpn(r.lpn);di.placeholder=fpp?"What’s on it, e.g. kitchen roll":isNoLpn(r.lpn)?"Optional: wrap, labels, PO number":"Optional: what’s on it, labels, PO number";
+    const di=document.createElement("input");di.id=id;di.maxLength=60;di.value=r.desc||"";const fpp=r.type==="FPP"&&!isNoLpn(r.lpn);di.placeholder=fpp?"What’s on it, e.g. kitchen roll":isNoLpn(r.lpn)?"Optional: wrap, labels, PO number":"Optional: contents, labels, PO";
     di.setAttribute("aria-label","Description for "+r.lpn);
     // A handheld scanner can type the next pallet's code here (the box opens by itself after No LPN or an FPP pallet). If a
     // fresh description is one word with digits typed at scanner speed (under 35 ms a character; people take 100 ms or
@@ -258,7 +269,7 @@ function dmgRow(r,pick,opt){
       if(!r.desc&&fast&&!/\s/.test(raw)&&/\d{4}/.test(raw)){di.value="";opt.save&&opt.save(false);$("lpn").value=raw;add();return}
       opt.save&&opt.save(true)}};
     dl.append(lb,di);td.appendChild(dl);tr._desc=di;
-    const tn=isNoLpn(r.lpn)?testNote("noLpn",td):fpp&&feat("fppDesc")?testNote("fppDesc",td):feat("palletDesc")?testNote("palletDesc",td):null;
+    const tn=isNoLpn(r.lpn)?testNote("noLpn",td):fpp&&feat("fppDesc")?(testNote("fppDesc",td)||testNote("palletDesc",td)):feat("palletDesc")?testNote("palletDesc",td):null;
     // Screen readers hear why focus moved here (the "Added" message can be cut off by the move) and how to carry on.
     const say=[];
     if(opt.auto){const h=document.createElement("span");h.className="srhint";h.id=id+"h";
