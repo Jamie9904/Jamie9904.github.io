@@ -1,6 +1,6 @@
 {
   "_about": "Shown once on each phone after it installs a new Android update (not on a first install). Replace the list with what this update changes, in plain words, each time an Android update is approved and built.",
   "items": [
-    "The Android app now has its own build numbers, starting again at build 1. Exported Excel and PDF files say “LPN Pallet Log (Android APK build 1)” at the bottom instead of the website's build, and Settings shows the same number."
+    "Any pallet can have a description now, not just FPP pallets and pallets with no LPN: tap its LPN, then tap the Description box under it and type (for example what's on it, the labels or a PO number). It shows under the LPN and goes on the exports. The box still only opens by itself for FPP pallets and No LPN."
   ]
 }

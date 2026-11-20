@@ -1,4 +1,4 @@
 {
   "_about": "The Android app's own build number, shown in Settings and in the footer of exported files as \"LPN Pallet Log (Android APK build N)\". It is separate from the website's build. Add 1 before each approved APK build (with whats-new.json). Android's hidden version code stays the GitHub run number, so each APK still installs over the last one.",
-  "build": 1
+  "build": 2
 }
