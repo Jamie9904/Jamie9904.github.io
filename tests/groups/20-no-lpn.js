@@ -1,6 +1,6 @@
 /* Checks: pallets with no LPN (the No LPN button): numbering, description, real LPN later, manifest, exports, layout.
    Also descriptions for FPP pallets (what is on them), which share the same description box. */
-const { check, page } = require("../lib");
+const { fs, path, ROOT, check, page } = require("../lib");
 module.exports = async ({ browser, URL0 }) => {
   let p, s;
   console.log("Pallets with no LPN");
@@ -225,4 +225,24 @@ module.exports = async ({ browser, URL0 }) => {
   check("the FPP description goes on the Excel export and comes back on import", s.xl && s.imp.type === "FPP" && s.imp.desc === "Full pallet of kitchen roll", s);
   check("no script errors", p.errors.length === 0, p.errors);
   await p.ctx.close();
+  // Only palletDesc off: BB, FMCG and Mixed get no box, while FPP and No LPN still do. Undo puts back a BB description.
+  {
+    const src = fs.readFileSync(path.join(ROOT, "config.js"), "utf8");
+    for (const off of [true, false]) {
+      p = await page(browser, 375);
+      if (off) await p.route("**/config.js", r => r.fulfill({ status: 200, contentType: "text/javascript", body: src.replace("palletDesc: true,", "palletDesc: false,") }));
+      await p.goto(URL0); await p.waitForTimeout(300);
+      s = await p.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
+        rows = [{ lpn: "VLT004040315", type: "BB", fsdu: false }, { lpn: "VLT004040323", type: "FMCG", fsdu: false }, { lpn: "VLT004040331", type: "Mixed", fsdu: false }, { lpn: "VLT004040349", type: "FPP", fsdu: false }, { lpn: "No LPN 1", type: "BB", fsdu: false }]; save(); render();
+        for (let i = 0; i < 5; i++) { if (document.activeElement) document.activeElement.blur(); await wait(80); document.querySelectorAll("#body .lpnedit")[i].click(); await wait(100); out[rows[i].type + (i === 4 ? "-nolpn" : "")] = !!document.querySelector(".descline"); }
+        if (document.activeElement) document.activeElement.blur(); await wait(80);
+        if (feat("palletDesc")) { document.querySelectorAll("#body .lpnedit")[0].click(); await wait(100); const d = document.querySelector(".descline input"); d.focus(); d.value = "Blue wrap"; d.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })); await wait(100);
+          out.saved = rows[0].desc; out.undoTxt = document.getElementById("undoTxt").textContent; document.getElementById("undoBtn") ? document.getElementById("undoBtn").click() : undo(); await wait(100); out.undone = rows[0].desc === undefined || rows[0].desc === ""; }
+        return out; });
+      if (off) check("with only palletDesc off, tapping BB, FMCG or Mixed gives no description box, but FPP and No LPN still do", !s.BB && !s.FMCG && !s.Mixed && s.FPP && s["BB-nolpn"], s);
+      else check("Undo takes back a description added to a BB pallet", s.BB && s.saved === "Blue wrap" && /Description saved for VLT004040315/.test(s.undoTxt) && s.undone, s);
+      check("no script errors", p.errors.length === 0, p.errors);
+      await p.ctx.close();
+    }
+  }
 };
