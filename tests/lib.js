@@ -17,9 +17,9 @@ function serve() {
       const f = path.join(ROOT, p);
       if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { rsp.writeHead(404); return rsp.end(); }
       rsp.writeHead(200, { "Content-Type": TYPES[path.extname(f)] || "application/octet-stream", "Cache-Control": "no-store" });
-      // The checks test the pallet log, so they run with it on even while the owner has it off on the live site
-      // (230-pallet-log-switch checks the off state, and 19-site-config checks config.js itself).
-      if (p === "/config.js") return rsp.end(fs.readFileSync(f, "utf8").replace(/^(\s*palletLog:\s*)false,/m, "$1true,"));
+      // The checks test the pallet log and Report a problem, so they run with them on even while the owner has them off
+      // on the live site (230-pallet-log-switch and 19-site-config check them off, and 19-site-config checks config.js itself).
+      if (p === "/config.js") return rsp.end(fs.readFileSync(f, "utf8").replace(/^(\s*(?:palletLog|report):\s*)false,/gm, "$1true,"));
       fs.createReadStream(f).pipe(rsp);
     }).listen(0, "127.0.0.1", () => res(srv));
   });
