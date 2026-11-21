@@ -252,7 +252,7 @@ module.exports = async ({ browser, URL0 }) => {
   await p.ctx.close();
   // Only palletDesc off: BB, FMCG and Mixed get no box, while FPP and No LPN still do. Undo puts back a BB description.
   {
-    const src = fs.readFileSync(path.join(ROOT, "config.js"), "utf8");
+    const src = fs.readFileSync(path.join(ROOT, "config.js"), "utf8").replace(/^(\s*(?:palletLog|report):\s*)false,/gm, "$1true,");
     for (const off of [true, false]) {
       p = await page(browser, 375);
       if (off) await p.route("**/config.js", r => r.fulfill({ status: 200, contentType: "text/javascript", body: src.replace("palletDesc: true,", "palletDesc: false,") }));

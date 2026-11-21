@@ -4,7 +4,8 @@ const { fs, path, ROOT, check, page } = require("../lib");
 module.exports = async ({ browser, URL0 }) => {
   let p, s;
   console.log("Pallet log switch");
-  const src = fs.readFileSync(path.join(ROOT, "config.js"), "utf8").replace("palletLog: true,", "palletLog: false,");
+  // (the pallet log off, everything else as the owner has it, except Report on so this checks it stays on)
+  const src = fs.readFileSync(path.join(ROOT, "config.js"), "utf8").replace(/^(\s*palletLog:\s*)true,/m, "$1false,").replace(/^(\s*report:\s*)false,/m, "$1true,");
   p = await page(browser, 375);
   await p.route("**/config.js", r => r.fulfill({ status: 200, contentType: "text/javascript", body: src }));
   await p.addInitScript(() => { try { localStorage.setItem("lpncfg", JSON.stringify({ simple: true, keys: true })); localStorage.setItem("lpnlog", JSON.stringify({ rows: [{ lpn: "VLT004040265", type: "BB", fsdu: false }] })); } catch (e) {} });
