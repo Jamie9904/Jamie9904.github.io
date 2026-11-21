@@ -320,7 +320,9 @@ The person who runs the site can switch features off for everyone, or mark them 
 
 ## Pallet log switch (`palletLog`)
 
-A site setting added after the docs for build 66 were written. It was made on the `updates` branch, is still numbered build 66, and is live since `main` `38c031c`. In the website's `config.js` it is `true`, so nothing changes for anyone until the site owner sets it to `false` (in the website's file or the Android app's own file, see [Android app](#android-app-offline-apk)).
+A site setting added after the docs for build 66 were written. It was made on the `updates` branch, is still numbered build 66, and is live since `main` `38c031c`. It can be set separately in the website's `config.js` and in the Android app's own file (see [Android app](#android-app-offline-apk)).
+
+**Current setting:** the site owner has switched the pallet log off on the website (`palletLog: false` in `config.js`, commit `4d1212d` on `updates`). That isn't live yet; once it is released, everyone who opens the website online gets only the Manifest check, already open, as described below. Until then the live site (`main` at `38c031c`) still has the pallet log on. The **Android app** keeps the pallet log (`palletLog: true` in `tools/android/config.js`), so staff who log pallets use the APK. The Guide on the website still starts with the **▶ Watch the demo video** button, and the demo video shows the pallet log (the video isn't tied to the switch).
 
 With `palletLog: false` the copy of the app is only a Manifest check:
 
@@ -805,7 +807,7 @@ Colours (Follow phone, two colours drive the whole theme, with a contrast warnin
 | The delivery details don't fold after the first pallet, or open folded | The app remembers whether you last opened or folded them with the one-line summary. Tap that line to change it; it is remembered again. They only fold automatically once **Received by** is filled in. |
 | No **?** by Manifest check | The Manifest check is switched off in the site settings, or Simple view is on (which hides the whole card). |
 | The seal box only shows numbers | Since build 66 the seal boxes open the number keypad, as the seals used are digits only. |
-| Only the Manifest check is on the page (no Delivery, LPN box or Pallet log) | The pallet log is switched off in this copy's settings (`palletLog`). Your log and saved deliveries are still on the phone and come back when it is switched on. |
+| Only the Manifest check is on the page (no Delivery, LPN box or Pallet log) | The pallet log is switched off in this copy's settings (`palletLog`). The website has it switched off (from the release after `main` `38c031c`); to log pallets, use the Android app, which keeps it on. Your log and saved deliveries are still on the phone and come back when it is switched on. |
 | The Manifest date has gone back to today | Since the release at `main` `38c031c` it starts as today's date each time the app opens. Change it again if the manifest is from another day. |
 | The blank tally sheet prints on two pages | Since the release at `main` `38c031c` it has a back page, for double-sided printing: the numbers carry on from the front and the totals for both sides are at the bottom of the back. Print it double-sided. |
 | Android app: where did my export go? | A copy is in **Documents › LPN Pallet Log** on the phone. Use **Open**, **Share** or **Save to…** on the Saved bar, or find it later under **Exported files**. |

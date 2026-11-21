@@ -2,7 +2,7 @@
 
 ```
 .
-├── config.js                site settings (build 53; `palletLog` and `palletDesc` added later, live since `main` `38c031c`): `window.LPN_CONFIG` with `features` (switch a feature off for everyone) and `testing` (add an "in testing" note); loaded before core.js, in the offline shell
+├── config.js                site settings (build 53; `palletLog` and `palletDesc` added later, live since `main` `38c031c`; `palletLog: false` on `updates` since `4d1212d`): `window.LPN_CONFIG` with `features` (switch a feature off for everyone) and `testing` (add an "in testing" note); loaded before core.js, in the offline shell
 ├── index.html               page markup: header, Delivery, Add a pallet, Pallet log, Manifest check, panels, report box, install box, banners
 ├── styles.css               all CSS: theme tokens, components, phone/tablet/desktop layouts, print rules
 ├── core.js                  site settings (`FEATURES`, `SITE`, `feat()`, `testNote()`, `siteHtml()`), state, persistence, tidying of saved data, table, validation, add flow, undo (the last 10 changes since build 62), received-pallet counts (`typeCounts()`, leaving out refused pallets; the type and FSDU totals are filter buttons since build 66), `mergePallets()` (adds pallets from another phone, build 66), library loader and fingerprints (SRI), helpers
@@ -35,7 +35,7 @@
 ├── .gitignore               keeps `__pycache__/`, `*.pyc` and `node_modules/` out of git
 ├── tests/
 │   ├── run.js               the runner for the automatic checks (`npm test`): starts the server and browser, runs every file in groups/ in name order, prints the totals
-│   ├── lib.js               shared helpers for the checks: serve(), check(), page(), EXCEL_STUB, LIBS / libFile() / REAL_LIBS, file types (TYPES), counts()
+│   ├── lib.js               shared helpers for the checks: serve() (serves `config.js` with `palletLog` forced on), check(), page(), EXCEL_STUB, LIBS / libFile() / REAL_LIBS, file types (TYPES), counts()
 │   ├── groups/              the checks, one self-contained file per area (since build 52)
 │   │   ├── 01-layout.js … 06-real-export.js     layout; phone flows and Settings; Excel export; version note, PDF safety and spreadsheet import; saved data from outside and fingerprints; real export libraries and library versions
 │   │   ├── 07-security-policy.js … 12-report.js security policy; demo video and the Changelog's build history video (build 65); manifest photos and problem report; accessibility; feedback Worker; Report a problem or idea
