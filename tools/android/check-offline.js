@@ -453,7 +453,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("a handheld scan closes an open pallet edit and is logged, goes into a box being filled in, and on the Manifest check's page into the manifest numbers", s.fromEdit === "VLT004040703,VLT004040711" && s.search === "VLT004040703:2" && s.cmp === "QUB001899182:2", s);
   // The phone's own text reader for manifest photos: its words go through the app's photo reading; if it fails, the
   // app's own reader takes over.
-  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative; N.calls = [];
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative; N.calls = []; const def = LPN_OCR() === null; localStorage.setItem("lpnapkocr", "on");
     window.__ocrStub = () => ({ text: "Manifest\nLPN: vlt004040265 x", words: [{ text: "LPN:", x0: 10, y0: 10, x1: 60, y1: 30 }, { text: "vlt004040265", x0: 70, y0: 10, x1: 250, y1: 30 }] });
     const c = document.createElement("canvas"); c.width = 400; c.height = 120; const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, 400, 120); x.fillStyle = "#000"; x.font = "20px sans-serif"; x.fillText("LPN: VLT004040265", 10, 30);
     const blob = await new Promise(r => c.toBlob(r, "image/png")), out = {};
@@ -462,9 +462,9 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     window.__ocrStub = null; const w = await LPN_OCR(); await w.setParameters({ tessedit_pageseg_mode: "11" });
     try { const r = await w.recognize(c); out.fallback = typeof (r && r.data && r.data.text) === "string"; } catch (e) { out.fallbackErr = String(e.message || e); } await w.terminate();
     try { localStorage.setItem("lpnapkocr", "off"); out.off = LPN_OCR() === null; } finally { localStorage.removeItem("lpnapkocr"); }
-    return out; });
+    out.def = def; return out; });
   check("manifest photos are read by the phone's own text reader (the page and a close-up of each number), through the app's photo reading", JSON.stringify(s.found) === '["VLT004040265"]' && s.reads === 2, s);
-  check("if the phone's text reader fails the app's own reader takes over, and Settings can switch back to the app's own reader", s.fallback && s.off, s);
+  check("if the phone's text reader fails the app's own reader takes over; it's off unless switched on in Settings (the app's own reader is more accurate)", s.fallback && s.off && s.def, s);
   // A folder chosen for exports gets a copy of every export.
   s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); N.calls = [];
     openHelp("settings", "Settings"); await wait(150); const before = document.getElementById("apkDirNote").textContent; document.getElementById("apkDirPick").click(); await wait(100);

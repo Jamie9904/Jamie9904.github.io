@@ -386,7 +386,7 @@
           + '<label class="chk"><input type="checkbox" id="apkCam"><span>Live scan with the phone’s own camera scanner (faster, with tap-to-focus and automatic zoom). Untick to use the one inside the app.</span></label>' : "")
         + (has("palletLog") ? '<label class="chk"><input type="checkbox" id="apkSpeak"><span>Say the count out loud after each pallet (and “already logged” or “check” for a warning)</span></label>' : "")
         + '<label class="chk"><input type="checkbox" id="apkHand"><span>Warehouse handheld scanner (Zebra or Honeywell): scans come straight into the app, so they can’t land in the wrong box. Untick if your scanner should type like a keyboard.</span></label>'
-        + (has("manifestPhotos") ? '<h4 class="apksub">Photos</h4><label class="chk"><input type="checkbox" id="apkOcr"><span>Read manifest photos with the phone’s own text reader (faster). Untick to use the one inside the app.</span></label>' : "")
+        + (has("manifestPhotos") ? '<h4 class="apksub">Photos</h4><label class="chk"><input type="checkbox" id="apkOcr"><span>Read manifest photos with the phone’s own text reader instead of the app’s own. It can be faster, but the app’s own reader is more accurate on the test photos, so check what it finds.</span></label>' : "")
         + '<h4 class="apksub">Display</h4>'
         + (has("palletLog") ? '<label class="chk"><input type="checkbox" id="apkBig"><span>Bigger buttons, for gloves (Add, Scan, the pallet types, Undo, and in the camera scanner)</span></label>' : "")
         + '<div class="row"><button type="button" id="apkColours" hidden>Use the phone’s colours</button></div>'
@@ -554,7 +554,9 @@
   /* Manifest photos read by the phone's own text reader (ML Kit, no internet) instead of the one inside the app: it
      stands in for that reader's worker, so the app's photo reading (close-ups, tidy-up, prefix list) is the same. If it
      fails, the app's own reader takes over. Settings › Android app can switch back to the app's own reader. */
-  const OCR_DEFAULT = true;
+  // Off by default: on the user's manifest photos (GitHub's virtual phone, 22 Nov 2026) it got 53 of 54 LPNs (it missed
+  // V0013323651, which the app's own reader gets), so the app's own reader stays the default.
+  const OCR_DEFAULT = false;
   const upper = t => String(t || "").toUpperCase().replace(/[^A-Z0-9:\s]/g, "");
   window.LPN_OCR = () => {
     if (!N() || typeof N().readText !== "function" || !pref("lpnapkocr", OCR_DEFAULT)) return null;

@@ -3,8 +3,8 @@
   "items": [
     "The app now opens on a start menu: choose Log pallets or Manifest check. Each has its own page, with its name and ‹ Menu in a bar that stays at the top (Back goes to the menu too). The menu also shows a delivery in progress (with Carry on scanning) and your last few saved deliveries, with buttons for Saved deliveries and Exported files.",
     "Zebra and Honeywell handheld scanners: scans now come straight into the app instead of being typed, so a scan can’t land in the wrong box, with the same buzz and sound as a camera scan and a green (or orange, for a check) flash round the screen. On the log it’s logged as the next pallet; on the Manifest check it’s added to the manifest numbers. Untick it in Settings › Android app if your scanner should type like a keyboard.",
-    "Manifest photos are read by the phone’s own text reader, which is much faster. If it ever fails, the app’s own reader takes over, and Settings › Android app can switch back to it.",
     "Choose a folder for exports in Settings › Android app (for example a OneDrive or Google Drive folder on the phone): every export is then saved there too, as well as in Documents › LPN Pallet Log.",
-    "Smaller things: Settings › Android app is grouped into Scanning, Photos, Display and Exports; the Manifest date shows as day/month/year like the delivery date; the “New here?” card is gone; and a tidier footer."
+    "Smaller things: Settings › Android app is grouped into Scanning, Photos, Display and Exports; the Manifest date shows as day/month/year like the delivery date; the “New here?” card is gone; and a tidier footer.",
+    "Settings › Android app › Photos can switch manifest photos to the phone’s own text reader. It can be faster, but the app’s own reader (still the default) is more accurate."
   ]
 }
