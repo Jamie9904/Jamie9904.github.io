@@ -63,6 +63,7 @@ ${dataLines}
             <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />$2`);
 // The phone's own camera scanner (Live scan).
 edit(man, /(<\/application>)/, `    <activity android:name=".ScanActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/AppTheme.NoActionBar" />
+    <activity android:name=".TextScanActivity" android:exported="false" android:screenOrientation="portrait" android:theme="@style/AppTheme.NoActionBar" />
     $1`);
 fs.mkdirSync(path.join(RES, "xml"), { recursive: true });
 const sc = (id, label, action) => `    <shortcut android:shortcutId="${id}" android:enabled="true" android:icon="@mipmap/ic_launcher" android:shortcutShortLabel="@string/sc_${id}" android:shortcutLongLabel="@string/sc_${id}">

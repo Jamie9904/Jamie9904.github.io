@@ -606,6 +606,21 @@
       }
     } catch (e) { tot.error = String((e && e.message) || e); }
     await log(tot);
+    // Live read manifest's rule on the same photos, as if each were one camera picture: the phone's text reader,
+    // then only numbers after "LPN:" (the same rule as TextScanActivity.afterLabels), tidied as on the page.
+    const lt = { liveDone: true, right: 0, want: 0, missing: [], extra: [] };
+    try {
+      const exp = await (await fetch("ocrtest/expected.json")).json();
+      for (const name of Object.keys(exp).filter(k => !k.startsWith("_"))) {
+        const want = exp[name], blob = await (await fetch("ocrtest/" + name)).blob(), bmp = await createImageBitmap(blob);
+        const c = document.createElement("canvas"); c.width = bmp.width; c.height = bmp.height; c.getContext("2d").drawImage(bmp, 0, 0);
+        const r = await N().readText({ data: c.toDataURL("image/jpeg", 0.9).split(",")[1] }); c.width = c.height = 0;
+        const got = [...new Set(afterLabels((r.words || []).map(w => w.text)).map(v => { const f = extractLpns(v, true)[0]; if (!f) return null; const o = photoLpns([{ raw: v, first: f, again: null, lab: true }]); return o[0] || null; }).filter(Boolean))];
+        const g = new Set(got), w = new Set(want);
+        lt.right += want.filter(x => g.has(x)).length; lt.want += want.length; lt.missing.push(...want.filter(x => !g.has(x))); lt.extra.push(...got.filter(x => !w.has(x)));
+      }
+    } catch (e) { lt.error = String((e && e.message) || e); }
+    await log(lt);
   }
 
   /* Start menu: the app opens on a menu to choose Log pallets or Manifest check, and each is its own page instead of
@@ -900,6 +915,63 @@
   document.addEventListener("DOMContentLoaded", () => {
     if (typeof sfx === "function") { const real = sfx; sfx = function () { if (!hushed() || typeof cfg === "undefined") return real.apply(this, arguments);
       const was = cfg.sound; cfg.sound = false; try { return real.apply(this, arguments); } finally { cfg.sound = was; } }; }
+  });
+
+  /* Live read manifest: the camera reads the printed manifest as it's moved down the page (TextScanActivity, the
+     phone's own text reader). Each number printed after "LPN:", once read the same way twice, comes here; it is
+     tidied with the app's own photo rules and prefix list and added to the manifest numbers, and the camera screen
+     shows what happened. Remove last takes the last one added back out. */
+  const liveRead = { added: [], recent: [] };
+  function liveStatus(text, flash, forget) {
+    if (!N() || typeof N().textScanStatus !== "function") return;
+    N().textScanStatus({ text, flash: flash || "", recent: liveRead.recent.slice(-3).reverse().join("\n"), canUndo: liveRead.added.length > 0, forget: forget || null }).catch(() => {});
+  }
+  function liveCount() { const b = $("cmpNums"); return b ? b.value.split(/\r?\n/).map(x => x.trim()).filter(Boolean).length : 0; }
+  function liveGot(raw) {
+    if (typeof extractLpns !== "function" || typeof photoLpns !== "function" || typeof addNums !== "function") return;
+    const v = String(raw || "").toUpperCase().replace(/[^A-Z0-9]/g, ""), first = extractLpns(v, true)[0];
+    if (!first) return; // not shaped like an LPN after all: left out quietly
+    const out = photoLpns([{ raw: v, first, again: null, lab: true }]);
+    if (!out.length) { const sk = (out.skipped || [])[0] || first; liveRead.recent.push(sk + " · skipped (prefix)"); if (typeof sfx === "function") sfx("warn");
+      liveStatus(sk + " skipped: its prefix isn't in your prefix list. " + liveCount() + " in the manifest list.", "warn"); return; }
+    const lpn = out[0], r = addNums([lpn], "cmpNums"); $("cmpNums").dispatchEvent(new Event("input", { bubbles: true }));
+    if (r.added) { liveRead.added.push(lpn); liveRead.recent.push(lpn); if (typeof sfx === "function") sfx("ok");
+      liveStatus("Added " + lpn + ". " + liveCount() + " in the manifest list.", "ok"); }
+    else { liveRead.recent.push(lpn + " · already listed"); liveStatus(lpn + " is already in the list. " + liveCount() + " in the manifest list.", ""); }
+    try { if (typeof diag === "function") diag("manifest", "Live read: " + v + " → " + lpn + (r.added ? " added" : " already listed")); } catch (e) {}
+  }
+  function liveUndo() {
+    const lpn = liveRead.added.pop(); if (!lpn) return;
+    const b = $("cmpNums"); b.value = b.value.split(/\r?\n/).filter(x => x.trim().toUpperCase() !== lpn).join("\n"); b.dispatchEvent(new Event("input", { bubbles: true }));
+    liveRead.recent.push(lpn + " · removed"); liveStatus("Removed " + lpn + ". " + liveCount() + " in the manifest list.", "", lpn);
+  }
+  window.LPN_APK_LIVEREAD = { got: liveGot, undo: liveUndo, state: liveRead };
+  /* The same rule as TextScanActivity.afterLabels (keep the two alike), for the photo test on the virtual phone. */
+  function afterLabels(words) {
+    const out = [], clean = s => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    for (let i = 0; i < words.length; i++) {
+      const m = /^LPN[:;.,]?(.*)$/.exec(String(words[i]).toUpperCase().trim()); if (!m) continue;
+      let n = clean(m[1]), next = i + 1;
+      if (!n && next < words.length) { n = clean(words[next]); next++; }
+      if (n.length >= 4 && n.length < 11 && next < words.length && /^[0-9]{1,8}$/.test(clean(words[next]))) n += clean(words[next]);
+      if (n.length >= 9 && n.length <= 16 && /[0-9]{6,}/.test(n)) out.push(n);
+    }
+    return out;
+  }
+  window.LPN_APK_AFTERLABELS = afterLabels;
+  function liveStart() {
+    liveRead.added = []; liveRead.recent = [];
+    if (mode && mode !== "cmp") setMode("cmp");
+    N().startTextScan().catch(() => toast("The camera couldn’t start."));
+  }
+  if (N()) {
+    try { N().addListener("textScan", e => liveGot(e && e.value)); N().addListener("textScanUndo", liveUndo);
+      N().addListener("textScanClosed", () => { const n = liveRead.added.length; if (typeof cmpMsg === "function") cmpMsg(n ? "Live read added " + n + " LPN" + (n === 1 ? "" : "s") + " to the manifest numbers. Check them against the paper copy." : "Live read didn’t add any LPNs."); }); } catch (e) {}
+  }
+  document.addEventListener("DOMContentLoaded", () => {
+    const b = $("cmpPhotoBtn"); if (!b || !N() || typeof N().startTextScan !== "function" || !has("manifestPhotos") || !has("manifestCheck")) return;
+    const l = document.createElement("button"); l.type = "button"; l.id = "apkLiveRead"; l.textContent = "Live read manifest"; l.onclick = liveStart;
+    b.before(l);
   });
 
   /* Carry on: opening the app with a delivery in progress offers to go straight back to scanning. */
