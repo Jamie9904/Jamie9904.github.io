@@ -343,6 +343,30 @@ public class LpnNativePlugin extends Plugin {
         super.handleOnPause();
     }
 
+    /* ---- Silent mode: whether the phone is on silent, vibrate or Do Not Disturb, so scan sounds can follow it. The
+       page is told when it changes. */
+    private BroadcastReceiver ringRcv = null;
+
+    private boolean silenced() {
+        Context ctx = getContext();
+        android.media.AudioManager am = (android.media.AudioManager) ctx.getSystemService(Context.AUDIO_SERVICE);
+        boolean quiet = am != null && am.getRingerMode() != android.media.AudioManager.RINGER_MODE_NORMAL;
+        android.app.NotificationManager nm = (android.app.NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm != null && nm.getCurrentInterruptionFilter() > android.app.NotificationManager.INTERRUPTION_FILTER_ALL) quiet = true;
+        return quiet;
+    }
+
+    @PluginMethod
+    public void ringer(PluginCall call) {
+        if (ringRcv == null) {
+            ringRcv = new BroadcastReceiver() { @Override public void onReceive(Context c, Intent i) { notifyListeners("ringer", new JSObject().put("silent", silenced())); } };
+            IntentFilter f = new IntentFilter(android.media.AudioManager.RINGER_MODE_CHANGED_ACTION);
+            f.addAction(android.app.NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED);
+            ContextCompat.registerReceiver(getContext(), ringRcv, f, ContextCompat.RECEIVER_NOT_EXPORTED);
+        }
+        call.resolve(new JSObject().put("silent", silenced()));
+    }
+
     /* ---- Manifest photos read by ML Kit's text reader on the phone (no internet): the words with their boxes, in the
        photo's own pixels, so the page's photo reading (close-ups, tidy-up, prefix list) works as with its own reader. */
     private TextRecognizer textReader = null;

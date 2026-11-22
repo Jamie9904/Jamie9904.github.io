@@ -387,6 +387,7 @@
         + (has("liveScan") ? '<label class="chk"><input type="checkbox" id="apkVol"><span>Volume-down button starts and stops Live scan (volume-up still changes the volume)</span></label>'
           + '<label class="chk"><input type="checkbox" id="apkCam"><span>Live scan with the phone’s own camera scanner (faster, with tap-to-focus and automatic zoom). Untick to use the one inside the app.</span></label>' : "")
         + (has("palletLog") ? '<label class="chk"><input type="checkbox" id="apkSpeak"><span>Say the count out loud after each pallet (and “already logged” or “check” for a warning)</span></label>' : "")
+        + '<label class="chk"><input type="checkbox" id="apkQuiet"><span>No scan sounds or spoken count while the phone is on silent, vibrate or Do Not Disturb (it still buzzes)</span></label>'
         + '<label class="chk"><input type="checkbox" id="apkHand"><span>Warehouse handheld scanner (Zebra or Honeywell): scans come straight into the app, so they can’t land in the wrong box. Untick if your scanner should type like a keyboard.</span></label>'
         + (has("manifestPhotos") ? '<h4 class="apksub">Photos</h4><label class="chk"><input type="checkbox" id="apkOcr"><span>Read manifest photos with the phone’s own text reader instead of the app’s own. It can be faster, but the app’s own reader is more accurate on the test photos, so check what it finds.</span></label>' : "")
         + '<h4 class="apksub">Display</h4>'
@@ -399,6 +400,7 @@
       if ($("apkVol")) { $("apkVol").checked = volOn(); $("apkVol").onchange = () => { try { localStorage.setItem("lpnapkvol", $("apkVol").checked ? "on" : "off"); } catch (e) {} syncVol(); }; }
       $("apkFilesSet").onclick = () => showFiles();
       const sw = (id, key, def) => { const c = $(id); if (!c) return; c.checked = pref(key, def); c.onchange = () => { try { localStorage.setItem(key, c.checked ? "on" : "off"); } catch (e) {} }; };
+      sw("apkQuiet", "lpnapkquiet", true);
       sw("apkCam", "lpnapkcamscan", true); sw("apkSpeak", "lpnapkspeak", false); sw("apkBig", "lpnapkbig", false); sw("apkHand", "lpnapkhand", true); sw("apkOcr", "lpnapkocr", OCR_DEFAULT);
       if ($("apkHand")) $("apkHand").addEventListener("change", syncHand);
       const dirShow = () => { const d = dirGet(), n = $("apkDirNote"); if (!n) return;
@@ -885,6 +887,21 @@
       if (el.tagName === "INPUT") el.addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); const nx = order[i + 1]; if (nx) nx.focus(); else el.blur(); } }); });
   });
 
+  /* Silent mode: with the phone on silent, vibrate or Do Not Disturb, scan sounds and the spoken count stay quiet and
+     only the buzz is left (Settings › Android app can turn this off). */
+  let phoneSilent = false;
+  const hushed = () => phoneSilent && pref("lpnapkquiet", true);
+  window.LPN_APK_HUSHED = hushed;
+  if (N()) {
+    const ring = () => { if (typeof N().ringer === "function") N().ringer().then(r => { phoneSilent = !!(r && r.silent); }).catch(() => {}); };
+    try { N().addListener("ringer", e => { phoneSilent = !!(e && e.silent); }); } catch (e) {}
+    window.addEventListener("load", ring); document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") ring(); });
+  }
+  document.addEventListener("DOMContentLoaded", () => {
+    if (typeof sfx === "function") { const real = sfx; sfx = function () { if (!hushed() || typeof cfg === "undefined") return real.apply(this, arguments);
+      const was = cfg.sound; cfg.sound = false; try { return real.apply(this, arguments); } finally { cfg.sound = was; } }; }
+  });
+
   /* Carry on: opening the app with a delivery in progress offers to go straight back to scanning. */
   function carryOn() {
     if (!N() || !has("palletLog") || !has("liveScan") || !rows.length || window.LPN_APK_NATIVESCAN || (typeof scanning !== "undefined" && scanning) || document.querySelector(".apkask") || ($("panel") && !$("panel").hidden)) return;
@@ -894,7 +911,7 @@
   if (N()) window.addEventListener("load", () => setTimeout(() => { try { if (!mode) carryOn(); } catch (e) {} }, 1200));
 
   /* The count out loud after each pallet, and a word for a warning (Settings › Android app). */
-  function sayIt(t) { if (N() && pref("lpnapkspeak", false)) N().speak({ text: t }).catch(() => {}); }
+  function sayIt(t) { if (N() && pref("lpnapkspeak", false) && !hushed()) N().speak({ text: t }).catch(() => {}); }
   if (N()) window.addEventListener("load", () => {
     if (typeof window.addValue === "function") { const orig = window.addValue; window.addValue = function () { const r = orig.apply(this, arguments); const n = rows.length, ex = parseInt(($("expect") || {}).value, 10); sayIt(ex > 0 ? n + " of " + ex : String(n)); return r; }; }
     const bar = $("chkBar");

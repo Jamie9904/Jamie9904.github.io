@@ -60,6 +60,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
         scanners: async () => ({ names: [] }),
         notify: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["notify", o.title, o.text]); return { shown: true }; },
         askNotify: async () => { window.Capacitor.Plugins.LpnNative.calls.push(["askNotify"]); return { asked: true }; },
+        ringer: async () => ({ silent: !!window.__silent }),
         setHandheld: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["hand", o.on]); },
         readText: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["readText", o.data.length > 100]); if (!window.__ocrStub) throw new Error("no reader here"); return window.__ocrStub(o); },
         pickFolder: async () => ({ picked: true, uri: "content://tree/drive", name: "Drive" }),
@@ -139,6 +140,16 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("if something goes wrong, a plain message says the log is safe, with Try again and Save problem report", s.oops === "Something went wrong. Your log is safe on this phone.|Try again,Save problem report,Cancel", s);
   check("a status message that can't be seen where it normally shows (here on the menu) also shows at the bottom", s.toast === "Copied VLT004040265.", s);
   check("in Delivery, Next on the keyboard goes to the next box, and names start with a capital", s.next === "expect:next:done:words", s);
+  // Silent mode: scan sounds and the spoken count stay quiet, the buzz stays.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, out = {}; let osc = 0;
+    const AC = window.AudioContext; window.AudioContext = function () { return { state: "running", currentTime: 0, resume() {}, destination: {}, createOscillator() { osc++; return { type: "", frequency: {}, connect() {}, start() {}, stop() {} }; }, createGain() { return { gain: {}, connect() {} }; } }; };
+    const was = { sound: cfg.sound, vib: cfg.vibrate }; cfg.sound = true; cfg.vibrate = true; actx = null; localStorage.setItem("lpnapkspeak", "on");
+    N.listeners.ringer({ silent: true }); N.calls = []; sfx("ok"); out.silent = osc + ":" + N.calls.filter(c => c[0] === "vib").length;
+    N.listeners.ringer({ silent: false }); osc = 0; actx = null; sfx("ok"); out.loud = osc;
+    N.listeners.ringer({ silent: true }); localStorage.setItem("lpnapkquiet", "off"); osc = 0; actx = null; sfx("ok"); out.optOut = osc;
+    localStorage.removeItem("lpnapkquiet"); localStorage.removeItem("lpnapkspeak"); N.listeners.ringer({ silent: false });
+    window.AudioContext = AC; actx = null; cfg.sound = was.sound; cfg.vibrate = was.vib; return out; });
+  check("with the phone on silent, vibrate or Do Not Disturb a scan only buzzes (sound back when it isn't; Settings can turn this off)", s.silent === "0:1" && s.loud === 1 && s.optOut === 1, s);
   // Moving between the menu and the pages: a slide, each page keeps its place, TalkBack hears the page's name, and
   // focus goes back to the button you came from; the menu buttons give the light tap.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), N = window.Capacitor.Plugins.LpnNative, main = document.querySelector("main");
