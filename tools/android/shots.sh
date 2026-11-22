@@ -46,8 +46,11 @@ ocr_test() {
   echo "Phone text reader on the manifest photos:"; cat "$OUT/ocr-phone-reader.txt"
 }
 ocr_test
+adb logcat -c
 set_of normal 11
 adb shell wm size 720x1440; adb shell wm density 320; sleep 3
 set_of small 22
 adb shell wm size reset; adb shell wm density reset
+# The page's own messages while the screenshots were taken (Capacitor/Console), to see why a step didn't happen.
+adb logcat -d -s Capacitor/Console:V Capacitor:V > "$OUT/page-log.txt" 2>/dev/null || true
 ls -1 "$OUT" | wc -l | xargs echo "screenshots:"

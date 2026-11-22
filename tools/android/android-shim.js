@@ -525,6 +525,7 @@
   }
   window.LPN_APK_HANDSCAN = handScan;
   function syncHand() { if (N() && typeof N().setHandheld === "function") N().setHandheld({ on: pref("lpnapkhand", true) }).catch(() => {}); }
+  window.LPN_APK_SYNCHAND = syncHand;
   if (N()) { try { N().addListener("hwScan", e => handScan(e && e.code)); } catch (e) {} window.addEventListener("load", syncHand); }
 
   /* Manifest photos read by the phone's own text reader (ML Kit, no internet) instead of the one inside the app: it

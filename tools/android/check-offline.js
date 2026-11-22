@@ -403,9 +403,10 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
 
   // Warehouse handheld scanners: each scan goes where it belongs.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), N = window.Capacitor.Plugins.LpnNative, out = {};
-    out.on = N.calls.some(c => c[0] === "hand" && c[1] === true) || (await (async () => { N.calls = []; window.dispatchEvent(new Event("load")); await wait(50); return N.calls.some(c => c[0] === "hand" && c[1] === true); })());
-    document.querySelectorAll(".apkask").forEach(a => a.remove()); rows = []; save(); render(); LPN_APK_MODE("menu");
+    N.calls = []; LPN_APK_SYNCHAND(); await wait(50); out.on = N.calls.some(c => c[0] === "hand" && c[1] === true);
+    document.querySelectorAll(".apkask").forEach(a => a.remove()); closeHelp(); if (document.activeElement) document.activeElement.blur(); rows = []; save(); render(); LPN_APK_MODE("menu");
     N.listeners.hwScan({ code: "VLT004040703" }); await wait(150); out.log = LPN_APK_MODE() + ":" + rows.map(r => r.lpn).join();
+    if (!rows.length) return Object.assign(out, { act: document.activeElement && (document.activeElement.id || document.activeElement.tagName), panel: !document.getElementById("panel").hidden, chk: !document.getElementById("chkBar").hidden, toast: (document.getElementById("apkToast") || {}).textContent, msg: document.getElementById("msg").textContent });
     document.querySelector("#body .lpnedit").click(); await wait(100); const d = document.querySelector(".descline input"); if (d) d.focus();
     N.listeners.hwScan({ code: "VLT004040711" }); await wait(150); out.fromEdit = !document.querySelector(".dmgrow") && rows.map(r => r.lpn).join();
     const f = document.getElementById("flt"); f.focus(); N.listeners.hwScan({ code: "VLT004040703" }); await wait(100); out.search = f.value + ":" + rows.length; f.value = ""; f.dispatchEvent(new Event("input", { bubbles: true })); f.blur();
