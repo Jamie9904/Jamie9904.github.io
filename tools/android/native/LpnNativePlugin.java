@@ -56,6 +56,14 @@ import com.google.mlkit.vision.barcode.BarcodeScanner;
 import com.google.mlkit.vision.barcode.BarcodeScanning;
 import com.google.mlkit.vision.barcode.common.Barcode;
 import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.text.Text;
+import com.google.mlkit.vision.text.TextRecognition;
+import com.google.mlkit.vision.text.TextRecognizer;
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
+import android.content.BroadcastReceiver;
+import android.graphics.Rect;
+import android.provider.DocumentsContract;
+import java.util.ArrayList;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -250,7 +258,167 @@ public class LpnNativePlugin extends Plugin {
     @Override
     protected void handleOnDestroy() {
         if (tts != null) tts.shutdown();
+        handheld(false);
         super.handleOnDestroy();
+    }
+
+    /* ---- Warehouse handheld scanners (Zebra and Honeywell): scans come straight to the app as an intent, instead of
+       being typed like a keyboard. Zebra: a DataWedge profile for this app is made (or updated) that sends each scan
+       to HW_ACTION and stops typing it. Honeywell: the scanner is claimed while the app is open, with its data sent
+       to HW_ACTION. Elsewhere these broadcasts do nothing. */
+    private static final String HW_ACTION = "io.github.jamie9904.lpnlog.HWSCAN";
+    private boolean hwOn = false;
+    private BroadcastReceiver hwRcv = null;
+
+    @PluginMethod
+    public void setHandheld(PluginCall call) {
+        final boolean on = Boolean.TRUE.equals(call.getBoolean("on", true));
+        main.post(() -> { handheld(on); zebraProfile(on); call.resolve(); });
+    }
+
+    private void handheld(boolean on) {
+        Context ctx = getContext();
+        if (on && hwRcv == null) {
+            hwRcv = new BroadcastReceiver() {
+                @Override public void onReceive(Context c, Intent i) {
+                    String code = null;
+                    for (String k : new String[] { "com.symbol.datawedge.data_string", "data", "barcode_string", "barcodeData", "scannerdata" }) {
+                        Object v = i.getExtras() == null ? null : i.getExtras().get(k);
+                        if (v instanceof String && !((String) v).trim().isEmpty()) { code = ((String) v).trim(); break; }
+                    }
+                    if (code != null) notifyListeners("hwScan", new JSObject().put("code", code));
+                }
+            };
+            // (Zebra sends it with the default category, Honeywell with none: an intent with no category always matches)
+            IntentFilter f = new IntentFilter(HW_ACTION); f.addCategory(Intent.CATEGORY_DEFAULT);
+            ContextCompat.registerReceiver(ctx, hwRcv, f, ContextCompat.RECEIVER_EXPORTED);
+        }
+        if (!on && hwRcv != null) { try { ctx.unregisterReceiver(hwRcv); } catch (Exception e) {} hwRcv = null; }
+        hwOn = on;
+        honeywell(on);
+    }
+
+    private void honeywell(boolean claim) {
+        try {
+            Intent i = new Intent(claim ? "com.honeywell.aidc.action.ACTION_CLAIM_SCANNER" : "com.honeywell.aidc.action.ACTION_RELEASE_SCANNER")
+                .setPackage("com.intermec.datacollectionservice");
+            if (claim) {
+                Bundle props = new Bundle();
+                props.putBoolean("DPR_DATA_INTENT", true);
+                props.putString("DPR_DATA_INTENT_ACTION", HW_ACTION);
+                i.putExtra("com.honeywell.aidc.extra.EXTRA_SCANNER", "dcs.scanner.imager")
+                 .putExtra("com.honeywell.aidc.extra.EXTRA_PROFILE", "DEFAULT")
+                 .putExtra("com.honeywell.aidc.extra.EXTRA_PROPERTIES", props);
+            }
+            getContext().sendBroadcast(i);
+        } catch (Exception e) {}
+    }
+
+    private void zebraProfile(boolean on) {
+        try {
+            Bundle profile = new Bundle();
+            profile.putString("PROFILE_NAME", "LPN Pallet Log");
+            profile.putString("PROFILE_ENABLED", "true");
+            profile.putString("CONFIG_MODE", "CREATE_IF_NOT_EXIST");
+            Bundle app = new Bundle();
+            app.putString("PACKAGE_NAME", getContext().getPackageName());
+            app.putStringArray("ACTIVITY_LIST", new String[] { "*" });
+            profile.putParcelableArray("APP_LIST", new Bundle[] { app });
+            ArrayList<Bundle> plugins = new ArrayList<>();
+            Bundle bc = new Bundle(); bc.putString("PLUGIN_NAME", "BARCODE"); bc.putString("RESET_CONFIG", "false");
+            Bundle bcp = new Bundle(); bcp.putString("scanner_selection", "auto"); bcp.putString("scanner_input_enabled", "true"); bc.putBundle("PARAM_LIST", bcp); plugins.add(bc);
+            Bundle in = new Bundle(); in.putString("PLUGIN_NAME", "INTENT"); in.putString("RESET_CONFIG", "true");
+            Bundle inp = new Bundle(); inp.putString("intent_output_enabled", on ? "true" : "false"); inp.putString("intent_action", HW_ACTION);
+            inp.putString("intent_category", Intent.CATEGORY_DEFAULT); inp.putString("intent_delivery", "2"); in.putBundle("PARAM_LIST", inp); plugins.add(in);
+            Bundle ks = new Bundle(); ks.putString("PLUGIN_NAME", "KEYSTROKE"); ks.putString("RESET_CONFIG", "true");
+            Bundle ksp = new Bundle(); ksp.putString("keystroke_output_enabled", on ? "false" : "true"); ks.putBundle("PARAM_LIST", ksp); plugins.add(ks);
+            profile.putParcelableArrayList("PLUGIN_CONFIG", plugins);
+            getContext().sendBroadcast(new Intent("com.symbol.datawedge.api.ACTION").putExtra("com.symbol.datawedge.api.SET_CONFIG", profile));
+        } catch (Exception e) {}
+    }
+
+    @Override
+    protected void handleOnPause() {
+        if (hwOn) honeywell(false); // let other apps use the Honeywell scanner while this one is in the background
+        super.handleOnPause();
+    }
+
+    /* ---- Manifest photos read by ML Kit's text reader on the phone (no internet): the words with their boxes, in the
+       photo's own pixels, so the page's photo reading (close-ups, tidy-up, prefix list) works as with its own reader. */
+    private TextRecognizer textReader = null;
+
+    @PluginMethod
+    public void readText(PluginCall call) {
+        String data = call.getString("data");
+        if (data == null) { call.reject("no image"); return; }
+        Bitmap bmp;
+        try { byte[] bytes = Base64.decode(data, Base64.DEFAULT); bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.length); }
+        catch (Exception e) { call.reject("image couldn’t be read"); return; }
+        if (bmp == null) { call.reject("image couldn’t be read"); return; }
+        if (textReader == null) textReader = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+        final Bitmap b = bmp;
+        textReader.process(InputImage.fromBitmap(b, 0))
+            .addOnSuccessListener(t -> {
+                JSArray words = new JSArray();
+                for (Text.TextBlock bl : t.getTextBlocks()) for (Text.Line ln : bl.getLines()) for (Text.Element el : ln.getElements()) {
+                    Rect r = el.getBoundingBox(); if (r == null) continue;
+                    words.put(new JSObject().put("text", el.getText()).put("x0", r.left).put("y0", r.top).put("x1", r.right).put("y1", r.bottom)
+                        .put("line", ln.getText()));
+                }
+                b.recycle();
+                call.resolve(new JSObject().put("text", t.getText()).put("words", words));
+            })
+            .addOnFailureListener(e -> { b.recycle(); call.reject(e.getMessage() == null ? "text reader failed" : e.getMessage()); });
+    }
+
+    /* ---- A folder chosen once (for example a synced OneDrive or Google Drive folder): every export also goes there. */
+    @PluginMethod
+    public void pickFolder(PluginCall call) {
+        Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        startActivityForResult(call, i, "pickFolderDone");
+    }
+
+    @ActivityCallback
+    private void pickFolderDone(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+        if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null || result.getData().getData() == null) { call.resolve(new JSObject().put("picked", false)); return; }
+        Uri tree = result.getData().getData();
+        try {
+            getContext().getContentResolver().takePersistableUriPermission(tree, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            call.resolve(new JSObject().put("picked", true).put("uri", tree.toString()).put("name", treeName(tree)));
+        } catch (Exception e) { call.reject(e.getMessage() == null ? "That folder can’t be used." : e.getMessage()); }
+    }
+
+    private String treeName(Uri tree) {
+        try {
+            Uri doc = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree));
+            try (Cursor c = getContext().getContentResolver().query(doc, new String[] { DocumentsContract.Document.COLUMN_DISPLAY_NAME }, null, null, null)) {
+                if (c != null && c.moveToFirst()) return c.getString(0);
+            }
+        } catch (Exception e) {}
+        return "the chosen folder";
+    }
+
+    @PluginMethod
+    public void saveToFolder(PluginCall call) {
+        String uri = call.getString("uri"), name = call.getString("name", "file"), data = call.getString("data"), mime = call.getString("mime", "application/octet-stream");
+        if (uri == null || data == null) { call.reject("no folder"); return; }
+        try {
+            Uri tree = Uri.parse(uri);
+            String treeId = DocumentsContract.getTreeDocumentId(tree);
+            Uri parent = DocumentsContract.buildDocumentUriUsingTree(tree, treeId);
+            // The same name again (an export made twice) replaces the older copy instead of adding "(1)".
+            Uri target = null;
+            try (Cursor c = getContext().getContentResolver().query(DocumentsContract.buildChildDocumentsUriUsingTree(tree, treeId),
+                    new String[] { DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME }, null, null, null)) {
+                while (c != null && c.moveToNext()) if (name.equals(c.getString(1))) { target = DocumentsContract.buildDocumentUriUsingTree(tree, c.getString(0)); break; }
+            }
+            if (target == null) target = DocumentsContract.createDocument(getContext().getContentResolver(), parent, mime, name);
+            if (target == null) { call.reject("The file couldn’t be made in that folder."); return; }
+            try (OutputStream os = getContext().getContentResolver().openOutputStream(target, "wt")) { os.write(Base64.decode(data, Base64.DEFAULT)); }
+            call.resolve(new JSObject().put("saved", true).put("folder", treeName(tree)));
+        } catch (SecurityException e) { call.reject("This app can’t reach that folder any more. Choose it again in Settings."); }
+        catch (Exception e) { call.reject(e.getMessage() == null ? "The file couldn’t be saved there." : e.getMessage()); }
     }
 
     /* The next Back within ms closes the app, with Android's own animation. */
@@ -267,6 +435,7 @@ public class LpnNativePlugin extends Plugin {
     protected void handleOnResume() {
         super.handleOnResume();
         if (backCb != null) backCb.setEnabled(true);
+        if (hwOn) honeywell(true);
     }
 
     @PluginMethod

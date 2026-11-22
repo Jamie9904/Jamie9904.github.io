@@ -35,6 +35,17 @@ set_of() {
   act -a "$PKG.MANIFEST"; shot "$s-8-manifest" 3   # the Manifest check on its own page
   back; shot "$s-9-menu" 2                        # Back from a page goes to the start menu
 }
+# The phone's own text reader on the user's manifest photos (only the test copy has them): what it got right, missing
+# and extra, from the app's log lines. Run once, before the screenshots.
+ocr_test() {
+  adb shell am force-stop "$PKG"; act; sleep 8
+  adb logcat -c
+  act -a "$PKG.SHOW" --es what ocrtest
+  i=0; while [ $i -lt 120 ]; do sleep 3; i=$((i+1)); adb logcat -d | grep -q 'OCRTEST {"done"' && break; done
+  adb logcat -d | grep -o 'OCRTEST {.*}' | sed 's/^OCRTEST //' > "$OUT/ocr-phone-reader.txt"
+  echo "Phone text reader on the manifest photos:"; cat "$OUT/ocr-phone-reader.txt"
+}
+ocr_test
 set_of normal 11
 adb shell wm size 720x1440; adb shell wm density 320; sleep 3
 set_of small 22

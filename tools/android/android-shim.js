@@ -57,10 +57,18 @@
     try { await P().Share.share({ title: name, files: [await toCache(blob, name)], dialogTitle: "Send or save " + name }); }
     catch (e) { if (!cancelled(e)) throw e; }
   };
+  /* The folder chosen in Settings (for example a synced OneDrive or Google Drive folder): every export also goes there. */
+  const dirGet = () => { try { const v = JSON.parse(localStorage.getItem("lpnapkdir") || "null"); return v && v.uri ? v : null; } catch (e) { return null; } };
+  async function toFolder(blob, name) {
+    const d = dirGet(); if (!d || !N() || typeof N().saveToFolder !== "function") return "";
+    const ext = (String(name).match(/\.([a-z0-9]+)$/i) || [])[1] || "";
+    try { const r = await N().saveToFolder({ uri: d.uri, name: clean(name), data: await b64(blob), mime: blob.type || MIME[ext.toLowerCase()] || "application/octet-stream" }); return r && r.saved ? " and in " + (r.folder || d.name) : ""; }
+    catch (e) { toast("Couldn’t save " + name + " in " + d.name + ": " + ((e && (e.message || e.errorMessage)) || e)); return ""; }
+  }
   window.LPN_APK_SAVE = async function (blob, name) {
-    const kept = await keep(blob, name);
-    say(kept ? "Saved " + name + " in Documents › LPN Pallet Log." : "");
-    if (kept) { savedBar(blob, name); return; }
+    const kept = await keep(blob, name), also = await toFolder(blob, name);
+    say(kept ? "Saved " + name + " in Documents › LPN Pallet Log" + also + "." : also ? "Saved " + name + also.replace(/^ and/, "") + "." : "");
+    if (kept) { savedBar(blob, name, also); return; }
     // Couldn't keep a copy (older Android): straight to the share menu, to save or send it.
     try { await shareFile(blob, name); } catch (e) { say("Couldn’t save " + name + ": " + ((e && e.message) || e)); }
   };
@@ -73,10 +81,10 @@
   }
   /* After saving: a bar at the bottom with Open and Share, so the file needn't be looked for. */
   let barT = 0;
-  function savedBar(blob, name) {
+  function savedBar(blob, name, also) {
     let b = document.getElementById("apkSaved"); if (b) b.remove();
     b = document.createElement("div"); b.id = "apkSaved"; b.className = "apksaved"; b.setAttribute("role", "status");
-    const t = document.createElement("p"); t.textContent = "Saved " + name + " in Documents › LPN Pallet Log."; b.appendChild(t);
+    const t = document.createElement("p"); t.textContent = "Saved " + name + " in Documents › LPN Pallet Log" + (also || "") + "."; b.appendChild(t);
     const row = document.createElement("div"); row.className = "row"; b.appendChild(row);
     const done = () => { clearTimeout(barT); b.remove(); };
     const btn = (label, fn, cls) => { const x = document.createElement("button"); x.type = "button"; x.textContent = label; if (cls) x.className = cls; x.onclick = fn; row.appendChild(x); return x; };
@@ -277,6 +285,7 @@
     if (r.action === "show") { // the screenshot check on GitHub (tools/android/shots.sh)
       if (r.what === "settings") { if (typeof closeHelp === "function") closeHelp(); openHelp("settings", "Settings"); }
       else if (r.what === "carry") carryOn();
+      else if (r.what === "ocrtest") ocrTest();
       else if (r.what === "big-on" || r.what === "big-off") { try { localStorage.setItem("lpnapkbig", r.what === "big-on" ? "on" : "off"); } catch (e) {} applyBig(); }
       return;
     }
@@ -377,13 +386,23 @@
         + (has("palletLog") ? '<label class="chk"><input type="checkbox" id="apkSpeak"><span>Say the count out loud after each pallet (and “already logged” or “check” for a warning)</span></label>' : "")
         + (has("palletLog") ? '<label class="chk"><input type="checkbox" id="apkBig"><span>Bigger buttons, for gloves (Add, Scan, the pallet types, Undo, and in the camera scanner)</span></label>' : "")
         + '<div class="row"><button type="button" id="apkColours" hidden>Use the phone’s colours</button></div>' 
+        + '<label class="chk"><input type="checkbox" id="apkHand"><span>Warehouse handheld scanner (Zebra or Honeywell): scans come straight into the app, so they can’t land in the wrong box. Untick if your scanner should type like a keyboard.</span></label>'
+        + (has("manifestPhotos") ? '<label class="chk"><input type="checkbox" id="apkOcr"><span>Read manifest photos with the phone’s own text reader (faster). Untick to use the one inside the app.</span></label>' : "")
+        + '<p class="note" id="apkDirNote"></p><div class="row"><button type="button" id="apkDirPick">Choose a folder for exports</button><button type="button" id="apkDirOff" hidden>Stop saving there</button></div>'
         + '<div class="row"><button type="button" id="apkFilesSet">Exported files</button></div>';
       $("panelBody").prepend(box);
       $("apkVer").textContent = (window.LPN_APK_VER || "Android app") + (window.LPN_APK_STORE ? " · Data on this phone: " + mb(S.size()) : "");
       if ($("apkVol")) { $("apkVol").checked = volOn(); $("apkVol").onchange = () => { try { localStorage.setItem("lpnapkvol", $("apkVol").checked ? "on" : "off"); } catch (e) {} syncVol(); }; }
       $("apkFilesSet").onclick = () => showFiles();
       const sw = (id, key, def) => { const c = $(id); if (!c) return; c.checked = pref(key, def); c.onchange = () => { try { localStorage.setItem(key, c.checked ? "on" : "off"); } catch (e) {} }; };
-      sw("apkCam", "lpnapkcamscan", true); sw("apkSpeak", "lpnapkspeak", false); sw("apkBig", "lpnapkbig", false);
+      sw("apkCam", "lpnapkcamscan", true); sw("apkSpeak", "lpnapkspeak", false); sw("apkBig", "lpnapkbig", false); sw("apkHand", "lpnapkhand", true); sw("apkOcr", "lpnapkocr", OCR_DEFAULT);
+      if ($("apkHand")) $("apkHand").addEventListener("change", syncHand);
+      const dirShow = () => { const d = dirGet(), n = $("apkDirNote"); if (!n) return;
+        n.textContent = "Exports are saved in Documents › LPN Pallet Log" + (d ? " and in " + d.name + "." : ". Choose a folder (for example a OneDrive or Google Drive folder on this phone) to put a copy of every export there too.");
+        $("apkDirOff").hidden = !d; $("apkDirPick").textContent = d ? "Choose another folder" : "Choose a folder for exports"; };
+      dirShow();
+      $("apkDirPick").onclick = async () => { try { const r = await N().pickFolder(); if (r && r.picked) { localStorage.setItem("lpnapkdir", JSON.stringify({ uri: r.uri, name: r.name })); dirShow(); toast("Every export will also be saved in " + r.name + "."); } } catch (e) { toast((e && e.message) || "That folder can’t be used."); } };
+      $("apkDirOff").onclick = () => { try { localStorage.removeItem("lpnapkdir"); } catch (e) {} dirShow(); toast("Exports are saved in Documents › LPN Pallet Log only."); };
       if ($("apkBig")) $("apkBig").addEventListener("change", applyBig);
       if (N()) N().phoneColours().then(c => { const b = $("apkColours"); if (!b || !c || !c.available) return; b.hidden = false;
         b.onclick = () => { theme = { bg: c.bg, ac: c.ac }; applyTheme(); saveTheme(); closeHelp(); openHelp("settings", "Settings"); toast("Using your phone’s colours. Reset to default colours (in Settings) goes back."); }; }).catch(() => {});
@@ -480,6 +499,73 @@
   bigCss.textContent = "html.apkbig #add,html.apkbig #scanBtn,html.apkbig #undoLast,html.apkbig #tyb button,html.apkbig #btnrow button,html.apkbig #noLpn{min-height:60px;font-size:1.15rem}"
     + "html.apkbig #fsdu{width:30px;height:30px}html.apkbig #tyb button{min-width:64px}";
   document.head.appendChild(bigCss);
+
+  /* Warehouse handheld scanners (Zebra, Honeywell): each scan arrives from Android as one whole code, so it goes where
+     it belongs whatever has focus: an open pallet edit closes first, a box someone is filling in (manifest numbers,
+     search, the scanner test) gets it, the Manifest check's page adds it to the manifest numbers, and otherwise it is
+     logged as the next pallet, with the usual checks. */
+  function handScan(code) {
+    code = String(code || "").trim(); if (!code) return;
+    const a = document.activeElement;
+    if (a && a.closest && a.closest(".dmgrow")) a.blur();
+    else if (a && /^(INPUT|TEXTAREA)$/.test(a.tagName) && a.id !== "lpn" && !/^(checkbox|radio|button|submit|file|date|color|range)$/i.test(a.type || "")) {
+      if (a.tagName === "TEXTAREA") { const v = a.value; a.value = v + (v && !/\n$/.test(v) ? "\n" : "") + code + "\n"; a.dispatchEvent(new Event("input", { bubbles: true })); }
+      else { a.value = code; a.dispatchEvent(new Event("input", { bubbles: true })); a.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })); }
+      return;
+    }
+    if (openPanel()) { toast("Close this to log scans."); return; }
+    if (mode === "cmp" || !has("palletLog")) {
+      if (!has("manifestCheck") || typeof addNums !== "function") return;
+      const r = addNums([code], "cmpNums"); $("cmpNums").dispatchEvent(new Event("input", { bubbles: true }));
+      toast(r.added ? "Added " + code + " to the manifest numbers." : code + " is already in the manifest numbers."); return;
+    }
+    if (mode && mode !== "log") setMode("log");
+    const l = $("lpn"); if (!l || typeof add !== "function") return;
+    l.value = code; add();
+  }
+  window.LPN_APK_HANDSCAN = handScan;
+  function syncHand() { if (N() && typeof N().setHandheld === "function") N().setHandheld({ on: pref("lpnapkhand", true) }).catch(() => {}); }
+  if (N()) { try { N().addListener("hwScan", e => handScan(e && e.code)); } catch (e) {} window.addEventListener("load", syncHand); }
+
+  /* Manifest photos read by the phone's own text reader (ML Kit, no internet) instead of the one inside the app: it
+     stands in for that reader's worker, so the app's photo reading (close-ups, tidy-up, prefix list) is the same. If it
+     fails, the app's own reader takes over. Settings › Android app can switch back to the app's own reader. */
+  const OCR_DEFAULT = true;
+  const upper = t => String(t || "").toUpperCase().replace(/[^A-Z0-9:\s]/g, "");
+  window.LPN_OCR = () => {
+    if (!N() || typeof N().readText !== "function" || !pref("lpnapkocr", OCR_DEFAULT)) return null;
+    let tw = null, params = {};
+    const own = async () => { if (!tw) { tw = await Tesseract.createWorker("eng", 1, window.LPN_TESS); await tw.setParameters(params); } return tw; };
+    return Promise.resolve({
+      setParameters: async p => { params = Object.assign({}, params, p); if (tw) await tw.setParameters(p); },
+      terminate: async () => { if (tw) { const t = tw; tw = null; await t.terminate(); } },
+      recognize: async img => {
+        if (tw) return tw.recognize(img);
+        try {
+          const url = img.toDataURL("image/jpeg", 0.95), r = await N().readText({ data: url.split(",")[1] });
+          const words = (r.words || []).map(w => ({ text: upper(w.text).replace(/\s+/g, ""), bbox: { x0: w.x0, y0: w.y0, x1: w.x1, y1: w.y1 } })).filter(w => w.text);
+          return { data: { text: upper(r.text), words } };
+        } catch (e) { typeof diag === "function" && diag("ocr", "The phone's text reader failed (" + ((e && e.message) || e) + "), so the app's own reader was used."); return (await own()).recognize(img); }
+      }
+    });
+  };
+  /* The photo check on GitHub's virtual phone (tools/android/shots.sh): reads the manifest photos put in a test copy
+     of the app and logs what was right, missing and extra, for the workflow to read. */
+  async function ocrTest() {
+    const log = o => console.log("OCRTEST " + JSON.stringify(o));
+    const tot = { done: true, engine: window.LPN_OCR && window.LPN_OCR() ? "phone" : "app", right: 0, want: 0, missing: [], extra: [], ms: 0 };
+    try {
+      const exp = await (await fetch("ocrtest/expected.json")).json();
+      for (const name of Object.keys(exp).filter(k => !k.startsWith("_"))) {
+        const want = exp[name], blob = await (await fetch("ocrtest/" + name)).blob(), t0 = Date.now();
+        let got = [];
+        try { got = [...await readPhoto(new File([blob], name, { type: "image/jpeg" }))]; } catch (e) { log({ name, error: String((e && e.message) || e) }); }
+        const g = new Set(got), w = new Set(want), o = { name, ms: Date.now() - t0, right: want.filter(x => g.has(x)).length, of: want.length, missing: want.filter(x => !g.has(x)), extra: got.filter(x => !w.has(x)) };
+        tot.right += o.right; tot.want += want.length; tot.missing.push(...o.missing); tot.extra.push(...o.extra); tot.ms += o.ms; log(o);
+      }
+    } catch (e) { tot.error = String((e && e.message) || e); }
+    log(tot);
+  }
 
   /* Start menu: the app opens on a menu to choose Log pallets or Manifest check, and each is its own page instead of
      one long page. "‹ Menu" at the top, or Back, goes back to the menu. Only while both are switched on and Simple view

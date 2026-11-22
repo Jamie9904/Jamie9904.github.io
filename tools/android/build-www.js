@@ -77,7 +77,7 @@ edit("scan.js", '"Camera access was blocked. Allow camera permission for this si
 // No service worker.
 edit("panels.js", 'if("serviceWorker" in navigator){', 'if(false&&"serviceWorker" in navigator){');
 // The photo reader's worker, engine and language data come from lib/.
-edit("compare.js", 'Tesseract.createWorker("eng")', 'Tesseract.createWorker("eng",1,window.LPN_TESS)');
+edit("compare.js", 'Tesseract.createWorker("eng")', '((window.LPN_OCR&&window.LPN_OCR())||Tesseract.createWorker("eng",1,window.LPN_TESS))'); // the phone's own text reader when it's on (android.js)
 // The page's own way of printing (a hidden frame) doesn't work inside the app: skip it, so a failed print saves and shares.
 edit("compare.js", "fr.onload=()=>{try{fr.contentWindow.focus();", "fr.onload=()=>{try{if(window.LPN_APK)throw 0;fr.contentWindow.focus();");
 // Print opens Android's own print screen first (android.js); if that can't, the PDF is saved and shared as above.

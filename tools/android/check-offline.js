@@ -58,6 +58,10 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
         battery: async () => window.__batt || { level: 80, charging: false },
         phoneColours: async () => ({ available: true, bg: "#1a1c1e", ac: "#9ecaff" }),
         scanners: async () => ({ names: [] }),
+        setHandheld: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["hand", o.on]); },
+        readText: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["readText", o.data.length > 100]); if (!window.__ocrStub) throw new Error("no reader here"); return window.__ocrStub(o); },
+        pickFolder: async () => ({ picked: true, uri: "content://tree/drive", name: "Drive" }),
+        saveToFolder: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["folder", o.uri, o.name, o.mime]); return { saved: true, folder: "Drive" }; },
         vibrate: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["vib", o.pattern.join(",")]); },
         takePending: async () => { const N = window.Capacitor.Plugins.LpnNative, r = N.pending || {}; N.pending = null; return r; },
         addListener: (ev, fn) => { window.Capacitor.Plugins.LpnNative.listeners[ev] = fn; return { remove() {} }; } },
@@ -383,11 +387,11 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("the Continue shortcut says how many pallets the delivery has, and goes when the log is cleared", s.two.join() === "Continue: 2 pallets" && s.none.join("|") === "Continue: 2 pallets|", s);
   // From the Manifest check scrolled to the top (where the entry bar slides away on a phone).
   await page.evaluate(async () => { const b = document.getElementById("cmpBody"); if (b.hidden) document.getElementById("cmpToggle").click(); document.getElementById("cmpCard").scrollIntoView({ block: "start" }); window.dispatchEvent(new Event("scroll")); await new Promise(r => setTimeout(r, 200)); });
-  const slid = await page.evaluate(() => document.body.classList.contains("cmpfocus"));
+  const slid = await page.evaluate(() => { LPN_APK_MODE("cmp"); return LPN_APK_MODE() === "cmp"; }); // the Manifest check's own page
   await open({ action: "continue" });
-  s = await page.evaluate(() => { const a = document.activeElement, l = document.getElementById("lpn"); const out = { f: a ? (a.id || a.tagName + "." + a.className + ":" + (a.textContent || "").slice(0, 40)) : "", mode: l.getAttribute("inputmode") };
+  s = await page.evaluate(() => { const a = document.activeElement, l = document.getElementById("lpn"); const out = { f: a ? (a.id || a.tagName + "." + a.className + ":" + (a.textContent || "").slice(0, 40)) : "", mode: l.getAttribute("inputmode"), page: LPN_APK_MODE() };
     l.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true })); out.after = l.getAttribute("inputmode"); return out; });
-  check("the Continue shortcut goes back to the LPN box (without the keyboard until it's tapped), even from the Manifest check where the entry bar had slid away", s.f === "lpn" && s.mode === "none" && s.after !== "none" && slid, { s, slid });
+  check("the Continue shortcut goes back to the LPN box (without the keyboard until it's tapped), even from the Manifest check's page", s.f === "lpn" && s.mode === "none" && s.after !== "none" && slid && s.page === "log", { s, slid });
   // Android-style controls.
   s = await page.evaluate(async () => { openHelp("settings", "Settings"); await new Promise(r => setTimeout(r, 100)); const c = document.querySelector("#panelBody label.chk > input[type=checkbox]"), cs = getComputedStyle(c);
     const out = { appearance: cs.appearance, w: cs.width, role: c.type }; closeHelp();
@@ -396,6 +400,42 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     const q = document.querySelector(".helpq"), before = getComputedStyle(q).position; q.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true })); out.helpq = [before, getComputedStyle(q).position];
     return out; });
   check("Android-style switches in Settings (still checkboxes) and a ripple where a button is pressed, without changing buttons' text or position", s.appearance === "none" && s.w === "44px" && s.role === "checkbox" && s.ripple && s.text === "Saved deliveries" && s.helpq[0] === s.helpq[1], s);
+
+  // Warehouse handheld scanners: each scan goes where it belongs.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), N = window.Capacitor.Plugins.LpnNative, out = {};
+    out.on = N.calls.some(c => c[0] === "hand" && c[1] === true) || (await (async () => { N.calls = []; window.dispatchEvent(new Event("load")); await wait(50); return N.calls.some(c => c[0] === "hand" && c[1] === true); })());
+    document.querySelectorAll(".apkask").forEach(a => a.remove()); rows = []; save(); render(); LPN_APK_MODE("menu");
+    N.listeners.hwScan({ code: "VLT004040703" }); await wait(150); out.log = LPN_APK_MODE() + ":" + rows.map(r => r.lpn).join();
+    document.querySelector("#body .lpnedit").click(); await wait(100); const d = document.querySelector(".descline input"); if (d) d.focus();
+    N.listeners.hwScan({ code: "VLT004040711" }); await wait(150); out.fromEdit = !document.querySelector(".dmgrow") && rows.map(r => r.lpn).join();
+    const f = document.getElementById("flt"); f.focus(); N.listeners.hwScan({ code: "VLT004040703" }); await wait(100); out.search = f.value + ":" + rows.length; f.value = ""; f.dispatchEvent(new Event("input", { bubbles: true })); f.blur();
+    LPN_APK_MODE("cmp"); document.getElementById("cmpNums").value = ""; N.listeners.hwScan({ code: "QUB001899182" }); await wait(100); out.cmp = document.getElementById("cmpNums").value.trim() + ":" + rows.length;
+    document.getElementById("cmpNums").value = ""; LPN_APK_MODE("log"); rows = []; save(); render(); return out; });
+  check("a handheld scanner is set up on opening, and a scan from the menu is logged as the next pallet on the log's page", s.on && s.log === "log:VLT004040703", s);
+  check("a handheld scan closes an open pallet edit and is logged, goes into a box being filled in, and on the Manifest check's page into the manifest numbers", s.fromEdit === "VLT004040703,VLT004040711" && s.search === "VLT004040703:2" && s.cmp === "QUB001899182:2", s);
+  // The phone's own text reader for manifest photos: its words go through the app's photo reading; if it fails, the
+  // app's own reader takes over.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative; N.calls = [];
+    window.__ocrStub = () => ({ text: "Manifest\nLPN: vlt004040265 x", words: [{ text: "LPN:", x0: 10, y0: 10, x1: 60, y1: 30 }, { text: "vlt004040265", x0: 70, y0: 10, x1: 250, y1: 30 }] });
+    const c = document.createElement("canvas"); c.width = 400; c.height = 120; const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, 400, 120); x.fillStyle = "#000"; x.font = "20px sans-serif"; x.fillText("LPN: VLT004040265", 10, 30);
+    const blob = await new Promise(r => c.toBlob(r, "image/png")), out = {};
+    try { out.found = [...await readPhoto(new File([blob], "m.png", { type: "image/png" }))]; } catch (e) { out.err = String(e.message || e); }
+    out.reads = N.calls.filter(k => k[0] === "readText").length;
+    window.__ocrStub = null; const w = await LPN_OCR(); await w.setParameters({ tessedit_pageseg_mode: "11" });
+    try { const r = await w.recognize(c); out.fallback = typeof (r && r.data && r.data.text) === "string"; } catch (e) { out.fallbackErr = String(e.message || e); } await w.terminate();
+    try { localStorage.setItem("lpnapkocr", "off"); out.off = LPN_OCR() === null; } finally { localStorage.removeItem("lpnapkocr"); }
+    return out; });
+  check("manifest photos are read by the phone's own text reader (the page and a close-up of each number), through the app's photo reading", JSON.stringify(s.found) === '["VLT004040265"]' && s.reads === 2, s);
+  check("if the phone's text reader fails the app's own reader takes over, and Settings can switch back to the app's own reader", s.fallback && s.off, s);
+  // A folder chosen for exports gets a copy of every export.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); N.calls = [];
+    openHelp("settings", "Settings"); await wait(150); const before = document.getElementById("apkDirNote").textContent; document.getElementById("apkDirPick").click(); await wait(100);
+    const after = document.getElementById("apkDirNote").textContent; closeHelp();
+    await LPN_APK_SAVE(new Blob(["%PDF-1.3"], { type: "application/pdf" }), "LPN log 22-11-2026.pdf"); await wait(100);
+    const bar = (document.getElementById("apkSaved") || {}).textContent || "", folder = N.calls.filter(c => c[0] === "folder");
+    const sb = document.getElementById("apkSaved"); if (sb) sb.remove(); localStorage.removeItem("lpnapkdir"); return { before, after, bar, folder }; });
+  check("Settings › Android app can choose a folder (such as a synced Drive folder), and every export is then saved there too", /Choose a folder/.test(s.before) && / and in Drive\.$/.test(s.after) && /in Documents › LPN Pallet Log and in Drive\./.test(s.bar)
+    && JSON.stringify(s.folder) === '[["folder","content://tree/drive","LPN log 22-11-2026.pdf","application/pdf"]]', s);
 
   // Photo reading with only the files inside the app.
   const photos = load(OCR).filter(p => p.want && p.want.length);

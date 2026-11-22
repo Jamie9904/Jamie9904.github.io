@@ -1,6 +1,9 @@
 {
   "_about": "Shown once on each phone after it installs a new Android update (not on a first install). Replace the list with what this update changes, in plain words, each time an Android update is approved and built.",
   "items": [
-    "The app now opens on a start menu: choose Log pallets or Manifest check. Each has its own page instead of one long page; tap ‹ Menu at the top, or press Back, to go back to the menu. With a delivery in progress, the menu shows how many pallets are logged and has a Carry on scanning button."
+    "The app now opens on a start menu: choose Log pallets or Manifest check. Each has its own page instead of one long page; tap ‹ Menu at the top, or press Back, to go back to the menu. With a delivery in progress, the menu shows how many pallets are logged and has a Carry on scanning button.",
+    "Zebra and Honeywell handheld scanners: scans now come straight into the app instead of being typed, so a scan can’t land in the wrong box. On the log it’s logged as the next pallet; on the Manifest check it’s added to the manifest numbers. Untick it in Settings › Android app if your scanner should type like a keyboard.",
+    "Manifest photos are read by the phone’s own text reader, which is much faster. If it ever fails, the app’s own reader takes over, and Settings › Android app can switch back to it.",
+    "Choose a folder for exports in Settings › Android app (for example a OneDrive or Google Drive folder on the phone): every export is then saved there too, as well as in Documents › LPN Pallet Log."
   ]
 }
