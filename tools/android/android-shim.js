@@ -839,6 +839,43 @@
     if (!seen && fresh && N()) intro(); else if (!seen) { try { localStorage.setItem("lpnapkintro", "seen"); } catch (e) {} }
   });
 
+  /* ---- Finishing touches: a "Saved" tick after each change, a friendly screen if something goes wrong, the app's
+     status messages at the bottom when their own line is out of sight, and Next on the keyboard in Delivery. */
+  const fin = document.createElement("style");
+  fin.textContent = "#apkSavedTick{margin-left:auto;color:#3ccf6e;font-weight:700;font-size:.9rem;opacity:0;transition:opacity .3s;white-space:nowrap}"
+    + "#apkSavedTick.on{opacity:1;transition:none}#apkBar #apkBarHelp{margin-left:10px}"
+    + "@media (prefers-reduced-motion:reduce){#apkSavedTick{transition:none}}";
+  document.head.appendChild(fin);
+  let tickT = 0;
+  function tick() {
+    const bar = $("apkBar"); if (!bar || getComputedStyle(bar).display === "none") return;
+    let t = $("apkSavedTick"); if (!t) { t = document.createElement("span"); t.id = "apkSavedTick"; t.setAttribute("aria-hidden", "true"); t.textContent = "✓ Saved"; const h = $("apkBarHelp"); bar.insertBefore(t, h || null); }
+    clearTimeout(tickT); t.classList.add("on"); tickT = setTimeout(() => t.classList.remove("on"), 1200);
+  }
+  window.LPN_APK_TICK = tick;
+  // Something unexpected went wrong: say so plainly (the log is already saved), with Try again and a problem report.
+  let oopsAt = 0;
+  function oops(what) {
+    if (Date.now() - oopsAt < 30000 || document.querySelector(".apkask") || $("apkIntro")) return; oopsAt = Date.now();
+    try { if (typeof diag === "function") diag("error", String(what).slice(0, 300)); } catch (e) {}
+    ask("Something went wrong. Your log is safe on this phone.", [["Try again", () => location.reload()], ["Save problem report", () => { openHelp("settings", "Settings"); setTimeout(() => { const b = $("diagDl"); if (b) { b.scrollIntoView({ block: "center" }); b.click(); } }, 150); }]]);
+  }
+  window.LPN_APK_OOPS = oops;
+  window.addEventListener("error", e => { if (e && e.error && !(e.target && e.target !== window && e.target.tagName)) oops((e.error && e.error.stack) || e.message); });
+  window.addEventListener("unhandledrejection", e => { const r = e && e.reason; if (r && r instanceof Error && !/cancel|abort/i.test(r.message || "")) oops(r.stack || r.message); });
+  document.addEventListener("DOMContentLoaded", () => {
+    // The "Saved" tick after each change to the log or the delivery.
+    if (typeof save === "function") { const real = save; save = function () { const r = real.apply(this, arguments); tick(); return r; }; }
+    // The status line under the entry bar, when it can't be seen (on another page or scrolled away), also shows at the bottom.
+    const m = $("msg"); if (m) new MutationObserver(() => { const t = (m.textContent || "").trim(); if (!t) return; const r = m.getBoundingClientRect();
+      if (!m.getClientRects().length || r.bottom < 0 || r.top > innerHeight) toast(t); }).observe(m, { childList: true, characterData: true, subtree: true });
+    // Delivery: Next on the keyboard goes to the next box; names start with a capital.
+    const order = ["recv", "expect", "trailer", "sealIn", "sealOut", "notes"].map($).filter(Boolean);
+    const r = $("recv"); if (r) r.setAttribute("autocapitalize", "words");
+    order.forEach((el, i) => { el.setAttribute("enterkeyhint", i < order.length - 1 ? "next" : "done");
+      if (el.tagName === "INPUT") el.addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); const nx = order[i + 1]; if (nx) nx.focus(); else el.blur(); } }); });
+  });
+
   /* Carry on: opening the app with a delivery in progress offers to go straight back to scanning. */
   function carryOn() {
     if (!N() || !has("palletLog") || !has("liveScan") || !rows.length || window.LPN_APK_NATIVESCAN || (typeof scanning !== "undefined" && scanning) || document.querySelector(".apkask") || ($("panel") && !$("panel").hidden)) return;

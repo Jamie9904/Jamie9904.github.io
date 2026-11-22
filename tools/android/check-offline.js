@@ -127,6 +127,18 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     msg.textContent = ""; LPN_APK_MODE("log"); return out; });
   check("reading photos shows a progress bar (photo 2 of 4) with Cancel, which skips the photos not started yet", s.shown === "Reading photo 2 of 4:38%" && /Cancel/.test(s.stopped) && s.gone && !/Cancel/.test(s.after), s);
   check("a notification says when photo reading finishes in the background (Android asks once, when photos are first read)", s.note === "Photo reading stopped" && s.asked === 1, s);
+  // Finishing touches: the Saved tick, the friendly error screen, messages at the bottom, Next in Delivery.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
+    LPN_APK_MODE("log"); document.querySelectorAll(".apkask").forEach(a => a.remove()); save(); out.tick = !!document.querySelector("#apkSavedTick.on");
+    LPN_APK_OOPS("check"); await wait(30); const a = document.querySelector(".apkask"); out.oops = a ? a.querySelector(".apkasktitle").textContent + "|" + [...a.querySelectorAll("button")].map(b => b.textContent).join(",") : ""; if (a) a.remove();
+    LPN_APK_MODE("menu"); document.getElementById("msg").textContent = "Copied VLT004040265."; await wait(50); out.toast = (document.getElementById("apkToast") || {}).textContent;
+    LPN_APK_MODE("log"); document.getElementById("msg").textContent = ""; const r = document.getElementById("recv"); r.focus(); r.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    out.next = document.activeElement.id + ":" + r.getAttribute("enterkeyhint") + ":" + document.getElementById("notes").getAttribute("enterkeyhint") + ":" + r.getAttribute("autocapitalize");
+    document.activeElement.blur(); LPN_APK_MODE("menu"); return out; });
+  check("a ✓ Saved tick shows in the page's bar after each change", s.tick, s);
+  check("if something goes wrong, a plain message says the log is safe, with Try again and Save problem report", s.oops === "Something went wrong. Your log is safe on this phone.|Try again,Save problem report,Cancel", s);
+  check("a status message that can't be seen where it normally shows (here on the menu) also shows at the bottom", s.toast === "Copied VLT004040265.", s);
+  check("in Delivery, Next on the keyboard goes to the next box, and names start with a capital", s.next === "expect:next:done:words", s);
   // Moving between the menu and the pages: a slide, each page keeps its place, TalkBack hears the page's name, and
   // focus goes back to the button you came from; the menu buttons give the light tap.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), N = window.Capacitor.Plugins.LpnNative, main = document.querySelector("main");
