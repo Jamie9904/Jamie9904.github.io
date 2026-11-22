@@ -84,6 +84,12 @@ edit("compare.js", "fr.onload=()=>{try{fr.contentWindow.focus();", "fr.onload=()
 edit("compare.js", "async function printBuf(buf,fname,m){", "async function printBuf(buf,fname,m){if(window.LPN_APK_PRINT&&await window.LPN_APK_PRINT(buf,fname)){m.textContent=\"\";return}");
 
 const tess = JSON.parse(fs.readFileSync(path.join(LIB, "tess.json"), "utf8"));
+// The language data unzipped: Android's app build treats files ending in .gz specially (the app then can't find
+// eng.traineddata.gz, and the photo reader waits 90 seconds and gives up), so the reader is told not to expect .gz.
+{ const zlib = require("zlib"), dir = path.join(WWW, "lib", tess.langPath.replace(/^\.?\/?lib\//, "")), gz = path.join(dir, "eng.traineddata.gz");
+  if (!fs.existsSync(gz)) fail("the photo reader's language data isn't at " + path.relative(ROOT, gz));
+  fs.writeFileSync(path.join(dir, "eng.traineddata"), zlib.gunzipSync(fs.readFileSync(gz))); fs.unlinkSync(gz);
+  tess.gzip = false; }
 const notes = JSON.parse(fs.readFileSync(path.join(__dirname, "whats-new.json"), "utf8"));
 if (!Array.isArray(notes.items) || notes.items.some(t => typeof t !== "string")) fail("tools/android/whats-new.json: items must be a list of sentences");
 fs.writeFileSync(path.join(WWW, "android.js"), fs.readFileSync(path.join(__dirname, "android-shim.js"), "utf8").replace("/*TESS*/null", JSON.stringify(tess)).replace("/*NOTES*/[]", JSON.stringify(notes.items)));

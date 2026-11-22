@@ -38,7 +38,7 @@
   }
   // The photo reader's files inside the app (filled in by build-www.js), as full addresses.
   const t = /*TESS*/null;
-  if (t) window.LPN_TESS = { workerPath: new URL(t.workerPath, location.href).href, corePath: new URL(t.corePath, location.href).href, langPath: new URL(t.langPath, location.href).href, workerBlobURL: false };
+  if (t) window.LPN_TESS = { workerPath: new URL(t.workerPath, location.href).href, corePath: new URL(t.corePath, location.href).href, langPath: new URL(t.langPath, location.href).href, workerBlobURL: false, gzip: t.gzip !== false };
 
   const P = () => (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() && window.Capacitor.Plugins) || null;
   const b64 = blob => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1] || ""); r.onerror = () => rej(r.error); r.readAsDataURL(blob); });
@@ -586,7 +586,7 @@
     const tot = { done: true, engine: window.LPN_OCR && window.LPN_OCR() ? "phone" : "app", right: 0, want: 0, missing: [], extra: [], ms: 0 };
     // Can the photo reader's files be reached from a background worker (where the reader runs), as well as from the page?
     try {
-      const t = window.LPN_TESS || {}, files = [t.workerPath, t.corePath, t.langPath && t.langPath.replace(/\/?$/, "/") + "eng.traineddata.gz"].filter(Boolean);
+      const t = window.LPN_TESS || {}, files = [t.workerPath, t.corePath, t.langPath && t.langPath.replace(/\/?$/, "/") + "eng.traineddata" + (t.gzip === false ? "" : ".gz")].filter(Boolean);
       const page = await Promise.all(files.map(u => fetch(u).then(r => r.status + " " + (r.headers.get("content-type") || "") + " " + (r.headers.get("content-encoding") || ""), e => "error " + e.message)));
       const src = "onmessage=async e=>{const out=[];for(const u of e.data){try{const r=await fetch(u);out.push(r.status+' '+(await r.arrayBuffer()).byteLength)}catch(x){out.push('error '+x.message)}}postMessage(out)}";
       const w = new Worker(URL.createObjectURL(new Blob([src], { type: "text/javascript" })));
