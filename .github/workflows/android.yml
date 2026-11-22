@@ -61,7 +61,9 @@ jobs:
       - name: Build the APK
         if: github.event_name == 'workflow_dispatch' # only when the owner approves an Android update
         working-directory: tools/android/android
-        run: ./gradlew --no-daemon --stacktrace assembleRelease
+        run: |
+          ./gradlew --no-daemon --stacktrace assembleRelease
+          for f in app/build/outputs/apk/release/*.apk; do echo "::notice title=APK size::$(basename "$f"): $(du -m "$f" | cut -f1) MB"; done
       - name: Build a test copy for the screenshots
         if: github.event_name == 'workflow_dispatch' && inputs.shots
         working-directory: tools/android/android
