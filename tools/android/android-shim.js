@@ -551,21 +551,23 @@
     });
   };
   /* The photo check on GitHub's virtual phone (tools/android/shots.sh): reads the manifest photos put in a test copy
-     of the app and logs what was right, missing and extra, for the workflow to read. */
+     of the app and writes what was right, missing and extra to Documents › LPN Pallet Log › ocrtest.txt (one line per
+     photo, then a "done" line), for the workflow to read. */
   async function ocrTest() {
-    const log = o => console.log("OCRTEST " + JSON.stringify(o));
+    const lines = [];
+    const log = async o => { lines.push(JSON.stringify(o)); try { await P().Filesystem.writeFile({ path: "LPN Pallet Log/ocrtest.txt", data: lines.join("\n") + "\n", directory: "DOCUMENTS", encoding: "utf8", recursive: true }); } catch (e) {} };
     const tot = { done: true, engine: window.LPN_OCR && window.LPN_OCR() ? "phone" : "app", right: 0, want: 0, missing: [], extra: [], ms: 0 };
     try {
       const exp = await (await fetch("ocrtest/expected.json")).json();
       for (const name of Object.keys(exp).filter(k => !k.startsWith("_"))) {
         const want = exp[name], blob = await (await fetch("ocrtest/" + name)).blob(), t0 = Date.now();
         let got = [];
-        try { got = [...await readPhoto(new File([blob], name, { type: "image/jpeg" }))]; } catch (e) { log({ name, error: String((e && e.message) || e) }); }
+        try { got = [...await readPhoto(new File([blob], name, { type: "image/jpeg" }))]; } catch (e) { await log({ name, error: String((e && e.message) || e) }); }
         const g = new Set(got), w = new Set(want), o = { name, ms: Date.now() - t0, right: want.filter(x => g.has(x)).length, of: want.length, missing: want.filter(x => !g.has(x)), extra: got.filter(x => !w.has(x)) };
-        tot.right += o.right; tot.want += want.length; tot.missing.push(...o.missing); tot.extra.push(...o.extra); tot.ms += o.ms; log(o);
+        tot.right += o.right; tot.want += want.length; tot.missing.push(...o.missing); tot.extra.push(...o.extra); tot.ms += o.ms; await log(o);
       }
     } catch (e) { tot.error = String((e && e.message) || e); }
-    log(tot);
+    await log(tot);
   }
 
   /* Start menu: the app opens on a menu to choose Log pallets or Manifest check, and each is its own page instead of

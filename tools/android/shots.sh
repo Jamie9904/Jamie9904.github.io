@@ -39,10 +39,10 @@ set_of() {
 # and extra, from the app's log lines. Run once, before the screenshots.
 ocr_test() {
   adb shell am force-stop "$PKG"; act; sleep 8
-  adb logcat -c
+  f="/sdcard/Documents/LPN Pallet Log/ocrtest.txt"; adb shell rm -f "'$f'"
   act -a "$PKG.SHOW" --es what ocrtest
-  i=0; while [ $i -lt 120 ]; do sleep 3; i=$((i+1)); adb logcat -d | grep -q 'OCRTEST {"done"' && break; done
-  adb logcat -d | grep -o 'OCRTEST {.*}' | sed 's/^OCRTEST //' > "$OUT/ocr-phone-reader.txt"
+  i=0; while [ $i -lt 120 ]; do sleep 3; i=$((i+1)); adb shell cat "'$f'" 2>/dev/null | grep -q '"done"' && break; done
+  adb shell cat "'$f'" > "$OUT/ocr-phone-reader.txt" 2>/dev/null
   echo "Phone text reader on the manifest photos:"; cat "$OUT/ocr-phone-reader.txt"
 }
 ocr_test
