@@ -98,6 +98,21 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("Manifest check opens on its own page, open, and its heading doesn't fold it away; Back goes to the menu", s.cmp === "cmp:apkBar,cmpCard:true" && s.stays && s.back === "menu", s);
   s = await page.evaluate(() => { cfg.simple = true; applySimple(); const on = { mode: LPN_APK_MODE(), cls: document.documentElement.className.includes("apkm-") };
     cfg.simple = false; applySimple(); on.back = LPN_APK_MODE(); return on; });
+  // The menu's recent deliveries and shortcuts, the page title bar, and the Manifest date shown the app's way.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
+    const keep = hist; hist = [{ id: "a", date: "2026-11-20", recv: "Sam", rows: [{ lpn: "VLT004040265", type: "BB", fsdu: false }, { lpn: "VLT004040273", type: "BB", fsdu: false }] }, { id: "b", date: "2026-11-19", recv: "", rows: [] }];
+    LPN_APK_MODE("log"); LPN_APK_MODE("menu"); out.recent = [...document.querySelectorAll("#apkRecL .apkrec")].map(b => b.textContent).join("|");
+    document.querySelector("#apkRecL .apkrec").click(); await wait(100); out.hist = !document.getElementById("panel").hidden && document.getElementById("panelTitle").textContent; closeHelp();
+    out.files = !!document.getElementById("apkGoFiles"); hist = keep;
+    document.getElementById("apkGoCmp").click(); await wait(80); const bar = document.getElementById("apkBar");
+    out.title = document.getElementById("apkBarT").textContent + ":" + getComputedStyle(bar).position;
+    const hb = document.getElementById("apkBarHelp"); out.help = !hb.hidden; hb.click(); await wait(100); out.helpOpen = !document.getElementById("panel").hidden; closeHelp();
+    const d = document.getElementById("cmpDate"); d.value = "2026-11-05"; out.date = document.getElementById("cmpDateShow").textContent + ":" + (d.closest(".dwrap") ? "wrapped" : "");
+    LPN_APK_MODE("log"); out.logTitle = document.getElementById("apkBarT").textContent; await wait(50); out.thTop = getComputedStyle(document.querySelector("#logCard th")).top !== "0px";
+    LPN_APK_MODE("menu"); return out; });
+  check("the menu lists recent saved deliveries (tap for Saved deliveries) with Saved deliveries and Exported files buttons", s.recent === "20/11/2026 · Sam · 2 pallets|19/11/2026 · No name · 0 pallets" && s.hist === "Saved deliveries" && s.files, s);
+  check("each page has a title bar (‹ Menu, the page name, and the Manifest check's ?) that stays at the top, with the log's column headings below it", s.title === "Manifest check:sticky" && s.help && s.helpOpen && s.logTitle === "Log pallets" && s.thTop, s);
+  check("the Manifest date shows day/month/year like the delivery date, whatever the phone's date format", s.date === "05/11/2026:wrapped", s);
   check("Simple view (which hides the Manifest check) opens straight on the log with no menu; switching it off brings the menu back", s.mode === "" && !s.cls && s.back === "menu", s);
   await page.evaluate(() => LPN_APK_MODE("log")); // the checks below use the log's page
   s = await page.evaluate(() => { openHelp("settings", "Settings"); const t = document.getElementById("panelBody").textContent; closeHelp(); openHelp("guide", "How to use this app"); const g = document.getElementById("panelBody").textContent; closeHelp(); return { share: /Share this app/.test(t) || !!document.getElementById("shareUrl"), report: /Report a problem/.test(t + g) }; });
@@ -239,7 +254,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     /translateX\(24px\) scale\(0\.97\)/.test(s.during) && s.cancelled === "" && s.stillOpen && s.closed && s.toMenu === "menu" && s.t === "Press Back again to close the app." && JSON.stringify(s.calls) === '[["exit",2000]]', s);
   // Which build this is.
   s = await page.evaluate(async () => { openHelp("settings", "Settings"); await new Promise(r => setTimeout(r, 100)); const v = document.getElementById("apkVer"); const out = { set: v && v.textContent, foot: (document.getElementById("apkFoot") || {}).textContent }; closeHelp(); return out; });
-  check("Settings and the footer say which Android build this is", /^Android APK build 9( · Data on this phone: .+)?$/.test(s.set || "") && s.foot === " · Android APK build 9", s);
+  check("Settings and the footer say which Android build this is", /^Android APK build 9( · Data on this phone: .+)?$/.test(s.set || "") && s.foot === " Android APK build 9 ·", s);
 
   // What's new after an Android update: not on a first install, once after an update.
   s = await page.evaluate(() => { const card = () => document.getElementById("apkNew"); localStorage.removeItem("lpnapkseen");
@@ -416,6 +431,12 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     LPN_APK_MODE("cmp"); document.getElementById("cmpNums").value = ""; N.listeners.hwScan({ code: "QUB001899182" }); await wait(100); out.cmp = document.getElementById("cmpNums").value.trim() + ":" + rows.length;
     document.getElementById("cmpNums").value = ""; LPN_APK_MODE("log"); rows = []; save(); render(); return out; });
   check("a handheld scanner is set up on opening, and a scan from the menu is logged as the next pallet on the log's page", s.on && s.log === "log:VLT004040703", s);
+  s.glow = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative; LPN_APK_MODE("log"); rows = []; save(); render(); const seen = [];
+    const g = () => (document.getElementById("apkGlow") || {}).className || "";
+    N.listeners.hwScan({ code: "VLT004040729" }); await new Promise(r => setTimeout(r, 90)); seen.push(g());
+    await new Promise(r => setTimeout(r, 500)); N.listeners.hwScan({ code: "VLT004040729" }); await new Promise(r => setTimeout(r, 90)); seen.push(g());
+    const sk = document.getElementById("chkSkip"); if (sk && !document.getElementById("chkBar").hidden) sk.click(); rows = []; save(); render(); return seen.join(","); });
+  check("a handheld scan flashes the screen's edge green, or orange when the same pallet is scanned again", s.glow === "ok,warn", s.glow);
   check("a handheld scan closes an open pallet edit and is logged, goes into a box being filled in, and on the Manifest check's page into the manifest numbers", s.fromEdit === "VLT004040703,VLT004040711" && s.search === "VLT004040703:2" && s.cmp === "QUB001899182:2", s);
   // The phone's own text reader for manifest photos: its words go through the app's photo reading; if it fails, the
   // app's own reader takes over.

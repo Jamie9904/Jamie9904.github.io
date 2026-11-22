@@ -29,7 +29,7 @@ window.LPN_CONFIG = {
     shareMissing: true,    // Share missing list in the Manifest check results
     findLpn: true,         // Find an LPN in Saved deliveries
     shareApp: false,        // Share this app (QR code) in Settings
-    welcome: true,         // the welcome card on someone's first visit
+    welcome: false,        // the welcome card (off in the Android app: its demo video shows the website's one-page layout) on someone's first visit
     whatsNew: true,        // the card after an update saying what's new
     exportReminder: true,  // reminder when a delivery from an earlier day was never exported
     historyVideo: true,    // the one-minute video at the top of the Changelog showing how the app has grown
