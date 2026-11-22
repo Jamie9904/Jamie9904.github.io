@@ -151,7 +151,7 @@
   document.addEventListener("pointerdown", e => {
     const b = e.target && e.target.closest && e.target.closest("button"); if (!b || b.disabled) return;
     // A light tap on the main buttons, like Android's keyboard (with Vibrate on in Settings).
-    if (N() && typeof cfg !== "undefined" && cfg.vibrate && b.matches("#add,#tyb button,#scanBtn,#scan,#photo,#upload,#undoLast,#noLpn")) N().tap().catch(() => {});
+    if (N() && typeof cfg !== "undefined" && cfg.vibrate && b.matches("#add,#tyb button,#scanBtn,#scan,#photo,#upload,#undoLast,#noLpn,.apkgo,#apkCarryBtn,#apkBack")) N().tap().catch(() => {});
     const r = b.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2, s = document.createElement("span");
     if (getComputedStyle(b).position === "static") b.style.position = "relative"; // the ripple sits inside the button; its tap area isn't clipped
     const w = document.createElement("span"); w.className = "apkripwrap"; w.setAttribute("aria-hidden", "true");
@@ -598,6 +598,7 @@
      (which hides the Manifest check) is off; otherwise the app opens straight on the one that's there. */
   const menuOn = () => has("palletLog") && has("manifestCheck") && !(typeof cfg !== "undefined" && cfg && cfg.simple);
   let mode = "";
+  const scrollAt = {};
   const menuCss = document.createElement("style");
   menuCss.textContent = "#apkMenu,#apkBar{display:none}"
     + "html.apkm-menu #apkMenu{display:block}html.apkm-log #apkBar,html.apkm-cmp #apkBar{display:flex}"
@@ -623,8 +624,14 @@
     + "#apkGlow{position:fixed;top:0;right:0;bottom:0;left:0;z-index:2000;pointer-events:none;border:8px solid transparent;opacity:0;transition:opacity .35s}"
     + "#apkGlow.ok{border-color:#3ccf6e;opacity:1;transition:none}#apkGlow.warn{border-color:#ff9f1a;opacity:1;transition:none}"
     + "@media (prefers-reduced-motion:reduce){#apkGlow{transition:none}}"
+    + "@keyframes apkin{from{transform:translateX(36px);opacity:.4}}@keyframes apkout{from{transform:translateX(-36px);opacity:.4}}"
+    + "main.apkin{animation:apkin .2s ease-out}main.apkout{animation:apkout .2s ease-out}#apkBarT:focus{outline:none}"
+    + "@media (prefers-reduced-motion:reduce){main.apkin,main.apkout{animation:none}}"
     + "@media (min-width:1100px){html.apkm-menu main,html.apkm-log main,html.apkm-cmp main{display:block;max-width:760px}}"; // one page at a time, not the wide two-column layout
   document.head.appendChild(menuCss);
+  // No flash of the whole page before the menu: android.js runs before the app's own scripts, so the menu is put up
+  // straight away (and taken down again if the settings leave only one part of the app).
+  if (document.querySelector("main")) { buildMenu(); document.documentElement.classList.add("apkm-menu"); }
   function buildMenu() {
     const main = document.querySelector("main"); if (!main || $("apkMenu")) return;
     const m = document.createElement("div"); m.className = "card"; m.id = "apkMenu"; m.setAttribute("role", "region"); m.setAttribute("aria-labelledby", "apkMenuH");
@@ -670,7 +677,7 @@
     if (!menuOn()) { mode = ""; H.classList.remove("apkm-menu", "apkm-log", "apkm-cmp"); return; }
     buildMenu();
     if (typeof closeHelp === "function" && m !== mode) closeHelp();
-    const was = mode; mode = m;
+    const was = mode; if (was) scrollAt[was] = window.scrollY; mode = m;
     H.classList.toggle("apkm-menu", m === "menu"); H.classList.toggle("apkm-log", m === "log"); H.classList.toggle("apkm-cmp", m === "cmp");
     const body = $("cmpBody");
     if (m === "cmp" && body && body.hidden) $("cmpToggle").click();
@@ -683,7 +690,18 @@
     if ($("apkBarHelp")) $("apkBarHelp").hidden = m !== "cmp" || !document.querySelector("#cmpCard .helpq");
     if (m !== "menu") requestAnimationFrame(() => { const b = $("apkBar"); if (b) H.style.setProperty("--apkbarh", b.offsetHeight + "px"); });
     if (m === "cmp") cmpDateShow();
-    if (m !== was) { window.scrollTo(0, 0); const f = m === "menu" ? $("apkGoLog") : $("apkBack"); if (f && was) f.focus({ preventScroll: true }); }
+    if (m !== was) {
+      // Each page keeps its place: back on a page, it's where it was left (the menu always starts at the top).
+      window.scrollTo(0, m === "menu" ? 0 : scrollAt[m] || 0);
+      // Pages slide in from the side and back out to the menu, as in other Android apps (still with Remove animations on).
+      const main = document.querySelector("main");
+      if (main && was) { main.classList.remove("apkin", "apkout"); void main.offsetWidth; main.classList.add(m === "menu" ? "apkout" : "apkin"); }
+      // TalkBack: a page says its name as it opens; back on the menu, focus is on the button you came from.
+      if (was) {
+        if (m === "menu") { const f = was === "cmp" ? $("apkGoCmp") : $("apkGoLog"); if (f) f.focus({ preventScroll: true }); }
+        else { const t = $("apkBarT"); if (t) { t.tabIndex = -1; t.focus({ preventScroll: true }); } }
+      }
+    }
   }
   window.LPN_APK_MODE = m => { if (m) setMode(m); return mode; };
   // (android.js loads before the app's own scripts, so this waits for them)

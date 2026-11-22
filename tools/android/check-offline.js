@@ -98,6 +98,19 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("Manifest check opens on its own page, open, and its heading doesn't fold it away; Back goes to the menu", s.cmp === "cmp:apkBar,cmpCard:true" && s.stays && s.back === "menu", s);
   s = await page.evaluate(() => { cfg.simple = true; applySimple(); const on = { mode: LPN_APK_MODE(), cls: document.documentElement.className.includes("apkm-") };
     cfg.simple = false; applySimple(); on.back = LPN_APK_MODE(); return on; });
+  // Moving between the menu and the pages: a slide, each page keeps its place, TalkBack hears the page's name, and
+  // focus goes back to the button you came from; the menu buttons give the light tap.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), N = window.Capacitor.Plugins.LpnNative, main = document.querySelector("main");
+    LPN_APK_MODE("menu"); document.getElementById("apkGoLog").click(); await wait(50);
+    const out = { focus: document.activeElement.id, slideIn: main.classList.contains("apkin") };
+    window.scrollTo(0, 300); await wait(30); const y = window.scrollY; document.getElementById("apkBack").click(); await wait(50);
+    out.menuFocus = document.activeElement.id; out.slideOut = main.classList.contains("apkout"); out.menuTop = window.scrollY === 0;
+    document.getElementById("apkGoLog").click(); await wait(50); out.kept = y > 0 && Math.abs(window.scrollY - y) < 2;
+    LPN_APK_MODE("menu"); N.calls = []; cfg.vibrate = true; document.getElementById("apkGoCmp").dispatchEvent(new PointerEvent("pointerdown", { bubbles: true })); out.tap = N.calls.filter(c => c[0] === "tap").length;
+    out.first = main.firstElementChild && main.firstElementChild.id; return out; });
+  check("pages slide in and back out, TalkBack hears the page's name, focus goes back to the menu button, and each page keeps its place",
+    s.focus === "apkBarT" && s.slideIn && s.menuFocus === "apkGoLog" && s.slideOut && s.menuTop && s.kept, s);
+  check("the menu is the first thing on the page, and its buttons give the light tap", s.first === "apkMenu" && s.tap === 1, s);
   // The menu's recent deliveries and shortcuts, the page title bar, and the Manifest date shown the app's way.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
     const keep = hist; hist = [{ id: "a", date: "2026-11-20", recv: "Sam", rows: [{ lpn: "VLT004040265", type: "BB", fsdu: false }, { lpn: "VLT004040273", type: "BB", fsdu: false }] }, { id: "b", date: "2026-11-19", recv: "", rows: [] }];
