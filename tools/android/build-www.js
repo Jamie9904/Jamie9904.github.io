@@ -101,6 +101,7 @@ for (const f of fs.readdirSync(WWW).filter(f => /\.(js|html|css)$/.test(f))) {
   for (const m of s.matchAll(/https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com|tessdata\.projectnaptha\.com)[^"'\s]*/g)) left.push(f + ": " + m[0]);
 }
 if (left.length) fail("still pointing at the internet:\n  " + left.join("\n  "));
-for (const k of Object.values(tess)) if (!fs.existsSync(path.join(WWW, k))) fail("missing " + k);
+for (const k of Object.values(tess)) if (typeof k === "string" && !fs.existsSync(path.join(WWW, k))) fail("missing " + k);
+if (!fs.existsSync(path.join(WWW, tess.langPath, "eng.traineddata"))) fail("missing the photo reader's unzipped language data");
 let size = 0; const walk = d => fs.readdirSync(d, { withFileTypes: true }).forEach(e => e.isDirectory() ? walk(path.join(d, e.name)) : size += fs.statSync(path.join(d, e.name)).size); walk(WWW);
 console.log((GH ? "::notice title=Offline app::" : "") + "Offline copy of the app built (" + (size / 1048576).toFixed(1) + " MB)");
