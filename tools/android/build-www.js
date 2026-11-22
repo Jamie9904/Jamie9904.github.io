@@ -92,7 +92,10 @@ const tess = JSON.parse(fs.readFileSync(path.join(LIB, "tess.json"), "utf8"));
   tess.gzip = false; }
 const notes = JSON.parse(fs.readFileSync(path.join(__dirname, "whats-new.json"), "utf8"));
 if (!Array.isArray(notes.items) || notes.items.some(t => typeof t !== "string")) fail("tools/android/whats-new.json: items must be a list of sentences");
-fs.writeFileSync(path.join(WWW, "android.js"), fs.readFileSync(path.join(__dirname, "android-shim.js"), "utf8").replace("/*TESS*/null", JSON.stringify(tess)).replace("/*NOTES*/[]", JSON.stringify(notes.items)));
+// Where the page loads the photo reader from (compare.js, already pointed at lib/), so android.js can get it ready early.
+const tessJs = (fs.readFileSync(path.join(WWW, "compare.js"), "utf8").match(/loadScript\("(\.\/lib\/[^"]*tesseract\.min\.js)"/) || [])[1];
+if (!tessJs || !fs.existsSync(path.join(WWW, tessJs))) fail("couldn't find the photo reader's script in compare.js");
+fs.writeFileSync(path.join(WWW, "android.js"), fs.readFileSync(path.join(__dirname, "android-shim.js"), "utf8").replace("/*TESS*/null", JSON.stringify(tess)).replace('/*TESSJS*/""', JSON.stringify(tessJs)).replace("/*NOTES*/[]", JSON.stringify(notes.items)));
 
 // Nothing may still point at the internet (the website's own address in text is fine).
 const left = [];

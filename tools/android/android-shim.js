@@ -719,7 +719,7 @@
     const bt = $("apkBarT"); if (bt) bt.textContent = m === "cmp" ? "Manifest check" : "Log pallets";
     if ($("apkBarHelp")) $("apkBarHelp").hidden = m !== "cmp" || !document.querySelector("#cmpCard .helpq");
     if (m !== "menu") requestAnimationFrame(() => { const b = $("apkBar"); if (b) H.style.setProperty("--apkbarh", b.offsetHeight + "px"); });
-    if (m === "cmp") cmpDateShow();
+    if (m === "cmp") { cmpDateShow(); setTimeout(warmOcr, 600); }
     if (m !== was) {
       // Each page keeps its place: back on a page, it's where it was left (the menu always starts at the top).
       window.scrollTo(0, m === "menu" ? 0 : scrollAt[m] || 0);
@@ -734,6 +734,20 @@
     }
   }
   window.LPN_APK_MODE = m => { if (m) setMode(m); return mode; };
+  /* The app's photo reader is got ready as the Manifest check opens, and again as a photo button is pressed (while
+     the camera or picker is open), so the first photo doesn't wait for it to start. It closes by itself when idle. */
+  const TESSJS = /*TESSJS*/"";
+  let warming = false;
+  async function warmOcr() {
+    if (warming || !TESSJS || typeof ocrWorker !== "function" || typeof loadScript !== "function" || !has("manifestPhotos")) return;
+    if (typeof ocrW !== "undefined" && ocrW) return; // already running (or reading a photo): leave it alone
+    if (window.LPN_OCR && window.LPN_OCR()) return; // the phone's own text reader is in use instead
+    warming = true;
+    try { await loadScript(TESSJS, () => window.Tesseract); if (typeof ocrW !== "undefined" && ocrW) return; const w = await ocrWorker(); ocrDone(w, true); } catch (e) {}
+    finally { warming = false; }
+  }
+  window.LPN_APK_WARMOCR = warmOcr;
+  document.addEventListener("pointerdown", e => { const b = e.target.closest && e.target.closest("#cmpCamBtn,#cmpPhotoBtn,#cmpLogPhotoBtn,#photo,#upload"); if (b) warmOcr(); }, true);
   // (android.js loads before the app's own scripts, so this waits for them)
   document.addEventListener("DOMContentLoaded", () => {
     // Simple view switched on or off in Settings: the menu goes or comes back.

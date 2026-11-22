@@ -37,6 +37,9 @@ edit(man, /android:allowBackup="true"/, 'android:allowBackup="false"');
 // Android 13+ predictive back: the app's own Back (android.js) gets the swipe's progress, and leaving shows the system animation.
 edit(man, /<application/, '<application android:enableOnBackInvokedCallback="true"');
 edit(path.join(AND, "build.gradle"), /versionCode \d+/, "versionCode " + code);
+// The signed APK carries only the ARM code that phones use (ML Kit's text reader is in it once per kind of processor,
+// so the Intel copies doubled the size). The test copy for GitHub's virtual phone (debug, Intel) keeps every kind.
+edit(path.join(AND, "build.gradle"), /(buildTypes\s*\{\s*release\s*\{)/, "$1\n            ndk { abiFilters 'armeabi-v7a', 'arm64-v8a' }");
 edit(path.join(AND, "build.gradle"), /versionName "[^"]*"/, 'versionName "' + name.replace(/"/g, "") + '"');
 
 // Android-only code (tools/android/native): edge-to-edge screen, ML Kit barcodes, printing, keeping the screen on, opened files.

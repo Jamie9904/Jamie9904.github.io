@@ -564,6 +564,12 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("Settings › Android app can choose a folder (such as a synced Drive folder), and every export is then saved there too", /Choose a folder/.test(s.before) && / and in Drive\.$/.test(s.after) && /in Documents › LPN Pallet Log and in Drive\./.test(s.bar)
     && JSON.stringify(s.folder) === '[["folder","content://tree/drive","LPN log 22-11-2026.pdf","application/pdf"]]', s);
 
+  // The photo reader is got ready as the Manifest check's page opens.
+  s = await page.evaluate(async () => { LPN_APK_MODE("log"); const before = !!ocrW; LPN_APK_MODE("cmp");
+    for (let i = 0; i < 60 && !ocrW; i++) await new Promise(r => setTimeout(r, 250));
+    let ready = false; try { ready = !!(ocrW && await ocrW); } catch (e) {} LPN_APK_MODE("log"); return { before, ready }; });
+  check("the photo reader starts as the Manifest check's page opens, so the first photo doesn't wait for it", !s.before && s.ready, s);
+
   // Photo reading with only the files inside the app.
   const photos = load(OCR).filter(p => p.want && p.want.length);
   let right = 0, total = 0, extra = 0, bad = [];

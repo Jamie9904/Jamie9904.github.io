@@ -253,10 +253,15 @@ public class TextScanActivity extends AppCompatActivity {
         return out;
     }
 
+    // About four readings a second: numbers are still picked up as quickly, and the phone stays cooler on long pages.
+    private long lastRun = 0;
+
     @OptIn(markerClass = ExperimentalGetImage.class)
     private void analyze(ImageProxy img) {
         TextRecognizer r = reader;
-        if (img.getImage() == null || r == null) { img.close(); return; }
+        long t0 = System.currentTimeMillis();
+        if (img.getImage() == null || r == null || t0 - lastRun < 250) { img.close(); return; }
+        lastRun = t0;
         InputImage in = InputImage.fromMediaImage(img.getImage(), img.getImageInfo().getRotationDegrees());
         r.process(in).addOnSuccessListener(t -> {
             List<String> words = new ArrayList<>();
