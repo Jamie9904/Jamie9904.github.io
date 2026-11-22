@@ -1113,6 +1113,15 @@ These changes were made on the `updates` branch and kept build number 66; they w
 - **What's new written by hand for each APK.** Android updates collect several changes, so the list in `whats-new.json` is replaced before each approved build; it isn't shown on a first install, where there is nothing to compare with.
 - **Compile-only runs.** Native code can't be checked by `check-offline.js`, so a hand-started run with the APK unticked compiles it without making an APK that phones would be asked to install.
 
+## Take manifest photo (commit `20083f2` on `updates`, not live yet, still build 66; Android from APK build 4)
+
+- **A camera button as well as the upload button.** **Upload manifest photos** opens the phone's picker, which takes an extra step when the paper is in front of you. A second hidden input with `capture="environment"` opens the back camera straight away. The upload button stays for photos already taken and for reading several at once.
+- **Renamed to say what each does.** With two photo buttons side by side, "Add manifest photo" no longer said which one picks existing photos, so it became **Upload manifest photos** (the same `#cmpPhotoBtn` and `#cmpPhotoFile`, so the Android app's handling of photos opened or shared into it, which passes them to `#cmpPhotoFile`, didn't change).
+- **One photo per tap, the same reader.** The camera input has no `multiple`; its `change` just calls the upload handler, so a camera photo gets the same note, prefix list, one-tap prefix add, problem log lines and report link as an uploaded one, and there is no second reading path to keep in step. The trade-off: each camera photo is its own batch, so its note says "Photo 1" and **Report a problem with these photos** only covers the latest photo.
+- **Only on touch screens.** `applySite()` hides the button unless `(pointer:coarse)` matches. On a computer `capture` has no camera to open straight away, so a second button would only open the same file picker as **Upload manifest photos**.
+- **No new switch.** It is part of reading manifest photos, so it goes with `manifestPhotos` (hidden with it, its Guide and changelog parts inside `data-f="manifestPhotos"`) instead of getting its own key in `FEATURES` and both `config.js` files.
+- **The Android app needed no new code.** The `<queries>` entry for `IMAGE_CAPTURE` that `patch-android.js` already adds for **Scan by photo** also lets this input open the camera app; the change reaches phones with the next APK (build 4), whose `whats-new.json` lists it.
+
 ## Blank tally sheet with the pallet log off (commit `bb37eff`, still build 66, live since `main` `13d2a77`)
 
 - **Not forced off with the log any more.** The sheet doesn't use the log: it is an empty paper sheet for writing pallets down at the trailer, which is just what people need when the website has no pallet log. So `tallySheet` was taken out of the list `SITE` turns off with `palletLog`, and keeps its own setting.
