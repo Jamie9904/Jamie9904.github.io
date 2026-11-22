@@ -371,6 +371,44 @@ public class LpnNativePlugin extends Plugin {
             .addOnFailureListener(e -> { b.recycle(); call.reject(e.getMessage() == null ? "text reader failed" : e.getMessage()); });
     }
 
+    /* ---- A notification when something finished while the app was in the background (manifest photos read).
+       Tapping it opens the app on the Manifest check. Android 13+ asks once for permission to show notifications. */
+    private static final String CHANNEL = "done";
+
+    @PluginMethod
+    public void notify(PluginCall call) {
+        Context ctx = getContext();
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 26) {
+                android.app.NotificationManager nm = ctx.getSystemService(android.app.NotificationManager.class);
+                if (nm.getNotificationChannel(CHANNEL) == null)
+                    nm.createNotificationChannel(new android.app.NotificationChannel(CHANNEL, "Finished in the background", android.app.NotificationManager.IMPORTANCE_DEFAULT));
+            }
+            if (android.os.Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                call.resolve(new JSObject().put("shown", false).put("allowed", false)); return;
+            }
+            Intent open = new Intent("io.github.jamie9904.lpnlog.MANIFEST").setClassName(ctx, MainActivity.class.getName()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            android.app.PendingIntent pi = android.app.PendingIntent.getActivity(ctx, 1, open, android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_UPDATE_CURRENT);
+            androidx.core.app.NotificationCompat.Builder b = new androidx.core.app.NotificationCompat.Builder(ctx, CHANNEL)
+                .setSmallIcon(ctx.getApplicationInfo().icon).setContentTitle(call.getString("title", "LPN Pallet Log"))
+                .setContentText(call.getString("text", "")).setStyle(new androidx.core.app.NotificationCompat.BigTextStyle().bigText(call.getString("text", "")))
+                .setContentIntent(pi).setAutoCancel(true);
+            androidx.core.app.NotificationManagerCompat.from(ctx).notify(1, b.build());
+            call.resolve(new JSObject().put("shown", true).put("allowed", true));
+        } catch (SecurityException e) { call.resolve(new JSObject().put("shown", false).put("allowed", false)); }
+        catch (Exception e) { call.reject(e.getMessage() == null ? "notification failed" : e.getMessage()); }
+    }
+
+    /* Asks for permission to show notifications (Android 13+), once, when it's first useful. */
+    @PluginMethod
+    public void askNotify(PluginCall call) {
+        if (android.os.Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(getContext(), Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+            call.resolve(new JSObject().put("allowed", true)); return;
+        }
+        getActivity().requestPermissions(new String[] { Manifest.permission.POST_NOTIFICATIONS }, 7341);
+        call.resolve(new JSObject().put("asked", true));
+    }
+
     /* ---- A folder chosen once (for example a synced OneDrive or Google Drive folder): every export also goes there. */
     @PluginMethod
     public void pickFolder(PluginCall call) {

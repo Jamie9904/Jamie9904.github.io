@@ -24,6 +24,7 @@ const man = path.join(AND, "src", "main", "AndroidManifest.xml");
 edit(man, /(<manifest[^>]*>)/, `$1
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />`);
 // Scan by photo opens the camera app (the page's capture="environment" input). Since Android 11 an app has to say it
 // will look for a camera app, or Android finds none and the photo picker opens instead (the same as Upload photo).

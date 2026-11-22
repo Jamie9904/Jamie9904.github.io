@@ -324,6 +324,8 @@
   function backReset() { [document.querySelector(".apkask"), openPanel()].forEach(t => { if (t) { t.style.transition = "transform .15s, opacity .15s"; t.style.transform = ""; t.style.opacity = ""; } }); }
   function back() {
     backReset();
+    if (window.LPN_APK_INTRODONE && window.LPN_APK_INTRODONE()) return;
+    if (window.LPN_APK_MORE && window.LPN_APK_MORE()) return;
     const a = document.querySelector(".apkask"); if (a) { if (!a.dataset.keep) a.remove(); return; }
     const sv = $("apkSaved"); if (sv) { sv.remove(); return; }
     if (openPanel()) { history.back(); return; }
@@ -617,7 +619,7 @@
     + "#apkMenu .apkgo.on{border-color:var(--ac,#ff8a2a)}#apkMenu .apkgo span.ip{color:var(--ink,#eaf0fa);font-weight:700}"
     + "#apkCarry{margin:-2px 0 14px}"
     + "#apkBar{position:sticky;top:0;z-index:12;background:var(--paper,#13264a);margin:-6px -18px 12px;padding:8px 18px;border-bottom:1px solid var(--line,#35507f)}"
-    + "#apkBarHelp{margin-left:auto;flex:none}"
+    + "#apkBarHelp{margin-left:auto;flex:none;width:40px;height:40px;min-height:0;padding:0;border-radius:20px}"
     + "#apkBarT{font-weight:700;font-size:1.15rem;margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}"
     + "html.apkm-log th{top:var(--apkbarh,60px)}html.apkm-cmp #cmpCard>.tglh{display:none}"
     + "#apkRecent h3{margin:18px 0 8px;font-size:1rem;color:var(--mu,#9db0d0)}#apkRecent .apkrec{display:block;width:100%;text-align:left;margin:0 0 8px;min-height:48px}"
@@ -712,6 +714,129 @@
     if (typeof applySimple === "function") { const was = applySimple; applySimple = function () { const r = was.apply(this, arguments); if (menuOn() !== !!mode) setMode(menuOn() ? "menu" : ""); return r; }; }
     setMode("menu");
     cmpDateShow();
+  });
+
+  /* ---- A professional app's frame: an app bar with a ⋮ menu (Guide, Changelog, Settings, Exported files, About)
+     instead of the row of three buttons; an About screen with the open-source licences; a short introduction on a
+     first install; a progress bar with Cancel while photos or PDFs are read; a notification when photo reading
+     finishes in the background; and Material-style corners throughout. */
+  const proCss = document.createElement("style");
+  proCss.textContent = ":root{--r:10px}#side{display:none!important}"
+    + ".top .brand{position:relative}#apkMoreBtn{margin-left:auto;min-width:48px;min-height:48px;padding:0;font-size:1.6rem;line-height:1;border-radius:24px;background:transparent;border:0;color:var(--ink,#eaf0fa)}"
+    + "#apkMore{position:fixed;z-index:1500;right:10px;min-width:220px;background:var(--paper,#13264a);border:1px solid var(--line,#35507f);border-radius:12px;padding:6px 0;box-shadow:0 8px 24px rgba(0,0,0,.45)}"
+    + "#apkMore button{display:block;width:100%;text-align:left;border:0;border-radius:0;background:transparent;min-height:48px;padding:10px 18px;font-weight:400}"
+    + "#apkMore button:focus-visible{outline:2px solid var(--ac,#ff8a2a);outline-offset:-2px}"
+    + ".apksheet{border-radius:28px 28px 0 0!important}"
+    + "#apkIntro{position:fixed;top:0;right:0;bottom:0;left:0;z-index:3000;background:var(--bg,#0c1830);display:flex;flex-direction:column;padding:calc(24px + env(safe-area-inset-top,0px)) 0 calc(18px + env(safe-area-inset-bottom,0px))}"
+    + "#apkIntro .cards{flex:1;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}#apkIntro .cards::-webkit-scrollbar{display:none}"
+    + "#apkIntro .cd{flex:0 0 100%;scroll-snap-align:center;padding:24px 28px;display:flex;flex-direction:column;justify-content:center;gap:14px}"
+    + "#apkIntro .cd .ic{width:84px;height:84px;border-radius:24px;background:var(--ac,#ff8a2a);color:#1b1b1b;display:flex;align-items:center;justify-content:center;font-size:2.4rem;font-weight:700}"
+    + "#apkIntro h2{margin:0;font-size:1.6rem}#apkIntro p{margin:0;color:var(--mu,#9db0d0);font-size:1.05rem;line-height:1.5}"
+    + "#apkIntro .dots{display:flex;justify-content:center;gap:8px;margin:10px 0 16px}#apkIntro .dots i{width:8px;height:8px;border-radius:4px;background:var(--line,#35507f)}#apkIntro .dots i.on{width:22px;background:var(--ac,#ff8a2a)}"
+    + "#apkIntro .row{display:flex;justify-content:space-between;padding:0 20px}#apkIntro .row button{min-height:48px;min-width:110px}"
+    + "#apkProg{position:sticky;top:var(--apkbarh,60px);z-index:11;background:var(--paper,#13264a);margin:-12px -18px 12px;padding:10px 18px;border-bottom:1px solid var(--line,#35507f)}"
+    + "#apkProg .t{display:flex;align-items:center;gap:10px;justify-content:space-between}#apkProg .t span{font-weight:700}#apkProg .t button{min-height:40px}"
+    + "#apkProg .bar{height:6px;border-radius:3px;background:var(--line,#35507f);margin-top:8px;overflow:hidden}#apkProg .bar i{display:block;height:100%;width:0;background:var(--ac,#ff8a2a);transition:width .3s}"
+    + "@media (prefers-reduced-motion:reduce){#apkProg .bar i{transition:none}}";
+  document.head.appendChild(proCss);
+
+  /* The ⋮ menu. */
+  function moreClose(focusBtn) { const m = $("apkMore"); if (m) m.remove(); const b = $("apkMoreBtn"); if (b) { b.setAttribute("aria-expanded", "false"); if (focusBtn) b.focus(); } }
+  function moreOpen() {
+    if ($("apkMore")) { moreClose(true); return; }
+    const b = $("apkMoreBtn"), r = b.getBoundingClientRect();
+    const m = document.createElement("div"); m.id = "apkMore"; m.setAttribute("role", "menu"); m.style.top = Math.round(r.bottom + 4) + "px";
+    const item = (label, fn) => { const x = document.createElement("button"); x.type = "button"; x.setAttribute("role", "menuitem"); x.textContent = label; x.onclick = () => { moreClose(false); fn(); }; m.appendChild(x); };
+    item("Guide", () => $("btnGuide").click()); item("Changelog", () => $("btnLog").click()); item("Settings", () => $("btnSet").click());
+    if (P()) item("Exported files", () => showFiles());
+    item("About", about);
+    document.body.appendChild(m); b.setAttribute("aria-expanded", "true"); m.querySelector("button").focus();
+    m.addEventListener("keydown", e => { const it = [...m.querySelectorAll("button")], i = it.indexOf(document.activeElement);
+      if (e.key === "Escape") { e.preventDefault(); moreClose(true); } else if (e.key === "ArrowDown") { e.preventDefault(); it[(i + 1) % it.length].focus(); } else if (e.key === "ArrowUp") { e.preventDefault(); it[(i - 1 + it.length) % it.length].focus(); } });
+  }
+  window.LPN_APK_MORE = () => $("apkMore") ? (moreClose(false), true) : false;
+  document.addEventListener("pointerdown", e => { const m = $("apkMore"); if (m && !m.contains(e.target) && e.target !== $("apkMoreBtn")) moreClose(false); }, true);
+  function addMoreBtn() {
+    const brand = document.querySelector(".top .brand"); if (!brand || $("apkMoreBtn")) return;
+    const b = document.createElement("button"); b.type = "button"; b.id = "apkMoreBtn"; b.textContent = "⋮"; b.setAttribute("aria-label", "More: Guide, Changelog, Settings, About");
+    b.setAttribute("aria-haspopup", "menu"); b.setAttribute("aria-expanded", "false"); b.onclick = moreOpen; brand.appendChild(b);
+  }
+  if (document.querySelector(".top .brand")) addMoreBtn();
+
+  /* About: version, privacy, and the open-source parts inside the app with their licences. */
+  const LICENCES = [
+    ["ExcelJS 4.4.0", "Excel files", "MIT"], ["jsPDF 2.5.1 and jsPDF-AutoTable 3.8.2", "PDF files", "MIT"], ["PDF.js 6.4.299", "reading PDFs", "Apache 2.0"],
+    ["pdf-lib 1.17.1", "PDF files", "MIT"], ["Tesseract.js 5.1.1, with Tesseract and its English data", "reading photos", "Apache 2.0"],
+    ["ZXing 0.21.3", "barcodes", "Apache 2.0"], ["Capacitor", "the Android app around the page", "MIT"], ["AndroidX and CameraX", "the camera scanner and Android parts", "Apache 2.0"],
+    ["Google ML Kit (barcode and text reading)", "barcodes and the phone’s text reader", "ML Kit terms of service"], ["Atkinson Hyperlegible and IBM Plex Mono", "the fonts", "SIL Open Font Licence 1.1"]];
+  function about() {
+    if (typeof HELP === "undefined") return;
+    const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+    HELP.apkabout = '<p><b>LPN Pallet Log</b>, the Android app. ' + esc(window.LPN_APK_VER || "") + '</p>'
+      + '<p>Made by Jamie, for logging pallets at goods-in and checking them against the supplier’s manifest.</p>'
+      + '<h3>Your data</h3><p>Everything stays on this phone: the log, saved deliveries, photos and exported files. The app works with no internet and sends nothing anywhere. A file only leaves the phone when you share, email or save it somewhere else yourself.</p>'
+      + '<h3>Open-source parts</h3><p class="note">This app is built with these, under their licences:</p><ul>'
+      + LICENCES.map(l => "<li><b>" + esc(l[0]) + "</b> (" + esc(l[1]) + "): " + esc(l[2]) + "</li>").join("") + "</ul>"
+      + '<p class="note">MIT and Apache 2.0 allow use and sharing as long as the copyright and licence notices are kept; the full texts are at opensource.org.</p>';
+    openHelp("apkabout", "About");
+  }
+  window.LPN_APK_ABOUT = about;
+
+  /* A short introduction on a first install (three cards to swipe), instead of the website's welcome card. */
+  function intro() {
+    if ($("apkIntro")) return;
+    const cards = [["✓", "Log every pallet", "Scan or type each LPN as it comes off the trailer, pick its type, and export the log as Excel or PDF."],
+      ["☰", "Two parts, one menu", "The app opens on a menu: Log pallets, or Manifest check to compare a delivery with the supplier’s manifest. ‹ Menu or Back takes you back."],
+      ["📷", "The camera", "The first time you scan, Android asks to use the camera: choose While using the app. Photos and logs stay on this phone."]];
+    const d = document.createElement("div"); d.id = "apkIntro"; d.setAttribute("role", "dialog"); d.setAttribute("aria-modal", "true"); d.setAttribute("aria-label", "Welcome to LPN Pallet Log");
+    d.innerHTML = '<div class="cards">' + cards.map((c, i) => '<section class="cd" aria-label="' + (i + 1) + ' of 3"><div class="ic" aria-hidden="true">' + c[0] + '</div><h2>' + c[1] + '</h2><p>' + c[2] + '</p></section>').join("") + '</div>'
+      + '<div class="dots" aria-hidden="true"><i class="on"></i><i></i><i></i></div><div class="row"><button type="button" id="apkIntroSkip">Skip</button><button type="button" class="p" id="apkIntroNext">Next</button></div>';
+    document.body.appendChild(d);
+    const sc = d.querySelector(".cards"), dots = d.querySelectorAll(".dots i"), next = $("apkIntroNext");
+    const at = () => Math.round(sc.scrollLeft / Math.max(1, sc.clientWidth));
+    const upd = () => { const i = at(); dots.forEach((x, k) => x.classList.toggle("on", k === i)); next.textContent = i >= 2 ? "Get started" : "Next"; };
+    const done = () => { try { localStorage.setItem("lpnapkintro", "seen"); } catch (e) {} d.remove(); const g = $("apkGoLog"); if (g) g.focus(); };
+    sc.addEventListener("scroll", () => requestAnimationFrame(upd), { passive: true });
+    next.onclick = () => { const i = at(); if (i >= 2) done(); else sc.scrollTo({ left: (i + 1) * sc.clientWidth, behavior: matchMedia("(prefers-reduced-motion:reduce)").matches ? "auto" : "smooth" }); };
+    $("apkIntroSkip").onclick = done; next.focus();
+  }
+  window.LPN_APK_INTRO = intro;
+  window.LPN_APK_INTRODONE = () => { const d = $("apkIntro"); if (d) { $("apkIntroSkip").click(); return true; } return false; };
+
+  /* Progress while photos or PDFs are read (from the Manifest check's own messages), with Cancel for photos; and a
+     notification if photo reading finishes while the app is in the background. */
+  let ocrStop = false, progOn = false, progPhotos = false;
+  function progress() {
+    const m = $("cmpMsg"); if (!m) return;
+    const t = m.textContent || "", k = /(?:Reading (log )?photo|Photo|PDF|reading page) (\d+) of (\d+)/i.exec(t);
+    let p = $("apkProg");
+    if (k) {
+      if (!p) { p = document.createElement("div"); p.id = "apkProg"; p.setAttribute("role", "status");
+        p.innerHTML = '<div class="t"><span></span><button type="button" id="apkProgStop">Cancel</button></div><div class="bar"><i></i></div>';
+        const card = $("cmpCard"); (card || document.querySelector("main")).prepend(p);
+        $("apkProgStop").onclick = () => { ocrStop = true; $("apkProgStop").disabled = true; p.querySelector("span").textContent = "Stopping after this photo…"; }; }
+      const n = +k[2], of = +k[3], photo = /photo/i.test(k[0]) || /Photo/.test(k[0]);
+      if (!ocrStop) p.querySelector("span").textContent = (photo ? "Reading photo " : /PDF/i.test(k[0]) ? "Reading PDF " : "Reading page ") + n + " of " + of;
+      p.querySelector(".bar i").style.width = Math.round(((n - 1) / of) * 100 + 100 / of / 2) + "%";
+      $("apkProgStop").hidden = !photo; if (photo && !progPhotos) { progPhotos = true; askNotifyOnce(); }
+      progOn = true;
+    } else if (progOn) {
+      if (p) p.remove(); progOn = false;
+      if (progPhotos && document.visibilityState === "hidden" && N() && typeof N().notify === "function")
+        N().notify({ title: ocrStop ? "Photo reading stopped" : "Manifest photos read", text: t.slice(0, 300) || "Open the app to see what was found." }).catch(() => {});
+      progPhotos = false; ocrStop = false;
+    }
+  }
+  function askNotifyOnce() { let asked = null; try { asked = localStorage.getItem("lpnapknotify"); } catch (e) {} if (asked || !N() || typeof N().askNotify !== "function") return;
+    try { localStorage.setItem("lpnapknotify", "asked"); } catch (e) {} N().askNotify().catch(() => {}); }
+  document.addEventListener("DOMContentLoaded", () => {
+    const m = $("cmpMsg"); if (m) new MutationObserver(progress).observe(m, { childList: true, characterData: true, subtree: true });
+    // Cancel: the photos not started yet are skipped (the one being read finishes).
+    if (typeof ocrLpns === "function") { const real = ocrLpns; ocrLpns = function (f) { if (ocrStop) return Promise.reject(new Error("stopped: you tapped Cancel")); return real.apply(this, arguments); }; }
+    addMoreBtn();
+    let seen = null; try { seen = localStorage.getItem("lpnapkintro"); } catch (e) {}
+    const fresh = (typeof rows === "undefined" || !rows.length) && (typeof hist === "undefined" || !hist.length);
+    if (!seen && fresh && N()) intro(); else if (!seen) { try { localStorage.setItem("lpnapkintro", "seen"); } catch (e) {} }
   });
 
   /* Carry on: opening the app with a delivery in progress offers to go straight back to scanning. */

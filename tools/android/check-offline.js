@@ -30,7 +30,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   page.on("console", m => { if (m.type() === "error" && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
   // Stand-ins for the Android app's file saving and share menu.
   await page.addInitScript(() => {
-    try { localStorage.setItem("lpninstallshown", "1"); localStorage.setItem("lpnmigtest", "from before"); } catch (e) {}
+    try { localStorage.setItem("lpninstallshown", "1"); localStorage.setItem("lpnmigtest", "from before"); localStorage.setItem("lpnapkintro", "seen"); } catch (e) {}
     // The app's own storage (native/LpnStore.java), standing in for the phone's.
     window.__realLS = window.localStorage; const m = new Map(); let mig = false;
     window.LpnStore = { get: k => m.has(k) ? m.get(k) : null, set: (k, v) => { m.set(k, v); return true; }, remove: k => { m.delete(k); }, clear: () => m.clear(),
@@ -58,6 +58,8 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
         battery: async () => window.__batt || { level: 80, charging: false },
         phoneColours: async () => ({ available: true, bg: "#1a1c1e", ac: "#9ecaff" }),
         scanners: async () => ({ names: [] }),
+        notify: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["notify", o.title, o.text]); return { shown: true }; },
+        askNotify: async () => { window.Capacitor.Plugins.LpnNative.calls.push(["askNotify"]); return { asked: true }; },
         setHandheld: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["hand", o.on]); },
         readText: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["readText", o.data.length > 100]); if (!window.__ocrStub) throw new Error("no reader here"); return window.__ocrStub(o); },
         pickFolder: async () => ({ picked: true, uri: "content://tree/drive", name: "Drive" }),
@@ -96,6 +98,35 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("the menu shows a delivery in progress, with Carry on scanning", s.menuText === "Delivery in progress: 1 pallet." && s.carry, s);
   check("Log pallets opens the log on its own page (no Manifest check), with ‹ Menu at the top", s.log === "log:apkBar,delCard,entryCard,logCard" && s.entryUsable && s.logAfterCmp, s);
   check("Manifest check opens on its own page, open, and its heading doesn't fold it away; Back goes to the menu", s.cmp === "cmp:apkBar,cmpCard:true" && s.stays && s.back === "menu", s);
+  // A professional app's frame: the ⋮ menu, About with the licences, the first-install introduction.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), N = window.Capacitor.Plugins.LpnNative, out = {};
+    out.side = getComputedStyle(document.getElementById("side")).display; const mb = document.getElementById("apkMoreBtn"); out.btn = !!mb && mb.getClientRects().length > 0;
+    mb.click(); await wait(50); out.items = [...document.querySelectorAll("#apkMore button")].map(b => b.textContent).join(",");
+    N.listeners.back(); await wait(30); out.backCloses = !document.getElementById("apkMore");
+    mb.click(); await wait(30); [...document.querySelectorAll("#apkMore button")].find(b => b.textContent === "About").click(); await wait(100);
+    out.about = document.getElementById("panelTitle").textContent + ":" + /Everything stays on this phone/.test(document.getElementById("panelBody").textContent) + ":" + document.querySelectorAll("#panelBody li").length; closeHelp();
+    mb.click(); await wait(30); [...document.querySelectorAll("#apkMore button")].find(b => b.textContent === "Settings").click(); await wait(100); out.settings = document.getElementById("panelTitle").textContent; closeHelp();
+    LPN_APK_INTRO(); await wait(50); const d = document.getElementById("apkIntro"); out.cards = d ? d.querySelectorAll(".cd").length : 0;
+    const sc = d.querySelector(".cards"); sc.scrollLeft = sc.clientWidth * 2; sc.dispatchEvent(new Event("scroll")); await wait(80); out.last = document.getElementById("apkIntroNext").textContent;
+    N.listeners.back(); await wait(30); out.introGone = !document.getElementById("apkIntro") && localStorage.getItem("lpnapkintro") === "seen";
+    return out; });
+  check("an app bar with a ⋮ menu (Guide, Changelog, Settings, Exported files, About) instead of the three buttons; Back closes it", s.side === "none" && s.btn && s.items === "Guide,Changelog,Settings,Exported files,About" && s.backCloses && s.settings === "Settings", s);
+  check("About shows the version, that data stays on the phone, and the open-source parts with their licences", /^About:true:(9|1\d)$/.test(s.about), s);
+  check("a first install gets a three-card introduction ending in Get started; Back (or Skip) closes it for good", s.cards === 3 && s.last === "Get started" && s.introGone, s);
+  // Progress with Cancel while photos are read, and a notification when it finishes in the background.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), N = window.Capacitor.Plugins.LpnNative, out = {}; N.calls = []; LPN_APK_MODE("cmp");
+    try { localStorage.removeItem("lpnapknotify"); } catch (e) {}
+    const msg = document.getElementById("cmpMsg"); msg.textContent = "Reading photo 2 of 4…"; await wait(50);
+    const p = document.getElementById("apkProg"); out.shown = p ? p.querySelector("span").textContent + ":" + p.querySelector(".bar i").style.width : "";
+    out.asked = N.calls.filter(c => c[0] === "askNotify").length;
+    document.getElementById("apkProgStop").click(); out.stopped = await readPhoto(new File([new Uint8Array(4)], "x.jpg", { type: "image/jpeg" })).then(() => "read", e => String(e.message));
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+    msg.textContent = "Read 1 of 4 photos and found 3 LPNs."; await wait(50); delete document.visibilityState;
+    out.gone = !document.getElementById("apkProg"); out.note = N.calls.filter(c => c[0] === "notify").map(c => c[1]).join();
+    out.after = await Promise.race([readPhoto(new File([new Uint8Array(4)], "x.jpg", { type: "image/jpeg" })).then(() => "read", e => String(e.message)), wait(400).then(() => "running")]);
+    msg.textContent = ""; LPN_APK_MODE("log"); return out; });
+  check("reading photos shows a progress bar (photo 2 of 4) with Cancel, which skips the photos not started yet", s.shown === "Reading photo 2 of 4:38%" && /Cancel/.test(s.stopped) && s.gone && !/Cancel/.test(s.after), s);
+  check("a notification says when photo reading finishes in the background (Android asks once, when photos are first read)", s.note === "Photo reading stopped" && s.asked === 1, s);
   // Moving between the menu and the pages: a slide, each page keeps its place, TalkBack hears the page's name, and
   // focus goes back to the button you came from; the menu buttons give the light tap.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), N = window.Capacitor.Plugins.LpnNative, main = document.querySelector("main");
