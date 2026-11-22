@@ -406,7 +406,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     N.calls = []; LPN_APK_SYNCHAND(); await wait(50); out.on = N.calls.some(c => c[0] === "hand" && c[1] === true);
     document.querySelectorAll(".apkask").forEach(a => a.remove()); closeHelp(); if (document.activeElement) document.activeElement.blur();
     ["flt", "fltType", "fltFsdu"].forEach(id => { const e = document.getElementById(id); if (e) e.value = ""; }); // no search or filter left by an earlier check
-    rows = []; save(); render(); LPN_APK_MODE("menu");
+    rows = []; save(); render(); LPN_APK_MODE("log"); document.querySelector('#tyb button[data-t="BB"]').click(); LPN_APK_MODE("menu"); // BB (an FPP pallet opens its description box)
     N.listeners.hwScan({ code: "VLT004040703" }); await wait(150); out.log = LPN_APK_MODE() + ":" + rows.map(r => r.lpn).join();
     if (!rows.length) return Object.assign(out, { act: document.activeElement && (document.activeElement.id || document.activeElement.tagName), panel: !document.getElementById("panel").hidden, chk: !document.getElementById("chkBar").hidden, toast: (document.getElementById("apkToast") || {}).textContent, msg: document.getElementById("msg").textContent });
     const eb = document.querySelector("#body .lpnedit"); if (!eb) return Object.assign(out, { noRow: document.getElementById("body").innerHTML.slice(0, 200) });
