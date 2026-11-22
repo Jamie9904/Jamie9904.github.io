@@ -96,8 +96,6 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("the menu shows a delivery in progress, with Carry on scanning", s.menuText === "Delivery in progress: 1 pallet." && s.carry, s);
   check("Log pallets opens the log on its own page (no Manifest check), with ‹ Menu at the top", s.log === "log:apkBar,delCard,entryCard,logCard" && s.entryUsable && s.logAfterCmp, s);
   check("Manifest check opens on its own page, open, and its heading doesn't fold it away; Back goes to the menu", s.cmp === "cmp:apkBar,cmpCard:true" && s.stays && s.back === "menu", s);
-  s = await page.evaluate(() => { cfg.simple = true; applySimple(); const on = { mode: LPN_APK_MODE(), cls: document.documentElement.className.includes("apkm-") };
-    cfg.simple = false; applySimple(); on.back = LPN_APK_MODE(); return on; });
   // Moving between the menu and the pages: a slide, each page keeps its place, TalkBack hears the page's name, and
   // focus goes back to the button you came from; the menu buttons give the light tap.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), N = window.Capacitor.Plugins.LpnNative, main = document.querySelector("main");
@@ -126,6 +124,8 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("the menu lists recent saved deliveries (tap for Saved deliveries) with Saved deliveries and Exported files buttons", s.recent === "20/11/2026 · Sam · 2 pallets|19/11/2026 · No name · 0 pallets" && s.hist === "Saved deliveries" && s.files, s);
   check("each page has a title bar (‹ Menu, the page name, and the Manifest check's ?) that stays at the top, with the log's column headings below it", s.title === "Manifest check:sticky" && s.help && s.helpOpen && s.logTitle === "Log pallets" && s.thTop, s);
   check("the Manifest date shows day/month/year like the delivery date, whatever the phone's date format", s.date === "05/11/2026:wrapped", s);
+  s = await page.evaluate(() => { cfg.simple = true; applySimple(); const on = { mode: LPN_APK_MODE(), cls: document.documentElement.className.includes("apkm-") };
+    cfg.simple = false; applySimple(); on.back = LPN_APK_MODE(); return on; });
   check("Simple view (which hides the Manifest check) opens straight on the log with no menu; switching it off brings the menu back", s.mode === "" && !s.cls && s.back === "menu", s);
   await page.evaluate(() => LPN_APK_MODE("log")); // the checks below use the log's page
   s = await page.evaluate(() => { openHelp("settings", "Settings"); const t = document.getElementById("panelBody").textContent; closeHelp(); openHelp("guide", "How to use this app"); const g = document.getElementById("panelBody").textContent; closeHelp(); return { share: /Share this app/.test(t) || !!document.getElementById("shareUrl"), report: /Report a problem/.test(t + g) }; });
