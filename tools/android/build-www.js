@@ -61,6 +61,9 @@ for (const f of ["core.js", "scan.js", "export.js", "compare.js"]) edit(f, /http
 const APK_BUILD = (() => { let b; try { b = JSON.parse(fs.readFileSync(path.join(__dirname, "build.json"), "utf8")).build; } catch (e) { fail("tools/android/build.json is missing or isn't valid JSON"); }
   if (!Number.isInteger(b) || b < 1) fail("tools/android/build.json: build must be a whole number from 1"); return b; })();
 edit("export.js", "  if(appVer)return appVer;\n", '  appVer="LPN Pallet Log (Android APK build ' + APK_BUILD + ')";return appVer;\n');
+// The start menu (android.js): the Guide says how to get between Log pallets and the Manifest check.
+edit("panels.js", '<span data-f="palletLog">Tap the <b>Manifest check</b> heading to open it.</span>', '<span data-f="palletLog">Choose <b>Manifest check</b> on the start menu (from the log, tap <b>‹ Menu</b> at the top or press Back). In Simple view the app opens straight on the log, with no menu or Manifest check.</span>');
+edit("panels.js", '<h3>1. Quick start</h3>\n<ol>\n', '<h3>1. Quick start</h3>\n<ol>\n<li data-f="manifestCheck"><b>Start menu:</b> the app opens on a menu: choose <b>Log pallets</b> or <b>Manifest check</b>. Each has its own page; <b>‹ Menu</b> at the top, or Back, takes you back to the menu.</li>\n');
 // Nothing about installing: the Android app is already installed (Guide section, Settings, and the first-visit pop-up).
 edit("panels.js", /<h3>\d+\. Install it on your phone<\/h3>[\s\S]*?(?=<h3>\d+\. Settings and good to know<\/h3>)/, "");
 edit("panels.js", '<h3>Install</h3>\n<p>Add this page to your home screen so it opens like an app.</p>\n<div class="row"><button id="showInstall">Show the install pop-up</button></div>\n', "");

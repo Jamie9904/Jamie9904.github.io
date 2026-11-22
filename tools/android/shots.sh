@@ -32,6 +32,8 @@ set_of() {
   act -a "$PKG.SCAN"; shot "$s-7-scanner-big" 7
   back 2.5
   act -a "$PKG.SHOW" --es what big-off; sleep 1
+  act -a "$PKG.MANIFEST"; shot "$s-8-manifest" 3   # the Manifest check on its own page
+  back; shot "$s-9-menu" 2                        # Back from a page goes to the start menu
 }
 set_of normal 11
 adb shell wm size 720x1440; adb shell wm density 320; sleep 3

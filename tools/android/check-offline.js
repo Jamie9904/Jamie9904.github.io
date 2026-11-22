@@ -77,6 +77,25 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("Report a problem and Share this app are switched off", !s.report && s.feats.report === false && s.feats.shareApp === false, s);
   s = await page.evaluate(src => { const w = {}; new Function("window", src)(w); const want = w.LPN_CONFIG.features; return Object.keys(want).filter(k => feat(k) !== want[k]); }, fs.readFileSync(path.join(__dirname, "config.js"), "utf8"));
   check("uses the Android app's own settings (tools/android/config.js), not the website's", s.length === 0, s);
+  // The start menu: Log pallets and Manifest check are separate pages; ‹ Menu and Back go back to the menu.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), shown = () => ["apkMenu", "apkBar", "delCard", "entryCard", "logCard", "cmpCard"].filter(i => { const e = document.getElementById(i); return e && e.getClientRects().length > 0; }).join(",");
+    const N = window.Capacitor.Plugins.LpnNative, out = { start: LPN_APK_MODE() + ":" + shown() };
+    rows = [{ lpn: "VLT004040265", type: "BB", fsdu: false }]; save(); render(); LPN_APK_MODE("menu"); out.menuText = document.getElementById("apkGoLogT").textContent; out.carry = !document.getElementById("apkCarry").hidden;
+    document.getElementById("apkGoLog").click(); await wait(50); out.log = LPN_APK_MODE() + ":" + shown(); out.entryUsable = !document.querySelector(".card.entry").inert;
+    document.getElementById("apkBack").click(); await wait(50); document.getElementById("apkGoCmp").click(); await wait(50);
+    out.cmp = LPN_APK_MODE() + ":" + shown() + ":" + !document.getElementById("cmpBody").hidden;
+    document.getElementById("cmpToggle").click(); await wait(50); out.stays = !document.getElementById("cmpBody").hidden;
+    N.listeners.back(); await wait(50); out.back = LPN_APK_MODE();
+    document.getElementById("apkGoLog").click(); await wait(50); out.logAfterCmp = !document.body.classList.contains("cmpfocus") && document.getElementById("cmpBody").hidden;
+    rows = []; save(); render(); return out; });
+  check("the app opens on a menu (Log pallets or Manifest check) with nothing else on the page", s.start === "menu:apkMenu", s);
+  check("the menu shows a delivery in progress, with Carry on scanning", s.menuText === "Delivery in progress: 1 pallet." && s.carry, s);
+  check("Log pallets opens the log on its own page (no Manifest check), with ‹ Menu at the top", s.log === "log:apkBar,delCard,entryCard,logCard" && s.entryUsable && s.logAfterCmp, s);
+  check("Manifest check opens on its own page, open, and its heading doesn't fold it away; Back goes to the menu", s.cmp === "cmp:apkBar,cmpCard:true" && s.stays && s.back === "menu", s);
+  s = await page.evaluate(() => { cfg.simple = true; applySimple(); const on = { mode: LPN_APK_MODE(), cls: document.documentElement.className.includes("apkm-") };
+    cfg.simple = false; applySimple(); on.back = LPN_APK_MODE(); return on; });
+  check("Simple view (which hides the Manifest check) opens straight on the log with no menu; switching it off brings the menu back", s.mode === "" && !s.cls && s.back === "menu", s);
+  await page.evaluate(() => LPN_APK_MODE("log")); // the checks below use the log's page
   s = await page.evaluate(() => { openHelp("settings", "Settings"); const t = document.getElementById("panelBody").textContent; closeHelp(); openHelp("guide", "How to use this app"); const g = document.getElementById("panelBody").textContent; closeHelp(); return { share: /Share this app/.test(t) || !!document.getElementById("shareUrl"), report: /Report a problem/.test(t + g) }; });
   check("Settings and the Guide don't offer Share this app or Report a problem", !s.share && !s.report, s);
   s = await page.evaluate(() => { openHelp("settings", "Settings"); const t = document.getElementById("panelBody").textContent; closeHelp(); openHelp("guide", "How to use this app"); const g = document.getElementById("panelBody").textContent, heads = [...document.querySelectorAll("#panelBody h3")].map(h => h.textContent); closeHelp();
@@ -193,14 +212,15 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   s = await page.evaluate(() => document.getElementById("apkToast").textContent);
   check("text with no LPNs says so", s === "No LPNs found in the shared text.", s);
   // Home-screen shortcuts.
-  await page.evaluate(() => { document.getElementById("cmpToggle").click(); }); // fold the Manifest check again
+  await page.evaluate(() => { LPN_APK_MODE("log"); }); // the log's page (folds the Manifest check)
   await open({ action: "manifest" });
-  s = await page.evaluate(() => !document.getElementById("cmpBody").hidden);
-  check("the Manifest check shortcut opens the Manifest check", s === true, s);
+  s = await page.evaluate(() => ({ open: !document.getElementById("cmpBody").hidden, mode: LPN_APK_MODE() }));
+  check("the Manifest check shortcut opens the Manifest check on its own page", s.open && s.mode === "cmp", s);
   await page.evaluate(() => { window.Capacitor.Plugins.LpnNative.calls = []; });
   await open({ action: "scan" });
   s = await page.evaluate(async () => { await new Promise(r => setTimeout(r, 300)); return { calls: window.Capacitor.Plugins.LpnNative.calls.filter(c => c[0] === "scanner").length, web: scanning }; });
-  check("the Scan shortcut starts Live scan (the phone's own camera scanner)", s.calls === 1 && !s.web, s);
+  s.mode = await page.evaluate(() => LPN_APK_MODE());
+  check("the Scan shortcut goes to the log's page and starts Live scan (the phone's own camera scanner)", s.calls === 1 && !s.web && s.mode === "log", s);
   // Back, with the predictive back gesture.
   s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); N.calls = [];
     const bar = document.getElementById("apkSaved"); if (bar) bar.remove(); // a Saved bar left by an earlier check (Back closes it first)
@@ -209,10 +229,10 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     N.listeners.backCancelled(); const cancelled = panel.style.transform, stillOpen = !panel.hidden;
     N.listeners.backProgress({ progress: 0.8 }); N.listeners.back(); await wait(300); const closed = panel.hidden;
     const before = { scanning, scanbox: !document.getElementById("scanbox").hidden, menu: !document.getElementById("expMenu").hidden, saved: !!document.getElementById("apkSaved") };
-    if (scanning || before.scanbox) stopScan(); N.calls = [];
-    N.listeners.back(); const t = document.getElementById("apkToast").textContent; return { during, cancelled, stillOpen, closed, t, calls: N.calls, before }; });
-  check("Back follows the swipe on an open panel, cancelling puts it back, letting go closes it; on the main screen the next Back closes the app",
-    /translateX\(24px\) scale\(0\.97\)/.test(s.during) && s.cancelled === "" && s.stillOpen && s.closed && s.t === "Press Back again to close the app." && JSON.stringify(s.calls) === '[["exit",2000]]', s);
+    if (scanning || before.scanbox) stopScan(); LPN_APK_MODE("log"); N.listeners.back(); const toMenu = LPN_APK_MODE(); N.calls = [];
+    N.listeners.back(); const t = document.getElementById("apkToast").textContent; LPN_APK_MODE("log"); return { during, cancelled, stillOpen, closed, toMenu, t, calls: N.calls, before }; });
+  check("Back follows the swipe on an open panel, cancelling puts it back, letting go closes it; on a page Back goes to the menu, and on the menu the next Back closes the app",
+    /translateX\(24px\) scale\(0\.97\)/.test(s.during) && s.cancelled === "" && s.stillOpen && s.closed && s.toMenu === "menu" && s.t === "Press Back again to close the app." && JSON.stringify(s.calls) === '[["exit",2000]]', s);
   // Which build this is.
   s = await page.evaluate(async () => { openHelp("settings", "Settings"); await new Promise(r => setTimeout(r, 100)); const v = document.getElementById("apkVer"); const out = { set: v && v.textContent, foot: (document.getElementById("apkFoot") || {}).textContent }; closeHelp(); return out; });
   check("Settings and the footer say which Android build this is", /^Android APK build 9( · Data on this phone: .+)?$/.test(s.set || "") && s.foot === " · Android APK build 9", s);

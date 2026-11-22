@@ -222,6 +222,7 @@
   function openManifest() {
     if (!has("manifestCheck")) { toast("The Manifest check is switched off in this app."); return false; }
     if (typeof closeHelp === "function") closeHelp();
+    if (mode) { setMode("cmp"); return true; }
     const body = $("cmpBody"); if (body && body.hidden) $("cmpToggle").click();
     const card = $("cmpCard"); if (card) card.scrollIntoView({ block: "start" });
     return true;
@@ -256,6 +257,7 @@
     el.addEventListener("pointerdown", back); el.addEventListener("blur", back);
   }
   function toLog() {
+    if (mode) setMode("log");
     const lc = $("logCard"); if (lc && !lc.hidden) lc.scrollIntoView({ block: "start" });
     document.body.classList.remove("cmpfocus"); const en = document.querySelector(".card.entry"); if (en) en.inert = false;
   }
@@ -318,6 +320,7 @@
     if (openPanel()) { history.back(); return; }
     const m = $("expMenu"); if (m && !m.hidden) { m.hidden = true; const b = $("expBtn"); if (b) b.setAttribute("aria-expanded", "false"); return; }
     const sb = $("scanbox"); if (sb && !sb.hidden && typeof stopScan === "function") { stopScan(); return; }
+    if (mode && mode !== "menu") { setMode("menu"); return; }
     toast("Press Back again to close the app.");
     N().allowExit({ ms: 2000 }).catch(() => {});
   }
@@ -478,13 +481,85 @@
     + "html.apkbig #fsdu{width:30px;height:30px}html.apkbig #tyb button{min-width:64px}";
   document.head.appendChild(bigCss);
 
+  /* Start menu: the app opens on a menu to choose Log pallets or Manifest check, and each is its own page instead of
+     one long page. "‹ Menu" at the top, or Back, goes back to the menu. Only while both are switched on and Simple view
+     (which hides the Manifest check) is off; otherwise the app opens straight on the one that's there. */
+  const menuOn = () => has("palletLog") && has("manifestCheck") && !(typeof cfg !== "undefined" && cfg && cfg.simple);
+  let mode = "";
+  const menuCss = document.createElement("style");
+  menuCss.textContent = "#apkMenu,#apkBar{display:none}"
+    + "html.apkm-menu #apkMenu{display:block}html.apkm-log #apkBar,html.apkm-cmp #apkBar{display:flex}"
+    + "html.apkm-menu main>.card:not(#apkMenu),html.apkm-menu #flash{display:none!important}"
+    + "html.apkm-log #cmpCard{display:none!important}"
+    + "html.apkm-cmp #delCard,html.apkm-cmp #entryCard,html.apkm-cmp #logCard{display:none!important}html.apkm-cmp #cmpCard{display:block!important}"
+    + "html.apkm-cmp #cmpCard .chev{display:none}html.apkm-cmp #cmpToggle{cursor:default}"
+    + "html.apkm-log #delCard,html.apkm-cmp #cmpCard{margin-top:0;border-top:0;padding-top:0}"
+    + "html.apkm-menu main,html.apkm-cmp main{padding-bottom:40px}"
+    + "#apkBar{align-items:center;gap:10px;margin:2px 0 14px}#apkBar button{min-height:44px;padding:8px 14px;font-weight:700}"
+    + "#apkMenu{border-top:0!important;margin-top:0!important;padding-top:4px!important}#apkMenu h2{margin:4px 0 14px}"
+    + "#apkMenu .apkgo{display:block;width:100%;text-align:left;padding:18px 18px 16px;margin:0 0 12px;border:2px solid var(--line,#35507f);border-radius:14px;background:var(--sel,#1a3562);min-height:88px}"
+    + "#apkMenu .apkgo b{display:block;font-size:1.25rem;margin-bottom:4px}#apkMenu .apkgo span{display:block;color:var(--mu,#9db0d0);font-size:.95rem}"
+    + "#apkMenu .apkgo.on{border-color:var(--ac,#ff8a2a)}#apkMenu .apkgo span.ip{color:var(--ink,#eaf0fa);font-weight:700}"
+    + "#apkCarry{margin:-2px 0 14px}";
+  document.head.appendChild(menuCss);
+  function buildMenu() {
+    const main = document.querySelector("main"); if (!main || $("apkMenu")) return;
+    const m = document.createElement("div"); m.className = "card"; m.id = "apkMenu"; m.setAttribute("role", "region"); m.setAttribute("aria-labelledby", "apkMenuH");
+    m.innerHTML = '<h2 id="apkMenuH">What do you want to do?</h2>'
+      + '<button type="button" class="apkgo" id="apkGoLog"><b>Log pallets</b><span id="apkGoLogT"></span></button>'
+      + '<div id="apkCarry" hidden><button type="button" class="p" id="apkCarryBtn">Carry on scanning</button></div>'
+      + '<button type="button" class="apkgo" id="apkGoCmp"><b>Manifest check</b><span id="apkGoCmpT">Compare a delivery’s LPNs with the supplier’s manifest: what’s missing and what’s extra.</span></button>';
+    const bar = document.createElement("div"); bar.id = "apkBar";
+    bar.innerHTML = '<button type="button" id="apkBack" aria-label="Back to the menu">‹ Menu</button>';
+    main.prepend(bar); main.prepend(m);
+    $("apkGoLog").onclick = () => setMode("log");
+    $("apkGoCmp").onclick = () => setMode("cmp");
+    $("apkCarryBtn").onclick = () => opened({ action: "scan" });
+    $("apkBack").onclick = () => setMode("menu");
+    // On its own page the Manifest check stays open: its heading doesn't fold it away.
+    // The log's keyboard shortcuts (1 to 4, F, /, Ctrl+Z) only on the log's page, where you can see what they change.
+    document.addEventListener("keydown", e => { if (!mode || mode === "log") return; const t = e.target; if (t && /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName)) return;
+      if (/^[1-4fF/]$/.test(e.key) || (e.key.toLowerCase() === "z" && (e.ctrlKey || e.metaKey))) e.stopImmediatePropagation(); }, true);
+    document.addEventListener("click", e => { if (mode === "cmp" && e.target.closest && e.target.closest("#cmpToggle") && !$("cmpBody").hidden) { e.stopPropagation(); e.preventDefault(); } }, true);
+  }
+  function updMenu() {
+    const t = $("apkGoLogT"); if (!t) return;
+    const n = typeof rows !== "undefined" ? rows.length : 0;
+    t.textContent = n ? "Delivery in progress: " + countText() + "." : "Scan or type each pallet as it comes off the trailer, then export the log.";
+    t.className = n ? "ip" : ""; $("apkGoLog").classList.toggle("on", !!n);
+    $("apkCarry").hidden = !(n && has("liveScan"));
+  }
+  function setMode(m) {
+    const H = document.documentElement;
+    if (!menuOn()) { mode = ""; H.classList.remove("apkm-menu", "apkm-log", "apkm-cmp"); return; }
+    buildMenu();
+    if (typeof closeHelp === "function" && m !== mode) closeHelp();
+    const was = mode; mode = m;
+    H.classList.toggle("apkm-menu", m === "menu"); H.classList.toggle("apkm-log", m === "log"); H.classList.toggle("apkm-cmp", m === "cmp");
+    const body = $("cmpBody");
+    if (m === "cmp" && body && body.hidden) $("cmpToggle").click();
+    // (fold it on the log's page, or the page's own Manifest-focus mode would hide the entry bar)
+    if (m === "log" && body && !body.hidden) $("cmpToggle").click();
+    document.body.classList.remove("cmpfocus");
+    const en = document.querySelector(".card.entry"); if (en) en.inert = m !== "log";
+    if (m === "menu") updMenu();
+    if (m !== was) { window.scrollTo(0, 0); const f = m === "menu" ? $("apkGoLog") : $("apkBack"); if (f && was) f.focus({ preventScroll: true }); }
+  }
+  window.LPN_APK_MODE = m => { if (m) setMode(m); return mode; };
+  // (android.js loads before the app's own scripts, so this waits for them)
+  document.addEventListener("DOMContentLoaded", () => {
+    // Simple view switched on or off in Settings: the menu goes or comes back.
+    if (typeof applySimple === "function") { const was = applySimple; applySimple = function () { const r = was.apply(this, arguments); if (menuOn() !== !!mode) setMode(menuOn() ? "menu" : ""); return r; }; }
+    setMode("menu");
+  });
+
   /* Carry on: opening the app with a delivery in progress offers to go straight back to scanning. */
   function carryOn() {
     if (!N() || !has("palletLog") || !has("liveScan") || !rows.length || window.LPN_APK_NATIVESCAN || (typeof scanning !== "undefined" && scanning) || document.querySelector(".apkask") || ($("panel") && !$("panel").hidden)) return;
     ask("Delivery in progress: " + countText() + ".", [["Carry on scanning", () => opened({ action: "scan" })]]);
   }
   window.LPN_APK_CARRYON = carryOn;
-  if (N()) window.addEventListener("load", () => setTimeout(() => { try { carryOn(); } catch (e) {} }, 1200));
+  if (N()) window.addEventListener("load", () => setTimeout(() => { try { if (!mode) carryOn(); } catch (e) {} }, 1200));
 
   /* The count out loud after each pallet, and a word for a warning (Settings › Android app). */
   function sayIt(t) { if (N() && pref("lpnapkspeak", false)) N().speak({ text: t }).catch(() => {}); }
