@@ -584,6 +584,15 @@
     const lines = [];
     const log = async o => { lines.push(JSON.stringify(o)); try { await P().Filesystem.writeFile({ path: "LPN Pallet Log/ocrtest.txt", data: lines.join("\n") + "\n", directory: "DOCUMENTS", encoding: "utf8", recursive: true }); } catch (e) {} };
     const tot = { done: true, engine: window.LPN_OCR && window.LPN_OCR() ? "phone" : "app", right: 0, want: 0, missing: [], extra: [], ms: 0 };
+    // Can the photo reader's files be reached from a background worker (where the reader runs), as well as from the page?
+    try {
+      const t = window.LPN_TESS || {}, files = [t.workerPath, t.corePath, t.langPath && t.langPath.replace(/\/?$/, "/") + "eng.traineddata.gz"].filter(Boolean);
+      const page = await Promise.all(files.map(u => fetch(u).then(r => r.status + " " + (r.headers.get("content-type") || "") + " " + (r.headers.get("content-encoding") || ""), e => "error " + e.message)));
+      const src = "onmessage=async e=>{const out=[];for(const u of e.data){try{const r=await fetch(u);out.push(r.status+' '+(await r.arrayBuffer()).byteLength)}catch(x){out.push('error '+x.message)}}postMessage(out)}";
+      const w = new Worker(URL.createObjectURL(new Blob([src], { type: "text/javascript" })));
+      const worker = await Promise.race([new Promise(r => { w.onmessage = e => r(e.data); w.onerror = e => r(["worker error " + e.message]); w.postMessage(files); }), new Promise(r => setTimeout(() => r(["no answer in 20 s"]), 20000))]);
+      w.terminate(); await log({ probe: true, files, page, worker });
+    } catch (e) { await log({ probe: true, error: String((e && e.message) || e) }); }
     try {
       const exp = await (await fetch("ocrtest/expected.json")).json();
       for (const name of Object.keys(exp).filter(k => !k.startsWith("_"))) {

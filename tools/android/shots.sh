@@ -43,6 +43,7 @@ ocr_test() {
   act -a "$PKG.SHOW" --es what ocrtest
   i=0; while [ $i -lt 120 ]; do sleep 3; i=$((i+1)); adb shell cat "'$f'" 2>/dev/null | grep -q '"done"' && break; done
   adb shell cat "'$f'" > "$OUT/ocr-phone-reader.txt" 2>/dev/null
+  adb logcat -d | grep -iE "chromium|console|capacitor|tesseract|worker" | grep -viE "Handling local request|callback:" | tail -300 > "$OUT/ocr-log.txt" 2>/dev/null
   echo "Phone text reader on the manifest photos:"; cat "$OUT/ocr-phone-reader.txt"
 }
 ocr_test
