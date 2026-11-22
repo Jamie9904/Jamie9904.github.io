@@ -1098,7 +1098,7 @@ These changes were made on the `updates` branch and kept build number 66; they w
 - **Pushes check, the owner decides when to build.** Since commit `5670eb0` every push only builds and checks the offline copy, so a website change that would break the app is caught at once, but an APK is built and signed only when the workflow is run by hand after the owner approves an Android update. Several changes then go into one APK, instead of a new APK (and a reinstall on every phone) after every push.
 - **Downloaded from the run's Artifacts, not a store.** No Play Store listing or public release is made; the APK is for the owner's own phones and colleagues, and artifacts are kept 90 days.
 
-## The second Android update (Build 66 (Android 26), on `updates`)
+## The second Android update (Build 66 (Android 26))
 
 - **Nothing about installing in the app.** An installed APK can't be "added to the home screen", so the Guide section, the Settings button and the pop-up would only confuse; they are cut out by `build-www.js` rather than hidden by a switch, and the privacy line says the tools are inside the app, because the website's line about code servers isn't true there.
 - **No Google backup.** Logs are work data; keeping them out of Google's phone backups means they stay on that phone. The cost is that a reinstall or new phone starts empty, so the app relies on **Download backup**, as on the website.
@@ -1113,7 +1113,7 @@ These changes were made on the `updates` branch and kept build number 66; they w
 - **What's new written by hand for each APK.** Android updates collect several changes, so the list in `whats-new.json` is replaced before each approved build; it isn't shown on a first install, where there is nothing to compare with.
 - **Compile-only runs.** Native code can't be checked by `check-offline.js`, so a hand-started run with the APK unticked compiles it without making an APK that phones would be asked to install.
 
-## Blank tally sheet with the pallet log off (commit `bb37eff` on `updates`, not live yet, still build 66)
+## Blank tally sheet with the pallet log off (commit `bb37eff`, still build 66, live since `main` `13d2a77`)
 
 - **Not forced off with the log any more.** The sheet doesn't use the log: it is an empty paper sheet for writing pallets down at the trailer, which is just what people need when the website has no pallet log. So `tallySheet` was taken out of the list `SITE` turns off with `palletLog`, and keeps its own setting.
 - **In the Manifest check's step 1, not a new menu.** With the log off there is no Export menu, and the Manifest check is the whole page. The written sheet ends up as the log for a comparison (the Guide says to type the LPNs into the log box afterwards), so the button sits with the other ways of getting a log in **1. LPN log**. It only shows with the pallet log off, so a copy with the log on doesn't have the sheet in two places.
@@ -1130,7 +1130,7 @@ Two commits made on `updates` (`b050e1c`, `6cd079d`), kept as build 66 like the 
 - **Each side is fitted on its own.** The front has the details and the back a shorter title, so they hold different numbers of rows. If either side runs over (a font or a tall logo), only that side is made again with fewer rows, keeping the other; the tries went up from 8 to 12 because two sides may need them.
 - **The checks look for any mention of the app** (the words "LPN Pallet Log", "app" or "build n" in any text and in the file details) on the stand-in jsPDF, and in the real PDF read back by pdf.js on GitHub.
 
-## The third Android update (Build 66 (Android 43), on `updates`)
+## The third Android update (Build 66 (Android 43))
 
 Approved and built as GitHub run 44525475542 (37 MB, signed with the same certificate, 63 offline checks passed). Its What's new list was replaced with these changes.
 
@@ -1181,7 +1181,7 @@ Commits `073db40` to `17a595e`, made on `updates` and live since `main` `38c031c
 
 ## Android APK build 3
 
-Commits `1c7fb46` to `6929d5e` (21 and 22 Nov 2026), Android-only (`tools/android/` and `.github/workflows/android.yml`), made on `updates` (not on `main` yet). They are in Android APK build 3 (built and signed from run 103, GitHub run 45040214307; file `LPN-Pallet-Log-Android-APK-build-3.apk`, 78 MB, up from 37 MB, mainly ML Kit's text recognition model; same signing certificate; 90 offline checks passed; photo test on the virtual phone 54/54); `a3e7b5e` raised `tools/android/build.json` to 3 and replaced the `whats-new.json` list with these changes. The larger file is the price of the optional phone text reader: ML Kit's text recognition model is inside the app, so it works offline.
+Commits `1c7fb46` to `6929d5e` (21 and 22 Nov 2026), Android-only (`tools/android/` and `.github/workflows/android.yml`), made on `updates` and on `main` since `13d2a77` (22 Nov 2026). They are in Android APK build 3 (built and signed from run 103, GitHub run 45040214307; file `LPN-Pallet-Log-Android-APK-build-3.apk`, 78 MB, up from 37 MB, mainly ML Kit's text recognition model; same signing certificate; 90 offline checks passed; photo test on the virtual phone 54/54); `a3e7b5e` raised `tools/android/build.json` to 3 and replaced the `whats-new.json` list with these changes. The larger file is the price of the optional phone text reader: ML Kit's text recognition model is inside the app, so it works offline.
 
 - **Unzipped language data, and a photo test on a real Android.** Android's app build treats asset files ending in `.gz` specially, so `eng.traineddata.gz` couldn't be found inside the APK and the photo reader waited 90 seconds and gave up in every APK up to Android APK build 2. The offline check didn't catch it, because desktop Chromium serves the folder as it is. Shipping the file unzipped (a larger file, but it is inside the app anyway) and telling Tesseract.js `gzip: false` avoids the special handling altogether; the build stops if the file isn't where it should be. Because only a real Android build shows this kind of fault, hand-started runs now read the owner's manifest photos inside the app on the emulator and make no APK unless every LPN is right. The photos go only into the debug test copy, not the signed APK. A failed emulator only warns, as for the screenshots, so an emulator problem doesn't block an APK the owner asked for; a wrong read does.
 - **A start menu and separate pages instead of one long page.** On a phone the log and the Manifest check are different jobs; one long page meant scrolling past one to reach the other and, on the website, the Manifest check sliding the entry bar away. Each part on its own page, with a sticky bar that names it and always offers ‹ Menu, is how Android apps are laid out, and Back going to the menu matches what Android users expect. The page's own cards are only shown or hidden by classes, so none of the website's code changed. The menu is drawn straight away by `android.js` (it runs before the app's scripts) so the long page never flashes up first.
