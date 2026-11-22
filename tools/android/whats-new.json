@@ -1,6 +1,13 @@
 {
   "_about": "Shown once on each phone after it installs a new Android update (not on a first install). Replace the list with what this update changes, in plain words, each time an Android update is approved and built.",
   "items": [
-    "Any pallet can have a description now, not just FPP pallets and pallets with no LPN: tap its LPN, then tap the Description box under it and type (for example what's on it, the labels or a PO number). It shows under the LPN and goes on the exports. The box still only opens by itself for FPP pallets and No LPN."
+    "Fixed: reading manifest photos (and Read the printed LPN) now works in the Android app. Before, the photo reader couldn’t start inside the app and gave up after 90 seconds.",
+    "The app now opens on a start menu: choose Log pallets or Manifest check. Each has its own page, with its name and ‹ Menu in a bar that stays at the top (Back goes to the menu too). The menu also shows a delivery in progress (with Carry on scanning) and your last few saved deliveries, with buttons for Saved deliveries and Exported files.",
+    "A tidier app bar: Guide, Changelog, Settings, Exported files and a new About screen (with your data and the app’s open-source licences) are in the ⋮ menu at the top. Reading photos shows a progress bar with Cancel, and if you switch away while photos are read, a notification says when they’re done.",
+    "Zebra and Honeywell handheld scanners: scans now come straight into the app instead of being typed, so a scan can’t land in the wrong box, with the same buzz and sound as a camera scan and a green (or orange, for a check) flash round the screen. On the log it’s logged as the next pallet; on the Manifest check it’s added to the manifest numbers. Untick it in Settings › Android app if your scanner should type like a keyboard.",
+    "Choose a folder for exports in Settings › Android app (for example a OneDrive or Google Drive folder on the phone): every export is then saved there too, as well as in Documents › LPN Pallet Log.",
+    "Smaller things: Settings › Android app is grouped into Scanning, Photos, Display and Exports; the Manifest date shows as day/month/year like the delivery date; the “New here?” card is gone; and a tidier footer.",
+    "Settings › Android app › Photos can switch manifest photos to the phone’s own text reader. It can be faster, but the app’s own reader (still the default) is more accurate; a ✓ Saved tick after each change; Next on the keyboard moves through the Delivery boxes; and if something ever goes wrong, a plain message says your log is safe, with Try again.",
+    "Scan sounds and the spoken count follow the phone: on silent, vibrate or Do Not Disturb you only get the buzz. Settings › Android app can turn this off."
   ]
 }

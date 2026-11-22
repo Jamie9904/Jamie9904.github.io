@@ -65,7 +65,12 @@ jobs:
       - name: Build a test copy for the screenshots
         if: github.event_name == 'workflow_dispatch' && inputs.shots
         working-directory: tools/android/android
-        run: ./gradlew --no-daemon assembleDebug
+        # Only this test copy carries the manifest photos, for the phone text reader check in shots.sh.
+        run: |
+          mkdir -p app/src/main/assets/public/ocrtest
+          cp ../../ocr-check/photos/* ../../ocr-check/expected.json app/src/main/assets/public/ocrtest/
+          ./gradlew --no-daemon assembleDebug
+          rm -rf app/src/main/assets/public/ocrtest
       - name: Let the virtual phone use the processor
         if: github.event_name == 'workflow_dispatch' && inputs.shots
         run: |
@@ -84,14 +89,23 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back virtualscene
           script: sh tools/android/shots.sh
-      - name: Keep the screenshots on the draft release "Android screenshots" (replaced each run)
+      # The app's photo reading on the user's manifest photos, on the virtual phone (shots.sh): every LPN right and
+      # nothing extra, or no APK. (The emulator itself may fail to start; then there's no result and only a warning.)
+      - name: Photo reading on the virtual phone
         if: github.event_name == 'workflow_dispatch' && inputs.shots
+        run: |
+          f=shots/ocr-phone-reader.txt
+          if [ ! -s "$f" ] || ! grep -q '"done"' "$f"; then echo "::warning title=Photo reading on the phone::No result from the virtual phone"; exit 0; fi
+          d=$(grep '"done"' "$f"); echo "$d"
+          if echo "$d" | grep -q '"right":\([0-9]*\),"want":\1,"missing":\[\],"extra":\[\]'; then echo "::notice title=Photo reading on the phone::$d"; else echo "::error title=Photo reading on the phone::$d"; exit 1; fi
+      - name: Keep the screenshots on the draft release "Android screenshots" (replaced each run)
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.shots # also when the photo test failed, to see why
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           [ -d shots ] && [ "$(ls shots | wc -l)" -gt 0 ] || { echo "no screenshots"; exit 0; }
-          (cd shots && zip -q ../android-screenshots.zip *.png)
+          (cd shots && zip -q ../android-screenshots.zip *.png *.txt 2>/dev/null || zip -q ../android-screenshots.zip *.png)
           id=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate -q '.[] | select(.draft and .name == "Android screenshots") | .id' | sort -n | head -n 1)
           if [ -z "$id" ]; then
             gh release create android-screenshots --repo "$GITHUB_REPOSITORY" --draft --title "Android screenshots" \
@@ -101,7 +115,7 @@ jobs:
             gh api -X POST -H "Content-Type: application/zip" --input android-screenshots.zip "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$id/assets?name=android-screenshots.zip" -q .name
           fi
       - uses: actions/upload-artifact@v5
-        if: github.event_name == 'workflow_dispatch' && inputs.shots
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.shots
         with:
           name: android-screenshots
           path: shots/

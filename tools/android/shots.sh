@@ -32,9 +32,26 @@ set_of() {
   act -a "$PKG.SCAN"; shot "$s-7-scanner-big" 7
   back 2.5
   act -a "$PKG.SHOW" --es what big-off; sleep 1
+  act -a "$PKG.MANIFEST"; shot "$s-8-manifest" 3   # the Manifest check on its own page
+  back; shot "$s-9-menu" 2                        # Back from a page goes to the start menu
 }
+# The app's photo reading (whichever reader the app would use; its own by default) on the user's manifest photos (only the test copy has them): what it got right, missing
+# and extra, from the app's log lines. Run once, before the screenshots.
+ocr_test() {
+  adb shell am force-stop "$PKG"; act; sleep 8
+  f="/sdcard/Documents/LPN Pallet Log/ocrtest.txt"; adb shell rm -f "'$f'"
+  act -a "$PKG.SHOW" --es what ocrtest
+  i=0; while [ $i -lt 300 ]; do sleep 3; i=$((i+1)); adb shell cat "'$f'" 2>/dev/null | grep -q '"done"' && break; done
+  adb shell cat "'$f'" > "$OUT/ocr-phone-reader.txt" 2>/dev/null
+  adb logcat -d | grep -iE "chromium|console|capacitor|tesseract|worker" | grep -viE "Handling local request|callback:" | tail -300 > "$OUT/ocr-log.txt" 2>/dev/null
+  echo "Phone text reader on the manifest photos:"; cat "$OUT/ocr-phone-reader.txt"
+}
+ocr_test
+adb logcat -c
 set_of normal 11
 adb shell wm size 720x1440; adb shell wm density 320; sleep 3
 set_of small 22
 adb shell wm size reset; adb shell wm density reset
+# The page's own messages while the screenshots were taken (Capacitor/Console), to see why a step didn't happen.
+adb logcat -d -s Capacitor/Console:V Capacitor:V > "$OUT/page-log.txt" 2>/dev/null || true
 ls -1 "$OUT" | wc -l | xargs echo "screenshots:"

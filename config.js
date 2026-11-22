@@ -32,7 +32,7 @@ window.LPN_CONFIG = {
     exportReminder: true,  // reminder when a delivery from an earlier day was never exported
     historyVideo: true,    // the one-minute video at the top of the Changelog showing how the app has grown
     twoPhones: true,       // Share log: send this log's pallets to another person's phone with QR codes, e.g. when two people unload one trailer
-    tallySheet: true       // Blank tally sheet in the Export menu, a paper sheet to fill in by hand
+    tallySheet: true       // Blank tally sheet, a paper sheet to fill in by hand: in the Export menu (in the Manifest check's step 1 when palletLog is off)
   },
   testing: {
     palletLog: false,

@@ -38,7 +38,7 @@
   }
   // The photo reader's files inside the app (filled in by build-www.js), as full addresses.
   const t = /*TESS*/null;
-  if (t) window.LPN_TESS = { workerPath: new URL(t.workerPath, location.href).href, corePath: new URL(t.corePath, location.href).href, langPath: new URL(t.langPath, location.href).href, workerBlobURL: false };
+  if (t) window.LPN_TESS = { workerPath: new URL(t.workerPath, location.href).href, corePath: new URL(t.corePath, location.href).href, langPath: new URL(t.langPath, location.href).href, workerBlobURL: false, gzip: t.gzip !== false };
 
   const P = () => (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform() && window.Capacitor.Plugins) || null;
   const b64 = blob => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1] || ""); r.onerror = () => rej(r.error); r.readAsDataURL(blob); });
@@ -57,10 +57,18 @@
     try { await P().Share.share({ title: name, files: [await toCache(blob, name)], dialogTitle: "Send or save " + name }); }
     catch (e) { if (!cancelled(e)) throw e; }
   };
+  /* The folder chosen in Settings (for example a synced OneDrive or Google Drive folder): every export also goes there. */
+  const dirGet = () => { try { const v = JSON.parse(localStorage.getItem("lpnapkdir") || "null"); return v && v.uri ? v : null; } catch (e) { return null; } };
+  async function toFolder(blob, name) {
+    const d = dirGet(); if (!d || !N() || typeof N().saveToFolder !== "function") return "";
+    const ext = (String(name).match(/\.([a-z0-9]+)$/i) || [])[1] || "";
+    try { const r = await N().saveToFolder({ uri: d.uri, name: clean(name), data: await b64(blob), mime: blob.type || MIME[ext.toLowerCase()] || "application/octet-stream" }); return r && r.saved ? " and in " + (r.folder || d.name) : ""; }
+    catch (e) { toast("Couldn’t save " + name + " in " + d.name + ": " + ((e && (e.message || e.errorMessage)) || e)); return ""; }
+  }
   window.LPN_APK_SAVE = async function (blob, name) {
-    const kept = await keep(blob, name);
-    say(kept ? "Saved " + name + " in Documents › LPN Pallet Log." : "");
-    if (kept) { savedBar(blob, name); return; }
+    const kept = await keep(blob, name), also = await toFolder(blob, name);
+    say(kept ? "Saved " + name + " in Documents › LPN Pallet Log" + also + "." : also ? "Saved " + name + also.replace(/^ and/, "") + "." : "");
+    if (kept) { savedBar(blob, name, also); return; }
     // Couldn't keep a copy (older Android): straight to the share menu, to save or send it.
     try { await shareFile(blob, name); } catch (e) { say("Couldn’t save " + name + ": " + ((e && e.message) || e)); }
   };
@@ -73,10 +81,10 @@
   }
   /* After saving: a bar at the bottom with Open and Share, so the file needn't be looked for. */
   let barT = 0;
-  function savedBar(blob, name) {
+  function savedBar(blob, name, also) {
     let b = document.getElementById("apkSaved"); if (b) b.remove();
     b = document.createElement("div"); b.id = "apkSaved"; b.className = "apksaved"; b.setAttribute("role", "status");
-    const t = document.createElement("p"); t.textContent = "Saved " + name + " in Documents › LPN Pallet Log."; b.appendChild(t);
+    const t = document.createElement("p"); t.textContent = "Saved " + name + " in Documents › LPN Pallet Log" + (also || "") + "."; b.appendChild(t);
     const row = document.createElement("div"); row.className = "row"; b.appendChild(row);
     const done = () => { clearTimeout(barT); b.remove(); };
     const btn = (label, fn, cls) => { const x = document.createElement("button"); x.type = "button"; x.textContent = label; if (cls) x.className = cls; x.onclick = fn; row.appendChild(x); return x; };
@@ -143,7 +151,7 @@
   document.addEventListener("pointerdown", e => {
     const b = e.target && e.target.closest && e.target.closest("button"); if (!b || b.disabled) return;
     // A light tap on the main buttons, like Android's keyboard (with Vibrate on in Settings).
-    if (N() && typeof cfg !== "undefined" && cfg.vibrate && b.matches("#add,#tyb button,#scanBtn,#scan,#photo,#upload,#undoLast,#noLpn")) N().tap().catch(() => {});
+    if (N() && typeof cfg !== "undefined" && cfg.vibrate && b.matches("#add,#tyb button,#scanBtn,#scan,#photo,#upload,#undoLast,#noLpn,.apkgo,#apkCarryBtn,#apkBack")) N().tap().catch(() => {});
     const r = b.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2, s = document.createElement("span");
     if (getComputedStyle(b).position === "static") b.style.position = "relative"; // the ripple sits inside the button; its tap area isn't clipped
     const w = document.createElement("span"); w.className = "apkripwrap"; w.setAttribute("aria-hidden", "true");
@@ -222,6 +230,7 @@
   function openManifest() {
     if (!has("manifestCheck")) { toast("The Manifest check is switched off in this app."); return false; }
     if (typeof closeHelp === "function") closeHelp();
+    if (mode) { setMode("cmp"); return true; }
     const body = $("cmpBody"); if (body && body.hidden) $("cmpToggle").click();
     const card = $("cmpCard"); if (card) card.scrollIntoView({ block: "start" });
     return true;
@@ -256,6 +265,7 @@
     el.addEventListener("pointerdown", back); el.addEventListener("blur", back);
   }
   function toLog() {
+    if (mode) setMode("log");
     const lc = $("logCard"); if (lc && !lc.hidden) lc.scrollIntoView({ block: "start" });
     document.body.classList.remove("cmpfocus"); const en = document.querySelector(".card.entry"); if (en) en.inert = false;
   }
@@ -275,6 +285,7 @@
     if (r.action === "show") { // the screenshot check on GitHub (tools/android/shots.sh)
       if (r.what === "settings") { if (typeof closeHelp === "function") closeHelp(); openHelp("settings", "Settings"); }
       else if (r.what === "carry") carryOn();
+      else if (r.what === "ocrtest") ocrTest();
       else if (r.what === "big-on" || r.what === "big-off") { try { localStorage.setItem("lpnapkbig", r.what === "big-on" ? "on" : "off"); } catch (e) {} applyBig(); }
       return;
     }
@@ -313,11 +324,14 @@
   function backReset() { [document.querySelector(".apkask"), openPanel()].forEach(t => { if (t) { t.style.transition = "transform .15s, opacity .15s"; t.style.transform = ""; t.style.opacity = ""; } }); }
   function back() {
     backReset();
+    if (window.LPN_APK_INTRODONE && window.LPN_APK_INTRODONE()) return;
+    if (window.LPN_APK_MORE && window.LPN_APK_MORE()) return;
     const a = document.querySelector(".apkask"); if (a) { if (!a.dataset.keep) a.remove(); return; }
     const sv = $("apkSaved"); if (sv) { sv.remove(); return; }
     if (openPanel()) { history.back(); return; }
     const m = $("expMenu"); if (m && !m.hidden) { m.hidden = true; const b = $("expBtn"); if (b) b.setAttribute("aria-expanded", "false"); return; }
     const sb = $("scanbox"); if (sb && !sb.hidden && typeof stopScan === "function") { stopScan(); return; }
+    if (mode && mode !== "menu") { setMode("menu"); return; }
     toast("Press Back again to close the app.");
     N().allowExit({ ms: 2000 }).catch(() => {});
   }
@@ -359,7 +373,7 @@
     // Which Android build this is (footer), and what's new after an Android update.
     A().getInfo().then(i => {
       const v = /^Android APK build \d+$/.test(i.version || "") ? i.version : "Android app: " + i.version; window.LPN_APK_VER = v;
-      const f = $("verText"); if (f && !$("apkFoot")) { const s = document.createElement("span"); s.id = "apkFoot"; s.textContent = " · " + v; f.after(s); }
+      const f = $("verText"); if (f && !$("apkFoot")) { const s = document.createElement("span"); s.id = "apkFoot"; s.textContent = " " + v + " ·"; f.after(s); } // (the website's line already ends with a dot)
       whatsNew(String(i.build || ""));
     }).catch(() => {});
   }
@@ -369,18 +383,32 @@
       if (!$("panelTitle") || $("panelTitle").textContent !== "Settings" || $("apkSet")) return;
       const box = document.createElement("div"); box.id = "apkSet";
       box.innerHTML = '<h3>Android app</h3><p class="note" id="apkVer"></p>'
+        + '<h4 class="apksub">Scanning</h4>'
         + (has("liveScan") ? '<label class="chk"><input type="checkbox" id="apkVol"><span>Volume-down button starts and stops Live scan (volume-up still changes the volume)</span></label>'
           + '<label class="chk"><input type="checkbox" id="apkCam"><span>Live scan with the phone’s own camera scanner (faster, with tap-to-focus and automatic zoom). Untick to use the one inside the app.</span></label>' : "")
         + (has("palletLog") ? '<label class="chk"><input type="checkbox" id="apkSpeak"><span>Say the count out loud after each pallet (and “already logged” or “check” for a warning)</span></label>' : "")
+        + '<label class="chk"><input type="checkbox" id="apkQuiet"><span>No scan sounds or spoken count while the phone is on silent, vibrate or Do Not Disturb (it still buzzes)</span></label>'
+        + '<label class="chk"><input type="checkbox" id="apkHand"><span>Warehouse handheld scanner (Zebra or Honeywell): scans come straight into the app, so they can’t land in the wrong box. Untick if your scanner should type like a keyboard.</span></label>'
+        + (has("manifestPhotos") ? '<h4 class="apksub">Photos</h4><label class="chk"><input type="checkbox" id="apkOcr"><span>Read manifest photos with the phone’s own text reader instead of the app’s own. It can be faster, but the app’s own reader is more accurate on the test photos, so check what it finds.</span></label>' : "")
+        + '<h4 class="apksub">Display</h4>'
         + (has("palletLog") ? '<label class="chk"><input type="checkbox" id="apkBig"><span>Bigger buttons, for gloves (Add, Scan, the pallet types, Undo, and in the camera scanner)</span></label>' : "")
-        + '<div class="row"><button type="button" id="apkColours" hidden>Use the phone’s colours</button></div>' 
+        + '<div class="row"><button type="button" id="apkColours" hidden>Use the phone’s colours</button></div>'
+        + '<h4 class="apksub">Exports</h4><p class="note" id="apkDirNote"></p><div class="row"><button type="button" id="apkDirPick">Choose a folder for exports</button><button type="button" id="apkDirOff" hidden>Stop saving there</button></div>'
         + '<div class="row"><button type="button" id="apkFilesSet">Exported files</button></div>';
       $("panelBody").prepend(box);
       $("apkVer").textContent = (window.LPN_APK_VER || "Android app") + (window.LPN_APK_STORE ? " · Data on this phone: " + mb(S.size()) : "");
       if ($("apkVol")) { $("apkVol").checked = volOn(); $("apkVol").onchange = () => { try { localStorage.setItem("lpnapkvol", $("apkVol").checked ? "on" : "off"); } catch (e) {} syncVol(); }; }
       $("apkFilesSet").onclick = () => showFiles();
       const sw = (id, key, def) => { const c = $(id); if (!c) return; c.checked = pref(key, def); c.onchange = () => { try { localStorage.setItem(key, c.checked ? "on" : "off"); } catch (e) {} }; };
-      sw("apkCam", "lpnapkcamscan", true); sw("apkSpeak", "lpnapkspeak", false); sw("apkBig", "lpnapkbig", false);
+      sw("apkQuiet", "lpnapkquiet", true);
+      sw("apkCam", "lpnapkcamscan", true); sw("apkSpeak", "lpnapkspeak", false); sw("apkBig", "lpnapkbig", false); sw("apkHand", "lpnapkhand", true); sw("apkOcr", "lpnapkocr", OCR_DEFAULT);
+      if ($("apkHand")) $("apkHand").addEventListener("change", syncHand);
+      const dirShow = () => { const d = dirGet(), n = $("apkDirNote"); if (!n) return;
+        n.textContent = "Exports are saved in Documents › LPN Pallet Log" + (d ? " and in " + d.name + "." : ". Choose a folder (for example a OneDrive or Google Drive folder on this phone) to put a copy of every export there too.");
+        $("apkDirOff").hidden = !d; $("apkDirPick").textContent = d ? "Choose another folder" : "Choose a folder for exports"; };
+      dirShow();
+      $("apkDirPick").onclick = async () => { try { const r = await N().pickFolder(); if (r && r.picked) { localStorage.setItem("lpnapkdir", JSON.stringify({ uri: r.uri, name: r.name })); dirShow(); toast("Every export will also be saved in " + r.name + "."); } } catch (e) { toast((e && e.message) || "That folder can’t be used."); } };
+      $("apkDirOff").onclick = () => { try { localStorage.removeItem("lpnapkdir"); } catch (e) {} dirShow(); toast("Exports are saved in Documents › LPN Pallet Log only."); };
       if ($("apkBig")) $("apkBig").addEventListener("change", applyBig);
       if (N()) N().phoneColours().then(c => { const b = $("apkColours"); if (!b || !c || !c.available) return; b.hidden = false;
         b.onclick = () => { theme = { bg: c.bg, ac: c.ac }; applyTheme(); saveTheme(); closeHelp(); openHelp("settings", "Settings"); toast("Using your phone’s colours. Reset to default colours (in Settings) goes back."); }; }).catch(() => {});
@@ -478,16 +506,412 @@
     + "html.apkbig #fsdu{width:30px;height:30px}html.apkbig #tyb button{min-width:64px}";
   document.head.appendChild(bigCss);
 
+  /* Warehouse handheld scanners (Zebra, Honeywell): each scan arrives from Android as one whole code, so it goes where
+     it belongs whatever has focus: an open pallet edit closes first, a box someone is filling in (manifest numbers,
+     search, the scanner test) gets it, the Manifest check's page adds it to the manifest numbers, and otherwise it is
+     logged as the next pallet, with the usual checks. */
+  function handScan(code) {
+    code = String(code || "").trim(); if (!code) return;
+    const a = document.activeElement;
+    if (a && a.closest && a.closest(".dmgrow")) a.blur();
+    else if (a && /^(INPUT|TEXTAREA)$/.test(a.tagName) && a.id !== "lpn" && !/^(checkbox|radio|button|submit|file|date|color|range)$/i.test(a.type || "")) {
+      if (a.tagName === "TEXTAREA") { const v = a.value; a.value = v + (v && !/\n$/.test(v) ? "\n" : "") + code + "\n"; a.dispatchEvent(new Event("input", { bubbles: true })); }
+      else { a.value = code; a.dispatchEvent(new Event("input", { bubbles: true })); a.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })); }
+      return;
+    }
+    if (openPanel()) { toast("Close this to log scans."); return; }
+    if (mode === "cmp" || !has("palletLog")) {
+      if (!has("manifestCheck") || typeof addNums !== "function") return;
+      const r = addNums([code], "cmpNums"); $("cmpNums").dispatchEvent(new Event("input", { bubbles: true }));
+      if (typeof sfx === "function") sfx(r.added ? "ok" : "warn"); glow(r.added ? "ok" : "warn");
+      toast(r.added ? "Added " + code + " to the manifest numbers." : code + " is already in the manifest numbers."); return;
+    }
+    if (mode && mode !== "log") setMode("log");
+    const l = $("lpn"); if (!l || typeof add !== "function") return;
+    const n = rows.length; l.value = code; add();
+    // The same buzz and sound as a camera scan come with adding; the screen's edge flashes green, or orange for a check.
+    setTimeout(() => { const chk = $("chkBar"); glow(chk && !chk.hidden ? "warn" : rows.length > n ? "ok" : "warn"); }, 60);
+  }
+  let glowT = 0;
+  function glow(kind) {
+    let g = $("apkGlow"); if (!g) { g = document.createElement("div"); g.id = "apkGlow"; g.setAttribute("aria-hidden", "true"); document.body.appendChild(g); }
+    clearTimeout(glowT); g.className = kind; glowT = setTimeout(() => { g.className = ""; }, 450);
+  }
+  /* The Manifest date shown the app's way (day/month/year unless Settings says otherwise), like the delivery date,
+     instead of the phone's own date box format. */
+  function cmpDateShow() {
+    const d = $("cmpDate"); if (!d) return;
+    if (!d.parentElement.classList.contains("dwrap")) {
+      const w = document.createElement("div"); w.className = "dwrap"; d.before(w); w.appendChild(d);
+      const s = document.createElement("span"); s.className = "dshow"; s.id = "cmpDateShow"; s.setAttribute("aria-hidden", "true"); w.appendChild(s);
+      const desc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value");
+      Object.defineProperty(d, "value", { configurable: true, get() { return desc.get.call(this); }, set(v) { desc.set.call(this, v); cmpDateShow(); } });
+      ["input", "change"].forEach(k => d.addEventListener(k, cmpDateShow));
+    }
+    const v = d.value, s = $("cmpDateShow"); s.textContent = v ? (typeof ukDate === "function" ? ukDate(v) : v) : "Pick a date"; s.classList.toggle("ph", !v);
+  }
+  window.LPN_APK_HANDSCAN = handScan;
+  function syncHand() { if (N() && typeof N().setHandheld === "function") N().setHandheld({ on: pref("lpnapkhand", true) }).catch(() => {}); }
+  window.LPN_APK_SYNCHAND = syncHand;
+  if (N()) { try { N().addListener("hwScan", e => handScan(e && e.code)); } catch (e) {} window.addEventListener("load", syncHand); }
+
+  /* Manifest photos read by the phone's own text reader (ML Kit, no internet) instead of the one inside the app: it
+     stands in for that reader's worker, so the app's photo reading (close-ups, tidy-up, prefix list) is the same. If it
+     fails, the app's own reader takes over. Settings › Android app can switch back to the app's own reader. */
+  // Off by default: on the user's manifest photos (GitHub's virtual phone, 22 Nov 2026) it got 53 of 54 LPNs (it missed
+  // V0013323651, which the app's own reader gets), so the app's own reader stays the default.
+  const OCR_DEFAULT = false;
+  const upper = t => String(t || "").toUpperCase().replace(/[^A-Z0-9:\s]/g, "");
+  window.LPN_OCR = () => {
+    if (!N() || typeof N().readText !== "function" || !pref("lpnapkocr", OCR_DEFAULT)) return null;
+    let tw = null, params = {};
+    const own = async () => { if (!tw) { tw = await Tesseract.createWorker("eng", 1, window.LPN_TESS); await tw.setParameters(params); } return tw; };
+    return Promise.resolve({
+      setParameters: async p => { params = Object.assign({}, params, p); if (tw) await tw.setParameters(p); },
+      terminate: async () => { if (tw) { const t = tw; tw = null; await t.terminate(); } },
+      recognize: async img => {
+        if (tw) return tw.recognize(img);
+        try {
+          const url = img.toDataURL("image/jpeg", 0.95), r = await N().readText({ data: url.split(",")[1] });
+          const words = (r.words || []).map(w => ({ text: upper(w.text).replace(/\s+/g, ""), bbox: { x0: w.x0, y0: w.y0, x1: w.x1, y1: w.y1 } })).filter(w => w.text);
+          return { data: { text: upper(r.text), words } };
+        } catch (e) { typeof diag === "function" && diag("ocr", "The phone's text reader failed (" + ((e && e.message) || e) + "), so the app's own reader was used."); return (await own()).recognize(img); }
+      }
+    });
+  };
+  /* The photo check on GitHub's virtual phone (tools/android/shots.sh): reads the manifest photos put in a test copy
+     of the app and writes what was right, missing and extra to Documents › LPN Pallet Log › ocrtest.txt (one line per
+     photo, then a "done" line), for the workflow to read. */
+  async function ocrTest() {
+    const lines = [];
+    const log = async o => { lines.push(JSON.stringify(o)); try { await P().Filesystem.writeFile({ path: "LPN Pallet Log/ocrtest.txt", data: lines.join("\n") + "\n", directory: "DOCUMENTS", encoding: "utf8", recursive: true }); } catch (e) {} };
+    const tot = { done: true, engine: window.LPN_OCR && window.LPN_OCR() ? "phone" : "app", right: 0, want: 0, missing: [], extra: [], ms: 0 };
+    // Can the photo reader's files be reached from a background worker (where the reader runs), as well as from the page?
+    try {
+      const t = window.LPN_TESS || {}, files = [t.workerPath, t.corePath, t.langPath && t.langPath.replace(/\/?$/, "/") + "eng.traineddata" + (t.gzip === false ? "" : ".gz")].filter(Boolean);
+      const page = await Promise.all(files.map(u => fetch(u).then(r => r.status + " " + (r.headers.get("content-type") || "") + " " + (r.headers.get("content-encoding") || ""), e => "error " + e.message)));
+      const src = "onmessage=async e=>{const out=[];for(const u of e.data){try{const r=await fetch(u);out.push(r.status+' '+(await r.arrayBuffer()).byteLength)}catch(x){out.push('error '+x.message)}}postMessage(out)}";
+      const w = new Worker(URL.createObjectURL(new Blob([src], { type: "text/javascript" })));
+      const worker = await Promise.race([new Promise(r => { w.onmessage = e => r(e.data); w.onerror = e => r(["worker error " + e.message]); w.postMessage(files); }), new Promise(r => setTimeout(() => r(["no answer in 20 s"]), 20000))]);
+      w.terminate(); await log({ probe: true, files, page, worker });
+    } catch (e) { await log({ probe: true, error: String((e && e.message) || e) }); }
+    try {
+      const exp = await (await fetch("ocrtest/expected.json")).json();
+      for (const name of Object.keys(exp).filter(k => !k.startsWith("_"))) {
+        const want = exp[name], blob = await (await fetch("ocrtest/" + name)).blob(), t0 = Date.now();
+        let got = [];
+        try { got = [...await readPhoto(new File([blob], name, { type: "image/jpeg" }))]; } catch (e) { await log({ name, error: String((e && e.message) || e) }); }
+        const g = new Set(got), w = new Set(want), o = { name, ms: Date.now() - t0, right: want.filter(x => g.has(x)).length, of: want.length, missing: want.filter(x => !g.has(x)), extra: got.filter(x => !w.has(x)) };
+        tot.right += o.right; tot.want += want.length; tot.missing.push(...o.missing); tot.extra.push(...o.extra); tot.ms += o.ms; await log(o);
+      }
+    } catch (e) { tot.error = String((e && e.message) || e); }
+    await log(tot);
+  }
+
+  /* Start menu: the app opens on a menu to choose Log pallets or Manifest check, and each is its own page instead of
+     one long page. "‹ Menu" at the top, or Back, goes back to the menu. Only while both are switched on and Simple view
+     (which hides the Manifest check) is off; otherwise the app opens straight on the one that's there. */
+  const menuOn = () => has("palletLog") && has("manifestCheck") && !(typeof cfg !== "undefined" && cfg && cfg.simple);
+  let mode = "";
+  const scrollAt = {};
+  const menuCss = document.createElement("style");
+  menuCss.textContent = "#apkMenu,#apkBar{display:none}"
+    + "html.apkm-menu #apkMenu{display:block}html.apkm-log #apkBar,html.apkm-cmp #apkBar{display:flex}"
+    + "html.apkm-menu main>.card:not(#apkMenu),html.apkm-menu #flash{display:none!important}"
+    + "html.apkm-log #cmpCard{display:none!important}"
+    + "html.apkm-cmp #delCard,html.apkm-cmp #entryCard,html.apkm-cmp #logCard{display:none!important}html.apkm-cmp #cmpCard{display:block!important}"
+    + "html.apkm-cmp #cmpCard .chev{display:none}html.apkm-cmp #cmpToggle{cursor:default}"
+    + "html.apkm-log #delCard,html.apkm-cmp #cmpCard{margin-top:0;border-top:0;padding-top:0}"
+    + "html.apkm-menu main,html.apkm-cmp main{padding-bottom:40px}"
+    + "#apkBar{align-items:center;gap:10px;margin:2px 0 14px}#apkBar button{min-height:44px;padding:8px 12px;font-weight:700;white-space:nowrap;flex:none}"
+    + "#apkMenu{border-top:0!important;margin-top:0!important;padding-top:4px!important}#apkMenu h2{margin:4px 0 14px}"
+    + "#apkMenu .apkgo{display:block;width:100%;text-align:left;padding:18px 18px 16px;margin:0 0 12px;border:2px solid var(--line,#35507f);border-radius:14px;background:var(--sel,#1a3562);min-height:88px}"
+    + "#apkMenu .apkgo b{display:block;font-size:1.25rem;margin-bottom:4px}#apkMenu .apkgo span{display:block;color:var(--mu,#9db0d0);font-size:.95rem}"
+    + "#apkMenu .apkgo.on{border-color:var(--ac,#ff8a2a)}#apkMenu .apkgo span.ip{color:var(--ink,#eaf0fa);font-weight:700}"
+    + "#apkCarry{margin:-2px 0 14px}"
+    + "#apkBar{position:sticky;top:0;z-index:12;background:var(--paper,#13264a);margin:-6px -18px 12px;padding:8px 18px;border-bottom:1px solid var(--line,#35507f)}"
+    + "#apkBarHelp{margin-left:auto;flex:none;width:40px;height:40px;min-height:0;padding:0;border-radius:20px}"
+    + "#apkBarT{font-weight:700;font-size:1.15rem;margin:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}"
+    + "html.apkm-log th{top:var(--apkbarh,60px)}html.apkm-cmp #cmpCard>.tglh{display:none}"
+    + "#apkRecent h3{margin:18px 0 8px;font-size:1rem;color:var(--mu,#9db0d0)}#apkRecent .apkrec{display:block;width:100%;text-align:left;margin:0 0 8px;min-height:48px}"
+    + "#apkRecent .apkrec span{color:var(--mu,#9db0d0);font-weight:400}"
+    + ".apksub{margin:16px 0 6px;font-size:.95rem;color:var(--ac,#ff8a2a)}"
+    + "#apkGlow{position:fixed;top:0;right:0;bottom:0;left:0;z-index:2000;pointer-events:none;border:8px solid transparent;opacity:0;transition:opacity .35s}"
+    + "#apkGlow.ok{border-color:#3ccf6e;opacity:1;transition:none}#apkGlow.warn{border-color:#ff9f1a;opacity:1;transition:none}"
+    + "@media (prefers-reduced-motion:reduce){#apkGlow{transition:none}}"
+    + "@keyframes apkin{from{transform:translateX(36px);opacity:.4}}@keyframes apkout{from{transform:translateX(-36px);opacity:.4}}"
+    + "main.apkin{animation:apkin .2s ease-out}main.apkout{animation:apkout .2s ease-out}#apkBarT:focus{outline:none}"
+    + "@media (prefers-reduced-motion:reduce){main.apkin,main.apkout{animation:none}}"
+    + "@media (min-width:1100px){html.apkm-menu main,html.apkm-log main,html.apkm-cmp main{display:block;max-width:760px}}"; // one page at a time, not the wide two-column layout
+  document.head.appendChild(menuCss);
+  // No flash of the whole page before the menu: android.js runs before the app's own scripts, so the menu is put up
+  // straight away (and taken down again if the settings leave only one part of the app).
+  if (document.querySelector("main")) { buildMenu(); document.documentElement.classList.add("apkm-menu"); }
+  function buildMenu() {
+    const main = document.querySelector("main"); if (!main || $("apkMenu")) return;
+    const m = document.createElement("div"); m.className = "card"; m.id = "apkMenu"; m.setAttribute("role", "region"); m.setAttribute("aria-labelledby", "apkMenuH");
+    m.innerHTML = '<h2 id="apkMenuH">What do you want to do?</h2>'
+      + '<button type="button" class="apkgo" id="apkGoLog"><b>Log pallets</b><span id="apkGoLogT"></span></button>'
+      + '<div id="apkCarry" hidden><button type="button" class="p" id="apkCarryBtn">Carry on scanning</button></div>'
+      + '<button type="button" class="apkgo" id="apkGoCmp"><b>Manifest check</b><span id="apkGoCmpT">Compare a delivery’s LPNs with the supplier’s manifest: what’s missing and what’s extra.</span></button>'
+      + '<div id="apkRecent"></div>';
+    const bar = document.createElement("div"); bar.id = "apkBar";
+    bar.innerHTML = '<button type="button" id="apkBack" aria-label="Back to the menu">‹ Menu</button><h2 id="apkBarT"></h2><button type="button" class="helpq" id="apkBarHelp" aria-label="Help with the Manifest check" hidden>?</button>';
+    main.prepend(bar); main.prepend(m);
+    $("apkGoLog").onclick = () => setMode("log");
+    $("apkGoCmp").onclick = () => setMode("cmp");
+    $("apkCarryBtn").onclick = () => opened({ action: "scan" });
+    $("apkBack").onclick = () => setMode("menu");
+    // (the Manifest check's own heading, with its ?, is hidden under the title bar on its page)
+    $("apkBarHelp").onclick = () => { const q = document.querySelector("#cmpCard .tglh .helpq, #cmpCard .helpq"); if (q) q.click(); };
+    // On its own page the Manifest check stays open: its heading doesn't fold it away.
+    // The log's keyboard shortcuts (1 to 4, F, /, Ctrl+Z) only on the log's page, where you can see what they change.
+    document.addEventListener("keydown", e => { if (!mode || mode === "log") return; const t = e.target; if (t && /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName)) return;
+      if (/^[1-4fF/]$/.test(e.key) || (e.key.toLowerCase() === "z" && (e.ctrlKey || e.metaKey))) e.stopImmediatePropagation(); }, true);
+    document.addEventListener("click", e => { if (mode === "cmp" && e.target.closest && e.target.closest("#cmpToggle") && !$("cmpBody").hidden) { e.stopPropagation(); e.preventDefault(); } }, true);
+  }
+  function updMenu() {
+    const t = $("apkGoLogT"); if (!t) return;
+    const n = typeof rows !== "undefined" ? rows.length : 0;
+    t.textContent = n ? "Delivery in progress: " + countText() + "." : "Scan or type each pallet as it comes off the trailer, then export the log.";
+    t.className = n ? "ip" : ""; $("apkGoLog").classList.toggle("on", !!n);
+    $("apkCarry").hidden = !(n && has("liveScan"));
+    // The last few saved deliveries (tap for Saved deliveries), and the way to the files made.
+    const rc = $("apkRecent"), list = typeof hist !== "undefined" && Array.isArray(hist) ? hist.slice(0, 3) : [];
+    const fmt = d => (typeof ukDate === "function" ? ukDate(d.date) : d.date) || "No date";
+    rc.innerHTML = (list.length ? '<h3 id="apkRecH">Recent deliveries</h3>' : "") + '<div id="apkRecL"></div><div class="row"><button type="button" id="apkGoHist">Saved deliveries</button>' + (P() ? '<button type="button" id="apkGoFiles">Exported files</button>' : "") + "</div>";
+    list.forEach(d => { const b = document.createElement("button"); b.type = "button"; b.className = "apkrec";
+      const k = (d.rows || []).filter(r => !r.ref).length; b.innerHTML = "<b></b> <span></span>";
+      b.firstChild.textContent = fmt(d) + " · " + (d.recv || "No name"); b.lastChild.textContent = "· " + k + (k === 1 ? " pallet" : " pallets");
+      b.onclick = () => openHelp("history", "Saved deliveries"); $("apkRecL").appendChild(b); });
+    $("apkGoHist").onclick = () => openHelp("history", "Saved deliveries");
+    if ($("apkGoFiles")) $("apkGoFiles").onclick = () => showFiles();
+  }
+  function setMode(m) {
+    const H = document.documentElement;
+    if (!menuOn()) { mode = ""; H.classList.remove("apkm-menu", "apkm-log", "apkm-cmp"); return; }
+    buildMenu();
+    if (typeof closeHelp === "function" && m !== mode) closeHelp();
+    const was = mode; if (was) scrollAt[was] = window.scrollY; mode = m;
+    H.classList.toggle("apkm-menu", m === "menu"); H.classList.toggle("apkm-log", m === "log"); H.classList.toggle("apkm-cmp", m === "cmp");
+    const body = $("cmpBody");
+    if (m === "cmp" && body && body.hidden) $("cmpToggle").click();
+    // (fold it on the log's page, or the page's own Manifest-focus mode would hide the entry bar)
+    if (m === "log" && body && !body.hidden) $("cmpToggle").click();
+    document.body.classList.remove("cmpfocus");
+    const en = document.querySelector(".card.entry"); if (en) en.inert = m !== "log";
+    if (m === "menu") updMenu();
+    const bt = $("apkBarT"); if (bt) bt.textContent = m === "cmp" ? "Manifest check" : "Log pallets";
+    if ($("apkBarHelp")) $("apkBarHelp").hidden = m !== "cmp" || !document.querySelector("#cmpCard .helpq");
+    if (m !== "menu") requestAnimationFrame(() => { const b = $("apkBar"); if (b) H.style.setProperty("--apkbarh", b.offsetHeight + "px"); });
+    if (m === "cmp") cmpDateShow();
+    if (m !== was) {
+      // Each page keeps its place: back on a page, it's where it was left (the menu always starts at the top).
+      window.scrollTo(0, m === "menu" ? 0 : scrollAt[m] || 0);
+      // Pages slide in from the side and back out to the menu, as in other Android apps (still with Remove animations on).
+      const main = document.querySelector("main");
+      if (main && was) { main.classList.remove("apkin", "apkout"); void main.offsetWidth; main.classList.add(m === "menu" ? "apkout" : "apkin"); }
+      // TalkBack: a page says its name as it opens; back on the menu, focus is on the button you came from.
+      if (was) {
+        if (m === "menu") { const f = was === "cmp" ? $("apkGoCmp") : $("apkGoLog"); if (f) f.focus({ preventScroll: true }); }
+        else { const t = $("apkBarT"); if (t) { t.tabIndex = -1; t.focus({ preventScroll: true }); } }
+      }
+    }
+  }
+  window.LPN_APK_MODE = m => { if (m) setMode(m); return mode; };
+  // (android.js loads before the app's own scripts, so this waits for them)
+  document.addEventListener("DOMContentLoaded", () => {
+    // Simple view switched on or off in Settings: the menu goes or comes back.
+    if (typeof applySimple === "function") { const was = applySimple; applySimple = function () { const r = was.apply(this, arguments); if (menuOn() !== !!mode) setMode(menuOn() ? "menu" : ""); return r; }; }
+    setMode("menu");
+    cmpDateShow();
+  });
+
+  /* ---- A professional app's frame: an app bar with a ⋮ menu (Guide, Changelog, Settings, Exported files, About)
+     instead of the row of three buttons; an About screen with the open-source licences; a short introduction on a
+     first install; a progress bar with Cancel while photos or PDFs are read; a notification when photo reading
+     finishes in the background; and Material-style corners throughout. */
+  const proCss = document.createElement("style");
+  proCss.textContent = ":root{--r:10px}#side{display:none!important}"
+    + ".top .brand{position:relative}#apkMoreBtn{margin-left:auto;min-width:48px;min-height:48px;padding:0;font-size:1.6rem;line-height:1;border-radius:24px;background:transparent;border:0;color:var(--ink,#eaf0fa)}"
+    + "#apkMore{position:fixed;z-index:1500;right:10px;min-width:220px;background:var(--paper,#13264a);border:1px solid var(--line,#35507f);border-radius:12px;padding:6px 0;box-shadow:0 8px 24px rgba(0,0,0,.45)}"
+    + "#apkMore button{display:block;width:100%;text-align:left;border:0;border-radius:0;background:transparent;min-height:48px;padding:10px 18px;font-weight:400}"
+    + "#apkMore button:focus-visible{outline:2px solid var(--ac,#ff8a2a);outline-offset:-2px}"
+    + ".apksheet{border-radius:28px 28px 0 0!important}"
+    + "#apkIntro{position:fixed;top:0;right:0;bottom:0;left:0;z-index:3000;background:var(--bg,#0c1830);display:flex;flex-direction:column;padding:calc(24px + env(safe-area-inset-top,0px)) 0 calc(18px + env(safe-area-inset-bottom,0px))}"
+    + "#apkIntro .cards{flex:1;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}#apkIntro .cards::-webkit-scrollbar{display:none}"
+    + "#apkIntro .cd{flex:0 0 100%;scroll-snap-align:center;padding:24px 28px;display:flex;flex-direction:column;justify-content:center;gap:14px}"
+    + "#apkIntro .cd .ic{width:84px;height:84px;border-radius:24px;background:var(--ac,#ff8a2a);color:#1b1b1b;display:flex;align-items:center;justify-content:center;font-size:2.4rem;font-weight:700}"
+    + "#apkIntro h2{margin:0;font-size:1.6rem}#apkIntro p{margin:0;color:var(--mu,#9db0d0);font-size:1.05rem;line-height:1.5}"
+    + "#apkIntro .dots{display:flex;justify-content:center;gap:8px;margin:10px 0 16px}#apkIntro .dots i{width:8px;height:8px;border-radius:4px;background:var(--line,#35507f)}#apkIntro .dots i.on{width:22px;background:var(--ac,#ff8a2a)}"
+    + "#apkIntro .row{display:flex;justify-content:space-between;padding:0 20px}#apkIntro .row button{min-height:48px;min-width:110px}"
+    + "#apkProg{position:sticky;top:var(--apkbarh,60px);z-index:11;background:var(--paper,#13264a);margin:-12px -18px 12px;padding:10px 18px;border-bottom:1px solid var(--line,#35507f)}"
+    + "#apkProg .t{display:flex;align-items:center;gap:10px;justify-content:space-between}#apkProg .t span{font-weight:700}#apkProg .t button{min-height:40px}"
+    + "#apkProg .bar{height:6px;border-radius:3px;background:var(--line,#35507f);margin-top:8px;overflow:hidden}#apkProg .bar i{display:block;height:100%;width:0;background:var(--ac,#ff8a2a);transition:width .3s}"
+    + "@media (prefers-reduced-motion:reduce){#apkProg .bar i{transition:none}}";
+  document.head.appendChild(proCss);
+
+  /* The ⋮ menu. */
+  function moreClose(focusBtn) { const m = $("apkMore"); if (m) m.remove(); const b = $("apkMoreBtn"); if (b) { b.setAttribute("aria-expanded", "false"); if (focusBtn) b.focus(); } }
+  function moreOpen() {
+    if ($("apkMore")) { moreClose(true); return; }
+    const b = $("apkMoreBtn"), r = b.getBoundingClientRect();
+    const m = document.createElement("div"); m.id = "apkMore"; m.setAttribute("role", "menu"); m.style.top = Math.round(r.bottom + 4) + "px";
+    const item = (label, fn) => { const x = document.createElement("button"); x.type = "button"; x.setAttribute("role", "menuitem"); x.textContent = label; x.onclick = () => { moreClose(false); fn(); }; m.appendChild(x); };
+    item("Guide", () => $("btnGuide").click()); item("Changelog", () => $("btnLog").click()); item("Settings", () => $("btnSet").click());
+    if (P()) item("Exported files", () => showFiles());
+    item("About", about);
+    document.body.appendChild(m); b.setAttribute("aria-expanded", "true"); m.querySelector("button").focus();
+    m.addEventListener("keydown", e => { const it = [...m.querySelectorAll("button")], i = it.indexOf(document.activeElement);
+      if (e.key === "Escape") { e.preventDefault(); moreClose(true); } else if (e.key === "ArrowDown") { e.preventDefault(); it[(i + 1) % it.length].focus(); } else if (e.key === "ArrowUp") { e.preventDefault(); it[(i - 1 + it.length) % it.length].focus(); } });
+  }
+  window.LPN_APK_MORE = () => $("apkMore") ? (moreClose(false), true) : false;
+  document.addEventListener("pointerdown", e => { const m = $("apkMore"); if (m && !m.contains(e.target) && e.target !== $("apkMoreBtn")) moreClose(false); }, true);
+  function addMoreBtn() {
+    const brand = document.querySelector(".top .brand"); if (!brand || $("apkMoreBtn")) return;
+    const b = document.createElement("button"); b.type = "button"; b.id = "apkMoreBtn"; b.textContent = "⋮"; b.setAttribute("aria-label", "More: Guide, Changelog, Settings, About");
+    b.setAttribute("aria-haspopup", "menu"); b.setAttribute("aria-expanded", "false"); b.onclick = moreOpen; brand.appendChild(b);
+  }
+  if (document.querySelector(".top .brand")) addMoreBtn();
+
+  /* About: version, privacy, and the open-source parts inside the app with their licences. */
+  const LICENCES = [
+    ["ExcelJS 4.4.0", "Excel files", "MIT"], ["jsPDF 2.5.1 and jsPDF-AutoTable 3.8.2", "PDF files", "MIT"], ["PDF.js 6.4.299", "reading PDFs", "Apache 2.0"],
+    ["pdf-lib 1.17.1", "PDF files", "MIT"], ["Tesseract.js 5.1.1, with Tesseract and its English data", "reading photos", "Apache 2.0"],
+    ["ZXing 0.21.3", "barcodes", "Apache 2.0"], ["Capacitor", "the Android app around the page", "MIT"], ["AndroidX and CameraX", "the camera scanner and Android parts", "Apache 2.0"],
+    ["Google ML Kit (barcode and text reading)", "barcodes and the phone’s text reader", "ML Kit terms of service"], ["Atkinson Hyperlegible and IBM Plex Mono", "the fonts", "SIL Open Font Licence 1.1"]];
+  function about() {
+    if (typeof HELP === "undefined") return;
+    const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+    HELP.apkabout = '<p><b>LPN Pallet Log</b>, the Android app. ' + esc(window.LPN_APK_VER || "") + '</p>'
+      + '<p>Made by Jamie, for logging pallets at goods-in and checking them against the supplier’s manifest.</p>'
+      + '<h3>Your data</h3><p>Everything stays on this phone: the log, saved deliveries, photos and exported files. The app works with no internet and sends nothing anywhere. A file only leaves the phone when you share, email or save it somewhere else yourself.</p>'
+      + '<h3>Open-source parts</h3><p class="note">This app is built with these, under their licences:</p><ul>'
+      + LICENCES.map(l => "<li><b>" + esc(l[0]) + "</b> (" + esc(l[1]) + "): " + esc(l[2]) + "</li>").join("") + "</ul>"
+      + '<p class="note">MIT and Apache 2.0 allow use and sharing as long as the copyright and licence notices are kept; the full texts are at opensource.org.</p>';
+    openHelp("apkabout", "About");
+  }
+  window.LPN_APK_ABOUT = about;
+
+  /* A short introduction on a first install (three cards to swipe), instead of the website's welcome card. */
+  function intro() {
+    if ($("apkIntro")) return;
+    const cards = [["✓", "Log every pallet", "Scan or type each LPN as it comes off the trailer, pick its type, and export the log as Excel or PDF."],
+      ["☰", "Two parts, one menu", "The app opens on a menu: Log pallets, or Manifest check to compare a delivery with the supplier’s manifest. ‹ Menu or Back takes you back."],
+      ["📷", "The camera", "The first time you scan, Android asks to use the camera: choose While using the app. Photos and logs stay on this phone."]];
+    const d = document.createElement("div"); d.id = "apkIntro"; d.setAttribute("role", "dialog"); d.setAttribute("aria-modal", "true"); d.setAttribute("aria-label", "Welcome to LPN Pallet Log");
+    d.innerHTML = '<div class="cards">' + cards.map((c, i) => '<section class="cd" aria-label="' + (i + 1) + ' of 3"><div class="ic" aria-hidden="true">' + c[0] + '</div><h2>' + c[1] + '</h2><p>' + c[2] + '</p></section>').join("") + '</div>'
+      + '<div class="dots" aria-hidden="true"><i class="on"></i><i></i><i></i></div><div class="row"><button type="button" id="apkIntroSkip">Skip</button><button type="button" class="p" id="apkIntroNext">Next</button></div>';
+    document.body.appendChild(d);
+    const sc = d.querySelector(".cards"), dots = d.querySelectorAll(".dots i"), next = $("apkIntroNext");
+    const at = () => Math.round(sc.scrollLeft / Math.max(1, sc.clientWidth));
+    const upd = () => { const i = at(); dots.forEach((x, k) => x.classList.toggle("on", k === i)); next.textContent = i >= 2 ? "Get started" : "Next"; };
+    const done = () => { try { localStorage.setItem("lpnapkintro", "seen"); } catch (e) {} d.remove(); const g = $("apkGoLog"); if (g) g.focus(); };
+    sc.addEventListener("scroll", () => requestAnimationFrame(upd), { passive: true });
+    next.onclick = () => { const i = at(); if (i >= 2) done(); else sc.scrollTo({ left: (i + 1) * sc.clientWidth, behavior: matchMedia("(prefers-reduced-motion:reduce)").matches ? "auto" : "smooth" }); };
+    $("apkIntroSkip").onclick = done; next.focus();
+  }
+  window.LPN_APK_INTRO = intro;
+  window.LPN_APK_INTRODONE = () => { const d = $("apkIntro"); if (d) { $("apkIntroSkip").click(); return true; } return false; };
+
+  /* Progress while photos or PDFs are read (from the Manifest check's own messages), with Cancel for photos; and a
+     notification if photo reading finishes while the app is in the background. */
+  let ocrStop = false, progOn = false, progPhotos = false;
+  function progress() {
+    const m = $("cmpMsg"); if (!m) return;
+    const t = m.textContent || "", k = /(?:Reading (log )?photo|Photo|PDF|reading page) (\d+) of (\d+)/i.exec(t);
+    let p = $("apkProg");
+    if (k) {
+      if (!p) { p = document.createElement("div"); p.id = "apkProg"; p.setAttribute("role", "status");
+        p.innerHTML = '<div class="t"><span></span><button type="button" id="apkProgStop">Cancel</button></div><div class="bar"><i></i></div>';
+        const card = $("cmpCard"); (card || document.querySelector("main")).prepend(p);
+        $("apkProgStop").onclick = () => { ocrStop = true; $("apkProgStop").disabled = true; p.querySelector("span").textContent = "Stopping after this photo…"; }; }
+      const n = +k[2], of = +k[3], photo = /photo/i.test(k[0]) || /Photo/.test(k[0]);
+      if (!ocrStop) p.querySelector("span").textContent = (photo ? "Reading photo " : /PDF/i.test(k[0]) ? "Reading PDF " : "Reading page ") + n + " of " + of;
+      p.querySelector(".bar i").style.width = Math.round(((n - 1) / of) * 100 + 100 / of / 2) + "%";
+      $("apkProgStop").hidden = !photo; if (photo && !progPhotos) { progPhotos = true; askNotifyOnce(); }
+      progOn = true;
+    } else if (progOn) {
+      if (p) p.remove(); progOn = false;
+      if (progPhotos && document.visibilityState === "hidden" && N() && typeof N().notify === "function")
+        N().notify({ title: ocrStop ? "Photo reading stopped" : "Manifest photos read", text: t.slice(0, 300) || "Open the app to see what was found." }).catch(() => {});
+      progPhotos = false; ocrStop = false;
+    }
+  }
+  function askNotifyOnce() { let asked = null; try { asked = localStorage.getItem("lpnapknotify"); } catch (e) {} if (asked || !N() || typeof N().askNotify !== "function") return;
+    try { localStorage.setItem("lpnapknotify", "asked"); } catch (e) {} N().askNotify().catch(() => {}); }
+  document.addEventListener("DOMContentLoaded", () => {
+    const m = $("cmpMsg"); if (m) new MutationObserver(progress).observe(m, { childList: true, characterData: true, subtree: true });
+    // Cancel: the photos not started yet are skipped (the one being read finishes).
+    if (typeof ocrLpns === "function") { const real = ocrLpns; ocrLpns = function (f) { if (ocrStop) return Promise.reject(new Error("stopped: you tapped Cancel")); return real.apply(this, arguments); }; }
+    addMoreBtn();
+    let seen = null; try { seen = localStorage.getItem("lpnapkintro"); } catch (e) {}
+    const fresh = (typeof rows === "undefined" || !rows.length) && (typeof hist === "undefined" || !hist.length);
+    if (!seen && fresh && N()) intro(); else if (!seen) { try { localStorage.setItem("lpnapkintro", "seen"); } catch (e) {} }
+  });
+
+  /* ---- Finishing touches: a "Saved" tick after each change, a friendly screen if something goes wrong, the app's
+     status messages at the bottom when their own line is out of sight, and Next on the keyboard in Delivery. */
+  const fin = document.createElement("style");
+  fin.textContent = "#apkSavedTick{margin-left:auto;color:#3ccf6e;font-weight:700;font-size:.9rem;opacity:0;transition:opacity .3s;white-space:nowrap}"
+    + "#apkSavedTick.on{opacity:1;transition:none}#apkBar #apkBarHelp{margin-left:10px}"
+    + "@media (prefers-reduced-motion:reduce){#apkSavedTick{transition:none}}";
+  document.head.appendChild(fin);
+  let tickT = 0;
+  function tick() {
+    const bar = $("apkBar"); if (!bar || getComputedStyle(bar).display === "none") return;
+    let t = $("apkSavedTick"); if (!t) { t = document.createElement("span"); t.id = "apkSavedTick"; t.setAttribute("aria-hidden", "true"); t.textContent = "✓ Saved"; const h = $("apkBarHelp"); bar.insertBefore(t, h || null); }
+    clearTimeout(tickT); t.classList.add("on"); tickT = setTimeout(() => t.classList.remove("on"), 1200);
+  }
+  window.LPN_APK_TICK = tick;
+  // Something unexpected went wrong: say so plainly (the log is already saved), with Try again and a problem report.
+  let oopsAt = 0;
+  function oops(what) {
+    if (Date.now() - oopsAt < 30000 || document.querySelector(".apkask") || $("apkIntro")) return; oopsAt = Date.now();
+    try { if (typeof diag === "function") diag("error", String(what).slice(0, 300)); } catch (e) {}
+    ask("Something went wrong. Your log is safe on this phone.", [["Try again", () => location.reload()], ["Save problem report", () => { openHelp("settings", "Settings"); setTimeout(() => { const b = $("diagDl"); if (b) { b.scrollIntoView({ block: "center" }); b.click(); } }, 150); }]]);
+  }
+  window.LPN_APK_OOPS = oops;
+  window.addEventListener("error", e => { if (e && e.error && !(e.target && e.target !== window && e.target.tagName)) oops((e.error && e.error.stack) || e.message); });
+  window.addEventListener("unhandledrejection", e => { const r = e && e.reason; if (r && r instanceof Error && !/cancel|abort/i.test(r.message || "")) oops(r.stack || r.message); });
+  document.addEventListener("DOMContentLoaded", () => {
+    // The "Saved" tick after each change to the log or the delivery.
+    if (typeof save === "function") { const real = save; save = function () { const r = real.apply(this, arguments); tick(); return r; }; }
+    // The status line under the entry bar, when it can't be seen (on another page or scrolled away), also shows at the bottom.
+    const m = $("msg"); if (m) new MutationObserver(() => { const t = (m.textContent || "").trim(); if (!t) return; const r = m.getBoundingClientRect();
+      if (!m.getClientRects().length || r.bottom < 0 || r.top > innerHeight) toast(t); }).observe(m, { childList: true, characterData: true, subtree: true });
+    // Delivery: Next on the keyboard goes to the next box; names start with a capital.
+    const order = ["recv", "expect", "trailer", "sealIn", "sealOut", "notes"].map($).filter(Boolean);
+    const r = $("recv"); if (r) r.setAttribute("autocapitalize", "words");
+    order.forEach((el, i) => { el.setAttribute("enterkeyhint", i < order.length - 1 ? "next" : "done");
+      if (el.tagName === "INPUT") el.addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); const nx = order[i + 1]; if (nx) nx.focus(); else el.blur(); } }); });
+  });
+
+  /* Silent mode: with the phone on silent, vibrate or Do Not Disturb, scan sounds and the spoken count stay quiet and
+     only the buzz is left (Settings › Android app can turn this off). */
+  let phoneSilent = false;
+  const hushed = () => phoneSilent && pref("lpnapkquiet", true);
+  window.LPN_APK_HUSHED = hushed;
+  if (N()) {
+    const ring = () => { if (typeof N().ringer === "function") N().ringer().then(r => { phoneSilent = !!(r && r.silent); }).catch(() => {}); };
+    try { N().addListener("ringer", e => { phoneSilent = !!(e && e.silent); }); } catch (e) {}
+    window.addEventListener("load", ring); document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") ring(); });
+  }
+  document.addEventListener("DOMContentLoaded", () => {
+    if (typeof sfx === "function") { const real = sfx; sfx = function () { if (!hushed() || typeof cfg === "undefined") return real.apply(this, arguments);
+      const was = cfg.sound; cfg.sound = false; try { return real.apply(this, arguments); } finally { cfg.sound = was; } }; }
+  });
+
   /* Carry on: opening the app with a delivery in progress offers to go straight back to scanning. */
   function carryOn() {
     if (!N() || !has("palletLog") || !has("liveScan") || !rows.length || window.LPN_APK_NATIVESCAN || (typeof scanning !== "undefined" && scanning) || document.querySelector(".apkask") || ($("panel") && !$("panel").hidden)) return;
     ask("Delivery in progress: " + countText() + ".", [["Carry on scanning", () => opened({ action: "scan" })]]);
   }
   window.LPN_APK_CARRYON = carryOn;
-  if (N()) window.addEventListener("load", () => setTimeout(() => { try { carryOn(); } catch (e) {} }, 1200));
+  if (N()) window.addEventListener("load", () => setTimeout(() => { try { if (!mode) carryOn(); } catch (e) {} }, 1200));
 
   /* The count out loud after each pallet, and a word for a warning (Settings › Android app). */
-  function sayIt(t) { if (N() && pref("lpnapkspeak", false)) N().speak({ text: t }).catch(() => {}); }
+  function sayIt(t) { if (N() && pref("lpnapkspeak", false) && !hushed()) N().speak({ text: t }).catch(() => {}); }
   if (N()) window.addEventListener("load", () => {
     if (typeof window.addValue === "function") { const orig = window.addValue; window.addValue = function () { const r = orig.apply(this, arguments); const n = rows.length, ex = parseInt(($("expect") || {}).value, 10); sayIt(ex > 0 ? n + " of " + ex : String(n)); return r; }; }
     const bar = $("chkBar");

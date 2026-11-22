@@ -10,7 +10,7 @@ const SITE=(()=>{
   const own=(o,k)=>o&&typeof o==="object"&&Object.prototype.hasOwnProperty.call(o,k)?o[k]:undefined; // only the file's own settings
   FEATURES.forEach(k=>{on[k]=own(f,k)!==false;test[k]=on[k]&&own(t,k)===true});
   // With the pallet log off, the parts that only work with it are off too (only the Manifest check is left).
-  if(!on.palletLog)["liveScan","scanByPhoto","photoUpload","torch","damage","refused","noLpn","fppDesc","palletDesc","exportReminder","twoPhones","tallySheet","findLpn","welcome"].forEach(k=>{on[k]=false;test[k]=false});
+  if(!on.palletLog)["liveScan","scanByPhoto","photoUpload","torch","damage","refused","noLpn","fppDesc","palletDesc","exportReminder","twoPhones","findLpn","welcome"].forEach(k=>{on[k]=false;test[k]=false});
   return {on,test};
 })();
 const feat=k=>SITE.on[k]!==false;

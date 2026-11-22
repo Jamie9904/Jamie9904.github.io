@@ -61,6 +61,9 @@ for (const f of ["core.js", "scan.js", "export.js", "compare.js"]) edit(f, /http
 const APK_BUILD = (() => { let b; try { b = JSON.parse(fs.readFileSync(path.join(__dirname, "build.json"), "utf8")).build; } catch (e) { fail("tools/android/build.json is missing or isn't valid JSON"); }
   if (!Number.isInteger(b) || b < 1) fail("tools/android/build.json: build must be a whole number from 1"); return b; })();
 edit("export.js", "  if(appVer)return appVer;\n", '  appVer="LPN Pallet Log (Android APK build ' + APK_BUILD + ')";return appVer;\n');
+// The start menu (android.js): the Guide says how to get between Log pallets and the Manifest check.
+edit("panels.js", '<span data-f="palletLog">Tap the <b>Manifest check</b> heading to open it.</span>', '<span data-f="palletLog">Choose <b>Manifest check</b> on the start menu (from the log, tap <b>‹ Menu</b> at the top or press Back). In Simple view the app opens straight on the log, with no menu or Manifest check.</span>');
+edit("panels.js", '<h3>1. Quick start</h3>\n<ol>\n', '<h3>1. Quick start</h3>\n<ol>\n<li data-f="manifestCheck"><b>Start menu:</b> the app opens on a menu: choose <b>Log pallets</b> or <b>Manifest check</b>. Each has its own page; <b>‹ Menu</b> at the top, or Back, takes you back to the menu.</li>\n');
 // Nothing about installing: the Android app is already installed (Guide section, Settings, and the first-visit pop-up).
 edit("panels.js", /<h3>\d+\. Install it on your phone<\/h3>[\s\S]*?(?=<h3>\d+\. Settings and good to know<\/h3>)/, "");
 edit("panels.js", '<h3>Install</h3>\n<p>Add this page to your home screen so it opens like an app.</p>\n<div class="row"><button id="showInstall">Show the install pop-up</button></div>\n', "");
@@ -74,13 +77,19 @@ edit("scan.js", '"Camera access was blocked. Allow camera permission for this si
 // No service worker.
 edit("panels.js", 'if("serviceWorker" in navigator){', 'if(false&&"serviceWorker" in navigator){');
 // The photo reader's worker, engine and language data come from lib/.
-edit("compare.js", 'Tesseract.createWorker("eng")', 'Tesseract.createWorker("eng",1,window.LPN_TESS)');
+edit("compare.js", 'Tesseract.createWorker("eng")', '((window.LPN_OCR&&window.LPN_OCR())||Tesseract.createWorker("eng",1,window.LPN_TESS))'); // the phone's own text reader when it's on (android.js)
 // The page's own way of printing (a hidden frame) doesn't work inside the app: skip it, so a failed print saves and shares.
 edit("compare.js", "fr.onload=()=>{try{fr.contentWindow.focus();", "fr.onload=()=>{try{if(window.LPN_APK)throw 0;fr.contentWindow.focus();");
 // Print opens Android's own print screen first (android.js); if that can't, the PDF is saved and shared as above.
 edit("compare.js", "async function printBuf(buf,fname,m){", "async function printBuf(buf,fname,m){if(window.LPN_APK_PRINT&&await window.LPN_APK_PRINT(buf,fname)){m.textContent=\"\";return}");
 
 const tess = JSON.parse(fs.readFileSync(path.join(LIB, "tess.json"), "utf8"));
+// The language data unzipped: Android's app build treats files ending in .gz specially (the app then can't find
+// eng.traineddata.gz, and the photo reader waits 90 seconds and gives up), so the reader is told not to expect .gz.
+{ const zlib = require("zlib"), dir = path.join(WWW, "lib", tess.langPath.replace(/^\.?\/?lib\//, "")), gz = path.join(dir, "eng.traineddata.gz");
+  if (!fs.existsSync(gz)) fail("the photo reader's language data isn't at " + path.relative(ROOT, gz));
+  fs.writeFileSync(path.join(dir, "eng.traineddata"), zlib.gunzipSync(fs.readFileSync(gz))); fs.unlinkSync(gz);
+  tess.gzip = false; }
 const notes = JSON.parse(fs.readFileSync(path.join(__dirname, "whats-new.json"), "utf8"));
 if (!Array.isArray(notes.items) || notes.items.some(t => typeof t !== "string")) fail("tools/android/whats-new.json: items must be a list of sentences");
 fs.writeFileSync(path.join(WWW, "android.js"), fs.readFileSync(path.join(__dirname, "android-shim.js"), "utf8").replace("/*TESS*/null", JSON.stringify(tess)).replace("/*NOTES*/[]", JSON.stringify(notes.items)));
@@ -92,6 +101,7 @@ for (const f of fs.readdirSync(WWW).filter(f => /\.(js|html|css)$/.test(f))) {
   for (const m of s.matchAll(/https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com|tessdata\.projectnaptha\.com)[^"'\s]*/g)) left.push(f + ": " + m[0]);
 }
 if (left.length) fail("still pointing at the internet:\n  " + left.join("\n  "));
-for (const k of Object.values(tess)) if (!fs.existsSync(path.join(WWW, k))) fail("missing " + k);
+for (const k of Object.values(tess)) if (typeof k === "string" && !fs.existsSync(path.join(WWW, k))) fail("missing " + k);
+if (!fs.existsSync(path.join(WWW, tess.langPath, "eng.traineddata"))) fail("missing the photo reader's unzipped language data");
 let size = 0; const walk = d => fs.readdirSync(d, { withFileTypes: true }).forEach(e => e.isDirectory() ? walk(path.join(d, e.name)) : size += fs.statSync(path.join(d, e.name)).size); walk(WWW);
 console.log((GH ? "::notice title=Offline app::" : "") + "Offline copy of the app built (" + (size / 1048576).toFixed(1) + " MB)");

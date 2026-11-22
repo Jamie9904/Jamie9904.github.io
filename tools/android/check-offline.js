@@ -30,7 +30,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   page.on("console", m => { if (m.type() === "error" && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
   // Stand-ins for the Android app's file saving and share menu.
   await page.addInitScript(() => {
-    try { localStorage.setItem("lpninstallshown", "1"); localStorage.setItem("lpnmigtest", "from before"); } catch (e) {}
+    try { localStorage.setItem("lpninstallshown", "1"); localStorage.setItem("lpnmigtest", "from before"); localStorage.setItem("lpnapkintro", "seen"); } catch (e) {}
     // The app's own storage (native/LpnStore.java), standing in for the phone's.
     window.__realLS = window.localStorage; const m = new Map(); let mig = false;
     window.LpnStore = { get: k => m.has(k) ? m.get(k) : null, set: (k, v) => { m.set(k, v); return true; }, remove: k => { m.delete(k); }, clear: () => m.clear(),
@@ -58,6 +58,13 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
         battery: async () => window.__batt || { level: 80, charging: false },
         phoneColours: async () => ({ available: true, bg: "#1a1c1e", ac: "#9ecaff" }),
         scanners: async () => ({ names: [] }),
+        notify: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["notify", o.title, o.text]); return { shown: true }; },
+        askNotify: async () => { window.Capacitor.Plugins.LpnNative.calls.push(["askNotify"]); return { asked: true }; },
+        ringer: async () => ({ silent: !!window.__silent }),
+        setHandheld: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["hand", o.on]); },
+        readText: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["readText", o.data.length > 100]); if (!window.__ocrStub) throw new Error("no reader here"); return window.__ocrStub(o); },
+        pickFolder: async () => ({ picked: true, uri: "content://tree/drive", name: "Drive" }),
+        saveToFolder: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["folder", o.uri, o.name, o.mime]); return { saved: true, folder: "Drive" }; },
         vibrate: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["vib", o.pattern.join(",")]); },
         takePending: async () => { const N = window.Capacitor.Plugins.LpnNative, r = N.pending || {}; N.pending = null; return r; },
         addListener: (ev, fn) => { window.Capacitor.Plugins.LpnNative.listeners[ev] = fn; return { remove() {} }; } },
@@ -77,6 +84,104 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("Report a problem and Share this app are switched off", !s.report && s.feats.report === false && s.feats.shareApp === false, s);
   s = await page.evaluate(src => { const w = {}; new Function("window", src)(w); const want = w.LPN_CONFIG.features; return Object.keys(want).filter(k => feat(k) !== want[k]); }, fs.readFileSync(path.join(__dirname, "config.js"), "utf8"));
   check("uses the Android app's own settings (tools/android/config.js), not the website's", s.length === 0, s);
+  // The start menu: Log pallets and Manifest check are separate pages; ‹ Menu and Back go back to the menu.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), shown = () => ["apkMenu", "apkBar", "delCard", "entryCard", "logCard", "cmpCard"].filter(i => { const e = document.getElementById(i); return e && e.getClientRects().length > 0; }).join(",");
+    const N = window.Capacitor.Plugins.LpnNative, out = { start: LPN_APK_MODE() + ":" + shown() };
+    rows = [{ lpn: "VLT004040265", type: "BB", fsdu: false }]; save(); render(); LPN_APK_MODE("menu"); out.menuText = document.getElementById("apkGoLogT").textContent; out.carry = !document.getElementById("apkCarry").hidden;
+    document.getElementById("apkGoLog").click(); await wait(50); out.log = LPN_APK_MODE() + ":" + shown(); out.entryUsable = !document.querySelector(".card.entry").inert;
+    document.getElementById("apkBack").click(); await wait(50); document.getElementById("apkGoCmp").click(); await wait(50);
+    out.cmp = LPN_APK_MODE() + ":" + shown() + ":" + !document.getElementById("cmpBody").hidden;
+    document.getElementById("cmpToggle").click(); await wait(50); out.stays = !document.getElementById("cmpBody").hidden;
+    N.listeners.back(); await wait(50); out.back = LPN_APK_MODE();
+    document.getElementById("apkGoLog").click(); await wait(50); out.logAfterCmp = !document.body.classList.contains("cmpfocus") && document.getElementById("cmpBody").hidden;
+    rows = []; save(); render(); return out; });
+  check("the app opens on a menu (Log pallets or Manifest check) with nothing else on the page", s.start === "menu:apkMenu", s);
+  check("the menu shows a delivery in progress, with Carry on scanning", s.menuText === "Delivery in progress: 1 pallet." && s.carry, s);
+  check("Log pallets opens the log on its own page (no Manifest check), with ‹ Menu at the top", s.log === "log:apkBar,delCard,entryCard,logCard" && s.entryUsable && s.logAfterCmp, s);
+  check("Manifest check opens on its own page, open, and its heading doesn't fold it away; Back goes to the menu", s.cmp === "cmp:apkBar,cmpCard:true" && s.stays && s.back === "menu", s);
+  // A professional app's frame: the ⋮ menu, About with the licences, the first-install introduction.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), N = window.Capacitor.Plugins.LpnNative, out = {};
+    out.side = getComputedStyle(document.getElementById("side")).display; const mb = document.getElementById("apkMoreBtn"); out.btn = !!mb && mb.getClientRects().length > 0;
+    mb.click(); await wait(50); out.items = [...document.querySelectorAll("#apkMore button")].map(b => b.textContent).join(",");
+    N.listeners.back(); await wait(30); out.backCloses = !document.getElementById("apkMore");
+    mb.click(); await wait(30); [...document.querySelectorAll("#apkMore button")].find(b => b.textContent === "About").click(); await wait(100);
+    out.about = document.getElementById("panelTitle").textContent + ":" + /Everything stays on this phone/.test(document.getElementById("panelBody").textContent) + ":" + document.querySelectorAll("#panelBody li").length; closeHelp();
+    mb.click(); await wait(30); [...document.querySelectorAll("#apkMore button")].find(b => b.textContent === "Settings").click(); await wait(100); out.settings = document.getElementById("panelTitle").textContent; closeHelp();
+    LPN_APK_INTRO(); await wait(50); const d = document.getElementById("apkIntro"); out.cards = d ? d.querySelectorAll(".cd").length : 0;
+    const sc = d.querySelector(".cards"); sc.scrollLeft = sc.clientWidth * 2; sc.dispatchEvent(new Event("scroll")); await wait(80); out.last = document.getElementById("apkIntroNext").textContent;
+    N.listeners.back(); await wait(30); out.introGone = !document.getElementById("apkIntro") && localStorage.getItem("lpnapkintro") === "seen";
+    return out; });
+  check("an app bar with a ⋮ menu (Guide, Changelog, Settings, Exported files, About) instead of the three buttons; Back closes it", s.side === "none" && s.btn && s.items === "Guide,Changelog,Settings,Exported files,About" && s.backCloses && s.settings === "Settings", s);
+  check("About shows the version, that data stays on the phone, and the open-source parts with their licences", /^About:true:(9|1\d)$/.test(s.about), s);
+  check("a first install gets a three-card introduction ending in Get started; Back (or Skip) closes it for good", s.cards === 3 && s.last === "Get started" && s.introGone, s);
+  // Progress with Cancel while photos are read, and a notification when it finishes in the background.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), N = window.Capacitor.Plugins.LpnNative, out = {}; N.calls = []; LPN_APK_MODE("cmp");
+    try { localStorage.removeItem("lpnapknotify"); } catch (e) {}
+    const msg = document.getElementById("cmpMsg"); msg.textContent = "Reading photo 2 of 4…"; await wait(50);
+    const p = document.getElementById("apkProg"); out.shown = p ? p.querySelector("span").textContent + ":" + p.querySelector(".bar i").style.width : "";
+    out.asked = N.calls.filter(c => c[0] === "askNotify").length;
+    document.getElementById("apkProgStop").click(); out.stopped = await readPhoto(new File([new Uint8Array(4)], "x.jpg", { type: "image/jpeg" })).then(() => "read", e => String(e.message));
+    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+    msg.textContent = "Read 1 of 4 photos and found 3 LPNs."; await wait(50); delete document.visibilityState;
+    out.gone = !document.getElementById("apkProg"); out.note = N.calls.filter(c => c[0] === "notify").map(c => c[1]).join();
+    out.after = await Promise.race([readPhoto(new File([new Uint8Array(4)], "x.jpg", { type: "image/jpeg" })).then(() => "read", e => String(e.message)), wait(400).then(() => "running")]);
+    msg.textContent = ""; LPN_APK_MODE("log"); return out; });
+  check("reading photos shows a progress bar (photo 2 of 4) with Cancel, which skips the photos not started yet", s.shown === "Reading photo 2 of 4:38%" && /Cancel/.test(s.stopped) && s.gone && !/Cancel/.test(s.after), s);
+  check("a notification says when photo reading finishes in the background (Android asks once, when photos are first read)", s.note === "Photo reading stopped" && s.asked === 1, s);
+  // Finishing touches: the Saved tick, the friendly error screen, messages at the bottom, Next in Delivery.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
+    LPN_APK_MODE("log"); document.querySelectorAll(".apkask").forEach(a => a.remove()); save(); out.tick = !!document.querySelector("#apkSavedTick.on");
+    LPN_APK_OOPS("check"); await wait(30); const a = document.querySelector(".apkask"); out.oops = a ? a.querySelector(".apkasktitle").textContent + "|" + [...a.querySelectorAll("button")].map(b => b.textContent).join(",") : ""; if (a) a.remove();
+    LPN_APK_MODE("menu"); document.getElementById("msg").textContent = "Copied VLT004040265."; await wait(50); out.toast = (document.getElementById("apkToast") || {}).textContent;
+    LPN_APK_MODE("log"); document.getElementById("msg").textContent = ""; const r = document.getElementById("recv"); r.focus(); r.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    out.next = document.activeElement.id + ":" + r.getAttribute("enterkeyhint") + ":" + document.getElementById("notes").getAttribute("enterkeyhint") + ":" + r.getAttribute("autocapitalize");
+    document.activeElement.blur(); LPN_APK_MODE("menu"); return out; });
+  check("a ✓ Saved tick shows in the page's bar after each change", s.tick, s);
+  check("if something goes wrong, a plain message says the log is safe, with Try again and Save problem report", s.oops === "Something went wrong. Your log is safe on this phone.|Try again,Save problem report,Cancel", s);
+  check("a status message that can't be seen where it normally shows (here on the menu) also shows at the bottom", s.toast === "Copied VLT004040265.", s);
+  check("in Delivery, Next on the keyboard goes to the next box, and names start with a capital", s.next === "expect:next:done:words", s);
+  // Silent mode: scan sounds and the spoken count stay quiet, the buzz stays.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, out = {}; let osc = 0;
+    const AC = window.AudioContext; window.AudioContext = function () { return { state: "running", currentTime: 0, resume() {}, destination: {}, createOscillator() { osc++; return { type: "", frequency: {}, connect() {}, start() {}, stop() {} }; }, createGain() { return { gain: {}, connect() {} }; } }; };
+    const was = { sound: cfg.sound, vib: cfg.vibrate }; cfg.sound = true; cfg.vibrate = true; actx = null; localStorage.setItem("lpnapkspeak", "on");
+    N.listeners.ringer({ silent: true }); N.calls = []; sfx("ok"); out.silent = osc + ":" + N.calls.filter(c => c[0] === "vib").length;
+    N.listeners.ringer({ silent: false }); osc = 0; actx = null; sfx("ok"); out.loud = osc;
+    N.listeners.ringer({ silent: true }); localStorage.setItem("lpnapkquiet", "off"); osc = 0; actx = null; sfx("ok"); out.optOut = osc;
+    localStorage.removeItem("lpnapkquiet"); localStorage.removeItem("lpnapkspeak"); N.listeners.ringer({ silent: false });
+    window.AudioContext = AC; actx = null; cfg.sound = was.sound; cfg.vibrate = was.vib; return out; });
+  check("with the phone on silent, vibrate or Do Not Disturb a scan only buzzes (sound back when it isn't; Settings can turn this off)", s.silent === "0:1" && s.loud === 1 && s.optOut === 1, s);
+  // Moving between the menu and the pages: a slide, each page keeps its place, TalkBack hears the page's name, and
+  // focus goes back to the button you came from; the menu buttons give the light tap.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), N = window.Capacitor.Plugins.LpnNative, main = document.querySelector("main");
+    LPN_APK_MODE("menu"); document.getElementById("apkGoLog").click(); await wait(50);
+    const out = { focus: document.activeElement.id, slideIn: main.classList.contains("apkin") };
+    window.scrollTo(0, 300); await wait(30); const y = window.scrollY; document.getElementById("apkBack").click(); await wait(50);
+    out.menuFocus = document.activeElement.id; out.slideOut = main.classList.contains("apkout"); out.menuTop = window.scrollY === 0;
+    document.getElementById("apkGoLog").click(); await wait(50); out.kept = y > 0 && Math.abs(window.scrollY - y) < 2;
+    LPN_APK_MODE("menu"); N.calls = []; cfg.vibrate = true; document.getElementById("apkGoCmp").dispatchEvent(new PointerEvent("pointerdown", { bubbles: true })); out.tap = N.calls.filter(c => c[0] === "tap").length;
+    out.first = main.firstElementChild && main.firstElementChild.id; return out; });
+  check("pages slide in and back out, TalkBack hears the page's name, focus goes back to the menu button, and each page keeps its place",
+    s.focus === "apkBarT" && s.slideIn && s.menuFocus === "apkGoLog" && s.slideOut && s.menuTop && s.kept, s);
+  check("the menu is the first thing on the page, and its buttons give the light tap", s.first === "apkMenu" && s.tap === 1, s);
+  // The menu's recent deliveries and shortcuts, the page title bar, and the Manifest date shown the app's way.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
+    const keep = hist; hist = [{ id: "a", date: "2026-11-20", recv: "Sam", rows: [{ lpn: "VLT004040265", type: "BB", fsdu: false }, { lpn: "VLT004040273", type: "BB", fsdu: false }] }, { id: "b", date: "2026-11-19", recv: "", rows: [] }];
+    LPN_APK_MODE("log"); LPN_APK_MODE("menu"); out.recent = [...document.querySelectorAll("#apkRecL .apkrec")].map(b => b.textContent).join("|");
+    document.querySelector("#apkRecL .apkrec").click(); await wait(100); out.hist = !document.getElementById("panel").hidden && document.getElementById("panelTitle").textContent; closeHelp();
+    out.files = !!document.getElementById("apkGoFiles"); hist = keep;
+    document.getElementById("apkGoCmp").click(); await wait(80); const bar = document.getElementById("apkBar");
+    out.title = document.getElementById("apkBarT").textContent + ":" + getComputedStyle(bar).position;
+    const hb = document.getElementById("apkBarHelp"); out.help = !hb.hidden; hb.click(); await wait(100); out.helpOpen = !document.getElementById("panel").hidden; closeHelp();
+    const d = document.getElementById("cmpDate"); d.value = "2026-11-05"; out.date = document.getElementById("cmpDateShow").textContent + ":" + (d.closest(".dwrap") ? "wrapped" : "");
+    LPN_APK_MODE("log"); out.logTitle = document.getElementById("apkBarT").textContent; await wait(50); out.thTop = getComputedStyle(document.querySelector("#logCard th")).top !== "0px";
+    LPN_APK_MODE("menu"); return out; });
+  check("the menu lists recent saved deliveries (tap for Saved deliveries) with Saved deliveries and Exported files buttons", s.recent === "20/11/2026 · Sam · 2 pallets|19/11/2026 · No name · 0 pallets" && s.hist === "Saved deliveries" && s.files, s);
+  check("each page has a title bar (‹ Menu, the page name, and the Manifest check's ?) that stays at the top, with the log's column headings below it", s.title === "Manifest check:sticky" && s.help && s.helpOpen && s.logTitle === "Log pallets" && s.thTop, s);
+  check("the Manifest date shows day/month/year like the delivery date, whatever the phone's date format", s.date === "05/11/2026:wrapped", s);
+  s = await page.evaluate(() => { cfg.simple = true; applySimple(); const on = { mode: LPN_APK_MODE(), cls: document.documentElement.className.includes("apkm-") };
+    cfg.simple = false; applySimple(); on.back = LPN_APK_MODE(); return on; });
+  check("Simple view (which hides the Manifest check) opens straight on the log with no menu; switching it off brings the menu back", s.mode === "" && !s.cls && s.back === "menu", s);
+  await page.evaluate(() => LPN_APK_MODE("log")); // the checks below use the log's page
   s = await page.evaluate(() => { openHelp("settings", "Settings"); const t = document.getElementById("panelBody").textContent; closeHelp(); openHelp("guide", "How to use this app"); const g = document.getElementById("panelBody").textContent; closeHelp(); return { share: /Share this app/.test(t) || !!document.getElementById("shareUrl"), report: /Report a problem/.test(t + g) }; });
   check("Settings and the Guide don't offer Share this app or Report a problem", !s.share && !s.report, s);
   s = await page.evaluate(() => { openHelp("settings", "Settings"); const t = document.getElementById("panelBody").textContent; closeHelp(); openHelp("guide", "How to use this app"); const g = document.getElementById("panelBody").textContent, heads = [...document.querySelectorAll("#panelBody h3")].map(h => h.textContent); closeHelp();
@@ -193,14 +298,15 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   s = await page.evaluate(() => document.getElementById("apkToast").textContent);
   check("text with no LPNs says so", s === "No LPNs found in the shared text.", s);
   // Home-screen shortcuts.
-  await page.evaluate(() => { document.getElementById("cmpToggle").click(); }); // fold the Manifest check again
+  await page.evaluate(() => { LPN_APK_MODE("log"); }); // the log's page (folds the Manifest check)
   await open({ action: "manifest" });
-  s = await page.evaluate(() => !document.getElementById("cmpBody").hidden);
-  check("the Manifest check shortcut opens the Manifest check", s === true, s);
+  s = await page.evaluate(() => ({ open: !document.getElementById("cmpBody").hidden, mode: LPN_APK_MODE() }));
+  check("the Manifest check shortcut opens the Manifest check on its own page", s.open && s.mode === "cmp", s);
   await page.evaluate(() => { window.Capacitor.Plugins.LpnNative.calls = []; });
   await open({ action: "scan" });
   s = await page.evaluate(async () => { await new Promise(r => setTimeout(r, 300)); return { calls: window.Capacitor.Plugins.LpnNative.calls.filter(c => c[0] === "scanner").length, web: scanning }; });
-  check("the Scan shortcut starts Live scan (the phone's own camera scanner)", s.calls === 1 && !s.web, s);
+  s.mode = await page.evaluate(() => LPN_APK_MODE());
+  check("the Scan shortcut goes to the log's page and starts Live scan (the phone's own camera scanner)", s.calls === 1 && !s.web && s.mode === "log", s);
   // Back, with the predictive back gesture.
   s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); N.calls = [];
     const bar = document.getElementById("apkSaved"); if (bar) bar.remove(); // a Saved bar left by an earlier check (Back closes it first)
@@ -209,13 +315,13 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     N.listeners.backCancelled(); const cancelled = panel.style.transform, stillOpen = !panel.hidden;
     N.listeners.backProgress({ progress: 0.8 }); N.listeners.back(); await wait(300); const closed = panel.hidden;
     const before = { scanning, scanbox: !document.getElementById("scanbox").hidden, menu: !document.getElementById("expMenu").hidden, saved: !!document.getElementById("apkSaved") };
-    if (scanning || before.scanbox) stopScan(); N.calls = [];
-    N.listeners.back(); const t = document.getElementById("apkToast").textContent; return { during, cancelled, stillOpen, closed, t, calls: N.calls, before }; });
-  check("Back follows the swipe on an open panel, cancelling puts it back, letting go closes it; on the main screen the next Back closes the app",
-    /translateX\(24px\) scale\(0\.97\)/.test(s.during) && s.cancelled === "" && s.stillOpen && s.closed && s.t === "Press Back again to close the app." && JSON.stringify(s.calls) === '[["exit",2000]]', s);
+    if (scanning || before.scanbox) stopScan(); LPN_APK_MODE("log"); N.listeners.back(); const toMenu = LPN_APK_MODE(); N.calls = [];
+    N.listeners.back(); const t = document.getElementById("apkToast").textContent; LPN_APK_MODE("log"); return { during, cancelled, stillOpen, closed, toMenu, t, calls: N.calls, before }; });
+  check("Back follows the swipe on an open panel, cancelling puts it back, letting go closes it; on a page Back goes to the menu, and on the menu the next Back closes the app",
+    /translateX\(24px\) scale\(0\.97\)/.test(s.during) && s.cancelled === "" && s.stillOpen && s.closed && s.toMenu === "menu" && s.t === "Press Back again to close the app." && JSON.stringify(s.calls) === '[["exit",2000]]', s);
   // Which build this is.
   s = await page.evaluate(async () => { openHelp("settings", "Settings"); await new Promise(r => setTimeout(r, 100)); const v = document.getElementById("apkVer"); const out = { set: v && v.textContent, foot: (document.getElementById("apkFoot") || {}).textContent }; closeHelp(); return out; });
-  check("Settings and the footer say which Android build this is", /^Android APK build 9( · Data on this phone: .+)?$/.test(s.set || "") && s.foot === " · Android APK build 9", s);
+  check("Settings and the footer say which Android build this is", /^Android APK build 9( · Data on this phone: .+)?$/.test(s.set || "") && s.foot === " Android APK build 9 ·", s);
 
   // What's new after an Android update: not on a first install, once after an update.
   s = await page.evaluate(() => { const card = () => document.getElementById("apkNew"); localStorage.removeItem("lpnapkseen");
@@ -363,11 +469,11 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("the Continue shortcut says how many pallets the delivery has, and goes when the log is cleared", s.two.join() === "Continue: 2 pallets" && s.none.join("|") === "Continue: 2 pallets|", s);
   // From the Manifest check scrolled to the top (where the entry bar slides away on a phone).
   await page.evaluate(async () => { const b = document.getElementById("cmpBody"); if (b.hidden) document.getElementById("cmpToggle").click(); document.getElementById("cmpCard").scrollIntoView({ block: "start" }); window.dispatchEvent(new Event("scroll")); await new Promise(r => setTimeout(r, 200)); });
-  const slid = await page.evaluate(() => document.body.classList.contains("cmpfocus"));
+  const slid = await page.evaluate(() => { LPN_APK_MODE("cmp"); return LPN_APK_MODE() === "cmp"; }); // the Manifest check's own page
   await open({ action: "continue" });
-  s = await page.evaluate(() => { const a = document.activeElement, l = document.getElementById("lpn"); const out = { f: a ? (a.id || a.tagName + "." + a.className + ":" + (a.textContent || "").slice(0, 40)) : "", mode: l.getAttribute("inputmode") };
+  s = await page.evaluate(() => { const a = document.activeElement, l = document.getElementById("lpn"); const out = { f: a ? (a.id || a.tagName + "." + a.className + ":" + (a.textContent || "").slice(0, 40)) : "", mode: l.getAttribute("inputmode"), page: LPN_APK_MODE() };
     l.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true })); out.after = l.getAttribute("inputmode"); return out; });
-  check("the Continue shortcut goes back to the LPN box (without the keyboard until it's tapped), even from the Manifest check where the entry bar had slid away", s.f === "lpn" && s.mode === "none" && s.after !== "none" && slid, { s, slid });
+  check("the Continue shortcut goes back to the LPN box (without the keyboard until it's tapped), even from the Manifest check's page", s.f === "lpn" && s.mode === "none" && s.after !== "none" && slid && s.page === "log", { s, slid });
   // Android-style controls.
   s = await page.evaluate(async () => { openHelp("settings", "Settings"); await new Promise(r => setTimeout(r, 100)); const c = document.querySelector("#panelBody label.chk > input[type=checkbox]"), cs = getComputedStyle(c);
     const out = { appearance: cs.appearance, w: cs.width, role: c.type }; closeHelp();
@@ -376,6 +482,52 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     const q = document.querySelector(".helpq"), before = getComputedStyle(q).position; q.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true })); out.helpq = [before, getComputedStyle(q).position];
     return out; });
   check("Android-style switches in Settings (still checkboxes) and a ripple where a button is pressed, without changing buttons' text or position", s.appearance === "none" && s.w === "44px" && s.role === "checkbox" && s.ripple && s.text === "Saved deliveries" && s.helpq[0] === s.helpq[1], s);
+
+  // Warehouse handheld scanners: each scan goes where it belongs.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), N = window.Capacitor.Plugins.LpnNative, out = {};
+    N.calls = []; LPN_APK_SYNCHAND(); await wait(50); out.on = N.calls.some(c => c[0] === "hand" && c[1] === true);
+    document.querySelectorAll(".apkask").forEach(a => a.remove()); closeHelp(); if (document.activeElement) document.activeElement.blur();
+    ["flt", "fltType", "fltFsdu"].forEach(id => { const e = document.getElementById(id); if (e) e.value = ""; }); // no search or filter left by an earlier check
+    rows = []; save(); render(); LPN_APK_MODE("log"); document.querySelector('#tyb button[data-t="BB"]').click(); LPN_APK_MODE("menu"); // BB (an FPP pallet opens its description box)
+    N.listeners.hwScan({ code: "VLT004040703" }); await wait(150); out.log = LPN_APK_MODE() + ":" + rows.map(r => r.lpn).join();
+    if (!rows.length) return Object.assign(out, { act: document.activeElement && (document.activeElement.id || document.activeElement.tagName), panel: !document.getElementById("panel").hidden, chk: !document.getElementById("chkBar").hidden, toast: (document.getElementById("apkToast") || {}).textContent, msg: document.getElementById("msg").textContent });
+    const eb = document.querySelector("#body .lpnedit"); if (!eb) return Object.assign(out, { noRow: document.getElementById("body").innerHTML.slice(0, 200) });
+    eb.click(); await wait(100); const d = document.querySelector(".descline input"); if (d) d.focus();
+    N.listeners.hwScan({ code: "VLT004040711" }); await wait(150); out.fromEdit = !document.querySelector(".dmgrow") && rows.map(r => r.lpn).join();
+    const f = document.getElementById("flt"); f.focus(); N.listeners.hwScan({ code: "VLT004040703" }); await wait(100); out.search = f.value + ":" + rows.length; f.value = ""; f.dispatchEvent(new Event("input", { bubbles: true })); f.blur();
+    LPN_APK_MODE("cmp"); document.getElementById("cmpNums").value = ""; N.listeners.hwScan({ code: "QUB001899182" }); await wait(100); out.cmp = document.getElementById("cmpNums").value.trim() + ":" + rows.length;
+    document.getElementById("cmpNums").value = ""; LPN_APK_MODE("log"); rows = []; save(); render(); return out; });
+  check("a handheld scanner is set up on opening, and a scan from the menu is logged as the next pallet on the log's page", s.on && s.log === "log:VLT004040703", s);
+  s.glow = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative; LPN_APK_MODE("log"); rows = []; save(); render(); const seen = [];
+    const g = () => (document.getElementById("apkGlow") || {}).className || "";
+    N.listeners.hwScan({ code: "VLT004040729" }); await new Promise(r => setTimeout(r, 90)); seen.push(g());
+    await new Promise(r => setTimeout(r, 500)); N.listeners.hwScan({ code: "VLT004040729" }); await new Promise(r => setTimeout(r, 90)); seen.push(g());
+    const sk = document.getElementById("chkSkip"); if (sk && !document.getElementById("chkBar").hidden) sk.click(); rows = []; save(); render(); return seen.join(","); });
+  check("a handheld scan flashes the screen's edge green, or orange when the same pallet is scanned again", s.glow === "ok,warn", s.glow);
+  check("a handheld scan closes an open pallet edit and is logged, goes into a box being filled in, and on the Manifest check's page into the manifest numbers", s.fromEdit === "VLT004040703,VLT004040711" && s.search === "VLT004040703:2" && s.cmp === "QUB001899182:2", s);
+  // The phone's own text reader for manifest photos: its words go through the app's photo reading; if it fails, the
+  // app's own reader takes over.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative; N.calls = []; const def = LPN_OCR() === null; localStorage.setItem("lpnapkocr", "on");
+    window.__ocrStub = () => ({ text: "Manifest\nLPN: vlt004040265 x", words: [{ text: "LPN:", x0: 10, y0: 10, x1: 60, y1: 30 }, { text: "vlt004040265", x0: 70, y0: 10, x1: 250, y1: 30 }] });
+    const c = document.createElement("canvas"); c.width = 400; c.height = 120; const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, 400, 120); x.fillStyle = "#000"; x.font = "20px sans-serif"; x.fillText("LPN: VLT004040265", 10, 30);
+    const blob = await new Promise(r => c.toBlob(r, "image/png")), out = {};
+    try { out.found = [...await readPhoto(new File([blob], "m.png", { type: "image/png" }))]; } catch (e) { out.err = String(e.message || e); }
+    out.reads = N.calls.filter(k => k[0] === "readText").length;
+    window.__ocrStub = null; const w = await LPN_OCR(); await w.setParameters({ tessedit_pageseg_mode: "11" });
+    try { const r = await w.recognize(c); out.fallback = typeof (r && r.data && r.data.text) === "string"; } catch (e) { out.fallbackErr = String(e.message || e); } await w.terminate();
+    try { localStorage.setItem("lpnapkocr", "off"); out.off = LPN_OCR() === null; } finally { localStorage.removeItem("lpnapkocr"); }
+    out.def = def; return out; });
+  check("manifest photos are read by the phone's own text reader (the page and a close-up of each number), through the app's photo reading", JSON.stringify(s.found) === '["VLT004040265"]' && s.reads === 2, s);
+  check("if the phone's text reader fails the app's own reader takes over; it's off unless switched on in Settings (the app's own reader is more accurate)", s.fallback && s.off && s.def, s);
+  // A folder chosen for exports gets a copy of every export.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); N.calls = [];
+    openHelp("settings", "Settings"); await wait(150); const before = document.getElementById("apkDirNote").textContent; document.getElementById("apkDirPick").click(); await wait(100);
+    const after = document.getElementById("apkDirNote").textContent; closeHelp();
+    await LPN_APK_SAVE(new Blob(["%PDF-1.3"], { type: "application/pdf" }), "LPN log 22-11-2026.pdf"); await wait(100);
+    const bar = (document.getElementById("apkSaved") || {}).textContent || "", folder = N.calls.filter(c => c[0] === "folder");
+    const sb = document.getElementById("apkSaved"); if (sb) sb.remove(); localStorage.removeItem("lpnapkdir"); return { before, after, bar, folder }; });
+  check("Settings › Android app can choose a folder (such as a synced Drive folder), and every export is then saved there too", /Choose a folder/.test(s.before) && / and in Drive\.$/.test(s.after) && /in Documents › LPN Pallet Log and in Drive\./.test(s.bar)
+    && JSON.stringify(s.folder) === '[["folder","content://tree/drive","LPN log 22-11-2026.pdf","application/pdf"]]', s);
 
   // Photo reading with only the files inside the app.
   const photos = load(OCR).filter(p => p.want && p.want.length);

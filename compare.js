@@ -841,11 +841,14 @@ $("prn").onclick=async()=>{
     markExported();
   }catch(e){m.textContent="Couldn’t prepare the print copy: "+((e&&e.message)||"unknown error")}
 };
-$("tallyBtn").onclick=async()=>{
-  const m=$("dlmsg");m.textContent="";
+async function printTally(m){
+  m.textContent="";
   try{m.textContent="Preparing the tally sheet…";await printBuf(await buildTallyPdf(),"LPN-tally-sheet.pdf",m)}
   catch(e){m.textContent="Couldn’t prepare the tally sheet: "+((e&&e.message)||"unknown error")}
-};
+}
+$("tallyBtn").onclick=()=>printTally($("dlmsg"));
+// With the pallet log switched off (only the Manifest check on the page), the tally sheet is in the Manifest check's step 1.
+$("cmpTally").onclick=()=>printTally($("cmpMsg"));
 $("cmpExpBtn").onclick=()=>{const m=$("cmpExpMenu");m.hidden=!m.hidden;$("cmpExpBtn").setAttribute("aria-expanded",!m.hidden)};
 $("cmpExpMenu").addEventListener("click",e=>{if(e.target.closest("button")){$("cmpExpMenu").hidden=true;$("cmpExpBtn").setAttribute("aria-expanded","false")}});
 // Escape closes an open Export menu and puts focus back on its button.
