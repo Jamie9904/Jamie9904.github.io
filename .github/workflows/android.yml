@@ -89,6 +89,15 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back virtualscene
           script: sh tools/android/shots.sh
+      # The app's photo reading on the user's manifest photos, on the virtual phone (shots.sh): every LPN right and
+      # nothing extra, or no APK. (The emulator itself may fail to start; then there's no result and only a warning.)
+      - name: Photo reading on the virtual phone
+        if: github.event_name == 'workflow_dispatch' && inputs.shots
+        run: |
+          f=shots/ocr-phone-reader.txt
+          if [ ! -s "$f" ] || ! grep -q '"done"' "$f"; then echo "::warning title=Photo reading on the phone::No result from the virtual phone"; exit 0; fi
+          d=$(grep '"done"' "$f"); echo "$d"
+          if echo "$d" | grep -q '"right":\([0-9]*\),"want":\1,"missing":\[\],"extra":\[\]'; then echo "::notice title=Photo reading on the phone::$d"; else echo "::error title=Photo reading on the phone::$d"; exit 1; fi
       - name: Keep the screenshots on the draft release "Android screenshots" (replaced each run)
         if: github.event_name == 'workflow_dispatch' && inputs.shots
         continue-on-error: true

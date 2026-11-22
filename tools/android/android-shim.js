@@ -621,7 +621,7 @@
     + "html.apkm-cmp #cmpCard .chev{display:none}html.apkm-cmp #cmpToggle{cursor:default}"
     + "html.apkm-log #delCard,html.apkm-cmp #cmpCard{margin-top:0;border-top:0;padding-top:0}"
     + "html.apkm-menu main,html.apkm-cmp main{padding-bottom:40px}"
-    + "#apkBar{align-items:center;gap:10px;margin:2px 0 14px}#apkBar button{min-height:44px;padding:8px 14px;font-weight:700}"
+    + "#apkBar{align-items:center;gap:10px;margin:2px 0 14px}#apkBar button{min-height:44px;padding:8px 12px;font-weight:700;white-space:nowrap;flex:none}"
     + "#apkMenu{border-top:0!important;margin-top:0!important;padding-top:4px!important}#apkMenu h2{margin:4px 0 14px}"
     + "#apkMenu .apkgo{display:block;width:100%;text-align:left;padding:18px 18px 16px;margin:0 0 12px;border:2px solid var(--line,#35507f);border-radius:14px;background:var(--sel,#1a3562);min-height:88px}"
     + "#apkMenu .apkgo b{display:block;font-size:1.25rem;margin-bottom:4px}#apkMenu .apkgo span{display:block;color:var(--mu,#9db0d0);font-size:.95rem}"
