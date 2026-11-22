@@ -921,29 +921,31 @@
      phone's own text reader). Each number printed after "LPN:", once read the same way twice, comes here; it is
      tidied with the app's own photo rules and prefix list and added to the manifest numbers, and the camera screen
      shows what happened. Remove last takes the last one added back out. */
-  const liveRead = { added: [], recent: [] };
+  const liveRead = { added: [], recent: [], target: "manifest" };
+  const liveBox = () => liveRead.target === "log" ? "cmpLogNums" : "cmpNums", liveName = () => liveRead.target === "log" ? "log numbers" : "manifest list";
   function liveStatus(text, flash, forget) {
     if (!N() || typeof N().textScanStatus !== "function") return;
     N().textScanStatus({ text, flash: flash || "", recent: liveRead.recent.slice(-3).reverse().join("\n"), canUndo: liveRead.added.length > 0, forget: forget || null }).catch(() => {});
   }
-  function liveCount() { const b = $("cmpNums"); return b ? b.value.split(/\r?\n/).map(x => x.trim()).filter(Boolean).length : 0; }
+  function liveCount() { const b = $(liveBox()); return b ? b.value.split(/\r?\n/).map(x => x.trim()).filter(Boolean).length : 0; }
   function liveGot(raw) {
     if (typeof extractLpns !== "function" || typeof photoLpns !== "function" || typeof addNums !== "function") return;
     const v = String(raw || "").toUpperCase().replace(/[^A-Z0-9]/g, ""), first = extractLpns(v, true)[0];
     if (!first) return; // not shaped like an LPN after all: left out quietly
-    const out = photoLpns([{ raw: v, first, again: null, lab: true }]);
-    if (!out.length) { const sk = (out.skipped || [])[0] || first; liveRead.recent.push(sk + " · skipped (prefix)"); if (typeof sfx === "function") sfx("warn");
-      liveStatus(sk + " skipped: its prefix isn't in your prefix list. " + liveCount() + " in the manifest list.", "warn"); return; }
-    const lpn = out[0], r = addNums([lpn], "cmpNums"); $("cmpNums").dispatchEvent(new Event("input", { bubbles: true }));
+    const out = photoLpns([{ raw: v, first, again: null, lab: liveRead.target !== "log" }]);
+    if (!out.length) { const sk = (out.skipped || [])[0]; if (!sk) return; liveRead.recent.push(sk + " · skipped (prefix)"); if (typeof sfx === "function") sfx("warn");
+      liveStatus(sk + " skipped: its prefix isn't in your prefix list. " + liveCount() + " in the " + liveName() + ".", "warn"); return; }
+    const lpn = out[0]; if (typeof lpnDigitsOk === "function" && !lpnDigitsOk(lpn)) return; // an order or phone number, not an LPN
+    const r = addNums([lpn], liveBox()); $(liveBox()).dispatchEvent(new Event("input", { bubbles: true }));
     if (r.added) { liveRead.added.push(lpn); liveRead.recent.push(lpn); if (typeof sfx === "function") sfx("ok");
-      liveStatus("Added " + lpn + ". " + liveCount() + " in the manifest list.", "ok"); }
-    else { liveRead.recent.push(lpn + " · already listed"); liveStatus(lpn + " is already in the list. " + liveCount() + " in the manifest list.", ""); }
-    try { if (typeof diag === "function") diag("manifest", "Live read: " + v + " → " + lpn + (r.added ? " added" : " already listed")); } catch (e) {}
+      liveStatus("Added " + lpn + ". " + liveCount() + " in the " + liveName() + ".", "ok"); }
+    else { liveRead.recent.push(lpn + " · already listed"); liveStatus(lpn + " is already in the list. " + liveCount() + " in the " + liveName() + ".", ""); }
+    try { if (typeof diag === "function") diag("manifest", "Live read (" + liveRead.target + "): " + v + " → " + lpn + (r.added ? " added" : " already listed")); } catch (e) {}
   }
   function liveUndo() {
     const lpn = liveRead.added.pop(); if (!lpn) return;
-    const b = $("cmpNums"); b.value = b.value.split(/\r?\n/).filter(x => x.trim().toUpperCase() !== lpn).join("\n"); b.dispatchEvent(new Event("input", { bubbles: true }));
-    liveRead.recent.push(lpn + " · removed"); liveStatus("Removed " + lpn + ". " + liveCount() + " in the manifest list.", "", lpn);
+    const b = $(liveBox()); b.value = b.value.split(/\r?\n/).filter(x => x.trim().toUpperCase() !== lpn).join("\n"); b.dispatchEvent(new Event("input", { bubbles: true }));
+    liveRead.recent.push(lpn + " · removed"); liveStatus("Removed " + lpn + ". " + liveCount() + " in the " + liveName() + ".", "", lpn);
   }
   window.LPN_APK_LIVEREAD = { got: liveGot, undo: liveUndo, state: liveRead };
   /* The same rule as TextScanActivity.afterLabels (keep the two alike), for the photo test on the virtual phone. */
@@ -959,19 +961,27 @@
     return out;
   }
   window.LPN_APK_AFTERLABELS = afterLabels;
-  function liveStart() {
-    liveRead.added = []; liveRead.recent = [];
+  /* The same rule as TextScanActivity.lpnWords (keep the two alike): a printed log's LPNs, standing on their own. */
+  window.LPN_APK_LPNWORDS = words => { const out = [], clean = s => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    for (let i = 0; i < words.length; i++) { let n = clean(words[i]);
+      if (n.length >= 4 && n.length < 11 && /^[A-Z]{1,4}[0-9]+$/.test(n) && i + 1 < words.length && /^[0-9]{1,8}$/.test(clean(words[i + 1]))) { n += clean(words[i + 1]); i++; }
+      if (/^[A-Z]{1,4}[0-9OIDLSBZ]{8,12}$/.test(n) && n.replace(/[^0-9]/g, "").length >= 6) out.push(n); }
+    return out; };
+  function liveStart(target) {
+    liveRead.added = []; liveRead.recent = []; liveRead.target = target;
     if (mode && mode !== "cmp") setMode("cmp");
-    N().startTextScan().catch(() => toast("The camera couldn’t start."));
+    N().startTextScan({ target }).catch(() => toast("The camera couldn’t start."));
   }
   if (N()) {
     try { N().addListener("textScan", e => liveGot(e && e.value)); N().addListener("textScanUndo", liveUndo);
-      N().addListener("textScanClosed", () => { const n = liveRead.added.length; if (typeof cmpMsg === "function") cmpMsg(n ? "Live read added " + n + " LPN" + (n === 1 ? "" : "s") + " to the manifest numbers. Check them against the paper copy." : "Live read didn’t add any LPNs."); }); } catch (e) {}
+      N().addListener("textScanClosed", () => { const n = liveRead.added.length; if (typeof cmpMsg === "function") cmpMsg(n ? "Live read added " + n + " LPN" + (n === 1 ? "" : "s") + " to the " + (liveRead.target === "log" ? "log numbers" : "manifest numbers") + ". Check them against the paper copy." : "Live read didn’t add any LPNs."); }); } catch (e) {}
   }
   document.addEventListener("DOMContentLoaded", () => {
     const b = $("cmpPhotoBtn"); if (!b || !N() || typeof N().startTextScan !== "function" || !has("manifestPhotos") || !has("manifestCheck")) return;
-    const l = document.createElement("button"); l.type = "button"; l.id = "apkLiveRead"; l.textContent = "Live read manifest"; l.onclick = liveStart;
+    const l = document.createElement("button"); l.type = "button"; l.id = "apkLiveRead"; l.textContent = "Live read manifest"; l.onclick = () => liveStart("manifest");
     b.before(l);
+    // The same for a printed log (step 1), where the LPNs stand on their own without an "LPN:" label.
+    const lp = $("cmpLogPhotoBtn"); if (lp) { const k = document.createElement("button"); k.type = "button"; k.id = "apkLiveLog"; k.textContent = "Live read log"; k.onclick = () => liveStart("log"); lp.after(k); }
   });
 
   /* Carry on: opening the app with a delivery in progress offers to go straight back to scanning. */

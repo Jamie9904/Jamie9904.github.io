@@ -69,11 +69,16 @@ public class TextScanActivity extends AppCompatActivity {
     private final Set<String> sent = new HashSet<>();
     static volatile String sRecent = "", sText = null;
     static volatile boolean sCanUndo = false;
+    // "manifest": numbers after an "LPN:" label. "log": a printed log, where the LPNs stand on their own, so any word
+    // shaped like an LPN (letters then 8 to 12 digits) is taken.
+    private boolean logMode = false;
+    private static final Pattern LPN_WORD = Pattern.compile("^[A-Z]{1,4}[0-9OIDLSBZ]{8,12}$");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         current = this;
+        logMode = "log".equals(getIntent().getStringExtra("target"));
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(Color.BLACK);
@@ -86,7 +91,8 @@ public class TextScanActivity extends AppCompatActivity {
         status = new TextView(this);
         status.setTextColor(Color.WHITE);
         status.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
-        status.setText(sText != null ? sText : "Hold the phone over the manifest and move it slowly down the page. Each “LPN:” number is added when it has been read clearly.");
+        status.setText(sText != null ? sText : logMode ? "Hold the phone over the printed log and move it slowly down the page. Each LPN is added when it has been read clearly."
+            : "Hold the phone over the manifest and move it slowly down the page. Each “LPN:” number is added when it has been read clearly.");
         status.setAccessibilityLiveRegion(android.view.View.ACCESSIBILITY_LIVE_REGION_POLITE);
         strip.addView(status);
         recent = new TextView(this);
@@ -236,6 +242,17 @@ public class TextScanActivity extends AppCompatActivity {
         return out;
     }
 
+    /* A printed log: every word shaped like an LPN, with a number read with a gap in it joined. */
+    static List<String> lpnWords(List<String> words) {
+        List<String> out = new ArrayList<>();
+        for (int i = 0; i < words.size(); i++) {
+            String n = clean(words.get(i));
+            if (n.length() >= 4 && n.length() < 11 && n.matches("[A-Z]{1,4}[0-9]+") && i + 1 < words.size() && clean(words.get(i + 1)).matches("[0-9]{1,8}")) { n += clean(words.get(i + 1)); i++; }
+            if (LPN_WORD.matcher(n).matches() && n.replaceAll("[^0-9]", "").length() >= 6) out.add(n);
+        }
+        return out;
+    }
+
     @OptIn(markerClass = ExperimentalGetImage.class)
     private void analyze(ImageProxy img) {
         TextRecognizer r = reader;
@@ -245,7 +262,7 @@ public class TextScanActivity extends AppCompatActivity {
             List<String> words = new ArrayList<>();
             for (Text.TextBlock b : t.getTextBlocks()) for (Text.Line l : b.getLines()) for (Text.Element e : l.getElements()) words.add(e.getText());
             long now = System.currentTimeMillis();
-            for (String n : afterLabels(words)) {
+            for (String n : logMode ? lpnWords(words) : afterLabels(words)) {
                 if (sent.contains(n)) continue;
                 Long at = seen.get(n);
                 if (at != null && now - at < 5000) { sent.add(n); LpnNativePlugin.scanEvent("textScan", new com.getcapacitor.JSObject().put("value", n)); }

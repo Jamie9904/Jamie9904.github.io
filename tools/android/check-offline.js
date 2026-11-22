@@ -60,7 +60,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
         scanners: async () => ({ names: [] }),
         notify: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["notify", o.title, o.text]); return { shown: true }; },
         askNotify: async () => { window.Capacitor.Plugins.LpnNative.calls.push(["askNotify"]); return { asked: true }; },
-        startTextScan: async () => { window.Capacitor.Plugins.LpnNative.calls.push(["textScan"]); },
+        startTextScan: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["textScan", (o || {}).target]); },
         textScanStatus: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["textStatus", o.text, o.flash, o.recent, o.canUndo, o.forget]); },
         ringer: async () => ({ silent: !!window.__silent }),
         setHandheld: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["hand", o.on]); },
@@ -156,7 +156,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, L = LPN_APK_LIVEREAD, box = document.getElementById("cmpNums"), pf = document.getElementById("cmpPfx"), out = {};
     const st = () => { const c = N.calls.filter(x => x[0] === "textStatus").pop(); return c ? c[1] + "|" + c[2] + "|" + c[4] + (c[5] ? "|forget " + c[5] : "") : ""; };
     LPN_APK_MODE("menu"); box.value = "QUB001899182"; pf.value = ""; const b = document.getElementById("apkLiveRead"); N.calls = [];
-    out.btn = !!b && b.textContent; b.click(); await new Promise(r => setTimeout(r, 30)); out.started = N.calls.some(c => c[0] === "textScan") && LPN_APK_MODE() === "cmp";
+    out.btn = !!b && b.textContent; b.click(); await new Promise(r => setTimeout(r, 30)); out.started = N.calls.some(c => c[0] === "textScan" && c[1] === "manifest") && LPN_APK_MODE() === "cmp";
     out.vis = b.getClientRects().length > 0;
     N.listeners.textScan({ value: "VLT004040265" }); out.add = st();
     N.listeners.textScan({ value: "VLTOO4040273" }); out.fix = box.value.split("\n").pop();
@@ -172,6 +172,19 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("one already listed isn't added twice; one with a prefix not in the list is skipped (orange); a non-LPN is left out", /^QUB001899182 is already in the list\./.test(s.dup) && /^RUN001832813 skipped: its prefix isn't in your prefix list\..*\|warn\|true$/.test(s.skip) && s.notLpn === 3, s);
   check("Remove last takes the last one added back out (and lets it be read again); closing says how many were added", s.undo === "Removed VLT004040273. 2 in the manifest list.||true|forget VLT004040273|QUB001899182,VLT004040265" && /Live read added 1 LPN/.test(s.closed), s);
   check("only numbers straight after an “LPN” label are taken, with a number read with a gap joined", s.rule === '["VLT004040265","QUB001911625","RUN001832813"]', s.rule);
+  // Live read log: a printed log's LPNs (no "LPN:" label) go into the log numbers.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, box = document.getElementById("cmpLogNums"), out = {};
+    const st = () => { const c = N.calls.filter(x => x[0] === "textStatus").pop(); return c ? c[1] + "|" + c[2] : ""; };
+    LPN_APK_MODE("menu"); box.value = ""; document.getElementById("cmpNums").value = ""; document.getElementById("cmpPfx").value = ""; N.calls = [];
+    const k = document.getElementById("apkLiveLog"); out.btn = !!k && k.textContent + ":" + (k.previousElementSibling || {}).id; k.click(); await new Promise(r => setTimeout(r, 30));
+    out.started = N.calls.some(c => c[0] === "textScan" && c[1] === "log") && LPN_APK_MODE() === "cmp";
+    N.listeners.textScan({ value: "VLT004040265" }); out.add = st(); N.listeners.textScan({ value: "PO12345678" }); N.listeners.textScan({ value: "QUB001899182" });
+    out.box = box.value.replace(/\n/g, ","); out.manifest = document.getElementById("cmpNums").value;
+    N.listeners.textScanClosed(); out.closed = document.getElementById("cmpMsg").textContent;
+    out.rule = JSON.stringify(LPN_APK_LPNWORDS(["1", "VLT004040265", "BB", "QUB00191", "1625", "PO", "12345678", "Tel", "01234567890", "No", "LPN", "1", "12/11/2026"]));
+    box.value = ""; LPN_APK_MODE("log"); return out; });
+  check("Live read log (in step 1, after Photo of printed log) reads a printed log's LPNs into the log numbers, not the manifest", s.btn === "Live read log:cmpLogPhotoBtn" && s.started && s.add === "Added VLT004040265. 1 in the log numbers.|ok" && s.box === "VLT004040265,QUB001899182" && s.manifest === "" && /2 LPNs to the log numbers/.test(s.closed), s);
+  check("on a printed log any LPN-shaped number is taken (a number read with a gap joined), but not order, phone or date numbers", s.rule === '["VLT004040265","QUB001911625"]', s.rule);
   // Moving between the menu and the pages: a slide, each page keeps its place, TalkBack hears the page's name, and
   // focus goes back to the button you came from; the menu buttons give the light tap.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), N = window.Capacitor.Plugins.LpnNative, main = document.querySelector("main");

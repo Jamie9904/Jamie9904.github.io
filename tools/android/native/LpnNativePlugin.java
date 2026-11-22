@@ -154,7 +154,7 @@ public class LpnNativePlugin extends Plugin {
     /* Live read manifest (TextScanActivity): numbers after "LPN:" come back as "textScan" events. */
     @PluginMethod
     public void startTextScan(PluginCall call) {
-        getActivity().startActivity(new Intent(getActivity(), TextScanActivity.class));
+        getActivity().startActivity(new Intent(getActivity(), TextScanActivity.class).putExtra("target", call.getString("target", "manifest")));
         call.resolve();
     }
 
