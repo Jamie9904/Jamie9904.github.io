@@ -567,6 +567,7 @@
     let tw = null, params = {};
     const own = async () => { if (!tw) { tw = await Tesseract.createWorker("eng", 1, window.LPN_TESS); await tw.setParameters(params); } return tw; };
     return Promise.resolve({
+      phone: true,
       setParameters: async p => { params = Object.assign({}, params, p); if (tw) await tw.setParameters(p); },
       terminate: async () => { if (tw) { const t = tw; tw = null; await t.terminate(); } },
       recognize: async img => {
@@ -615,7 +616,8 @@
         const want = exp[name], blob = await (await fetch("ocrtest/" + name)).blob(), bmp = await createImageBitmap(blob);
         const c = document.createElement("canvas"); c.width = bmp.width; c.height = bmp.height; c.getContext("2d").drawImage(bmp, 0, 0);
         const r = await N().readText({ data: c.toDataURL("image/jpeg", 0.9).split(",")[1] }); c.width = c.height = 0;
-        const got = [...new Set(afterLabels((r.words || []).map(w => w.text)).map(v => { const f = extractLpns(v, true)[0]; if (!f) return null; const o = photoLpns([{ raw: v, first: f, again: null, lab: true }]); return o[0] || null; }).filter(Boolean))];
+        // In reading order, each against the ones taken before it from the same page (as in a live session).
+        const got = []; afterLabels((r.words || []).map(w => w.text)).forEach(v => { const t = liveTidy(v, got, true); if (t.lpn && !got.includes(t.lpn)) got.push(t.lpn); });
         const g = new Set(got), w = new Set(want);
         lt.right += want.filter(x => g.has(x)).length; lt.want += want.length; lt.missing.push(...want.filter(x => !g.has(x))); lt.extra.push(...got.filter(x => !w.has(x)));
       }
@@ -748,6 +750,16 @@
   }
   window.LPN_APK_WARMOCR = warmOcr;
   document.addEventListener("pointerdown", e => { const b = e.target.closest && e.target.closest("#cmpCamBtn,#cmpPhotoBtn,#cmpLogPhotoBtn,#photo,#upload"); if (b) warmOcr(); }, true);
+  // Switched to the phone's own text reader in Settings while the app's reader was already running (started early, or
+  // still idle after a photo): the app's reader is closed, so the next photo uses the one now chosen.
+  document.addEventListener("DOMContentLoaded", () => {
+    if (typeof ocrWorker !== "function") return;
+    const real = ocrWorker;
+    ocrWorker = async function () {
+      if (typeof ocrW !== "undefined" && ocrW && window.LPN_OCR && window.LPN_OCR()) { try { const w = await ocrW; if (!w.phone) ocrDone(w, false); } catch (e) {} }
+      return real.apply(this, arguments);
+    };
+  });
   // (android.js loads before the app's own scripts, so this waits for them)
   document.addEventListener("DOMContentLoaded", () => {
     // Simple view switched on or off in Settings: the menu goes or comes back.
@@ -942,14 +954,35 @@
     N().textScanStatus({ text, flash: flash || "", recent: liveRead.recent.slice(-3).reverse().join("\n"), canUndo: liveRead.added.length > 0, forget: forget || null }).catch(() => {});
   }
   function liveCount() { const b = $(liveBox()); return b ? b.value.split(/\r?\n/).map(x => x.trim()).filter(Boolean).length : 0; }
+  /* One number read live, tidied with the app's photo rules against the numbers already in the list, so a misread
+     that doesn't match the page (such as a digit too many) is caught rather than added. Returns { lpn } to add (or
+     already listed), { skipped } for a prefix not in the list, { odd } to check by hand, or {} to leave out. */
+  function liveTidy(raw, have, lab) {
+    const v = String(raw || "").toUpperCase().replace(/[^A-Z0-9]/g, ""), first = extractLpns(v, true)[0];
+    if (!first) return {}; // not shaped like an LPN after all
+    const known = new Set(have), split = x => /^([A-Z]+)([0-9]+)$/.exec(x || "");
+    const out = photoLpns(have.filter(x => split(x)).map(x => ({ raw: x, first: x, again: null, lab: true })).concat([{ raw: v, first, again: null, lab }]));
+    const fresh = out.filter(x => !known.has(x)), sk = (out.skipped || []).find(x => !known.has(x));
+    const cand = fresh[0] || (out.includes(first) || known.has(first) ? first : null);
+    if (!cand) return sk ? { skipped: sk } : (typeof lpnDigitsOk === "function" && lpnDigitsOk(first)) ? { odd: first } : {};
+    if (known.has(cand)) return { lpn: cand };
+    if (typeof lpnDigitsOk === "function" && !lpnDigitsOk(cand)) return {}; // an order or phone number, not an LPN
+    // Two or more numbers with this prefix already, all the same length, and this one isn't: a digit misread.
+    const s = split(cand), same = have.map(split).filter(m => m && s && m[1] === s[1]);
+    if (s && same.length >= 2 && same.every(m => m[2].length === same[0][2].length) && s[2].length !== same[0][2].length) return { odd: cand };
+    return { lpn: cand };
+  }
+  window.LPN_APK_LIVETIDY = liveTidy;
   function liveGot(raw) {
     if (typeof extractLpns !== "function" || typeof photoLpns !== "function" || typeof addNums !== "function") return;
-    const v = String(raw || "").toUpperCase().replace(/[^A-Z0-9]/g, ""), first = extractLpns(v, true)[0];
-    if (!first) return; // not shaped like an LPN after all: left out quietly
-    const out = photoLpns([{ raw: v, first, again: null, lab: liveRead.target !== "log" }]);
-    if (!out.length) { const sk = (out.skipped || [])[0]; if (!sk) return; liveRead.recent.push(sk + " · skipped (prefix)"); if (typeof sfx === "function") sfx("warn");
-      liveStatus(sk + " skipped: its prefix isn't in your prefix list. " + liveCount() + " in the " + liveName() + ".", "warn"); return; }
-    const lpn = out[0]; if (typeof lpnDigitsOk === "function" && !lpnDigitsOk(lpn)) return; // an order or phone number, not an LPN
+    const have = $(liveBox()).value.split(/\r?\n/).map(x => x.trim().toUpperCase()).filter(Boolean);
+    const t = liveTidy(raw, have, liveRead.target !== "log");
+    if (t.skipped) { liveRead.recent.push(t.skipped + " · skipped (prefix)"); if (typeof sfx === "function") sfx("warn");
+      liveStatus(t.skipped + " skipped: its prefix isn't in your prefix list. " + liveCount() + " in the " + liveName() + ".", "warn"); return; }
+    if (t.odd) { liveRead.recent.push(t.odd + " · check"); if (typeof sfx === "function") sfx("warn");
+      liveStatus(t.odd + " doesn't look like the others on this page, so it wasn't added. Check the paper and type it in if it's right.", "warn"); return; }
+    if (!t.lpn) return; // not an LPN: left out quietly
+    const lpn = t.lpn;
     const r = addNums([lpn], liveBox()); $(liveBox()).dispatchEvent(new Event("input", { bubbles: true }));
     if (r.added) { liveRead.added.push(lpn); liveRead.recent.push(lpn); if (typeof sfx === "function") sfx("ok");
       liveStatus("Added " + lpn + ". " + liveCount() + " in the " + liveName() + ".", "ok"); }

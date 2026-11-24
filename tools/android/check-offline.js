@@ -172,6 +172,10 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("one already listed isn't added twice; one with a prefix not in the list is skipped (orange); a non-LPN is left out", /^QUB001899182 is already in the list\./.test(s.dup) && /^RUN001832813 skipped: its prefix isn't in your prefix list\..*\|warn\|true$/.test(s.skip) && s.notLpn === 3, s);
   check("Remove last takes the last one added back out (and lets it be read again); closing says how many were added", s.undo === "Removed VLT004040273. 2 in the manifest list.||true|forget VLT004040273|QUB001899182,VLT004040265" && /Live read added 1 LPN/.test(s.closed), s);
   check("only numbers straight after an “LPN” label are taken, with a number read with a gap joined", s.rule === '["VLT004040265","QUB001911625","RUN001832813"]', s.rule);
+  // A live read that doesn't match the page's pattern (a digit too many, seen on the user's photos) isn't added.
+  s = await page.evaluate(() => { const T = LPN_APK_LIVETIDY, h = ["VLT004040265", "VLT004040273"]; document.getElementById("cmpPfx").value = "";
+    return JSON.stringify({ extra: T("VLT0040440278", h, true), ok: T("VLT004040278", h, true), first: T("VLT004040265", [], true), po: T("PO12345678", h, true) }); });
+  check("a live read with a digit more than the other numbers with its prefix is held back to check, not added", s === '{"extra":{"odd":"VLT0040440278"},"ok":{"lpn":"VLT004040278"},"first":{"lpn":"VLT004040265"},"po":{}}', s);
   // Live read log: a printed log's LPNs (no "LPN:" label) go into the log numbers.
   s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, box = document.getElementById("cmpLogNums"), out = {};
     const st = () => { const c = N.calls.filter(x => x[0] === "textStatus").pop(); return c ? c[1] + "|" + c[2] : ""; };
