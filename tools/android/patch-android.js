@@ -40,31 +40,6 @@ edit(path.join(AND, "build.gradle"), /versionCode \d+/, "versionCode " + code);
 // The signed APK carries only the ARM code that phones use (ML Kit's text reader is in it once per kind of processor,
 // so the Intel copies doubled the size). The test copy for GitHub's virtual phone (debug, Intel) keeps every kind.
 edit(path.join(AND, "build.gradle"), /(buildTypes\s*\{\s*release\s*\{)/, "$1\n            ndk { abiFilters 'armeabi-v7a', 'arm64-v8a' }");
-// The signed APK's Android code is shrunk (unused code and images left out; the app's own code, Capacitor and the
-// page's bridges are kept whole). "qa" is the same shrunk build, signed with the test key and for the virtual phone's
-// Intel processor, so GitHub's photo test and screenshots run on exactly what goes into the APK.
-edit(path.join(AND, "build.gradle"), /minifyEnabled false/, "minifyEnabled true\n            shrinkResources true");
-// (added after Capacitor's own android { } block, so release is fully set up before qa copies it)
-fs.appendFileSync(path.join(AND, "build.gradle"), `
-android {
-    buildTypes {
-        qa {
-            initWith buildTypes.release
-            signingConfig signingConfigs.debug
-            matchingFallbacks = ['release']
-            ndk { abiFilters.clear(); abiFilters 'x86_64' }
-        }
-    }
-}
-`);
-fs.appendFileSync(path.join(AND, "proguard-rules.pro"), `
-# LPN Pallet Log: keep the app's own Android code, Capacitor (plugins are found by name) and the page's bridges.
--keep class io.github.jamie9904.lpnlog.** { *; }
--keep class com.getcapacitor.** { *; }
--keepclassmembers class * { @android.webkit.JavascriptInterface <methods>; }
--keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
--dontwarn com.google.android.gms.**
-`);
 edit(path.join(AND, "build.gradle"), /versionName "[^"]*"/, 'versionName "' + name.replace(/"/g, "") + '"');
 
 // Android-only code (tools/android/native): edge-to-edge screen, ML Kit barcodes, printing, keeping the screen on, opened files.
