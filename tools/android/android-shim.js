@@ -879,12 +879,21 @@
       progPhotos = false; ocrStop = false;
     }
   }
+  /* The photo reader is restarted after every four photos (once nothing is being read): its memory grows with each
+     photo, and on phones with little memory the page was stopped by Android part-way through a long batch. */
+  let readsSince = 0;
+  function recycle(p) {
+    const after = () => { if (++readsSince < 4 || typeof ocrQ === "undefined") return; readsSince = 0;
+      ocrQ = ocrQ.then(async () => { try { if (typeof ocrW !== "undefined" && ocrW) { const w = await ocrW; if (!w.phone) ocrDone(w, false); } } catch (e) {} }); };
+    p.then(after, after); return p;
+  }
+  window.LPN_APK_RECYCLE = () => readsSince;
   function askNotifyOnce() { let asked = null; try { asked = localStorage.getItem("lpnapknotify"); } catch (e) {} if (asked || !N() || typeof N().askNotify !== "function") return;
     try { localStorage.setItem("lpnapknotify", "asked"); } catch (e) {} N().askNotify().catch(() => {}); }
   document.addEventListener("DOMContentLoaded", () => {
     const m = $("cmpMsg"); if (m) new MutationObserver(progress).observe(m, { childList: true, characterData: true, subtree: true });
     // Cancel: the photos not started yet are skipped (the one being read finishes).
-    if (typeof ocrLpns === "function") { const real = ocrLpns; ocrLpns = function (f) { if (ocrStop) return Promise.reject(new Error("stopped: you tapped Cancel")); return real.apply(this, arguments); }; }
+    if (typeof ocrLpns === "function") { const real = ocrLpns; ocrLpns = function (f) { if (ocrStop) return Promise.reject(new Error("stopped: you tapped Cancel")); return recycle(real.apply(this, arguments)); }; }
     addMoreBtn();
     let seen = null; try { seen = localStorage.getItem("lpnapkintro"); } catch (e) {}
     const fresh = (typeof rows === "undefined" || !rows.length) && (typeof hist === "undefined" || !hist.length);
