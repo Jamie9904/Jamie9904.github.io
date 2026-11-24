@@ -4,7 +4,7 @@
 # inside the emulator step; the pictures are kept as the run's "android-screenshots" artifact.
 # Two sizes: the emulator's own (Pixel 6, 411 dp wide) and a small phone (360 dp), each normal and with Bigger buttons.
 set -u
-APK=tools/android/android/app/build/outputs/apk/debug/app-debug.apk
+APK=tools/android/android/app/build/outputs/apk/qa/app-qa.apk # the shrunk build, as in the signed APK
 PKG=io.github.jamie9904.lpnlog
 OUT=shots
 mkdir -p "$OUT"
