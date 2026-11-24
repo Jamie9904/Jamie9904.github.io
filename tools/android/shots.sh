@@ -41,10 +41,12 @@ ocr_test() {
   adb shell am force-stop "$PKG"; act; sleep 8
   f="/sdcard/Documents/LPN Pallet Log/ocrtest.txt"; adb shell rm -f "'$f'"
   act -a "$PKG.SHOW" --es what ocrtest
-  # The probe line comes within about 30 s; if nothing has come after 90 s the request didn't reach the page, so it's sent again.
+  # The probe line comes within about 30 s. If nothing has come after 90 s the page didn't answer (seen twice on a first start
+  # after installing): what the phone showed is kept as ocr-stalled.png, and the app is restarted and asked again.
   i=0; while [ $i -lt 300 ]; do sleep 3; i=$((i+1))
     t=$(adb shell cat "'$f'" 2>/dev/null); echo "$t" | grep -q '"liveDone"' && break
-    if [ $i -eq 30 ] && [ -z "$t" ]; then echo "No photo test result after 90 s: asking again"; act -a "$PKG.SHOW" --es what ocrtest; fi
+    if [ $i -eq 30 ] && [ -z "$t" ]; then echo "No photo test result after 90 s: restarting the app and asking again"
+      adb exec-out screencap -p > "$OUT/ocr-stalled.png"; adb shell am force-stop "$PKG"; act; sleep 8; act -a "$PKG.SHOW" --es what ocrtest; fi
   done
   adb shell cat "'$f'" > "$OUT/ocr-phone-reader.txt" 2>/dev/null
   { echo "== crashes"; adb logcat -d -b crash; echo "== memory and the page's process"; adb logcat -d | grep -iE "lowmemorykiller|lmkd|renderer|sandboxed_process|died|lpnlog" | grep -v "empty #" | tail -120; echo "== the page's messages"; adb logcat -d -s "Capacitor/Console:*" "chromium:*" | tail -80; } > "$OUT/ocr-log.txt" 2>/dev/null

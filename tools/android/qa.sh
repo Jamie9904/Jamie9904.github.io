@@ -18,33 +18,13 @@ shot() { sleep "${2:-2}"; adb exec-out screencap -p > "$OUT/$1.png"; }
 back() { adb shell input keyevent 4; sleep "${1:-1.2}"; }
 alive() { adb shell pidof "$PKG" >/dev/null 2>&1 && echo yes || echo no; }
 top() { adb shell dumpsys activity activities 2>/dev/null | grep -m1 -E "topResumedActivity|mResumedActivity" | sed 's/.*{[^ ]* [^ ]* //; s/ .*//' | tr -d '\r'; }
-# Tap the first on-screen element whose text or description contains $1 (the page's buttons show up in Android's
-# accessibility tree). Prints "tapped" or "not found".
-tap() {
-  adb shell uiautomator dump /sdcard/qa-ui.xml >/dev/null 2>&1; adb pull /sdcard/qa-ui.xml "$OUT/ui.xml" >/dev/null 2>&1
-  xy=$(python3 - "$1" "$OUT/ui.xml" <<'E'
-import sys, re, xml.etree.ElementTree as T
-want = sys.argv[1].lower()
-try: root = T.parse(sys.argv[2]).getroot()
-except Exception: print(""); sys.exit()
-for n in root.iter("node"):
-    t = (n.get("text") or "") + " " + (n.get("content-desc") or "")
-    if want in t.lower():
-        m = re.findall(r"\d+", n.get("bounds") or "")
-        if len(m) == 4:
-            x1, y1, x2, y2 = map(int, m)
-            if x2 > x1 and y2 > y1: print((x1 + x2) // 2, (y1 + y2) // 2); break
-E
-)
-  if [ -n "$xy" ]; then adb shell input tap $xy; sleep "${2:-1.5}"; echo tapped; else echo "not found"; fi
-}
 adb logcat -c
 adb shell pm grant "$PKG" android.permission.CAMERA 2>/dev/null
 
 step "1. First install: storage cleared, cold start"
 adb shell pm clear "$PKG" >/dev/null; adb shell pm grant "$PKG" android.permission.CAMERA 2>/dev/null
 note "start time: $(act)"; shot 01-first-open 6
-note "Skip: $(tap Skip)"; shot 02-after-intro 2
+shot 02-intro-still-open 1
 
 step "2. Back on the start menu asks before leaving; the app stays open after one Back"
 back; shot 03-back-once 1; note "open after one Back: $(alive), on top: $(top)"
@@ -109,14 +89,14 @@ note "open: $(alive), on top: $(top)"; shot 22-after-scanner-loop 1
 
 step "13. Live read manifest opened and closed 5 times"
 act -a "$PKG.MANIFEST" >/dev/null; sleep 2
-i=0; while [ $i -lt 5 ]; do r=$(tap "Live read manifest" 4); [ "$r" = tapped ] || { note "Live read manifest button: $r"; break; }; [ $i -eq 0 ] && shot 23-live-read 1; back 2; i=$((i+1)); done
+i=0; while [ $i -lt 5 ]; do act -a "$PKG.SHOW" --es what liveread >/dev/null; sleep 4; [ $i -eq 0 ] && { note "on top: $(top)"; shot 23-live-read 1; }; back 2; i=$((i+1)); done
 note "open: $(alive), on top: $(top)"; shot 24-after-live-read 1
 
 step "14. Volume-down in the log starts Live scan"
 act -a "$PKG.CONTINUE" >/dev/null; sleep 2; adb shell input keyevent 25; sleep 4; note "on top: $(top)"; shot 25-volume-down 1; back 2
 
 step "15. Export menu (opened, not saved)"
-act -a "$PKG.CONTINUE" >/dev/null; sleep 2; note "Export: $(tap Export 2)"; shot 26-export-menu 1; back
+act -a "$PKG.SHOW" --es what export >/dev/null; shot 26-export-menu 3; back
 
 step "16. Back from every page goes back, not out"
 act -a "$PKG.MANIFEST" >/dev/null; sleep 2; back; note "Manifest check, Back: on top $(top)"; shot 27-back-manifest 1

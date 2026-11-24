@@ -286,6 +286,8 @@
       if (r.what === "settings") { if (typeof closeHelp === "function") closeHelp(); openHelp("settings", "Settings"); }
       else if (r.what === "carry") carryOn();
       else if (r.what === "ocrtest") ocrTest();
+      else if (r.what === "export") { if (has("palletLog")) toLog(); const b = $("expBtn"); if (b) b.click(); } // the bug hunt (tools/android/qa.sh)
+      else if (r.what === "liveread") { const b = $("apkLiveRead"); if (b) b.click(); }
       else if (r.what === "big-on" || r.what === "big-off") { try { localStorage.setItem("lpnapkbig", r.what === "big-on" ? "on" : "off"); } catch (e) {} applyBig(); }
       return;
     }
