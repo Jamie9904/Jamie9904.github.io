@@ -21,6 +21,10 @@ on:
         description: "Screenshots on a virtual Android phone (about 10 minutes more)"
         type: boolean
         default: true
+      qa:
+        description: "Bug hunt on the virtual phone after the screenshots (about 15 minutes more; needs Screenshots ticked)"
+        type: boolean
+        default: false
 permissions:
   contents: write # only to keep the signing key as a draft release (tools/android/sign.sh)
 concurrency:
@@ -29,7 +33,7 @@ concurrency:
 jobs:
   apk:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -91,7 +95,7 @@ jobs:
           disable-animations: true
           ram-size: 3072M # about what a typical phone has free (the default is less, and the page was stopped part-way through the photos)
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back virtualscene
-          script: sh tools/android/shots.sh
+          script: sh tools/android/shots.sh; if [ "${{ inputs.qa }}" = true ]; then sh tools/android/qa.sh; fi
       # The app's photo reading on the user's manifest photos, on the virtual phone (shots.sh): every LPN right and
       # nothing extra, or no APK. (A test that doesn't finish fails the run too.)
       - name: Photo reading on the virtual phone
@@ -118,6 +122,20 @@ jobs:
             for a in $(gh api "repos/$GITHUB_REPOSITORY/releases/$id/assets" -q '.[].id'); do gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$a"; done
             gh api -X POST -H "Content-Type: application/zip" --input android-screenshots.zip "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$id/assets?name=android-screenshots.zip" -q .name
           fi
+      # The bug hunt (tools/android/qa.sh): its findings as notices, and its pictures and logs on the same draft release.
+      - name: Bug hunt results
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.shots && inputs.qa
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -s qa/report.txt ] || { echo "::warning title=Bug hunt::No report from the virtual phone"; exit 0; }
+          grep -E "app crashes|freezes|page errors|open after|memory:" qa/report.txt | while read -r l; do echo "::notice title=Bug hunt::$l"; done
+          (cd qa && zip -q ../android-qa.zip *.png *.txt)
+          id=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate -q '.[] | select(.draft and .name == "Android screenshots") | .id' | sort -n | head -n 1)
+          [ -n "$id" ] || exit 0
+          for a in $(gh api "repos/$GITHUB_REPOSITORY/releases/$id/assets" -q '.[] | select(.name == "android-qa.zip") | .id'); do gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$a"; done
+          gh api -X POST -H "Content-Type: application/zip" --input android-qa.zip "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$id/assets?name=android-qa.zip" -q .name
       - uses: actions/upload-artifact@v5
         if: always() && github.event_name == 'workflow_dispatch' && inputs.shots
         with:
