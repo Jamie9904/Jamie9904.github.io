@@ -976,7 +976,9 @@
   function liveGot(raw) {
     if (typeof extractLpns !== "function" || typeof photoLpns !== "function" || typeof addNums !== "function") return;
     const have = $(liveBox()).value.split(/\r?\n/).map(x => x.trim().toUpperCase()).filter(Boolean);
-    const t = liveTidy(raw, have, liveRead.target !== "log");
+    // (labelled in both modes: a live read is already shaped like an LPN and read the same way twice, so a log with a
+    // second supplier's prefix isn't held back as "not like the others")
+    const t = liveTidy(raw, have, true);
     if (t.skipped) { liveRead.recent.push(t.skipped + " · skipped (prefix)"); if (typeof sfx === "function") sfx("warn");
       liveStatus(t.skipped + " skipped: its prefix isn't in your prefix list. " + liveCount() + " in the " + liveName() + ".", "warn"); return; }
     if (t.odd) { liveRead.recent.push(t.odd + " · check"); if (typeof sfx === "function") sfx("warn");
