@@ -93,7 +93,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back virtualscene
           script: sh tools/android/shots.sh
       # The app's photo reading on the user's manifest photos, on the virtual phone (shots.sh): every LPN right and
-      # nothing extra, or no APK. (The emulator itself may fail to start; then there's no result and only a warning.)
+      # nothing extra, or no APK. (A test that doesn't finish fails the run too.)
       - name: Photo reading on the virtual phone
         if: github.event_name == 'workflow_dispatch' && inputs.shots
         run: |

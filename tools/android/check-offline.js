@@ -155,7 +155,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   // Live read manifest: numbers after "LPN:" read by the camera go into the manifest numbers, tidied and checked.
   s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, L = LPN_APK_LIVEREAD, box = document.getElementById("cmpNums"), pf = document.getElementById("cmpPfx"), out = {};
     const st = () => { const c = N.calls.filter(x => x[0] === "textStatus").pop(); return c ? c[1] + "|" + c[2] + "|" + c[4] + (c[5] ? "|forget " + c[5] : "") : ""; };
-    LPN_APK_MODE("menu"); box.value = "QUB001899182"; pf.value = ""; const b = document.getElementById("apkLiveRead"); N.calls = [];
+    localStorage.setItem("lpnapkcam", "1"); LPN_APK_MODE("menu"); box.value = "QUB001899182"; pf.value = ""; const b = document.getElementById("apkLiveRead"); N.calls = [];
     out.btn = !!b && b.textContent; b.click(); await new Promise(r => setTimeout(r, 30)); out.started = N.calls.some(c => c[0] === "textScan" && c[1] === "manifest") && LPN_APK_MODE() === "cmp";
     out.vis = b.getClientRects().length > 0;
     N.listeners.textScan({ value: "VLT004040265" }); out.add = st();
@@ -190,6 +190,12 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     out.rule = JSON.stringify(LPN_APK_LPNWORDS(["1", "VLT004040265", "BB", "QUB00191", "1625", "PO", "12345678", "Tel", "01234567890", "No", "LPN", "1", "12/11/2026"]));
     box.value = ""; LPN_APK_MODE("log"); return out; });
   check("Live read log (in step 1, after Photo of printed log) reads a printed log's LPNs into the log numbers, not the manifest", s.btn === "Live read log:cmpLogPhotoBtn" && s.started && s.add === "Added VLT004040265. 1 in the log numbers.|ok" && s.box === "VLT004040265,QUB001899182" && s.manifest === "" && /2 LPNs to the log numbers/.test(s.closed), s);
+  // Live read shows the camera note first, like the other camera buttons, until Android has been asked once.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); localStorage.removeItem("lpnapkcam"); window.__camAllowed = false; N.calls = [];
+    document.getElementById("apkLiveRead").click(); await wait(100); const q = { sheet: !!document.querySelector(".apkask"), before: N.calls.filter(c => c[0] === "textScan").length };
+    const btn = document.querySelector(".apkask button"); if (btn) btn.click(); await wait(100); q.after = N.calls.filter(c => c[0] === "textScan").length;
+    window.__camAllowed = true; localStorage.setItem("lpnapkcam", "1"); LPN_APK_MODE("log"); return q; });
+  check("Live read says what the camera is for before Android first asks, then opens the text reader", s.sheet && s.before === 0 && s.after === 1, s);
   check("on a printed log any LPN-shaped number is taken (a number read with a gap joined), but not order, phone or date numbers", s.rule === '["VLT004040265","QUB001911625"]', s.rule);
   // Moving between the menu and the pages: a slide, each page keeps its place, TalkBack hears the page's name, and
   // focus goes back to the button you came from; the menu buttons give the light tap.

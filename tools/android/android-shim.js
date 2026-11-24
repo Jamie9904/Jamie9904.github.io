@@ -998,7 +998,7 @@
     if (r.added) { liveRead.added.push(lpn); liveRead.recent.push(lpn); if (typeof sfx === "function") sfx("ok");
       liveStatus("Added " + lpn + ". " + liveCount() + " in the " + liveName() + ".", "ok"); }
     else { liveRead.recent.push(lpn + " · already listed"); liveStatus(lpn + " is already in the list. " + liveCount() + " in the " + liveName() + ".", ""); }
-    try { if (typeof diag === "function") diag("manifest", "Live read (" + liveRead.target + "): " + v + " → " + lpn + (r.added ? " added" : " already listed")); } catch (e) {}
+    try { if (typeof diag === "function") diag("manifest", "Live read (" + liveRead.target + "): " + raw + " → " + lpn + (r.added ? " added" : " already listed")); } catch (e) {}
   }
   function liveUndo() {
     const lpn = liveRead.added.pop(); if (!lpn) return;
@@ -1028,7 +1028,7 @@
   function liveStart(target) {
     liveRead.added = []; liveRead.recent = []; liveRead.target = target;
     if (mode && mode !== "cmp") setMode("cmp");
-    N().startTextScan({ target }).catch(() => toast("The camera couldn’t start."));
+    cameraOk().then(() => N().startTextScan({ target })).catch(() => toast("The camera couldn’t start."));
   }
   if (N()) {
     try { N().addListener("textScan", e => liveGot(e && e.value)); N().addListener("textScanUndo", liveUndo);
