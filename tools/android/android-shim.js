@@ -1035,6 +1035,8 @@
       N().addListener("textScanClosed", () => { const n = liveRead.added.length; if (typeof cmpMsg === "function") cmpMsg(n ? "Live read added " + n + " LPN" + (n === 1 ? "" : "s") + " to the " + (liveRead.target === "log" ? "log numbers" : "manifest numbers") + ". Check them against the paper copy." : "Live read didn’t add any LPNs."); }); } catch (e) {}
   }
   document.addEventListener("DOMContentLoaded", () => {
+    // Take manifest photo: the phone always has a camera (Android's web view doesn't always say it's a touch screen).
+    const cam = $("cmpCamBtn"); if (cam && N() && has("manifestPhotos") && has("manifestCheck")) cam.hidden = false;
     const b = $("cmpPhotoBtn"); if (!b || !N() || typeof N().startTextScan !== "function" || !has("manifestPhotos") || !has("manifestCheck")) return;
     const l = document.createElement("button"); l.type = "button"; l.id = "apkLiveRead"; l.textContent = "Live read manifest"; l.onclick = () => liveStart("manifest");
     b.before(l);
