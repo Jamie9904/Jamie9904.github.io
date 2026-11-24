@@ -168,12 +168,12 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     out.rule = JSON.stringify(LPN_APK_AFTERLABELS(["Item", "LPN:", "VLT004040265", "Qty", "LPN", "QUB00191", "1625", "LPN:", "PO", "1", "Ref", "VLT004040999", "LPN:RUN001832813"]));
     box.value = ""; LPN_APK_MODE("log"); return out; });
   check("Live read manifest (in the Manifest check) opens the camera's text reader on the Manifest check's page", s.btn === "Live read manifest" && s.started && s.vis, s);
-  s = await page.evaluate(() => { LPN_APK_MODE("cmp"); const b = document.getElementById("cmpCamBtn"), out = !b.hidden && b.getClientRects().length > 0; LPN_APK_MODE("log"); return out; });
-  check("Take manifest photo is always there in the Android app (the phone has a camera)", s === true, s);
   check("a number read after “LPN:” is added to the manifest numbers with a green flash, tidied like photos (O read for 0)", s.add === "Added VLT004040265. 2 in the manifest list.|ok|true" && s.fix === "VLT004040273", s);
   check("one already listed isn't added twice; one with a prefix not in the list is skipped (orange); a non-LPN is left out", /^QUB001899182 is already in the list\./.test(s.dup) && /^RUN001832813 skipped: its prefix isn't in your prefix list\..*\|warn\|true$/.test(s.skip) && s.notLpn === 3, s);
   check("Remove last takes the last one added back out (and lets it be read again); closing says how many were added", s.undo === "Removed VLT004040273. 2 in the manifest list.||true|forget VLT004040273|QUB001899182,VLT004040265" && /Live read added 1 LPN/.test(s.closed), s);
   check("only numbers straight after an “LPN” label are taken, with a number read with a gap joined", s.rule === '["VLT004040265","QUB001911625","RUN001832813"]', s.rule);
+  s = await page.evaluate(() => { LPN_APK_MODE("cmp"); const b = document.getElementById("cmpCamBtn"), out = !b.hidden && b.getClientRects().length > 0; LPN_APK_MODE("log"); return out; });
+  check("Take manifest photo is always there in the Android app (the phone has a camera)", s === true, s);
   // A live read that doesn't match the page's pattern (a digit too many, seen on the user's photos) isn't added.
   s = await page.evaluate(() => { const T = LPN_APK_LIVETIDY, h = ["VLT004040265", "VLT004040273"]; document.getElementById("cmpPfx").value = "";
     return JSON.stringify({ extra: T("VLT0040440278", h, true), ok: T("VLT004040278", h, true), first: T("VLT004040265", [], true), po: T("PO12345678", h, true) }); });
