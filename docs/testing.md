@@ -289,11 +289,46 @@ Since commit `1bd4f34`, Android workflow runs started by hand with **Screenshots
 - **A "qa" build instead of the debug build** (commit `2d7e50a`): the workflow builds the test copy with `assembleQa` and `shots.sh` installs `app/build/outputs/apk/qa/app-qa.apk`: the same shrunk (R8) release build as the signed APK, signed with the debug key and with x86_64 code only (see [architecture](architecture.md#native-code-toolsandroidnative)).
 - **Plain Android, 3 GB** (commits `800aa49`, `c91d004`): the emulator runs `target: default` instead of `google_apis` (Google Play services on that image crashed soon after start-up and Android closed the app with it, stopping the photo test; the app doesn't need it, as ML Kit is inside the app), with `ram-size: 3072M`.
 - **The live read rule is scored too** (commit `3ff3456`): after the `"done"` line the photo test writes a `"liveDone"` line (see [architecture](architecture.md#androidjs-toolsandroidandroid-shimjs)); `shots.sh` now waits for that line, and the workflow shows it as the notice "Live read rule on the manifest photos". It is information only, not a pass or fail.
-- **Asked again after 90 seconds** (commit `d173048`): if `ocrtest.txt` is still empty after 30 × 3 seconds, `shots.sh` sends the `SHOW` `ocrtest` intent again.
+- **Restarted after 90 seconds** (commits `d173048`, `2ff87e7`): if `ocrtest.txt` is still empty after 30 × 3 seconds (the probe line normally comes within about 30 seconds), `shots.sh` prints "No photo test result after 90 s: restarting the app and asking again", keeps what the phone showed as `shots/ocr-stalled.png`, force-stops and reopens the app, waits 8 seconds and sends the `SHOW` `ocrtest` intent again. Before `2ff87e7` it only sent the intent again. The stall was seen on a first start after installing.
 - **No result fails the run** (commit `b2e8f52`): with no `"done"` line the step gives the error "The photo test on the virtual phone did not finish (see ocr-log.txt with the screenshots)" and no APK is made (it used to only warn; the workflow's comment above the step says so since commit `d5657c0`).
 - **Logs** (commits `800aa49`, `d173048`): `ocr-log.txt` now holds Android's crash buffer, lines about low memory and the page's process (`lowmemorykiller`, `lmkd`, `renderer`, `sandboxed_process`, `died`, `lpnlog`; last 120) and the page's console (`Capacitor/Console`, `chromium`; last 80). The screenshots and `.txt` files are kept as the artifact and on the draft release **Android screenshots** even when the photo test fails (`if: always()`).
+- **Longer time limit** (commit `9a330bc`): the workflow's job may run for 75 minutes (45 before), to leave room for the bug hunt below.
 - **APK size** (commit `45f34b1`): after `assembleRelease` the run gives a notice "APK size" with each APK's size in MB.
 - **Latest result** (as given by the owner's session for the run after `369e12f`): photo test 54/54 with the app's own reader, 21 files in `shots/` (the 18 screenshots plus `ocr-phone-reader.txt`, `ocr-log.txt` and `page-log.txt`, which `shots.sh` counts together as "screenshots:"), APK size 42 MB, and the live read rule 52 of 54 (two misreads of the same length).
+
+### Bug hunt on the virtual phone (`tools/android/qa.sh`)
+
+Since commits `9a330bc` and `2ff87e7` (on `updates`, for Android APK build 4), hand-started Android runs have a third tick box, **Bug hunt on the virtual phone after the screenshots (about 15 minutes more; needs Screenshots ticked)** (input `qa`, off by default). With it ticked, the emulator step runs `sh tools/android/qa.sh` straight after `shots.sh`, on the same virtual phone with the same `qa` test copy installed. Start it without making an APK with:
+
+```sh
+gh workflow run android.yml --ref updates -f apk=false -f shots=true -f qa=true
+```
+
+`qa.sh` never fails the run. It clears Android's log, grants the camera, and goes through 17 steps, taking a screenshot after each (`qa/01-first-open.png` to `qa/29-after-monkey.png`) and writing what it saw to `qa/report.txt` (each step is also marked in Android's log with the tag `LPNQA`):
+
+1. **First install:** the app's storage cleared (`pm clear`), a cold start (start time from `am start -W`), and the first-install screen.
+2. **Back on the start menu:** one Back press; the report says whether the app is still running and which screen is on top (it should ask before leaving).
+3. **Log pallets typing:** through the Continue shortcut, 30 LPNs typed fast (`VLT004041210` to `VLT004041239`), a repeat, the word `hello` and a 41-character line.
+4. **Closed by Android and reopened:** Home, then `am kill` (as Android does in the background) and reopen, then `force-stop` and reopen; the screenshots should still show the log.
+5. **Low memory:** `send-trim-memory RUNNING_CRITICAL` while open.
+6. **Text size:** font scale 1.3 on Log pallets, Manifest check and the start menu, then 0.85, then back to 1.0.
+7. **Dark and light:** `cmd uimode night yes`, then `no`.
+8. **Sideways:** the screen turned (`user_rotation 1`); the report gives the rotation, as phones stay upright.
+9. **Shared text:** a `SEND` intent with three LPNs (`VLT004040265 RUN001832813 QUB001899182`).
+10. **Opened files:** `tests/fixtures/old/build-64/log.xlsx` and `log.pdf` pushed to `Download/`, found through the media store and opened with a `VIEW` intent (the report says if the phone gave no content address).
+11. **Shortcuts:** Scan, Manifest check and Continue.
+12. **Camera scanner loop:** the Scan shortcut opened and closed with Back 8 times.
+13. **Live read loop:** on the Manifest check, Live read manifest opened (the `SHOW` intent with `what=liveread`) and closed 5 times.
+14. **Volume-down:** on Log pallets, volume-down should start Live scan.
+15. **Export menu:** opened with `SHOW` `what=export` and closed; nothing is saved.
+16. **Back from each page:** Back from the Manifest check and from Log pallets should go back to the menu, not out of the app.
+17. **Monkey:** Android's `monkey` tool sends 1,800 random events to the app (150 ms apart, seed 4242, no system keys, 2% app switches); any `CRASH`, `ANR` or abort lines go into the report.
+
+At the end it saves Android's crash buffer (`qa/crashes.txt`), the whole log (`qa/logcat.txt`) and the page's warnings and errors with the step marks (`qa/page-messages.txt`), and adds to the report the counts **app crashes** (`FATAL EXCEPTION` lines), **freezes (ANR)** (`ANR in io.github.jamie9904.lpnlog`) and **page errors** (error lines from `Capacitor/Console` and uncaught errors), the first lines of each, and the app's memory from `dumpsys meminfo` (`TOTAL PSS`). Only made-up numbers and the old-build test files go into the phone.
+
+The workflow step **Bug hunt results** (runs even after an earlier failure, `continue-on-error`) warns "No report from the virtual phone" if there is no `qa/report.txt`; otherwise it posts the crash, freeze, page-error, "open after" and memory lines as "Bug hunt" notices, zips `qa/*.png` and `qa/*.txt` as `android-qa.zip` and puts it on the draft release **Android screenshots**, replacing only an earlier `android-qa.zip` there. Look the pictures over as for the screenshots: the script only counts crashes, freezes and page errors; whether each screen looks right is for a person to judge.
+
+**Latest result** (as given by the owner's session for the run after `2ff87e7`): 0 crashes, 0 freezes, 0 page errors, photo test 54/54, memory about 119 MB PSS.
 
 ## Photo reading check (`tools/ocr-check`)
 
