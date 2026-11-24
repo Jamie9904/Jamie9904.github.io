@@ -85,7 +85,7 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
-          target: google_apis
+          target: default # plain Android: Google Play services on the test image crashes soon after start-up and takes the app with it (ML Kit is built into the app)
           arch: x86_64
           profile: pixel_6
           disable-animations: true
