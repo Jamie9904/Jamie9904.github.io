@@ -71,7 +71,7 @@ jobs:
         run: |
           mkdir -p app/src/main/assets/public/ocrtest
           cp ../../ocr-check/photos/* ../../ocr-check/expected.json app/src/main/assets/public/ocrtest/
-          ./gradlew --no-daemon assembleDebug
+          ./gradlew --no-daemon assembleQa
           rm -rf app/src/main/assets/public/ocrtest
       - name: Let the virtual phone use the processor
         if: github.event_name == 'workflow_dispatch' && inputs.shots
