@@ -190,13 +190,13 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     out.rule = JSON.stringify(LPN_APK_LPNWORDS(["1", "VLT004040265", "BB", "QUB00191", "1625", "PO", "12345678", "Tel", "01234567890", "No", "LPN", "1", "12/11/2026"]));
     box.value = ""; LPN_APK_MODE("log"); return out; });
   check("Live read log (in step 1, after Photo of printed log) reads a printed log's LPNs into the log numbers, not the manifest", s.btn === "Live read log:cmpLogPhotoBtn" && s.started && s.add === "Added VLT004040265. 1 in the log numbers.|ok" && s.box === "VLT004040265,QUB001899182" && s.manifest === "" && /2 LPNs to the log numbers/.test(s.closed), s);
+  check("on a printed log any LPN-shaped number is taken (a number read with a gap joined), but not order, phone or date numbers", s.rule === '["VLT004040265","QUB001911625"]', s.rule);
   // Live read shows the camera note first, like the other camera buttons, until Android has been asked once.
   s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); localStorage.removeItem("lpnapkcam"); window.__camAllowed = false; N.calls = [];
     document.getElementById("apkLiveRead").click(); await wait(100); const q = { sheet: !!document.querySelector(".apkask"), before: N.calls.filter(c => c[0] === "textScan").length };
     const btn = document.querySelector(".apkask button"); if (btn) btn.click(); await wait(100); q.after = N.calls.filter(c => c[0] === "textScan").length;
     window.__camAllowed = true; localStorage.setItem("lpnapkcam", "1"); LPN_APK_MODE("log"); return q; });
   check("Live read says what the camera is for before Android first asks, then opens the text reader", s.sheet && s.before === 0 && s.after === 1, s);
-  check("on a printed log any LPN-shaped number is taken (a number read with a gap joined), but not order, phone or date numbers", s.rule === '["VLT004040265","QUB001911625"]', s.rule);
   // Moving between the menu and the pages: a slide, each page keeps its place, TalkBack hears the page's name, and
   // focus goes back to the button you came from; the menu buttons give the light tap.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), N = window.Capacitor.Plugins.LpnNative, main = document.querySelector("main");
