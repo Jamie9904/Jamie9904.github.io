@@ -89,6 +89,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
+          ram-size: 3072M # about what a typical phone has free (the default is less, and the page was stopped part-way through the photos)
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back virtualscene
           script: sh tools/android/shots.sh
       # The app's photo reading on the user's manifest photos, on the virtual phone (shots.sh): every LPN right and
