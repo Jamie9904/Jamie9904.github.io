@@ -98,7 +98,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && inputs.shots
         run: |
           f=shots/ocr-phone-reader.txt
-          if [ ! -s "$f" ] || ! grep -q '"done"' "$f"; then echo "::warning title=Photo reading on the phone::No result from the virtual phone"; exit 0; fi
+          if [ ! -s "$f" ] || ! grep -q '"done"' "$f"; then echo "::error title=Photo reading on the phone::The photo test on the virtual phone did not finish (see ocr-log.txt with the screenshots)"; exit 1; fi
           l=$(grep '"liveDone"' "$f"); [ -n "$l" ] && echo "::notice title=Live read rule on the manifest photos::$l"
           d=$(grep '"done"' "$f"); echo "$d"
           if echo "$d" | grep -q '"right":\([0-9]*\),"want":\1,"missing":\[\],"extra":\[\]'; then echo "::notice title=Photo reading on the phone::$d"; else echo "::error title=Photo reading on the phone::$d"; exit 1; fi
