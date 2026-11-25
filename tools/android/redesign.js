@@ -56,7 +56,8 @@
     "html.rd #apkBack svg{width:24px;height:24px}html.rd #apkBarT{flex:1;font-size:1.25rem}",
     ".rdib{width:48px;height:48px;min-height:48px!important;padding:0!important;border:0!important;background:transparent!important;border-radius:24px!important;display:flex;align-items:center;justify-content:center;color:var(--ink,#eaf0fa);flex:none}",
     ".rdib[aria-pressed=true]{background:var(--sel,#1a3562)!important}",
-    "#rdExport{height:40px;min-height:40px!important;padding:0 14px!important;border-radius:20px!important;border:1px solid var(--ac,#ff8a2a)!important;background:transparent!important;color:var(--ac,#ff8a2a)!important;font-weight:700;display:flex;align-items:center;gap:6px;flex:none}",
+    "#rdExport{height:44px;min-height:44px!important;padding:0 14px!important;border-radius:20px!important;border:1px solid var(--act,var(--ac,#ff8a2a))!important;background:transparent!important;color:var(--act,var(--ac,#ff8a2a))!important;font-weight:700;display:flex;align-items:center;gap:6px;flex:none}",
+    "@media (max-width:400px){#rdExport .rdxl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}#rdExport{width:48px;padding:0!important;justify-content:center}}",
     "#rdSearch,#rdExport,#rdMenuBtn{display:none}html.apkm-log #rdSearch,html.apkm-log #rdExport,html.apkm-log #rdMenuBtn{display:flex}",
     "html.rd.rd-nosearch #rdSearch{display:none!important}html.rd.rd-noexp #rdExport{display:none!important}",
     // ---- home
@@ -69,7 +70,7 @@
     "html.rd #apkMenu #rdDel .apkgo span.ip{display:none}",
     "html.rd #apkMenu #rdNumRow{display:flex;align-items:baseline;gap:10px;margin:6px 0 14px;color:var(--ink,#eaf0fa);font-size:inherit}html.rd #apkMenu #rdNum{display:inline;font-size:3.6rem;font-weight:700;line-height:1;color:var(--ink,#eaf0fa)}html.rd #apkMenu #rdNumL{display:inline;color:var(--mu,#9db0d0);font-size:1.1rem}",
     "html.rd #apkMenu #rdBar{display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px;margin:0 0 12px}#rdBar i{display:block;min-width:4px}",
-    "html.rd #apkMenu #rdLeg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;font-size:.9rem;color:var(--ink,#eaf0fa)}html.rd #apkMenu #rdLeg span{display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:.9rem;color:var(--ink,#eaf0fa)}#rdLeg i{width:8px;height:8px;border-radius:4px;flex:none}",
+    "html.rd #apkMenu #rdLeg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.9rem;color:var(--ink,#eaf0fa)}html.rd #apkMenu #rdLeg span{display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:.9rem;color:var(--ink,#eaf0fa)}#rdLeg i{width:8px;height:8px;border-radius:4px;flex:none}",
     "html.rd #apkCarry{margin:12px 16px 0!important}html.rd #apkCarryBtn{width:100%;min-height:56px;border-radius:16px;font-size:1.1rem;display:flex;align-items:center;justify-content:center;gap:8px}",
     "#rdDel.empty #rdNumRow,#rdDel.empty #rdBar,#rdDel.empty #rdLeg{display:none}",
     "html.rd #apkMenu #rdDel.empty .apkgo b{font-size:1.25rem;font-weight:700;color:var(--ink,#eaf0fa)}",
@@ -84,9 +85,9 @@
     // bottom navigation (home)
     "#rdNav{display:none}html.rd.apkm-menu #rdNav{display:grid}",
     "#rdNav{position:fixed;left:0;right:0;bottom:0;z-index:35;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--paper,#13264a);padding:8px 8px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--rule,#223a63)}",
-    "#rdNav button{display:flex;flex-direction:column;align-items:center;gap:4px;border:0;background:transparent;color:var(--mu,#9db0d0);font-size:.8rem;min-height:56px;padding:0;border-radius:16px;font-weight:400}",
+    "#rdNav button{display:flex;flex-direction:column;align-items:center;gap:4px;border:0;background:transparent;color:var(--mu,#9db0d0);font-size:.9rem;min-height:56px;padding:0;border-radius:16px;font-weight:400}",
     "#rdNav button span{width:56px;height:32px;border-radius:16px;display:flex;align-items:center;justify-content:center}",
-    "#rdNav button[aria-current=page]{color:var(--ink,#eaf0fa);font-weight:700}#rdNav button[aria-current=page] span{background:var(--sel,#1a3562);color:var(--ac,#ff8a2a)}",
+    "#rdNav button[aria-current=page]{color:var(--ink,#eaf0fa);font-weight:700}#rdNav button[aria-current=page] span{background:var(--sel,#1a3562);color:var(--act,var(--ac,#ff8a2a))}",
     "html.rd.apkm-menu main{padding-bottom:110px}html.rd.apkm-menu .foot{margin-bottom:84px}",
     // ---- log pallets: delivery details, the old button rows and the search live elsewhere now
     "html.rd.apkm-log #delCard{display:none}",
@@ -112,7 +113,7 @@
     "html.rd .card.entry #tyb button:not(.on){background:transparent;color:var(--ink,#eaf0fa)}",
     "html.rd .card.entry #lpn{border-radius:14px}html.rd .card.entry #add{border-radius:14px}",
     // sheets (export, this delivery, more ways)
-    ".rdsheet{padding:12px 16px calc(22px + env(safe-area-inset-bottom,0px))!important}",
+    ".rdsheet{padding:12px 16px calc(22px + env(safe-area-inset-bottom,0px))!important;max-height:calc(100dvh - 24px);overflow-y:auto}",
     ".rdsheet .rdgrab{display:block;width:40px;height:4px;border-radius:2px;background:var(--line,#35507f);margin:0 auto 14px}",
     ".rdsheet h2{margin:0;font-size:1.35rem}.rdsheet .rdsub{margin:4px 0 16px;color:var(--mu,#9db0d0);font-size:.95rem}",
     ".rdtiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}",
@@ -120,18 +121,18 @@
     ".rdrow{display:flex!important;align-items:center;gap:14px;width:100%;min-height:64px;border:0!important;border-radius:16px!important;background:transparent!important;padding:6px 8px!important;text-align:left;font-weight:400!important;color:var(--ink,#eaf0fa)}",
     ".rdrow .rdic{width:44px;height:44px;border-radius:12px;background:var(--bg,#0c1830);display:flex;align-items:center;justify-content:center;flex:none}",
     ".rdrow .rdtx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.rdrow .rdtx b{font-size:1rem}.rdrow .rdtx span{font-size:.85rem;color:var(--mu,#9db0d0)}",
-    ".rdrow.hi{background:var(--sel,#1a3562)!important}.rdrow.hi .rdic{color:var(--ac,#ff8a2a)}.rdrow.d .rdic{color:var(--dg,#ff7b6e)}",
+    ".rdrow.hi{background:var(--sel,#1a3562)!important}.rdrow.hi .rdtx span{color:var(--ink,#eaf0fa)}.rdrow.hi .rdic{color:var(--act,var(--ac,#ff8a2a))}.rdrow.d .rdic{color:var(--dg,#ff7b6e)}",
     ".rdline{height:1px;background:var(--rule,#223a63);margin:8px 0}",
     // ---- manifest check
     "#rdSteps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;list-style:none;margin:0 0 16px;padding:0}",
     "#rdSteps li{display:flex;flex-direction:column;gap:6px;font-size:.85rem;color:var(--mu,#9db0d0)}#rdSteps li i{height:4px;border-radius:2px;background:var(--rule,#223a63)}",
-    "#rdSteps li.done{color:var(--ink,#eaf0fa)}#rdSteps li.done i{background:#57d38c}#rdSteps li.now{color:var(--ink,#eaf0fa);font-weight:700}#rdSteps li.now i{background:var(--ac,#ff8a2a)}",
+    "#rdSteps li.done{color:var(--ink,#eaf0fa)}#rdSteps li.done i{background:var(--ink,#eaf0fa)}#rdSteps li.now{color:var(--ink,#eaf0fa);font-weight:700}#rdSteps li.now i{background:var(--act,var(--ac,#ff8a2a))}#rdSteps .ok{display:none}#rdSteps li.done .ok{display:inline}",
     "#rdSteps{display:none}html.apkm-cmp #rdSteps{display:grid}",
     "html.rd.apkm-cmp #cmpCard{background:transparent}",
     "html.rd #cmpCard .cmpsteps>.grow:last-child>.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}",
     "html.rd #cmpCard .cmpsteps>.grow:last-child>.row button{min-height:104px;border-radius:20px;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;text-align:left;padding:14px 16px;margin:0;background:var(--sel,#1a3562);border:0}",
-    "html.rd #cmpCard .cmpsteps>.grow:last-child>.row button .rdtic{color:var(--ac,#ff8a2a)}",
-    "html.rd #cmpCard .cmpsteps>.grow:last-child>.row button:first-child{background:var(--ac,#ff8a2a);color:#1b1b1b}html.rd #cmpCard .cmpsteps>.grow:last-child>.row button:first-child .rdtic{color:inherit}",
+    "html.rd #cmpCard .cmpsteps>.grow:last-child>.row button .rdtic{color:var(--act,var(--ac,#ff8a2a))}",
+    "html.rd #cmpCard .cmpsteps>.grow:last-child>.row button:first-child{background:var(--ac,#ff8a2a);color:var(--onac,#1b1b1b)}html.rd #cmpCard .cmpsteps>.grow:last-child>.row button:first-child .rdtic{color:inherit}",
     "html.rd #cmpCard .cmpsteps>.grow:last-child>.row button[hidden]{display:none}",
     "html.rd #cmpCard .cmpsteps>.grow:first-child>.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}html.rd #cmpCard .cmpsteps>.grow:first-child>.row>*{margin:0;min-height:52px;border-radius:14px}",
     "html.rd #cmpCard .cmpsteps>.grow:first-child>.row>select{grid-column:1/-1}",
@@ -139,20 +140,20 @@
     "html.rd #cmpCheck{min-height:56px;border-radius:16px;font-size:1.05rem}",
     "html.rd #cmpRes .rdbig{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;background:var(--paper,#13264a);border-radius:20px;padding:18px;margin:0 0 12px}",
     "html.rd #cmpRes .rdbig div{display:flex;flex-direction:column;gap:2px}html.rd #cmpRes .rdbig b{font-size:2.4rem;line-height:1}html.rd #cmpRes .rdbig span{font-size:.9rem;color:var(--mu,#9db0d0)}",
-    "html.rd #cmpRes .rdbig .mi b{color:#ff9a85}html.rd #cmpRes .rdbig .ex b{color:#8cbcff}",
+    "html.rd #cmpRes .rdbig .mi b{color:var(--dg,#ff7b6e)}html.rd #cmpRes .rdbig .ex b{color:var(--fm,#6fa8ff)}",
     // ---- settings and the other panels
     "html.rd #panel{border-radius:0;background:var(--bg,#0c1830)}",
     "html.rd #panelBody .rdgrp{background:var(--paper,#13264a);border-radius:20px;padding:14px 16px 10px;margin:0 0 16px}",
-    "html.rd #panelBody .rdgrp h3:not(:first-child){margin:18px 0 8px;padding-top:14px;border-top:1px solid var(--rule,#223a63);font-size:.85rem;letter-spacing:.05em;text-transform:uppercase;color:var(--ac,#ff8a2a)}",
-    "html.rd #panelBody .rdgrp>h3:first-child{margin:0 0 8px;font-size:.85rem;letter-spacing:.05em;text-transform:uppercase;color:var(--ac,#ff8a2a)}",
+    "html.rd #panelBody .rdgrp h3:not(:first-child){margin:18px 0 8px;padding-top:14px;border-top:1px solid var(--rule,#223a63);font-size:.85rem;letter-spacing:.05em;text-transform:uppercase;color:var(--act,var(--ac,#ff8a2a))}",
+    "html.rd #panelBody .rdgrp>h3:first-child{margin:0 0 8px;font-size:.85rem;letter-spacing:.05em;text-transform:uppercase;color:var(--act,var(--ac,#ff8a2a))}",
     "html.rd #panelBody label.chk{display:flex;flex-direction:row-reverse;justify-content:space-between;gap:14px;min-height:56px;padding:8px 0;border-top:1px solid var(--rule,#223a63);margin:0}",
     "html.rd #panelBody .rdgrp>h3+label.chk,html.rd #panelBody .rdgrp>h3+p+label.chk{border-top:0}",
     "html.rd #panelBody label.chk>input[type=checkbox]{margin:0!important;width:52px;height:32px;border-radius:16px}",
     "html.rd #panelBody label.chk>input[type=checkbox]::after{top:5px;left:5px;width:18px;height:18px}",
-    "html.rd #panelBody label.chk>input[type=checkbox]:checked::after{transform:translateX(20px);background:#1b1b1b}",
+    "html.rd #panelBody label.chk>input[type=checkbox]:checked::after{transform:translateX(20px);background:var(--onac,#1b1b1b)}",
     // Share log: Send and Add theirs as tabs
     "#rdTabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;background:var(--paper,#13264a);border-radius:16px;padding:4px;margin:4px 0 16px}",
-    "#rdTabs button{min-height:48px;border:0;border-radius:12px;background:transparent;color:var(--ink,#eaf0fa);font-weight:400}#rdTabs button[aria-selected=true]{background:var(--ac,#ff8a2a);color:#1b1b1b;font-weight:700}",
+    "#rdTabs button{min-height:48px;border:0;border-radius:12px;background:transparent;color:var(--ink,#eaf0fa);font-weight:400}#rdTabs button[aria-selected=true]{background:var(--ac,#ff8a2a);color:var(--onac,#1b1b1b);font-weight:700}",
     ".rdpane[hidden]{display:none!important}",
     "html.rd #panelBody .qrimg{background:#fff;border-radius:24px;padding:16px}"
   ].join("");
@@ -202,7 +203,8 @@
     const cs = getComputedStyle(H), cnt = TYPES_C.map(([t]) => all.filter(r => r.type === t && !r.ref).length);
     $("rdBar").innerHTML = TYPES_C.map(([t, v], i) => cnt[i] ? '<i style="flex:' + cnt[i] + ";background:" + cs.getPropertyValue(v).trim() + '"></i>' : "").join("");
     $("rdLeg").innerHTML = TYPES_C.map(([t, v], i) => '<span><i style="background:' + cs.getPropertyValue(v).trim() + '"></i>' + t + " " + cnt[i] + "</span>").join("");
-    go.setAttribute("aria-label", all.length ? "Log pallets: delivery in progress, " + n + " " + (n === 1 ? "pallet" : "pallets") + (ex > 0 ? " of " + ex : "") : "Log pallets");
+    go.setAttribute("aria-label", all.length ? "Log pallets: delivery in progress" + (tr ? ", trailer " + tr : "") + ", " + n + " " + (n === 1 ? "pallet" : "pallets") + (ex > 0 ? " of " + ex + " expected" : "") + ": " + TYPES_C.map(([t], i) => cnt[i] + " " + t).join(", ") : "Log pallets");
+    del.setAttribute("aria-label", all.length ? "Delivery in progress" : "Log pallets");
   }
 
   /* ---- Log pallets: the app bar's Search, Export and ⋮ ---- */
@@ -211,30 +213,40 @@
     const bk = $("apkBack"); bk.innerHTML = svg(IC.back, 24); // (its label stays "Back to the menu")
     const mk = (id, html, label, fn) => { const b = document.createElement("button"); b.type = "button"; b.id = id; b.innerHTML = html; if (label) b.setAttribute("aria-label", label); b.onclick = fn; return b; };
     const help = $("apkBarHelp");
-    const s = mk("rdSearch", svg(IC.search), "Search pallets", () => { const on = !H.classList.contains("rd-search"); H.classList.toggle("rd-search", on); s.setAttribute("aria-pressed", on); if (on) { const f = $("flt"); if (f) f.focus(); } else { const f = $("flt"); if (f && f.value) { f.value = ""; f.dispatchEvent(new Event("input", { bubbles: true })); if (typeof render === "function") render(); } } });
+    const s = mk("rdSearch", svg(IC.search), "Search pallets", () => { const on = !H.classList.contains("rd-search"); setSearch(on); if (on) { const f = $("flt"); if (f) f.focus(); } else { const f = $("flt"); if (f && f.value) { f.value = ""; f.dispatchEvent(new Event("input", { bubbles: true })); if (typeof render === "function") render(); } } });
     s.className = "rdib"; s.setAttribute("aria-pressed", "false");
-    const e = mk("rdExport", svg(IC.down, 18) + "Export", null, exportSheet);
-    const mb = mk("rdMenuBtn", svg(IC.more, 24), "This delivery: details, Share log, new delivery", deliverySheet); mb.className = "rdib"; mb.setAttribute("aria-haspopup", "dialog");
+    const e = mk("rdExport", svg(IC.down, 18) + '<span class="rdxl">Export</span>', null, exportSheet); e.setAttribute("aria-haspopup", "dialog");
+    const mb = mk("rdMenuBtn", svg(IC.truck, 24), "This delivery: details, Share log, new delivery", deliverySheet); mb.className = "rdib"; mb.setAttribute("aria-haspopup", "dialog");
     bar.insertBefore(s, help); bar.insertBefore(e, help); bar.insertBefore(mb, help);
   }
+  function setSearch(on) { H.classList.toggle("rd-search", !!on); const b = $("rdSearch"); if (b) b.setAttribute("aria-pressed", String(!!on)); }
   // Search only when the app has it (Simple view hides it), Export only with pallets to export.
   function syncBar() {
     const flt = document.querySelector("#logCard .flt"), simple = typeof cfg !== "undefined" && cfg.simple;
     H.classList.toggle("rd-nosearch", !flt || !!simple);
-    if (simple) H.classList.remove("rd-search");
+    if (simple) setSearch(false);
     const eb = $("expBtn"); H.classList.toggle("rd-noexp", !eb || eb.hidden);
   }
 
+  /* While a sheet or the delivery details are open, what's behind them can't be reached (TalkBack, a keyboard or a
+     switch can't change pallets that can't be seen), and closing gives focus back to what opened it. */
+  const behind = () => [...document.querySelectorAll("main>*,.top,#rdNav")];
+  function shut(on, except) { behind().forEach(e => { if (except && (e === except || e.contains(except))) { e.inert = false; return; } if (on) { if (!e.inert) { e.inert = true; e.dataset.rdInert = "1"; } } else if (e.dataset.rdInert) { e.inert = false; delete e.dataset.rdInert; } }); }
+  document.addEventListener("keydown", e => { if (e.key !== "Escape") return; const a = document.querySelector(".apkask.rdask"); if (a) { e.preventDefault(); a.remove(); } else if (H.classList.contains("rd-del")) { e.preventDefault(); closeDel(); } });
   /* A bottom sheet (the same kind as android.js's questions, so Back and a tap outside close it). */
   function sheet(label, build) {
     const old = document.querySelector(".apkask"); if (old) old.remove();
-    const d = document.createElement("div"); d.className = "apkask"; d.setAttribute("role", "dialog"); d.setAttribute("aria-modal", "true"); d.setAttribute("aria-label", label);
+    const from = document.activeElement; let moved = false;
+    const d = document.createElement("div"); d.className = "apkask rdask"; d.setAttribute("role", "dialog"); d.setAttribute("aria-modal", "true"); d.setAttribute("aria-label", label);
     const s = document.createElement("div"); s.className = "apksheet card rdsheet"; d.appendChild(s);
     s.innerHTML = '<span class="rdgrab" aria-hidden="true"></span>';
     d.addEventListener("click", ev => { if (ev.target === d) d.remove(); });
-    d.addEventListener("keydown", ev => { if (ev.key === "Escape") { ev.preventDefault(); d.remove(); } });
-    build(s, () => d.remove());
-    document.body.appendChild(d);
+    build(s, () => { moved = true; d.remove(); });
+    document.body.appendChild(d); shut(true);
+    // However it closes (a choice, a tap outside, Escape, or Back in android.js), what's behind comes back.
+    const ob = new MutationObserver(() => { if (d.isConnected) return; ob.disconnect(); shut(false); if (H.classList.contains("rd-del")) shut(true, $("delCard"));
+      if (!moved && from && from.isConnected && !H.classList.contains("rd-del")) from.focus({ preventScroll: true }); });
+    ob.observe(document.body, { childList: true });
     const f = s.querySelector("button"); if (f) f.focus();
     return d;
   }
@@ -264,15 +276,14 @@
       const h = document.createElement("div"); h.id = "rdDelHead";
       h.innerHTML = '<button type="button" class="rdib" id="rdDelBack" aria-label="Close delivery details">' + svg(IC.back, 24) + '</button><h2 id="rdDelT" tabindex="-1">Delivery details</h2><button type="button" class="p" id="rdDelDone">Done</button>';
       c.prepend(h); $("rdDelBack").onclick = closeDel; $("rdDelDone").onclick = closeDel;
-      c.addEventListener("keydown", ev => { if (ev.key === "Escape" && H.classList.contains("rd-del")) { ev.preventDefault(); closeDel(); } });
     }
     if (typeof delCollapsed !== "undefined" && delCollapsed) { const s = $("delSum"); if (s) s.click(); }
     c.setAttribute("role", "dialog"); c.setAttribute("aria-modal", "true"); c.setAttribute("aria-labelledby", "rdDelT");
-    H.classList.add("rd-del"); c.scrollTop = 0; $("rdDelT").focus({ preventScroll: true });
+    H.classList.add("rd-del"); shut(true, c); c.scrollTop = 0; $("rdDelT").focus({ preventScroll: true });
   }
   function closeDel() {
     if (!H.classList.contains("rd-del")) return;
-    const c = $("delCard"); H.classList.remove("rd-del"); if (c) { c.removeAttribute("role"); c.removeAttribute("aria-modal"); c.removeAttribute("aria-labelledby"); }
+    const c = $("delCard"); H.classList.remove("rd-del"); shut(false); if (c) { c.removeAttribute("role"); c.removeAttribute("aria-modal"); c.removeAttribute("aria-labelledby"); }
     const b = $("rdMenuBtn"); if (b) b.focus({ preventScroll: true });
     if (typeof updateDel === "function") updateDel();
   }
@@ -323,14 +334,15 @@
   /* ---- Manifest check: steps, tiles and big numbers ---- */
   function buildCmp() {
     const body = $("cmpBody"); if (!body || $("rdSteps")) return;
-    const st = document.createElement("ol"); st.id = "rdSteps"; st.setAttribute("aria-label", "Steps");
-    st.innerHTML = '<li id="rdS1"><i></i>1 · Log</li><li id="rdS2"><i></i>2 · Manifest</li><li id="rdS3"><i></i>3 · Results</li>';
+    const st = document.createElement("ol"); st.id = "rdSteps"; st.setAttribute("aria-label", "Manifest check steps");
+    st.innerHTML = ["Log", "Manifest", "Results"].map((t, i) => '<li id="rdS' + (i + 1) + '"><i></i><span>' + (i + 1) + " · " + t + '<span class="ok"> ✓<span class="sr"> (done)</span></span></span></li>').join("");
     body.prepend(st);
     const tic = { apkLiveRead: IC.read, cmpCamBtn: IC.cam, cmpPhotoBtn: IC.img, cmpPdfBtn: IC.file };
     const short = { apkLiveRead: "Live read", cmpCamBtn: "Take photo", cmpPhotoBtn: "Photos", cmpPdfBtn: "PDF" };
+    const more = { apkLiveRead: "the manifest", cmpCamBtn: "the manifest", cmpPhotoBtn: "manifest photos", cmpPdfBtn: "manifest PDFs" };
     const sub = { apkLiveRead: "Move down the page", cmpCamBtn: "One page at a time", cmpPhotoBtn: "Already taken", cmpPdfBtn: "From email" };
     const tiles = () => Object.keys(tic).forEach(id => { const b = $(id); if (!b || b.dataset.rd) return; b.dataset.rd = "1";
-      const label = b.textContent.trim(); b.setAttribute("aria-label", label);
+      b.setAttribute("aria-label", short[id] + ": " + more[id] + ", " + sub[id].toLowerCase());
       b.innerHTML = '<span class="rdtic">' + svg(tic[id], 28) + '</span><span><b style="display:block;font-size:1.05rem"></b><span style="font-size:.85rem;font-weight:400;opacity:.85"></span></span>';
       b.querySelector("b").textContent = short[id]; b.querySelector("span>span").textContent = sub[id]; });
     tiles(); setTimeout(tiles, 0);
@@ -349,7 +361,7 @@
     const res = $("cmpRes"); if (!res || res.hidden || res.querySelector(".rdbig")) return;
     const txt = res.textContent;
     const num = re => { const m = re.exec(txt); return m ? +m[1] : null; };
-    const mi = num(/(\d+)\s+missing/i), ex = num(/(\d+)\s+extra/i), ma = num(/(\d+)\s+(?:matched|found|on both)/i);
+    const mi = num(/Missing from the log \((\d+)\)/), ex = num(/On the log only[^(]*\((\d+)\)/), ma = num(/Matched \((\d+)\)/);
     if (mi === null && ex === null) return;
     const d = document.createElement("div"); d.className = "rdbig"; d.setAttribute("aria-hidden", "true");
     d.innerHTML = '<div class="mi"><b class="rdmono"></b><span>Missing</span></div><div class="ex"><b class="rdmono"></b><span>Extra</span></div><div><b class="rdmono"></b><span>Matched</span></div>';
@@ -398,8 +410,9 @@
     if (typeof applySimple === "function" && !applySimple.rd) { const a = applySimple; applySimple = function () { const x = a.apply(this, arguments); try { syncBar(); syncEntry(); } catch (e) {} return x; }; applySimple.rd = true; }
     const pb = $("panelBody"); if (pb) new MutationObserver(() => { try { groupPanel(); } catch (e) {} }).observe(pb, { childList: true });
     const was = window.LPN_APK_MODE;
-    window.LPN_APK_MODE = m => { const r = was(m); if (m && m !== "log") H.classList.remove("rd-search"); if (m) { closeDel(); updHome(); syncSteps(); } return r; };
-    const nb = $("rdNav"); if (nb) nb.hidden = false;
+    window.LPN_APK_MODE = m => { const r = was(m); if (m && m !== "log") setSearch(false); if (m) { closeDel(); updHome(); syncSteps(); } return r; };
+    const nb = $("rdNav"), mn = document.querySelector("main");
+    if (nb && mn) new MutationObserver(() => { if (!mn.dataset.rdInert) nb.inert = mn.inert; }).observe(mn, { attributes: true, attributeFilter: ["inert"] });
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
 })();

@@ -167,7 +167,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     N.listeners.textScanClosed(); out.closed = document.getElementById("cmpMsg").textContent;
     out.rule = JSON.stringify(LPN_APK_AFTERLABELS(["Item", "LPN:", "VLT004040265", "Qty", "LPN", "QUB00191", "1625", "LPN:", "PO", "1", "Ref", "VLT004040999", "LPN:RUN001832813"]));
     box.value = ""; LPN_APK_MODE("log"); return out; });
-  check("Live read manifest (in the Manifest check) opens the camera's text reader on the Manifest check's page", s.btn === "Live read manifest" && s.started && s.vis, s);
+  check("Live read manifest (in the Manifest check) opens the camera's text reader on the Manifest check's page", /^Live read: the manifest, move down the page$/.test(s.btn) && s.started && s.vis, s);
   check("a number read after “LPN:” is added to the manifest numbers with a green flash, tidied like photos (O read for 0)", s.add === "Added VLT004040265. 2 in the manifest list.|ok|true" && s.fix === "VLT004040273", s);
   check("one already listed isn't added twice; one with a prefix not in the list is skipped (orange); a non-LPN is left out", /^QUB001899182 is already in the list\./.test(s.dup) && /^RUN001832813 skipped: its prefix isn't in your prefix list\..*\|warn\|true$/.test(s.skip) && s.notLpn === 3, s);
   check("Remove last takes the last one added back out (and lets it be read again); closing says how many were added", s.undo === "Removed VLT004040273. 2 in the manifest list.||true|forget VLT004040273|QUB001899182,VLT004040265" && /Live read added 1 LPN/.test(s.closed), s);
@@ -250,6 +250,13 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     document.getElementById("rdWays").click(); await wait(30); out.ways = [...document.querySelectorAll(".apkask .rdrow b")].map(b => b.textContent).join(",");
     [...document.querySelectorAll(".apkask .rdrow")].find(b => /No LPN/.test(b.textContent)).click(); await wait(30);
     out.fired = fired; const q = document.querySelector(".apkask"); if (q) q.remove(); Object.keys(spies).forEach(id => document.getElementById(id).removeEventListener("click", spies[id], true)); return out; });
+  s.focus = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), b = document.getElementById("rdExport"); b.focus(); b.click(); await wait(30);
+    const out = { behind: document.querySelector("main>#logCard").inert && document.querySelector(".top").inert, inSheet: !!document.activeElement.closest(".apkask") };
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); await wait(30);
+    out.closed = !document.querySelector(".apkask"); out.back = document.activeElement === b; out.free = !document.querySelector("main>#logCard").inert;
+    LPN_APK_DELDETAILS(true); await wait(20); out.delBehind = document.querySelector("main>#logCard").inert && !document.getElementById("delCard").inert;
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); await wait(20); out.delClosed = !LPN_APK_DELDETAILS() && !document.querySelector("main>#logCard").inert; return out; });
+  check("while a sheet or the delivery details are open nothing behind them can be reached; Escape closes them and focus goes back", s.focus.behind && s.focus.inSheet && s.focus.closed && s.focus.back && s.focus.free && s.focus.delBehind && s.focus.delClosed, s.focus);
   check("Export opens one sheet: Excel, Email PDF and Print, and the blank tally sheet; each does what the old menu did", s.title === "Export 5 pallets" && s.tiles === "Excel,Email PDF,Print" && s.tally && s.closed && s.fired.startsWith("prn,dl,"), s);
   check("the entry panel has one big Live scan, and a camera button for Scan by photo, Upload photo and No LPN", s.live && s.ways === "Scan by photo,Upload photo,No LPN" && /noLpn,$/.test(s.fired), s);
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {}, st = () => ["rdS1", "rdS2", "rdS3"].map(i => document.getElementById(i).className).join(",");
@@ -264,7 +271,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     t[1].click(); await wait(20); out.pane = document.getElementById("rdPane0").hidden && !document.getElementById("rdPane1").hidden && document.getElementById("qrShow").getClientRects().length === 0;
     closeHelp(); rows = []; save(); render(); LPN_APK_MODE("menu"); return out; });
   check("the Manifest check shows its steps (log, manifest, results) as they're done, and the ways to add a manifest as tiles",
-    s.s0 === "now,," && s.s1 === "done,now," && s.s2 === "done,done,now" && s.tiles.join("|") === "Take manifest photo:Take photo|Live read manifest:Live read|Upload manifest photos:Photos|Add manifest PDFs:PDF", s);
+    s.s0 === "now,," && s.s1 === "done,now," && s.s2 === "done,done,now" && s.tiles.join("|") === "Take photo: the manifest, one page at a time:Take photo|Live read: the manifest, move down the page:Live read|Photos: manifest photos, already taken:Photos|PDF: manifest PDFs, from email:PDF", s);
   check("Settings is in grouped cards with the switches on the right; Share log has Send my pallets and Add theirs as tabs",
     s.groups > 4 && s.right === "row-reverse" && s.tabs === "Send my pallets:true,Add theirs:false" && s.pane, s);
   // The menu's recent deliveries and shortcuts, the page title bar, and the Manifest date shown the app's way.
