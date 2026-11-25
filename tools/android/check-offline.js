@@ -280,6 +280,15 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     out.mode = LPN_APK_MODE(); out.exp = vis(document.getElementById("expBtn")); document.getElementById("expBtn").click(); await wait(30);
     out.menu = vis(document.getElementById("dl")); out.newDel = vis(document.getElementById("newDel"));
     document.getElementById("expBtn").click(); cfg.simple = false; applySimple(); await wait(50); out.after = LPN_APK_MODE(); rows = []; save(); render(); return out; });
+  // The Manifest check's big numbers and its Export sheet read the results' own wording: a change there must show here.
+  s.big = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
+    LPN_APK_MODE("cmp"); const l = document.getElementById("cmpLogNums"), m = document.getElementById("cmpNums");
+    l.value = ["VLT004041210", "VLT004041211", "VLT004041212", "VLT004041299"].join("\n"); m.value = ["VLT004041210", "VLT004041211", "VLT004041212", "VLT004041298", "VLT004041297"].join("\n");
+    l.dispatchEvent(new Event("input")); m.dispatchEvent(new Event("input")); document.getElementById("cmpCheck").click(); await wait(150);
+    out.big = [...document.querySelectorAll("#cmpRes .rdbig b")].map(b => b.textContent).join(",");
+    document.getElementById("cmpExpBtn").click(); await wait(50); const sh = document.querySelector(".apkask"); out.sub = sh ? sh.querySelector(".rdsub").textContent : ""; if (sh) sh.remove();
+    document.getElementById("cmpClear").click(); LPN_APK_MODE("menu"); return out; });
+  check("the Manifest check's results show Missing, Extra and Matched as big numbers, and its Export sheet says them too", s.big.big === "2,1,3" && s.big.sub === "2 missing · 1 extra · 3 matched", s.big);
   check("in Simple view the log keeps its Export menu (Excel and the rest) and its buttons, so exporting still works", s.mode === "" && s.exp && s.menu && s.newDel && s.after === "menu", s);
   // The menu's recent deliveries and shortcuts, the page title bar, and the Manifest date shown the app's way.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
