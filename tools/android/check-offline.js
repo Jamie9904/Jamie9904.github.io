@@ -113,7 +113,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     const sc = d.querySelector(".cards"); sc.scrollLeft = sc.clientWidth * 2; sc.dispatchEvent(new Event("scroll")); await wait(80); out.last = document.getElementById("apkIntroNext").textContent;
     N.listeners.back(); await wait(30); out.introGone = !document.getElementById("apkIntro") && localStorage.getItem("lpnapkintro") === "seen";
     return out; });
-  check("an app bar with a ⋮ menu (Guide, Changelog, Settings, Exported files, About) instead of the three buttons; Back closes it", s.side === "none" && s.btn && s.items === "Guide,Changelog,Settings,Exported files,About" && s.backCloses && s.settings === "Settings", s);
+  check("an app bar with a ⋮ menu (Settings, Exported files, About; no Guide or Changelog) instead of the three buttons; Back closes it", s.side === "none" && s.btn && s.items === "Settings,Exported files,About" && s.backCloses && s.settings === "Settings", s);
   check("About shows the version, that data stays on the phone, and the open-source parts with their licences", /^About:true:(9|1\d)$/.test(s.about), s);
   check("a first install gets a three-card introduction ending in Get started; Back (or Skip) closes it for good", s.cards === 3 && s.last === "Get started" && s.introGone, s);
   // Progress with Cancel while photos are read, and a notification when it finishes in the background.
@@ -302,12 +302,13 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     out.files = !!document.getElementById("apkGoFiles"); hist = keep;
     document.getElementById("apkGoCmp").click(); await wait(80); const bar = document.getElementById("apkBar");
     out.title = document.getElementById("apkBarT").textContent + ":" + getComputedStyle(bar).position;
-    const hb = document.getElementById("apkBarHelp"); out.help = !hb.hidden; hb.click(); await wait(100); out.helpOpen = !document.getElementById("panel").hidden; closeHelp();
+    // No Guide or Changelog in the Android app: no ? buttons, no Changelog link at the bottom.
+    out.noHelp = [...document.querySelectorAll(".helpq,#apkBarHelp,#footLog")].every(e => e.getClientRects().length === 0);
     const d = document.getElementById("cmpDate"); d.value = "2026-11-05"; out.date = document.getElementById("cmpDateShow").textContent + ":" + (d.closest(".dwrap") ? "wrapped" : "");
     LPN_APK_MODE("log"); out.logTitle = document.getElementById("apkBarT").textContent; await wait(50); out.thTop = getComputedStyle(document.querySelector("#logCard th")).top !== "0px";
     LPN_APK_MODE("menu"); return out; });
   check("the menu lists recent saved deliveries (tap for Saved deliveries) with Saved deliveries and Exported files buttons", s.recent === "20/11/2026 · Sam · 2 pallets|19/11/2026 · No name · 0 pallets" && s.hist === "Saved deliveries" && s.files, s);
-  check("each page has a title bar (‹ Menu, the page name, and the Manifest check's ?) that stays at the top, with the log's column headings below it", s.title === "Manifest check:sticky" && s.help && s.helpOpen && s.logTitle === "Log pallets" && s.thTop, s);
+  check("each page has a title bar (back arrow and the page name) that stays at the top; no Guide ? buttons or Changelog link in the Android app", s.title === "Manifest check:sticky" && s.noHelp && s.logTitle === "Log pallets", s);
   check("the Manifest date shows day/month/year like the delivery date, whatever the phone's date format", s.date === "05/11/2026:wrapped", s);
   s = await page.evaluate(() => { cfg.simple = true; applySimple(); const on = { mode: LPN_APK_MODE(), cls: document.documentElement.className.includes("apkm-") };
     cfg.simple = false; applySimple(); on.back = LPN_APK_MODE(); return on; });
@@ -452,7 +453,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     /translateX\(24px\) scale\(0\.97\)/.test(s.during) && s.cancelled === "" && s.stillOpen && s.closed && s.toMenu === "menu" && s.t === "Press Back again to close the app." && JSON.stringify(s.calls) === '[["exit",2000]]', s);
   // Which build this is.
   s = await page.evaluate(async () => { openHelp("settings", "Settings"); await new Promise(r => setTimeout(r, 100)); const v = document.getElementById("apkVer"); const out = { set: v && v.textContent, foot: (document.getElementById("apkFoot") || {}).textContent }; closeHelp(); return out; });
-  check("Settings and the footer say which Android build this is", /^Android APK build 9( · Data on this phone: .+)?$/.test(s.set || "") && s.foot === " Android APK build 9 ·", s);
+  check("Settings and the footer say which Android build this is", /^Android APK build 9( · Data on this phone: .+)?$/.test(s.set || "") && s.foot === " Android APK build 9", s);
 
   // What's new after an Android update: not on a first install, once after an update.
   s = await page.evaluate(() => { const card = () => document.getElementById("apkNew"); localStorage.removeItem("lpnapkseen");

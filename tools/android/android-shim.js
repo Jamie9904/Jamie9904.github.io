@@ -802,7 +802,7 @@
     const b = $("apkMoreBtn"), r = b.getBoundingClientRect();
     const m = document.createElement("div"); m.id = "apkMore"; m.setAttribute("role", "menu"); m.style.top = Math.round(r.bottom + 4) + "px";
     const item = (label, fn) => { const x = document.createElement("button"); x.type = "button"; x.setAttribute("role", "menuitem"); x.textContent = label; x.onclick = () => { moreClose(false); fn(); }; m.appendChild(x); };
-    item("Guide", () => $("btnGuide").click()); item("Changelog", () => $("btnLog").click()); item("Settings", () => $("btnSet").click());
+    item("Settings", () => $("btnSet").click()); // (no Guide or Changelog in the Android app)
     if (P()) item("Exported files", () => showFiles());
     item("About", about);
     document.body.appendChild(m); b.setAttribute("aria-expanded", "true"); m.querySelector("button").focus();
@@ -813,7 +813,7 @@
   document.addEventListener("pointerdown", e => { const m = $("apkMore"); if (m && !m.contains(e.target) && e.target !== $("apkMoreBtn")) moreClose(false); }, true);
   function addMoreBtn() {
     const brand = document.querySelector(".top .brand"); if (!brand || $("apkMoreBtn")) return;
-    const b = document.createElement("button"); b.type = "button"; b.id = "apkMoreBtn"; b.textContent = "⋮"; b.setAttribute("aria-label", "More: Guide, Changelog, Settings, About");
+    const b = document.createElement("button"); b.type = "button"; b.id = "apkMoreBtn"; b.textContent = "⋮"; b.setAttribute("aria-label", "More: Settings, Exported files, About");
     b.setAttribute("aria-haspopup", "menu"); b.setAttribute("aria-expanded", "false"); b.onclick = moreOpen; brand.appendChild(b);
   }
   if (document.querySelector(".top .brand")) addMoreBtn();
