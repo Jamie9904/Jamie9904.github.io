@@ -1266,3 +1266,21 @@ A new look for the Android app only, from a design mock-up (a claude.ai canvas, 
   - **The Saved sheet covers the entry panel.** As a bottom sheet it now sits over the docked entry panel instead of above it; it goes by itself after 12 seconds unless it is being used, and `check-offline.js` checks that nothing covers it.
   - **The camera scanner matches the pages.** Done in the app's orange (the main button, as on the pages) and green when all are in; the other buttons with thin outlines so the types and Done stand out.
   - **Settings › Android app as a card too** (`97cdabb`): the other Settings groups became cards, but the Android app's own section is added by `android.js` and isn't one of the groups `groupPanel()` wraps, so it had no card; it now gets the same card, heading and switch rules.
+
+## Android APK build 5 (built 25 Nov 2026)
+
+Commits `cbd7fc2` to `b13297d`, Android-only (`tools/android/`), made on `updates` (not on `main` yet); `b13297d` raised `tools/android/build.json` to 5 and replaced `whats-new.json`. Android APK build 5 was built and signed on 25 Nov 2026 from GitHub run 45658141921 (file `LPN-Pallet-Log-Android-APK-build-5.apk`, 41 MB; the same signing certificate as build 4, SHA-256 `b028a58a…1a36`; 112 offline checks, photo test on the virtual phone 54/54).
+
+- **Seamless pages, in `redesign.js`.** The frame round `<main>`, the line along the top of the entry panel and the line down the side of the panels are taken off with CSS in `redesign.js`, like the rest of the redesign, so the website keeps its own look.
+- **No Guide or Changelog in the app.** The Guide and Changelog are hidden (the ⋮ entries, the ? buttons and the footer link) rather than removed from the page, so the website's files and the checks that use them don't change; the footer's last "·", which only separated the Changelog link, is trimmed so the line doesn't end in a dot. The commit doesn't record why they were taken out; What's new tells people they have gone and that ⋮ has Settings, Exported files and About.
+- **The logo in its own shape.** The code comment: "The logo as it is, a little bigger: the box takes the logo's own shape (no white frame round a square logo)". With no padding or background the logo shows as it is, at 64px.
+- **The empty log message across the page.** The list-style log gives each cell a column's look; the one empty-log cell is made a plain block so the message reads as a sentence. A check in `check-offline.js` guards it, and the page-place check now makes a 25-pallet log first (`b6e1d9e`), because the empty log is shorter now and its page could no longer scroll.
+
+## Notes for this check (commit `9f144a4`, on `updates`, not live yet; still build 66)
+
+- **Why:** some comparisons need a remark that the numbers can't show, for example that one DC didn't send a manifest (the check's own example: "so they show as log only").
+- **Kept until Clear.** The code comment: "kept on this phone until Clear". They are saved as typed (`lpncmpnotes`), so a reload or a closed app doesn't lose them. Start new delivery empties the manifest numbers but not the notes (it only clears `#cmpNums`), so notes from the last check stay until **Clear**.
+- **Plain text, one line, 500 characters.** The box's own `maxlength` and the save both stop at 500, the same cut as Share log uses for delivery notes. On the exports and in the shared message the notes are made one line, so they fit one merged cell and one message line; the box keeps the line breaks.
+- **In Delivery Details, below the date.** The comparison's details box already holds the date; the notes go under it with their own heading, merged across the box's two columns (the widest place on the sheet's right side) and with the row height worked out from that width, so long notes aren't cut off when printed. The PDF gets the same as a row of its Delivery Details table.
+- **No switch of its own.** It is part of the Manifest check (the Changelog line is marked `data-f="manifestCheck"`), and an empty box changes nothing on any export.
+- **Only on the page.** The notes are written as a table row; nothing about them was added to the PDF's hidden data.
