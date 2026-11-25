@@ -57,7 +57,7 @@
     ".rdib{width:48px;height:48px;min-height:48px!important;padding:0!important;border:0!important;background:transparent!important;border-radius:24px!important;display:flex;align-items:center;justify-content:center;color:var(--ink,#eaf0fa);flex:none}",
     ".rdib[aria-pressed=true]{background:var(--sel,#1a3562)!important}",
     "#rdExport{height:44px;min-height:44px!important;padding:0 14px!important;border-radius:20px!important;border:1px solid var(--act,var(--ac,#ff8a2a))!important;background:transparent!important;color:var(--act,var(--ac,#ff8a2a))!important;font-weight:700;display:flex;align-items:center;gap:6px;flex:none}",
-    "@media (max-width:400px){#rdExport .rdxl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}#rdExport{width:48px;padding:0!important;justify-content:center}}",
+    "@media (max-width:480px){#rdExport .rdxl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}#rdExport{width:48px;padding:0!important;justify-content:center}}",
     "#rdSearch,#rdExport,#rdMenuBtn{display:none}html.apkm-log #rdSearch,html.apkm-log #rdExport,html.apkm-log #rdMenuBtn{display:flex}",
     "html.rd.rd-nosearch #rdSearch{display:none!important}html.rd.rd-noexp #rdExport{display:none!important}",
     // ---- home
