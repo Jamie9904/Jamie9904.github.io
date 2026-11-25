@@ -135,9 +135,9 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     LPN_APK_MODE("log"); document.querySelectorAll(".apkask").forEach(a => a.remove()); save(); out.tick = !!document.querySelector("#apkSavedTick.on");
     LPN_APK_OOPS("check"); await wait(30); const a = document.querySelector(".apkask"); out.oops = a ? a.querySelector(".apkasktitle").textContent + "|" + [...a.querySelectorAll("button")].map(b => b.textContent).join(",") : ""; if (a) a.remove();
     LPN_APK_MODE("menu"); document.getElementById("msg").textContent = "Copied VLT004040265."; await wait(50); out.toast = (document.getElementById("apkToast") || {}).textContent;
-    LPN_APK_MODE("log"); document.getElementById("msg").textContent = ""; const r = document.getElementById("recv"); r.focus(); r.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    LPN_APK_MODE("log"); LPN_APK_DELDETAILS(true); document.getElementById("msg").textContent = ""; const r = document.getElementById("recv"); r.focus(); r.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
     out.next = document.activeElement.id + ":" + r.getAttribute("enterkeyhint") + ":" + document.getElementById("notes").getAttribute("enterkeyhint") + ":" + r.getAttribute("autocapitalize");
-    document.activeElement.blur(); LPN_APK_MODE("menu"); return out; });
+    document.activeElement.blur(); LPN_APK_DELDETAILS(false); LPN_APK_MODE("menu"); return out; });
   check("a ✓ Saved tick shows in the page's bar after each change", s.tick, s);
   check("if something goes wrong, a plain message says the log is safe, with Try again and Save problem report", s.oops === "Something went wrong. Your log is safe on this phone.|Try again,Save problem report,Cancel", s);
   check("a status message that can't be seen where it normally shows (here on the menu) also shows at the bottom", s.toast === "Copied VLT004040265.", s);
@@ -156,7 +156,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, L = LPN_APK_LIVEREAD, box = document.getElementById("cmpNums"), pf = document.getElementById("cmpPfx"), out = {};
     const st = () => { const c = N.calls.filter(x => x[0] === "textStatus").pop(); return c ? c[1] + "|" + c[2] + "|" + c[4] + (c[5] ? "|forget " + c[5] : "") : ""; };
     localStorage.setItem("lpnapkcam", "1"); LPN_APK_MODE("menu"); box.value = "QUB001899182"; pf.value = ""; const b = document.getElementById("apkLiveRead"); N.calls = [];
-    out.btn = !!b && b.textContent; b.click(); await new Promise(r => setTimeout(r, 30)); out.started = N.calls.some(c => c[0] === "textScan" && c[1] === "manifest") && LPN_APK_MODE() === "cmp";
+    out.btn = !!b && (b.getAttribute("aria-label") || b.textContent); b.click(); await new Promise(r => setTimeout(r, 30)); out.started = N.calls.some(c => c[0] === "textScan" && c[1] === "manifest") && LPN_APK_MODE() === "cmp";
     out.vis = b.getClientRects().length > 0;
     N.listeners.textScan({ value: "VLT004040265" }); out.add = st();
     N.listeners.textScan({ value: "VLTOO4040273" }); out.fix = box.value.split("\n").pop();
@@ -598,7 +598,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     const eb = document.querySelector("#body .lpnedit"); if (!eb) return Object.assign(out, { noRow: document.getElementById("body").innerHTML.slice(0, 200) });
     eb.click(); await wait(100); const d = document.querySelector(".descline input"); if (d) d.focus();
     N.listeners.hwScan({ code: "VLT004040711" }); await wait(150); out.fromEdit = !document.querySelector(".dmgrow") && rows.map(r => r.lpn).join();
-    const f = document.getElementById("flt"); f.focus(); N.listeners.hwScan({ code: "VLT004040703" }); await wait(100); out.search = f.value + ":" + rows.length; f.value = ""; f.dispatchEvent(new Event("input", { bubbles: true })); f.blur();
+    document.getElementById("rdSearch").click(); const f = document.getElementById("flt"); f.focus(); N.listeners.hwScan({ code: "VLT004040703" }); await wait(100); out.search = f.value + ":" + rows.length; f.value = ""; f.dispatchEvent(new Event("input", { bubbles: true })); f.blur(); document.getElementById("rdSearch").click();
     LPN_APK_MODE("cmp"); document.getElementById("cmpNums").value = ""; N.listeners.hwScan({ code: "QUB001899182" }); await wait(100); out.cmp = document.getElementById("cmpNums").value.trim() + ":" + rows.length;
     document.getElementById("cmpNums").value = ""; LPN_APK_MODE("log"); rows = []; save(); render(); return out; });
   check("a handheld scanner is set up on opening, and a scan from the menu is logged as the next pallet on the log's page", s.on && s.log === "log:VLT004040703", s);
