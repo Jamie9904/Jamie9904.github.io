@@ -66,7 +66,7 @@ module.exports = async ({ browser, URL0 }) => {
     check("a damage note from a backup or import is plain text up to 60 characters", s[0] === undefined && s[1] === 60 && s[2] === "very long xxxxx", s);
     // Share missing list.
     s = await q.evaluate(async () => { closeHelp && closeHelp(); document.getElementById("cmpToggle").click();
-      document.getElementById("cmpLogNums").value = "VLT004040265\nRUN0001830763\nQUB001899182"; document.getElementById("cmpNums").value = "VLT004040265\nRUN0001830763\nRBY006292169\nRBY006292211";
+      document.getElementById("cmpLogNums").value = "VLT004040265\nRUN0001830763\nRUN0001830999"; document.getElementById("cmpNums").value = "VLT004040265\nRUN0001830763\nRBY006292169\nRBY006292211";
       cmpTrailer = "TR4471"; document.getElementById("cmpDate").value = "2026-11-01"; document.getElementById("cmpCheck").click(); await new Promise(r => setTimeout(r, 100));
       let shared = null; navigator.share = async o => { shared = o; };
       document.getElementById("cmpShare").click(); await new Promise(r => setTimeout(r, 50));
@@ -74,7 +74,7 @@ module.exports = async ({ browser, URL0 }) => {
       let copied = null; navigator.share = undefined; navigator.clipboard.writeText = async t => { copied = t; };
       document.getElementById("cmpShare").click(); await new Promise(r => setTimeout(r, 50));
       return { shared, copied, msg: document.getElementById("cmpMsg").textContent }; });
-    const want = "Manifest check 01/11/2026, trailer TR4471\nMissing from the log (2): RBY006292169, RBY006292211\nOn the log only, to book in (1): QUB001899182\nMatched: 2 of 4 on the manifest";
+    const want = "Manifest check 01/11/2026, trailer TR4471\nMissing from the log (2): RBY006292169, RBY006292211\nOn the log only, to book in (1): RUN0001830999\nMatched: 2 of 4 on the manifest";
     check("Share missing list sends the missing and extra LPNs as plain text through the share menu", s.shared && s.shared.text === want, s.shared);
     check("without a share menu, the list is copied and the message says so", s.copied === want && /copied/.test(s.msg), s);
     // Share this app (Settings) and Your data and privacy (Guide).
