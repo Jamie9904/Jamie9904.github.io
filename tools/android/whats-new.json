@@ -1,9 +1,6 @@
 {
   "_about": "Shown once on each phone after it installs a new Android update (not on a first install). Replace the list with what this update changes, in plain words, each time an Android update is approved and built.",
   "items": [
-    "A cleaner look: the pages sit on the plain background, with no frame round them and no line across the top of the bottom panel.",
-    "Your logo on Home is a little bigger and keeps its own shape, with no white frame round it.",
-    "An empty log’s “No pallets yet” message now runs across the page instead of being squeezed down the side.",
-    "The Guide and Changelog have been taken out of the app. The ⋮ menu has Settings, Exported files and About."
+    "Notes for this check in the Manifest check, for things like a DC that didn’t send a manifest. They stay on the phone until you tap Clear, and go on the Excel and PDF of the check (under Delivery Details) and in the shared missing list."
   ]
 }
