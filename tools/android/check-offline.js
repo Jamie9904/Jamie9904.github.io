@@ -290,6 +290,14 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     document.getElementById("cmpExpBtn").click(); await wait(50); const sh = document.querySelector(".apkask"); out.sub = sh ? sh.querySelector(".rdsub").textContent : ""; if (sh) sh.remove();
     document.getElementById("cmpClear").click(); LPN_APK_MODE("menu"); return out; });
   check("the Manifest check's results show Missing, Extra and Matched as big numbers, and its Export sheet says them too", s.big.big === "2,1,3" && s.big.sub === "2 missing · 1 extra · 3 matched", s.big);
+  s.nm = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
+    LPN_APK_MODE("cmp"); const l = document.getElementById("cmpLogNums"), m = document.getElementById("cmpNums");
+    l.value = ["VLT004041210", "RBY006291167", "RBY006291168"].join("\n"); m.value = "VLT004041210"; l.dispatchEvent(new Event("input")); m.dispatchEvent(new Event("input"));
+    document.getElementById("cmpCheck").click(); await wait(150);
+    out.big = [...document.querySelectorAll("#cmpRes .rdbig div")].map(d => d.textContent).join(",");
+    document.getElementById("cmpExpBtn").click(); await wait(50); const sh = document.querySelector(".apkask"); out.sub = sh ? sh.querySelector(".rdsub").textContent : ""; if (sh) sh.remove();
+    document.getElementById("cmpClear").click(); LPN_APK_MODE("menu"); return out; });
+  check("a DC that didn't send its manifest adds a fourth big number, No manifest, and the Export sheet says it", s.nm.big === "0Missing,0Extra,1Matched,2No manifest" && s.nm.sub === "0 missing · 0 extra · 1 matched · 2 no manifest", s.nm);
   s.empty = await page.evaluate(async () => { rows = []; save(); render(); LPN_APK_MODE("log"); await new Promise(r => setTimeout(r, 50));
     const td = document.querySelector("#body td.empty"), w = td ? td.getBoundingClientRect().width : 0, out = { w, page: document.documentElement.clientWidth, h: td ? td.getBoundingClientRect().height : 0 }; LPN_APK_MODE("menu"); return out; });
   check("an empty log's \"No pallets yet\" message runs across the page, not squeezed into a narrow column", s.empty.w > s.empty.page * 0.8 && s.empty.h < 140, s.empty);

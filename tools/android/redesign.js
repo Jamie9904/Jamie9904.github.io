@@ -141,7 +141,7 @@
     "html.rd #cmpCheck{min-height:56px;border-radius:16px;font-size:1.05rem}",
     "html.rd #cmpRes .rdbig{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;background:var(--paper,#13264a);border-radius:20px;padding:18px;margin:0 0 12px}",
     "html.rd #cmpRes .rdbig div{display:flex;flex-direction:column;gap:2px}html.rd #cmpRes .rdbig b{font-size:2.4rem;line-height:1}html.rd #cmpRes .rdbig span{font-size:.9rem;color:var(--mu,#9db0d0)}",
-    "html.rd #cmpRes .rdbig .mi b{color:var(--dg,#ff7b6e)}html.rd #cmpRes .rdbig .ex b{color:var(--fm,#6fa8ff)}",
+    "html.rd #cmpRes .rdbig .nm b{color:var(--wn,#ffcf8a)}html.rd #cmpRes .rdbig .mi b{color:var(--dg,#ff7b6e)}html.rd #cmpRes .rdbig .ex b{color:var(--fm,#6fa8ff)}",
     // ---- settings and the other panels
     "html.rd #panel{border-radius:0;background:var(--bg,#0c1830);border:0!important;box-shadow:none!important}",
     "html.rd #panelBody .rdgrp{background:var(--paper,#13264a);border-radius:20px;padding:14px 16px 10px;margin:0 0 16px}",
@@ -373,6 +373,9 @@
     const d = document.createElement("div"); d.className = "rdbig"; d.setAttribute("aria-hidden", "true");
     d.innerHTML = '<div class="mi"><b class="rdmono"></b><span>Missing</span></div><div class="ex"><b class="rdmono"></b><span>Extra</span></div><div><b class="rdmono"></b><span>Matched</span></div>';
     const bs = d.querySelectorAll("b"); bs[0].textContent = mi === null ? "0" : mi; bs[1].textContent = ex === null ? "0" : ex; bs[2].textContent = ma === null ? "–" : ma;
+    // A DC that didn't send its manifest: a fourth number
+    const nm = num(/No manifest received \((\d+)\)/);
+    if (nm) { d.insertAdjacentHTML("beforeend", '<div class="nm"><b class="rdmono"></b><span>No manifest</span></div>'); d.lastChild.querySelector("b").textContent = nm; d.style.gridTemplateColumns = "repeat(4,minmax(0,1fr))"; }
     res.prepend(d);
   }
 
@@ -478,6 +481,7 @@
     "html.rd #cmpRes .ri{background:var(--paper,#13264a);margin:0;padding:6px 8px 6px 16px;border-top:1px solid var(--rule,#223a63);display:flex;align-items:center;gap:6px}",
     "html.rd #cmpRes .note+.ri{border-top:0;border-radius:18px 18px 0 0}html.rd #cmpRes .ri:not(:has(+.ri)){border-radius:0 0 18px 18px}html.rd #cmpRes .note+.ri:not(:has(+.ri)){border-radius:18px}",
     "html.rd #cmpRes .ri .l{flex:1;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:1.02rem}",
+    "html.rd #cmpRes .nmri .l{font-family:inherit;font-weight:700}",
     "html.rd #cmpBody:has(#cmpRes .rdbig) #cmpSum{display:none}",
     // After saving a file: a sheet with a tick, Open, Share and Save to…
     "html.rd .apksaved{left:0!important;right:0!important;bottom:0!important;border-radius:28px 28px 0 0!important;padding:20px 16px calc(20px + env(safe-area-inset-bottom,0px))!important;background:var(--paper,#13264a)!important;color:var(--ink,#eaf0fa)!important;text-align:center;z-index:1300!important}",
@@ -529,7 +533,8 @@
     const box = $("cmpRes"), t = box && !box.hidden ? box.textContent : "", num = re => { const m = re.exec(t); return m ? m[1] : "0"; };
     sheet("Export the check", (s, close) => {
       s.insertAdjacentHTML("beforeend", '<h2>Export the check</h2><p class="rdsub"></p><div class="rdtiles"></div>');
-      s.querySelector(".rdsub").textContent = t ? num(/Missing from the log \((\d+)\)/) + " missing · " + num(/On the log only[^(]*\((\d+)\)/) + " extra · " + num(/Matched \((\d+)\)/) + " matched" : "The comparison of the log and the manifest";
+      const nm = num(/No manifest received \((\d+)\)/);
+      s.querySelector(".rdsub").textContent = t ? num(/Missing from the log \((\d+)\)/) + " missing · " + num(/On the log only[^(]*\((\d+)\)/) + " extra · " + num(/Matched \((\d+)\)/) + " matched" + (nm !== "0" ? " · " + nm + " no manifest" : "") : "The comparison of the log and the manifest";
       const tiles = s.querySelector(".rdtiles");
       [["cmpGo", IC.sheet, "Excel", true], ["cmpMail", IC.file, "Email PDF"], ["cmpPrn", IC.print, "Print"]].forEach(([id, ic, label, p]) => { const o = $(id); if (!o || o.hidden) return;
         const b = document.createElement("button"); b.type = "button"; if (p) b.className = "p"; b.innerHTML = svg(ic, 26) + "<span></span>"; b.querySelector("span").textContent = label; b.onclick = () => { close(); o.click(); }; tiles.appendChild(b); });

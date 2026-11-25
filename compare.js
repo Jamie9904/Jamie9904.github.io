@@ -543,7 +543,14 @@ function showPfxAdd(){
     box.appendChild(b);
   });
 }
-$("cmpClear").onclick=()=>{cmpForgetPhotos();$("cmpNotes").value="";saveCmpNotes();cmpTrailer="";logSrc=null;logPdfSrc=null;logSheets=null;$("cmpNums").value="";$("cmpLogNums").value="";$("cmpLogName").textContent="";$("cmpSum").innerHTML="";$("cmpRes").hidden=true;$("cmpRes").innerHTML="";cmpMsg("")};
+$("cmpClear").onclick=()=>{cmpForgetPhotos();cmpNoManKeep.clear();$("cmpNotes").value="";saveCmpNotes();cmpTrailer="";logSrc=null;logPdfSrc=null;logSheets=null;$("cmpNums").value="";$("cmpLogNums").value="";$("cmpLogName").textContent="";$("cmpSum").innerHTML="";$("cmpRes").hidden=true;$("cmpRes").innerHTML="";cmpMsg("")};
+/* Which DC a pallet comes from, by its LPN prefix (the letters before the numbers). Each DC has its own prefixes, with
+   an extra one for its FPP pallets. A prefix not listed here counts as a DC of its own. */
+const DCS={Vault:["VLT","V"],Runcorn:["RUN","R"],Qube:["QUB","Q"],Rugby:["RBY","IM"]};
+const lpnPfx=n=>(String(n).toUpperCase().replace(/[\s-]+/g,"").match(/^[A-Z]+/)||[""])[0];
+const dcOf=n=>{const p=lpnPfx(n);if(!p)return "";for(const d in DCS)if(DCS[d].indexOf(p)>=0)return d;return p};
+// DCs whose pallets were said to be on the manifest after all (Count as log only), until Clear.
+const cmpNoManKeep=new Set();
 function cmpData(){
   const lines=id=>$(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
   const uniq=a=>{const seen=new Set();return a.filter(x=>{const k=norm(x);if(!k||seen.has(k))return false;seen.add(k);return true})};
@@ -554,10 +561,14 @@ function cmpData(){
   const ms=new Set(man.map(norm)),ls=new Set(logList.map(norm));
   const res=[];
   man.forEach(n=>res.push({n,man:true,log:ls.has(norm(n))}));
-  logList.forEach(n=>{if(!ms.has(norm(n)))res.push({n,man:false,log:true})});
-  const kind=x=>x.man&&x.log?"ok":x.man?"missing":"book";
-  const cnt={ok:0,missing:0,book:0,noLpn:noLpn};res.forEach(x=>cnt[kind(x)]++);
-  return {logList,man,res,cnt,kind,noLpn};
+  // A DC with pallets on the log but none at all on the manifest didn't send its manifest: those pallets are "No
+  // manifest", not "log only" (unless that was turned off for it with Count as log only).
+  const manDcs=new Set(man.map(dcOf).filter(Boolean));
+  logList.forEach(n=>{if(!ms.has(norm(n))){const dc=dcOf(n);res.push({n,man:false,log:true,nm:dc&&!manDcs.has(dc)&&!cmpNoManKeep.has(dc)?dc:""})}});
+  const kind=x=>x.man&&x.log?"ok":x.man?"missing":x.nm?"noman":"book";
+  const cnt={ok:0,missing:0,book:0,noman:0,noLpn:noLpn};res.forEach(x=>cnt[kind(x)]++);
+  const nmDcs=[];res.forEach(x=>{if(kind(x)!=="noman")return;const g=nmDcs.find(d=>d.dc===x.nm);if(g)g.n++;else nmDcs.push({dc:x.nm,n:1})});
+  return {logList,man,res,cnt,kind,noLpn,nmDcs};
 }
 function replaceLine(id,old,nv){
   const k=norm(old);
@@ -572,12 +583,14 @@ const cmpNotes=()=>String(($("cmpNotes")||{}).value||"").replace(/\s+/g," ").tri
 const saveCmpNotes=()=>{try{const v=$("cmpNotes").value;if(v.trim())localStorage.setItem("lpncmpnotes",v.slice(0,500));else localStorage.removeItem("lpncmpnotes")}catch(e){}};
 try{const v=localStorage.getItem("lpncmpnotes");if(v&&$("cmpNotes"))$("cmpNotes").value=String(v).slice(0,500)}catch(e){}
 if($("cmpNotes"))$("cmpNotes").addEventListener("input",saveCmpNotes);
+const nmText=a=>a.map(d=>d.dc+" ("+d.n+(d.n===1?" pallet":" pallets")+")").join(", ");
 function cmpShareText(C){
   const {res,cnt,man,kind}=C,d=$("cmpDate").value;
   const miss=res.filter(x=>kind(x)==="missing").map(x=>x.n),book=res.filter(x=>kind(x)==="book").map(x=>x.n);
   return ["Manifest check"+(d?" "+ukDate(d):"")+(cmpTrailer?", trailer "+cmpTrailer:""),
     "Missing from the log ("+miss.length+"): "+(miss.join(", ")||"none"),
     "On the log only, to book in ("+book.length+"): "+(book.join(", ")||"none"),
+    ...(C.nmDcs&&C.nmDcs.length?["No manifest received: "+nmText(C.nmDcs)]:[]),
     "Matched: "+cnt.ok+" of "+man.length+" on the manifest"].concat(C.noLpn?["Pallets with no LPN (check by hand): "+C.noLpn]:[]).concat(cmpNotes()?["Notes: "+cmpNotes()]:[]).join("\n");
 }
 async function shareCmp(C){
@@ -593,7 +606,7 @@ async function shareCmp(C){
 }
 function renderCmp(C){
   const {res,cnt,man,kind}=C;
-  $("cmpSum").innerHTML="<span>On manifest: <b>"+man.length+"</b></span><span>✓ Matched: <b>"+cnt.ok+"</b></span><span>✗ Missing (report): <b>"+cnt.missing+"</b></span><span>⚠ On log only (book in): <b>"+cnt.book+"</b></span>"+(C.noLpn?"<span>No LPN (check by hand): <b>"+C.noLpn+"</b></span>":"");
+  $("cmpSum").innerHTML=(cnt.noman?"<span>⊘ No manifest: <b>"+cnt.noman+"</b></span>":"")+"<span>On manifest: <b>"+man.length+"</b></span><span>✓ Matched: <b>"+cnt.ok+"</b></span><span>✗ Missing (report): <b>"+cnt.missing+"</b></span><span>⚠ On log only (book in): <b>"+cnt.book+"</b></span>"+(C.noLpn?"<span>No LPN (check by hand): <b>"+C.noLpn+"</b></span>":"");
   const box=$("cmpRes");box.hidden=false;box.innerHTML="";
   if(feat("shareMissing")){
   const sh=document.createElement("div");sh.className="row";sh.style.margin="0 0 8px";
@@ -621,6 +634,20 @@ function renderCmp(C){
     });
   };
   mk("✗ Missing from the log","m",res.filter(x=>kind(x)==="missing"),"cmpNums","On the manifest but not in your log: report these. If one was misread, tap Fix.");
+  if(C.nmDcs.length){
+    const h=document.createElement("h3");h.className="nm";h.textContent="⊘ No manifest received ("+cnt.noman+")";box.appendChild(h);
+    const note=document.createElement("div");note.className="note";note.style.margin="0 0 4px";
+    note.textContent="These DCs have pallets on your log but none on the manifest, so their manifest probably wasn’t sent. If it was, tap Count as log only.";box.appendChild(note);
+    C.nmDcs.forEach(g=>{
+      const row=document.createElement("div");row.className="ri nmri";
+      const l=document.createElement("span");l.className="l";l.textContent=g.dc+": "+g.n+(g.n===1?" pallet":" pallets")+" on the log";
+      const b=document.createElement("button");b.type="button";b.textContent="Count as log only";b.setAttribute("aria-label",g.dc+": count as log only (its manifest was sent)");
+      b.onclick=()=>{cmpNoManKeep.add(g.dc);refreshCmp()};
+      row.append(l,b);box.appendChild(row);
+      const ls=document.createElement("div");ls.className="note";ls.style.cssText="margin:0 0 8px;overflow-wrap:anywhere";
+      ls.textContent=res.filter(x=>kind(x)==="noman"&&x.nm===g.dc).map(x=>x.n).join(", ");box.appendChild(ls);
+    });
+  }
   mk("⚠ On the log only","b",res.filter(x=>kind(x)==="book"),"cmpLogNums","In your log but not on the manifest: book these in. If one was mistyped, tap Fix.");
   const ok=res.filter(x=>kind(x)==="ok");
   const det=document.createElement("details");
@@ -685,17 +712,19 @@ $("cmpGo").onclick=async()=>{
       {v:["✓ Matched",cnt.ok]},
       {v:["✗ Missing",cnt.missing]},
       {v:["⚠ Log only",cnt.book]},
+      ...(cnt.noman?[{v:["⊘ No manifest",cnt.noman]}]:[]),
       ...(cnt.noLpn?[{v:["No LPN pallets",cnt.noLpn]}]:[]),
       null,
       {v:["Delivery Details",""],h:1,merge:1},
       {v:["Date",ukDate(d)],l:1},
+      ...(C.nmDcs.length?[{v:["No manifest from",C.nmDcs.map(g=>g.dc).join(", ")],l:1}]:[]),
       ...(notes?[{v:["Notes",""],h:1,merge:1},{v:[notes,""],merge:1,note:1}]:[])
     ];
-    const ST={ok:{t:"✓ Matched",f:null},missing:{t:"✗ MISSING",f:"FFA6A6A6"},book:{t:"⚠ LOG ONLY",f:"FFD0D0D0"}};
+    const ST={ok:{t:"✓ Matched",f:null},missing:{t:"✗ MISSING",f:"FFA6A6A6"},book:{t:"⚠ LOG ONLY",f:"FFD0D0D0"},noman:{t:"⊘ NO MANIFEST",f:"FFE4E4E4"}};
     const HD="FFE6E9ED";
     const n=Math.max(res.length,side.length-1);
-    const H=xlTitle(ws,off,8,"Manifest check","Date: "+ukDate(d)+"     On manifest: "+man.length+"     Matched: "+cnt.ok+"     Missing: "+cnt.missing+"     Log only: "+cnt.book+(cnt.noLpn?"     No LPN: "+cnt.noLpn:""));
-    const nl=cnt.noLpn?1:0,lastL=H+res.length,s1=H+4+nl,s2a=H+6+nl,s2b=H+7+nl+(notes?2:0);
+    const H=xlTitle(ws,off,8,"Manifest check","Date: "+ukDate(d)+"     On manifest: "+man.length+"     Matched: "+cnt.ok+"     Missing: "+cnt.missing+"     Log only: "+cnt.book+(cnt.noman?"     No manifest: "+cnt.noman:"")+(cnt.noLpn?"     No LPN: "+cnt.noLpn:""));
+    const nl=(cnt.noLpn?1:0)+(cnt.noman?1:0),lastL=H+res.length,s1=H+4+nl,s2a=H+6+nl,s2b=H+7+nl+(C.nmDcs.length?1:0)+(notes?2:0);
     for(let i=-1;i<n;i++){
       const r=ws.getRow(H+i+1);
       const head=i<0,x=head?null:res[i],k0=x?kind(x):null,st=k0?ST[k0]:null;
@@ -737,7 +766,7 @@ $("cmpGo").onclick=async()=>{
       });
     }
     const outName=mergeSrc?mergeSrc.name.replace(/\.xlsx$/i,"")+" (with manifest check).xlsx":"Manifest-check-"+d+fileTag(cmpTrailer)+".xlsx";
-    pdfJob=()=>buildCmpPdf(res,cnt,man.length,d,merge?{list:logList,pdf:logPdfSrc,sheets:logSheets}:null,notes);
+    pdfJob=()=>buildCmpPdf(res,cnt,man.length,d,merge?{list:logList,pdf:logPdfSrc,sheets:logSheets}:null,notes,C.nmDcs);
     await sendFile(await wb.xlsx.writeBuffer(),outName,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     cmpMsg("");
   }catch(err){
@@ -869,7 +898,7 @@ $("cmpPrn").onclick=async()=>{
   const d=$("cmpDate").value||"no-date",merge=mergeLog;
   try{
     cmpMsg("Preparing the print copy…");
-    const buf=await buildCmpPdf(C.res,C.cnt,C.man.length,d,merge?{list:C.logList,pdf:logPdfSrc,sheets:logSheets}:null,cmpNotes());
+    const buf=await buildCmpPdf(C.res,C.cnt,C.man.length,d,merge?{list:C.logList,pdf:logPdfSrc,sheets:logSheets}:null,cmpNotes(),C.nmDcs);
     await printBuf(buf,"Manifest-check-"+d+fileTag(cmpTrailer)+".pdf",{set textContent(t){cmpMsg(t)}});
   }catch(e){cmpMsg("Couldn’t prepare the print copy: "+((e&&e.message)||"error"))}
 };

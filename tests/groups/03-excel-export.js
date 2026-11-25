@@ -72,6 +72,26 @@ module.exports = async ({ browser, URL0 }) => {
   });
   check("notes for a manifest check go under Delivery Details on the Excel (a row of their own, tall enough), in the shared list, and stay until Clear",
     s.label && s.text && s.below && s.merged && s.h >= 42 && /^The Daventry DC/.test(s.stored || "") && s.share === "Notes: The Daventry DC didn't send a manifest for the RBY pallets, so they show as log only." && s.cleared, s);
+  // A DC with pallets on the log but none on the manifest: "No manifest received", by DC, on screen, the Excel and the shared list.
+  s = await p.evaluate(async () => {
+    window.__wb = null; const out = {};
+    document.getElementById("cmpLogNums").value = ["VLT003977037", "VLT003977038", "RBY006291167", "IM00012345678", "RBY006291168", "QUB001899182"].join("\n");
+    document.getElementById("cmpNums").value = ["VLT003977037", "V0013323651", "QUB001899182"].join("\n");
+    const C = cmpData(); out.kinds = C.res.map(x => x.n + ":" + C.kind(x)).join(","); out.dcs = JSON.stringify(C.nmDcs);
+    document.getElementById("cmpCheck").click(); await new Promise(r => setTimeout(r, 50));
+    const res = document.getElementById("cmpRes"); out.head = (res.querySelector("h3.nm") || {}).textContent; out.row = (res.querySelector(".nmri .l") || {}).textContent;
+    out.share = cmpShareText(cmpData()).split("\n").find(l => /^No manifest/.test(l));
+    await document.getElementById("cmpGo").onclick();
+    const ws = window.__wb.sheets.find(w => /Manifest/.test(w.name)), val = (k, c) => ws.rows[k]._c[c] && ws.rows[k]._c[c].value, ks = Object.keys(ws.rows);
+    out.xlRow = val(ks.find(k => val(k, 2) === "RBY006291167"), 5); out.xlSum = val(ks.find(k => val(k, 7) === "⊘ No manifest"), 8); out.xlFrom = val(ks.find(k => val(k, 7) === "No manifest from"), 8);
+    res.querySelector(".nmri button").click(); const C2 = cmpData(); out.after = C2.res.filter(x => C2.kind(x) === "book").map(x => x.n).join(",") + "|" + C2.nmDcs.length;
+    document.getElementById("cmpClear").click(); out.clear = cmpNoManKeep.size; return out;
+  });
+  check("a DC with pallets on the log but none on the manifest shows as No manifest received (by DC: VLT/V Vault, RUN/R Runcorn, QUB/Q Qube, RBY/IM Rugby), not log only",
+    s.kinds === "VLT003977037:ok,V0013323651:missing,QUB001899182:ok,VLT003977038:book,RBY006291167:noman,IM00012345678:noman,RBY006291168:noman" && s.dcs === '[{"dc":"Rugby","n":3}]'
+    && s.head === "⊘ No manifest received (3)" && s.row === "Rugby: 3 pallets on the log" && s.share === "No manifest received: Rugby (3 pallets)", s);
+  check("No manifest goes on the Excel (each pallet's result, the summary count and which DCs), and Count as log only puts a DC back to log only until Clear",
+    s.xlRow === "⊘ NO MANIFEST" && s.xlSum === 3 && s.xlFrom === "Rugby" && s.after === "VLT003977038,RBY006291167,IM00012345678,RBY006291168|0" && s.clear === 0, s);
   s = await p.evaluate(() => ({ note: document.getElementById("expNote").textContent, next: !document.getElementById("nextBar").hidden }));
   check("export is noted and a new delivery is offered", /Exported at \d\d:\d\d/.test(s.note) && s.next, s);
   await p.click("#nextNew");

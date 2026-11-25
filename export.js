@@ -276,7 +276,7 @@ async function tallyPdf(want1,want2){
   pdfFooter(doc,0,true,true);
   return {ok:true,buf:doc.output("arraybuffer"),pages:doc.getNumberOfPages(),rows1:n1,rows2:n2};
 }
-async function buildCmpPdf(res,cnt,manCount,d,logCopy,notes){
+async function buildCmpPdf(res,cnt,manCount,d,logCopy,notes,nmDcs){
   await loadJsPdf();await appVersion();
   const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:"portrait"});
   const L=10,LW=112,RX=L+LW+6,RW=190-LW-6;
@@ -286,18 +286,18 @@ async function buildCmpPdf(res,cnt,manCount,d,logCopy,notes){
   doc.autoTable(Object.assign({},PDF_BASE,PDF_PLAIN,{
     startY:y0,margin:{left:RX,right:10,top:12,bottom:16},tableWidth:RW,
     head:[["Summary","Count"]],
-    body:[["On manifest",manCount],["Matched",cnt.ok],["Missing",cnt.missing],["Log only",cnt.book]].concat(cnt.noLpn?[["No LPN pallets",cnt.noLpn]]:[]),
+    body:[["On manifest",manCount],["Matched",cnt.ok],["Missing",cnt.missing],["Log only",cnt.book]].concat(cnt.noman?[["No manifest",cnt.noman]]:[]).concat(cnt.noLpn?[["No LPN pallets",cnt.noLpn]]:[]),
     columnStyles:{1:{halign:"center",cellWidth:22}}
   }));
   doc.autoTable(Object.assign({},PDF_BASE,PDF_PLAIN,{
     startY:doc.lastAutoTable.finalY+8,margin:{left:RX,right:10,top:12,bottom:16},tableWidth:RW,
     head:[[{content:"Delivery Details",colSpan:2}]],
-    body:[[pdfCell("Date",bold),ukDate(d)]].concat(notes?[[pdfCell("Notes",bold),String(notes)]]:[]),
+    body:[[pdfCell("Date",bold),ukDate(d)]].concat(nmDcs&&nmDcs.length?[[pdfCell("No manifest from",bold),nmDcs.map(g=>g.dc).join(", ")]]:[]).concat(notes?[[pdfCell("Notes",bold),String(notes)]]:[]),
     columnStyles:{0:{cellWidth:26}}
   }));
   doc.setPage(1);
-  const ST={ok:{t:"Matched",s:{}},missing:{t:"MISSING",s:{fontStyle:"bold",fillColor:[166,166,166]}},book:{t:"LOG ONLY",s:{fontStyle:"bold",fillColor:[208,208,208]}}};
-  const kd=x=>x.man&&x.log?"ok":x.man?"missing":"book";
+  const ST={ok:{t:"Matched",s:{}},missing:{t:"MISSING",s:{fontStyle:"bold",fillColor:[166,166,166]}},book:{t:"LOG ONLY",s:{fontStyle:"bold",fillColor:[208,208,208]}},noman:{t:"NO MANIFEST",s:{fontStyle:"bold",fillColor:[228,228,228]}}};
+  const kd=x=>x.man&&x.log?"ok":x.man?"missing":x.nm?"noman":"book";
   doc.autoTable(Object.assign({},PDF_BASE,{
     startY:y0,margin:{left:L,right:210-L-LW,top:12,bottom:16},tableWidth:LW,
     head:[["#","LPN","On manifest","On log","Result"]],
