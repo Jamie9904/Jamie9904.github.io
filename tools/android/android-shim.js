@@ -390,6 +390,7 @@
         + (has("liveScan") ? '<label class="chk"><input type="checkbox" id="apkVol"><span>Volume-down button starts and stops Live scan (volume-up still changes the volume)</span></label>'
           + '<label class="chk"><input type="checkbox" id="apkCam"><span>Live scan with the phone’s own camera scanner (faster, with tap-to-focus and automatic zoom). Untick to use the one inside the app.</span></label>' : "")
         + (has("palletLog") ? '<label class="chk"><input type="checkbox" id="apkSpeak"><span>Say the count out loud after each pallet (and “already logged” or “check” for a warning)</span></label>' : "")
+        + (has("palletLog") ? '<label class="chk"><input type="checkbox" id="apkDcWarn"><span>Warn when a pallet’s LPN doesn’t start with a known DC prefix (Vault, Runcorn, Qube or Rugby), so a misread or wrong label is caught at the dock</span></label>' : "")
         + '<label class="chk"><input type="checkbox" id="apkQuiet"><span>No scan sounds or spoken count while the phone is on silent, vibrate or Do Not Disturb (it still buzzes)</span></label>'
         + '<label class="chk"><input type="checkbox" id="apkHand"><span>Warehouse handheld scanner (Zebra or Honeywell): scans come straight into the app, so they can’t land in the wrong box. Untick if your scanner should type like a keyboard.</span></label>'
         + (has("manifestPhotos") ? '<h4 class="apksub">Photos</h4><label class="chk"><input type="checkbox" id="apkOcr"><span>Read manifest photos with the phone’s own text reader instead of the app’s own. It can be faster, but the app’s own reader is more accurate on the test photos, so check what it finds.</span></label>' : "")
@@ -403,7 +404,7 @@
       if ($("apkVol")) { $("apkVol").checked = volOn(); $("apkVol").onchange = () => { try { localStorage.setItem("lpnapkvol", $("apkVol").checked ? "on" : "off"); } catch (e) {} syncVol(); }; }
       $("apkFilesSet").onclick = () => showFiles();
       const sw = (id, key, def) => { const c = $(id); if (!c) return; c.checked = pref(key, def); c.onchange = () => { try { localStorage.setItem(key, c.checked ? "on" : "off"); } catch (e) {} }; };
-      sw("apkQuiet", "lpnapkquiet", true);
+      sw("apkQuiet", "lpnapkquiet", true); sw("apkDcWarn", "lpnapkdcwarn", true);
       sw("apkCam", "lpnapkcamscan", true); sw("apkSpeak", "lpnapkspeak", false); sw("apkBig", "lpnapkbig", false); sw("apkHand", "lpnapkhand", true); sw("apkOcr", "lpnapkocr", OCR_DEFAULT);
       if ($("apkHand")) $("apkHand").addEventListener("change", syncHand);
       const dirShow = () => { const d = dirGet(), n = $("apkDirNote"); if (!n) return;
@@ -445,7 +446,44 @@
   const typeColours = () => { const cs = getComputedStyle(document.documentElement); return ["--bb", "--fm", "--fp", "--mx"].map(v => cs.getPropertyValue(v).trim()).filter(c => /^#[0-9a-f]{6}$/i.test(c)).join(","); };
   const expected = () => parseInt(($("expect") || {}).value, 10);
   const allIn = () => { const ex = expected(); return ex > 0 && rows.length >= ex; };
-  const scanState = () => ({ allIn: allIn(), type: ($("type") || {}).value || "BB", fsdu: !!($("fsdu") || {}).checked, canUndo: rows.length > 0, big: pref("lpnapkbig", false), colours: typeColours(),
+  /* Pallets per DC from the LPN prefixes (compare.js's DCS list: Vault, Runcorn, Qube, Rugby), most first, for example
+     "Rugby 12 · Vault 8 · Other 1". Refused pallets and pallets with no LPN are left out. Empty when none of the
+     pallets is from a known DC, so test numbers or another site's labels show nothing. */
+  window.LPN_APK_DCS = list => {
+    if (typeof dcOf !== "function" || typeof DCS === "undefined") return "";
+    const c = {}; let known = 0;
+    (list || []).forEach(r => { if (!r || r.ref || (typeof isNoLpn === "function" && isNoLpn(r.lpn))) return; const d = dcOf(r.lpn); if (!d) return;
+      const k = DCS[d] ? d : "Other"; if (k !== "Other") known++; c[k] = (c[k] || 0) + 1; });
+    if (!known) return "";
+    return Object.keys(c).sort((a, b) => (a === "Other") - (b === "Other") || c[b] - c[a] || a.localeCompare(b)).map(k => k + " " + c[k]).join(" · ");
+  };
+  /* An LPN whose letters aren't a known DC prefix (DCS in compare.js) gets a warning as it's added: a misread, or a
+     label from somewhere else. The pallet is still added (Undo takes it off). Settings › Android app can turn it off. */
+  window.LPN_APK_DCWARN = v => {
+    try {
+      if (!pref("lpnapkdcwarn", true) || typeof dcOf !== "function" || typeof DCS === "undefined" || typeof lpnPfx !== "function") return false;
+      if (typeof isNoLpn === "function" && isNoLpn(v)) return false;
+      return !!lpnPfx(v) && !DCS[dcOf(v)];
+    } catch (e) { return false; }
+  };
+  document.addEventListener("DOMContentLoaded", () => {
+    if (typeof flashAdded !== "function" || flashAdded.dc) return;
+    const f = flashAdded;
+    flashAdded = function (v) {
+      const x = f.apply(this, arguments);
+      try {
+        if (window.LPN_APK_DCWARN(v)) {
+          const el = $("flash"), was = el.classList.contains("warn");
+          el.append(" · ⚠ Not a known DC: check the label"); el.classList.add("warn");
+          clearTimeout(flashTimer); flashTimer = setTimeout(() => { el.hidden = true; }, 4000);
+          if (!was && typeof sfx === "function") sfx("warn");
+        }
+      } catch (e) {}
+      return x;
+    };
+    flashAdded.dc = true;
+  });
+  const scanState = () => ({ allIn: allIn(), type: ($("type") || {}).value || "BB", fsdu: !!($("fsdu") || {}).checked, canUndo: rows.length > 0, big: pref("lpnapkbig", false), colours: typeColours(), dcs: window.LPN_APK_DCS(rows),
     recent: rows.slice(-3).reverse().map(r => r.lpn + " · " + r.type + (r.fsdu ? " + FSDU" : "")).join("\n") });
   function pushScan(text) { if (N()) N().scanStatus(text ? { text, state: scanState() } : { state: scanState() }).catch(() => {}); }
   window.LPN_APK_SCANSTATE = scanState;
@@ -467,7 +505,8 @@
         else {
           const ex = expected(), n = rows.length, done = /^Added/.test(said) && ex > 0 && n >= ex;
           const tail = done ? (n === ex ? countText() + ", all in" : countText() + ", more than expected") : countText();
-          N().scanStatus({ text: /^LPNM/.test(v) ? said : said + " · " + tail, state: scanState(), flash: /^Added/.test(said) ? "ok" : undefined });
+          const odd = /^Added/.test(said) && rows.length && window.LPN_APK_DCWARN(rows[rows.length - 1].lpn);
+          N().scanStatus({ text: /^LPNM/.test(v) ? said : said + " · " + tail + (odd ? " · ⚠ Not a known DC: check the label" : ""), state: scanState(), flash: odd ? "warn" : /^Added/.test(said) ? "ok" : undefined });
         }
       });
       // The scanner's own buttons change the page's controls, and the scanner shows the result.
@@ -743,13 +782,23 @@
      the camera or picker is open), so the first photo doesn't wait for it to start. It closes by itself when idle. */
   const TESSJS = /*TESSJS*/"";
   let warming = false;
+  const WARM_MS = 60000;
   async function warmOcr() {
     if (warming || !TESSJS || typeof ocrWorker !== "function" || typeof loadScript !== "function" || !has("manifestPhotos")) return;
     if (typeof ocrW !== "undefined" && ocrW) return; // already running (or reading a photo): leave it alone
     if (window.LPN_OCR && window.LPN_OCR()) return; // the phone's own text reader is in use instead
+    if (navigator.deviceMemory && navigator.deviceMemory < 2) return; // very little memory: start it only when needed
     warming = true;
-    try { await loadScript(TESSJS, () => window.Tesseract); if (typeof ocrW !== "undefined" && ocrW) return; const w = await ocrWorker(); ocrDone(w, true); } catch (e) {}
-    finally { warming = false; }
+    // It takes its turn with photo reads (ocrQ), so a photo started meanwhile simply waits for it, and once ready it
+    // stays open for a minute (not the usual 15 seconds), long enough to line up the camera. A photo read clears
+    // that timer and sets its own.
+    const run = (typeof ocrQ !== "undefined" ? ocrQ : Promise.resolve()).then(async () => {
+      await loadScript(TESSJS, () => window.Tesseract); if (typeof ocrW !== "undefined" && ocrW) return;
+      const w = await ocrWorker(), mine = ocrW; clearTimeout(ocrIdle);
+      ocrIdle = setTimeout(() => { if (ocrW === mine) { ocrW = null; try { Promise.resolve(w.terminate()).catch(() => {}); } catch (e) {} } }, WARM_MS);
+    });
+    if (typeof ocrQ !== "undefined") ocrQ = run.catch(() => {});
+    try { await run; } catch (e) {} finally { warming = false; }
   }
   window.LPN_APK_WARMOCR = warmOcr;
   document.addEventListener("pointerdown", e => { const b = e.target.closest && e.target.closest("#cmpCamBtn,#cmpPhotoBtn,#cmpLogPhotoBtn,#photo,#upload"); if (b) warmOcr(); }, true);

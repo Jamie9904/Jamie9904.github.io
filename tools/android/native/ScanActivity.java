@@ -66,11 +66,11 @@ public class ScanActivity extends AppCompatActivity {
     private final Button[] typeBtns = new Button[TYPES.length];
     private CheckBox fsduBox;
     private Button undoBtn;
-    private TextView recent;
+    private TextView recent, dcs;
     private final List<Button> allBtns = new ArrayList<>();
     private boolean applying = false;
     // The page's state (type, FSDU, last pallets, bigger buttons), kept so it shows as soon as the scanner opens.
-    static volatile String sType = "BB", sRecent = "";
+    static volatile String sType = "BB", sRecent = "", sDcs = "";
     static volatile boolean sFsdu = false, sCanUndo = false, sBig = false, sAllIn = false;
     private Button doneBtn;
     // The pallet type colours from the main screen (styles.css --bb, --fm, --fp, --mx), sent by the page; these are the same values.
@@ -97,6 +97,14 @@ public class ScanActivity extends AppCompatActivity {
         status.setText("Line the barcode up in the frame. Tap the picture to focus.");
         status.setAccessibilityLiveRegion(android.view.View.ACCESSIBILITY_LIVE_REGION_POLITE);
         strip.addView(status);
+        // Pallets per DC so far ("Rugby 12 · Vault 8"), from the page.
+        dcs = new TextView(this);
+        dcs.setTextColor(Color.parseColor("#dfe7f5"));
+        dcs.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        dcs.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        dcs.setPadding(0, dp(6), 0, 0);
+        dcs.setVisibility(android.view.View.GONE);
+        strip.addView(dcs);
         recent = new TextView(this);
         recent.setTextColor(Color.parseColor("#9db0d0"));
         recent.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
@@ -327,6 +335,8 @@ public class ScanActivity extends AppCompatActivity {
                 doneBtn.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
             }
         }
+        dcs.setText(sDcs == null ? "" : sDcs);
+        dcs.setVisibility(sDcs == null || sDcs.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
         recent.setText(sRecent == null ? "" : sRecent);
         recent.setVisibility(sRecent == null || sRecent.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
         undoBtn.setEnabled(sCanUndo);
@@ -339,7 +349,8 @@ public class ScanActivity extends AppCompatActivity {
         applying = false;
     }
 
-    static void setState(String type, boolean fsdu, String recentText, boolean canUndo, boolean big, String[] colours, boolean allIn) {
+    static void setState(String type, boolean fsdu, String recentText, boolean canUndo, boolean big, String[] colours, boolean allIn, String dcsText) {
+        sDcs = dcsText;
         if (type != null) sType = type;
         sAllIn = allIn;
         if (colours != null && colours.length == TYPES.length) sColours = colours;

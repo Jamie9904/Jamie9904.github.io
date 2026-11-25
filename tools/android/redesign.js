@@ -73,7 +73,8 @@
     "html.rd #apkMenu #rdBar{display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px;margin:0 0 12px}#rdBar i{display:block;min-width:4px}",
     "html.rd #apkMenu #rdLeg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.9rem;color:var(--ink,#eaf0fa)}html.rd #apkMenu #rdLeg span{display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:.9rem;color:var(--ink,#eaf0fa)}#rdLeg i{width:8px;height:8px;border-radius:4px;flex:none}",
     "html.rd #apkCarry{margin:12px 16px 0!important}html.rd #apkCarryBtn{width:100%;min-height:56px;border-radius:16px;font-size:1.1rem;display:flex;align-items:center;justify-content:center;gap:8px}",
-    "#rdDel.empty #rdNumRow,#rdDel.empty #rdBar,#rdDel.empty #rdLeg{display:none}",
+    "#rdDel.empty #rdNumRow,#rdDel.empty #rdBar,#rdDel.empty #rdLeg,#rdDel.empty #rdDcs{display:none}",
+    "html.rd #apkMenu #rdDcs{display:block;margin-top:8px;font-size:.9rem;font-weight:700;color:var(--ink,#eaf0fa)}html.rd #apkMenu #rdDcs:empty{display:none}",
     "html.rd #apkMenu #rdDel.empty .apkgo b{font-size:1.25rem;font-weight:700;color:var(--ink,#eaf0fa)}",
     "html.rd #apkMenu #apkGoCmp{display:flex;align-items:center;gap:14px;border:0;background:var(--paper,#13264a);border-radius:20px;padding:16px 18px;min-height:80px}",
     "html.rd #apkMenu #apkGoCmp .rdic{width:48px;height:48px;border-radius:14px;background:var(--sel,#1a3562);color:var(--fm,#6fa8ff);display:flex;align-items:center;justify-content:center;flex:none}",
@@ -174,7 +175,7 @@
     const del = document.createElement("section"); del.id = "rdDel"; del.setAttribute("aria-label", "Delivery in progress");
     m.insertBefore(del, $("apkGoLog")); del.appendChild($("apkGoLog")); del.appendChild($("apkCarry"));
     const go = $("apkGoLog");
-    go.insertAdjacentHTML("beforeend", '<span id="rdNumRow" aria-hidden="true"><span id="rdNum" class="rdmono"></span><span id="rdNumL"></span></span><span id="rdBar" aria-hidden="true"></span><span id="rdLeg" aria-hidden="true"></span>');
+    go.insertAdjacentHTML("beforeend", '<span id="rdNumRow" aria-hidden="true"><span id="rdNum" class="rdmono"></span><span id="rdNumL"></span></span><span id="rdBar" aria-hidden="true"></span><span id="rdLeg" aria-hidden="true"></span><span id="rdDcs" aria-hidden="true"></span>');
     const cb = $("apkCarryBtn"); if (cb && !cb.querySelector("svg")) cb.insertAdjacentHTML("afterbegin", svg(IC.scan));
     const gc = $("apkGoCmp");
     if (gc && !gc.querySelector(".rdic")) {
@@ -208,7 +209,9 @@
     const cs = getComputedStyle(H), cnt = TYPES_C.map(([t]) => all.filter(r => r.type === t && !r.ref).length);
     $("rdBar").innerHTML = TYPES_C.map(([t, v], i) => cnt[i] ? '<i style="flex:' + cnt[i] + ";background:" + cs.getPropertyValue(v).trim() + '"></i>' : "").join("");
     $("rdLeg").innerHTML = TYPES_C.map(([t, v], i) => '<span><i style="background:' + cs.getPropertyValue(v).trim() + '"></i>' + t + " " + cnt[i] + "</span>").join("");
-    go.setAttribute("aria-label", all.length ? "Log pallets: delivery in progress" + (tr ? ", trailer " + tr : "") + ", " + n + " " + (n === 1 ? "pallet" : "pallets") + (ex > 0 ? " of " + ex + " expected" : "") + ": " + TYPES_C.map(([t], i) => cnt[i] + " " + t).join(", ") : "Log pallets");
+    // Pallets per DC, for example "Rugby 12 · Vault 8" (android.js works it out from the LPN prefixes).
+    const dc = typeof LPN_APK_DCS === "function" ? LPN_APK_DCS(all) : ""; $("rdDcs").textContent = dc;
+    go.setAttribute("aria-label", all.length ? "Log pallets: delivery in progress" + (tr ? ", trailer " + tr : "") + ", " + n + " " + (n === 1 ? "pallet" : "pallets") + (ex > 0 ? " of " + ex + " expected" : "") + ": " + TYPES_C.map(([t], i) => cnt[i] + " " + t).join(", ") + (dc ? ". By DC: " + dc.replace(/ · /g, ", ") : "") : "Log pallets");
     del.setAttribute("aria-label", all.length ? "Delivery in progress" : "Log pallets");
   }
 
@@ -352,12 +355,18 @@
       b.innerHTML = '<span class="rdtic">' + svg(tic[id], 28) + '</span><span><b style="display:block;font-size:1.05rem"></b><span style="font-size:.85rem;font-weight:400;opacity:.85"></span></span>';
       b.querySelector("b").textContent = short[id]; b.querySelector("span>span").textContent = sub[id]; });
     tiles(); setTimeout(tiles, 0);
-    ["cmpLogNums", "cmpNums"].forEach(id => { const e = $(id); if (e) e.addEventListener("input", syncSteps); });
+    // The steps update when the boxes change: typing (input), and the app filling them from photos, PDFs or the log
+    // (a value set in code fires no event, so each box's own value setter is wrapped). No timer, so nothing runs
+    // in the background while the page sits open.
+    const vd = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
+    let q = 0; const later = () => { if (!q) q = requestAnimationFrame(() => { q = 0; syncSteps(); }); };
+    ["cmpLogNums", "cmpNums"].forEach(id => { const e = $(id); if (!e) return; e.addEventListener("input", later);
+      if (vd && vd.set) Object.defineProperty(e, "value", { configurable: true, get() { return vd.get.call(this); }, set(v) { vd.set.call(this, v); later(); } }); });
     const res = $("cmpRes"); if (res) new MutationObserver(() => { bigResults(); syncSteps(); }).observe(res, { childList: true, attributes: true, attributeFilter: ["hidden"] });
     syncSteps();
-    setInterval(() => { if (H.classList.contains("apkm-cmp") && !document.hidden) syncSteps(); }, 700);
   }
   const lines = id => (($(id) || {}).value || "").split(/\r?\n/).map(x => x.trim()).filter(Boolean).length;
+
   function syncSteps() {
     const a = lines("cmpLogNums") > 0, b = lines("cmpNums") > 0, r = $("cmpRes") && !$("cmpRes").hidden;
     const set = (id, done, now) => { const e = $(id); if (!e) return; e.className = done ? "done" : now ? "now" : ""; if (now) e.setAttribute("aria-current", "step"); else e.removeAttribute("aria-current"); };

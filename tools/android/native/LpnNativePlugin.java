@@ -183,7 +183,7 @@ public class LpnNativePlugin extends Plugin {
             String[] cols = null;
             String cs = st.getString("colours"); // "#dba56c,#6fa8ff,#a9c95a,#c79bf0" for BB, FMCG, FPP, Mixed
             if (cs != null && cs.split(",").length == 4) cols = cs.split(",");
-            ScanActivity.setState(st.getString("type"), Boolean.TRUE.equals(st.getBool("fsdu")), st.getString("recent"), Boolean.TRUE.equals(st.getBool("canUndo")), Boolean.TRUE.equals(st.getBool("big")), cols, Boolean.TRUE.equals(st.getBool("allIn")));
+            ScanActivity.setState(st.getString("type"), Boolean.TRUE.equals(st.getBool("fsdu")), st.getString("recent"), Boolean.TRUE.equals(st.getBool("canUndo")), Boolean.TRUE.equals(st.getBool("big")), cols, Boolean.TRUE.equals(st.getBool("allIn")), st.getString("dcs"));
         }
         if (call.getString("text") != null || call.getString("flash") != null || Boolean.TRUE.equals(call.getBoolean("close", false))) ScanActivity.show(call.getString("text"), Boolean.TRUE.equals(call.getBoolean("close", false)), call.getString("flash"));
         call.resolve();
