@@ -543,7 +543,7 @@ function showPfxAdd(){
     box.appendChild(b);
   });
 }
-$("cmpClear").onclick=()=>{cmpForgetPhotos();cmpTrailer="";logSrc=null;logPdfSrc=null;logSheets=null;$("cmpNums").value="";$("cmpLogNums").value="";$("cmpLogName").textContent="";$("cmpSum").innerHTML="";$("cmpRes").hidden=true;$("cmpRes").innerHTML="";cmpMsg("")};
+$("cmpClear").onclick=()=>{cmpForgetPhotos();$("cmpNotes").value="";saveCmpNotes();cmpTrailer="";logSrc=null;logPdfSrc=null;logSheets=null;$("cmpNums").value="";$("cmpLogNums").value="";$("cmpLogName").textContent="";$("cmpSum").innerHTML="";$("cmpRes").hidden=true;$("cmpRes").innerHTML="";cmpMsg("")};
 function cmpData(){
   const lines=id=>$(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
   const uniq=a=>{const seen=new Set();return a.filter(x=>{const k=norm(x);if(!k||seen.has(k))return false;seen.add(k);return true})};
@@ -566,13 +566,19 @@ function replaceLine(id,old,nv){
 }
 function refreshCmp(){const C=cmpData();if(C)renderCmp(C);else $("cmpRes").hidden=true}
 /* The result as plain text, to send by WhatsApp, Teams, email or text from the phone's share menu. */
+/* Notes for the check (for example "one DC didn't send a manifest"): kept on this phone until Clear, and put on the
+   Excel and PDF (in Delivery Details) and the shared missing list. */
+const cmpNotes=()=>String(($("cmpNotes")||{}).value||"").replace(/\s+/g," ").trim().slice(0,500);
+const saveCmpNotes=()=>{try{const v=$("cmpNotes").value;if(v.trim())localStorage.setItem("lpncmpnotes",v.slice(0,500));else localStorage.removeItem("lpncmpnotes")}catch(e){}};
+try{const v=localStorage.getItem("lpncmpnotes");if(v&&$("cmpNotes"))$("cmpNotes").value=String(v).slice(0,500)}catch(e){}
+if($("cmpNotes"))$("cmpNotes").addEventListener("input",saveCmpNotes);
 function cmpShareText(C){
   const {res,cnt,man,kind}=C,d=$("cmpDate").value;
   const miss=res.filter(x=>kind(x)==="missing").map(x=>x.n),book=res.filter(x=>kind(x)==="book").map(x=>x.n);
   return ["Manifest check"+(d?" "+ukDate(d):"")+(cmpTrailer?", trailer "+cmpTrailer:""),
     "Missing from the log ("+miss.length+"): "+(miss.join(", ")||"none"),
     "On the log only, to book in ("+book.length+"): "+(book.join(", ")||"none"),
-    "Matched: "+cnt.ok+" of "+man.length+" on the manifest"].concat(C.noLpn?["Pallets with no LPN (check by hand): "+C.noLpn]:[]).join("\n");
+    "Matched: "+cnt.ok+" of "+man.length+" on the manifest"].concat(C.noLpn?["Pallets with no LPN (check by hand): "+C.noLpn]:[]).concat(cmpNotes()?["Notes: "+cmpNotes()]:[]).join("\n");
 }
 async function shareCmp(C){
   const text=cmpShareText(C);
@@ -654,7 +660,7 @@ $("cmpGo").onclick=async()=>{
   const lines=id=>$(id).value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
   const uniq=a=>{const seen=new Set();return a.filter(x=>{const k=norm(x);if(!k||seen.has(k))return false;seen.add(k);return true})};
   const C=cmpData();if(!C)return;
-  const {logList,man,res,cnt,kind}=C;
+  const {logList,man,res,cnt,kind}=C,notes=cmpNotes();
   renderCmp(C);
   cmpMsg("Preparing document…");
   try{
@@ -682,13 +688,14 @@ $("cmpGo").onclick=async()=>{
       ...(cnt.noLpn?[{v:["No LPN pallets",cnt.noLpn]}]:[]),
       null,
       {v:["Delivery Details",""],h:1,merge:1},
-      {v:["Date",ukDate(d)],l:1}
+      {v:["Date",ukDate(d)],l:1},
+      ...(notes?[{v:["Notes",""],h:1,merge:1},{v:[notes,""],merge:1,note:1}]:[])
     ];
     const ST={ok:{t:"✓ Matched",f:null},missing:{t:"✗ MISSING",f:"FFA6A6A6"},book:{t:"⚠ LOG ONLY",f:"FFD0D0D0"}};
     const HD="FFE6E9ED";
     const n=Math.max(res.length,side.length-1);
     const H=xlTitle(ws,off,8,"Manifest check","Date: "+ukDate(d)+"     On manifest: "+man.length+"     Matched: "+cnt.ok+"     Missing: "+cnt.missing+"     Log only: "+cnt.book+(cnt.noLpn?"     No LPN: "+cnt.noLpn:""));
-    const nl=cnt.noLpn?1:0,lastL=H+res.length,s1=H+4+nl,s2a=H+6+nl,s2b=H+7+nl;
+    const nl=cnt.noLpn?1:0,lastL=H+res.length,s1=H+4+nl,s2a=H+6+nl,s2b=H+7+nl+(notes?2:0);
     for(let i=-1;i<n;i++){
       const r=ws.getRow(H+i+1);
       const head=i<0,x=head?null:res[i],k0=x?kind(x):null,st=k0?ST[k0]:null;
@@ -708,7 +715,7 @@ $("cmpGo").onclick=async()=>{
         put(8,right.v[1],{bold:hd,fill:hd?HD:null,center:typeof right.v[1]==="number",box:bx(8)});
         if(right.merge)ws.mergeCells(r.number,7,r.number,8);
       }
-      r.height=(head||(right&&right.h))?32:Math.max(24,x?xlLpnLines(x.n,lpnW)*18+6:0,right&&typeof right.v[0]==="string"?xlLines(right.v[0],25)*18+6:0);
+      r.height=(head||(right&&right.h))?32:Math.max(24,x?xlLpnLines(x.n,lpnW)*18+6:0,right&&typeof right.v[0]==="string"?xlLines(right.v[0],right.note?43:25)*18+6:0);
     }
     xlMadeWith(ws,H+n+2,8);
     xlPrint(ws,H);
@@ -730,7 +737,7 @@ $("cmpGo").onclick=async()=>{
       });
     }
     const outName=mergeSrc?mergeSrc.name.replace(/\.xlsx$/i,"")+" (with manifest check).xlsx":"Manifest-check-"+d+fileTag(cmpTrailer)+".xlsx";
-    pdfJob=()=>buildCmpPdf(res,cnt,man.length,d,merge?{list:logList,pdf:logPdfSrc,sheets:logSheets}:null);
+    pdfJob=()=>buildCmpPdf(res,cnt,man.length,d,merge?{list:logList,pdf:logPdfSrc,sheets:logSheets}:null,notes);
     await sendFile(await wb.xlsx.writeBuffer(),outName,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     cmpMsg("");
   }catch(err){
@@ -862,7 +869,7 @@ $("cmpPrn").onclick=async()=>{
   const d=$("cmpDate").value||"no-date",merge=mergeLog;
   try{
     cmpMsg("Preparing the print copy…");
-    const buf=await buildCmpPdf(C.res,C.cnt,C.man.length,d,merge?{list:C.logList,pdf:logPdfSrc,sheets:logSheets}:null);
+    const buf=await buildCmpPdf(C.res,C.cnt,C.man.length,d,merge?{list:C.logList,pdf:logPdfSrc,sheets:logSheets}:null,cmpNotes());
     await printBuf(buf,"Manifest-check-"+d+fileTag(cmpTrailer)+".pdf",{set textContent(t){cmpMsg(t)}});
   }catch(e){cmpMsg("Couldn’t prepare the print copy: "+((e&&e.message)||"error"))}
 };

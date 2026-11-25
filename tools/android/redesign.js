@@ -143,7 +143,7 @@
     "html.rd #cmpRes .rdbig div{display:flex;flex-direction:column;gap:2px}html.rd #cmpRes .rdbig b{font-size:2.4rem;line-height:1}html.rd #cmpRes .rdbig span{font-size:.9rem;color:var(--mu,#9db0d0)}",
     "html.rd #cmpRes .rdbig .mi b{color:var(--dg,#ff7b6e)}html.rd #cmpRes .rdbig .ex b{color:var(--fm,#6fa8ff)}",
     // ---- settings and the other panels
-    "html.rd #panel{border-radius:0;background:var(--bg,#0c1830)}",
+    "html.rd #panel{border-radius:0;background:var(--bg,#0c1830);border:0!important;box-shadow:none!important}",
     "html.rd #panelBody .rdgrp{background:var(--paper,#13264a);border-radius:20px;padding:14px 16px 10px;margin:0 0 16px}",
     "html.rd #panelBody #apkSet{background:var(--paper,#13264a);border-radius:20px;padding:14px 16px 10px;margin:0 0 16px}",
     "html.rd #panelBody #apkSet>h3:first-child{margin:0 0 4px;font-size:.85rem;letter-spacing:.05em;text-transform:uppercase;color:var(--act,var(--ac,#ff8a2a))}",
@@ -417,7 +417,13 @@
     "html.rd.apkm-log .top,html.rd.apkm-cmp .top{display:none}",
     "html.rd.apkm-log #apkBar,html.rd.apkm-cmp #apkBar{padding-top:calc(6px + env(safe-area-inset-top,0px))}",
     "html.rd.apkm-menu .top .brand>:not(.mark):not(#apkMoreBtn):not(#logoImg){display:none}",
-    "html.rd.apkm-menu .top #logoImg:not([hidden]){display:block;height:52px;width:auto;max-width:180px;padding:6px 12px;border-radius:14px;background:#fff;object-fit:contain;box-shadow:0 8px 24px rgba(0,0,0,.3)}",
+    // The logo as it is, a little bigger: the box takes the logo's own shape (no white frame round a square logo)
+    "html.rd.apkm-menu .top #logoImg:not([hidden]){display:block;height:64px;width:auto;max-width:220px;padding:0;border-radius:14px;background:transparent;object-fit:contain;box-shadow:0 8px 24px rgba(0,0,0,.3)}",
+    // Seamless pages: no frame round the page and no line along the top of the entry panel
+    "html.rd main{border:0!important;background:transparent!important;box-shadow:none!important;border-radius:0!important}",
+    "html.rd .card.entry,html.rd .card+.card.entry{border:0!important}",
+    // No Guide or Changelog in the Android app: the ? buttons, the footer's Changelog link and the menu's entries go
+    "html.rd .helpq,html.rd #apkBarHelp,html.rd #footLog,html.rd #btnGuide,html.rd #btnLog{display:none!important}",
     "html.rd.apkm-menu .top .mark{width:52px;height:52px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.3)}",
     "html.rd #apkBar{position:sticky}html.rd #apkSavedTick{position:absolute;top:100%;right:16px;margin:0;padding:2px 10px;border-radius:10px;background:var(--bg,#0c1830);pointer-events:none}",
     "html.rd #apkBar #apkMoreBtn{width:48px;height:48px;min-width:48px;margin:0;font-size:1.5rem}",
@@ -452,7 +458,7 @@
     "html.rd.apkm-log #body input[type=checkbox]{width:26px;height:26px;margin:0 4px}",
     "html.rd.apkm-log #body>tr>td:last-child button{background:transparent;border:0;color:var(--mu,#9db0d0);min-width:44px;min-height:44px;padding:0}",
     "html.rd.apkm-log #body>tr.dmgrow{display:block}html.rd.apkm-log #body>tr.dmgrow>td{display:block}",
-    "html.rd.apkm-log #body td.empty{display:block;padding:18px 4px!important}",
+    "html.rd.apkm-log #body>tr>td.empty{display:block;flex:1;width:auto;padding:18px 16px!important;text-align:left;font-family:inherit;font-size:1rem;line-height:1.5;color:var(--ink,#eaf0fa)}",
     // The entry panel: Add is the quieter button (Live scan is the main one)
     "html.rd .card.entry #add{background:var(--sel,#1a3562);color:var(--ink,#eaf0fa);border:0}",
     // Manifest check: which log, as four choices; the bottom buttons stay in reach
@@ -548,6 +554,10 @@
   function start() {
     buildHome(); buildBar(); buildEntry(); buildCmp(); buildSrc(); syncBar(); updHome(); placeMore(); recentHead();
     new MutationObserver(placeMore).observe(H, { attributes: true, attributeFilter: ["class"] });
+    // The footer's line ends in "·" before the Changelog link, which the Android app doesn't have: the last "·" goes
+    // (on the Android build's part, which android.js adds after the version line).
+    const ft = document.querySelector(".foot"), trim = () => { const e = $("apkFoot"); if (!e) return; const t = e.textContent, u = t.replace(/\s*·\s*$/, ""); if (u !== t) e.textContent = u; };
+    if (ft) { trim(); new MutationObserver(trim).observe(ft, { childList: true, characterData: true, subtree: true }); }
     const rc = $("apkRecent"); if (rc) new MutationObserver(recentHead).observe(rc, { childList: true });
     // The Manifest check's Export opens the sheet (its own menu stays for Simple view, where the page is one long page).
     const ce = $("cmpExpBtn"); if (ce) ce.addEventListener("click", e => { if (!H.classList.contains("apkm-cmp")) return; e.stopImmediatePropagation(); e.preventDefault(); cmpExportSheet(); }, true);

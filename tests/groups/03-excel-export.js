@@ -58,6 +58,20 @@ module.exports = async ({ browser, URL0 }) => {
     return { w: ws.columns[1].width, h: k ? ws.rows[k].height : null };
   });
   check("a junk scan can't stretch the LPN column, it wraps onto a taller row", s.w <= 40 && s.h > 24, s);
+  // Notes for the check: kept on the phone, in Delivery Details on the Excel, in the shared missing list; Clear empties them.
+  s = await p.evaluate(async () => {
+    window.__wb = null; const nb = document.getElementById("cmpNotes"), note = "The Daventry DC didn't send a manifest for the RBY pallets, so they show as log only.";
+    nb.value = note; nb.dispatchEvent(new Event("input", { bubbles: true }));
+    document.getElementById("cmpLogNums").value = "VLT003977037\nRBY006291167"; document.getElementById("cmpNums").value = "VLT003977037";
+    await document.getElementById("cmpGo").onclick();
+    const ws = window.__wb.sheets.find(w => /Manifest/.test(w.name)), val = (k, c) => ws.rows[k]._c[c] && ws.rows[k]._c[c].value;
+    const kl = Object.keys(ws.rows).find(k => val(k, 7) === "Notes"), kt = Object.keys(ws.rows).find(k => val(k, 7) === note);
+    const out = { label: !!kl, text: !!kt, below: kl && kt && +kt === +kl + 1, merged: ws.merges.some(m => m[0] === +kt && m[2] === +kt && m[1] === 7 && m[3] === 8), h: kt ? ws.rows[kt].height : 0,
+      stored: localStorage.getItem("lpncmpnotes"), share: cmpShareText(cmpData()).split("\n").pop() };
+    document.getElementById("cmpClear").click(); out.cleared = nb.value === "" && localStorage.getItem("lpncmpnotes") === null; return out;
+  });
+  check("notes for a manifest check go under Delivery Details on the Excel (a row of their own, tall enough), in the shared list, and stay until Clear",
+    s.label && s.text && s.below && s.merged && s.h >= 42 && /^The Daventry DC/.test(s.stored || "") && s.share === "Notes: The Daventry DC didn't send a manifest for the RBY pallets, so they show as log only." && s.cleared, s);
   s = await p.evaluate(() => ({ note: document.getElementById("expNote").textContent, next: !document.getElementById("nextBar").hidden }));
   check("export is noted and a new delivery is offered", /Exported at \d\d:\d\d/.test(s.note) && s.next, s);
   await p.click("#nextNew");

@@ -113,7 +113,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     const sc = d.querySelector(".cards"); sc.scrollLeft = sc.clientWidth * 2; sc.dispatchEvent(new Event("scroll")); await wait(80); out.last = document.getElementById("apkIntroNext").textContent;
     N.listeners.back(); await wait(30); out.introGone = !document.getElementById("apkIntro") && localStorage.getItem("lpnapkintro") === "seen";
     return out; });
-  check("an app bar with a ⋮ menu (Guide, Changelog, Settings, Exported files, About) instead of the three buttons; Back closes it", s.side === "none" && s.btn && s.items === "Guide,Changelog,Settings,Exported files,About" && s.backCloses && s.settings === "Settings", s);
+  check("an app bar with a ⋮ menu (Settings, Exported files, About; no Guide or Changelog) instead of the three buttons; Back closes it", s.side === "none" && s.btn && s.items === "Settings,Exported files,About" && s.backCloses && s.settings === "Settings", s);
   check("About shows the version, that data stays on the phone, and the open-source parts with their licences", /^About:true:(9|1\d)$/.test(s.about), s);
   check("a first install gets a three-card introduction ending in Get started; Back (or Skip) closes it for good", s.cards === 3 && s.last === "Get started" && s.introGone, s);
   // Progress with Cancel while photos are read, and a notification when it finishes in the background.
@@ -200,13 +200,14 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   // Moving between the menu and the pages: a slide, each page keeps its place, TalkBack hears the page's name, and
   // focus goes back to the button you came from; the menu buttons give the light tap.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), N = window.Capacitor.Plugins.LpnNative, main = document.querySelector("main");
+    rows = Array.from({ length: 25 }, (x, i) => ({ lpn: "VLT00404" + (3000 + i), type: "BB", fsdu: false })); save(); render(); // (a log long enough to scroll)
     LPN_APK_MODE("menu"); document.getElementById("apkGoLog").click(); await wait(50);
     const out = { focus: document.activeElement.id, slideIn: main.classList.contains("apkin") };
     window.scrollTo(0, 300); await wait(30); const y = window.scrollY; document.getElementById("apkBack").click(); await wait(50);
     out.menuFocus = document.activeElement.id; out.slideOut = main.classList.contains("apkout"); out.menuTop = window.scrollY === 0;
     document.getElementById("apkGoLog").click(); await wait(50); out.kept = y > 0 && Math.abs(window.scrollY - y) < 2;
     LPN_APK_MODE("menu"); N.calls = []; cfg.vibrate = true; document.getElementById("apkGoCmp").dispatchEvent(new PointerEvent("pointerdown", { bubbles: true })); out.tap = N.calls.filter(c => c[0] === "tap").length;
-    out.first = main.firstElementChild && main.firstElementChild.id; return out; });
+    out.first = main.firstElementChild && main.firstElementChild.id; rows = []; save(); render(); return out; });
   check("pages slide in and back out, TalkBack hears the page's name, focus goes back to the menu button, and each page keeps its place",
     s.focus === "apkBarT" && s.slideIn && s.menuFocus === "apkGoLog" && s.slideOut && s.menuTop && s.kept, s);
   check("the menu is the first thing on the page, and its buttons give the light tap", s.first === "apkMenu" && s.tap === 1, s);
@@ -289,6 +290,9 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     document.getElementById("cmpExpBtn").click(); await wait(50); const sh = document.querySelector(".apkask"); out.sub = sh ? sh.querySelector(".rdsub").textContent : ""; if (sh) sh.remove();
     document.getElementById("cmpClear").click(); LPN_APK_MODE("menu"); return out; });
   check("the Manifest check's results show Missing, Extra and Matched as big numbers, and its Export sheet says them too", s.big.big === "2,1,3" && s.big.sub === "2 missing · 1 extra · 3 matched", s.big);
+  s.empty = await page.evaluate(async () => { rows = []; save(); render(); LPN_APK_MODE("log"); await new Promise(r => setTimeout(r, 50));
+    const td = document.querySelector("#body td.empty"), w = td ? td.getBoundingClientRect().width : 0, out = { w, page: document.documentElement.clientWidth, h: td ? td.getBoundingClientRect().height : 0 }; LPN_APK_MODE("menu"); return out; });
+  check("an empty log's \"No pallets yet\" message runs across the page, not squeezed into a narrow column", s.empty.w > s.empty.page * 0.8 && s.empty.h < 140, s.empty);
   check("in Simple view the log keeps its Export menu (Excel and the rest) and its buttons, so exporting still works", s.mode === "" && s.exp && s.menu && s.newDel && s.after === "menu", s);
   // The menu's recent deliveries and shortcuts, the page title bar, and the Manifest date shown the app's way.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
@@ -298,12 +302,13 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     out.files = !!document.getElementById("apkGoFiles"); hist = keep;
     document.getElementById("apkGoCmp").click(); await wait(80); const bar = document.getElementById("apkBar");
     out.title = document.getElementById("apkBarT").textContent + ":" + getComputedStyle(bar).position;
-    const hb = document.getElementById("apkBarHelp"); out.help = !hb.hidden; hb.click(); await wait(100); out.helpOpen = !document.getElementById("panel").hidden; closeHelp();
+    // No Guide or Changelog in the Android app: no ? buttons, no Changelog link at the bottom.
+    out.noHelp = [...document.querySelectorAll(".helpq,#apkBarHelp,#footLog")].every(e => e.getClientRects().length === 0);
     const d = document.getElementById("cmpDate"); d.value = "2026-11-05"; out.date = document.getElementById("cmpDateShow").textContent + ":" + (d.closest(".dwrap") ? "wrapped" : "");
     LPN_APK_MODE("log"); out.logTitle = document.getElementById("apkBarT").textContent; await wait(50); out.thTop = getComputedStyle(document.querySelector("#logCard th")).top !== "0px";
     LPN_APK_MODE("menu"); return out; });
   check("the menu lists recent saved deliveries (tap for Saved deliveries) with Saved deliveries and Exported files buttons", s.recent === "20/11/2026 · Sam · 2 pallets|19/11/2026 · No name · 0 pallets" && s.hist === "Saved deliveries" && s.files, s);
-  check("each page has a title bar (‹ Menu, the page name, and the Manifest check's ?) that stays at the top, with the log's column headings below it", s.title === "Manifest check:sticky" && s.help && s.helpOpen && s.logTitle === "Log pallets" && s.thTop, s);
+  check("each page has a title bar (back arrow and the page name) that stays at the top; no Guide ? buttons or Changelog link in the Android app", s.title === "Manifest check:sticky" && s.noHelp && s.logTitle === "Log pallets", s);
   check("the Manifest date shows day/month/year like the delivery date, whatever the phone's date format", s.date === "05/11/2026:wrapped", s);
   s = await page.evaluate(() => { cfg.simple = true; applySimple(); const on = { mode: LPN_APK_MODE(), cls: document.documentElement.className.includes("apkm-") };
     cfg.simple = false; applySimple(); on.back = LPN_APK_MODE(); return on; });
@@ -448,7 +453,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     /translateX\(24px\) scale\(0\.97\)/.test(s.during) && s.cancelled === "" && s.stillOpen && s.closed && s.toMenu === "menu" && s.t === "Press Back again to close the app." && JSON.stringify(s.calls) === '[["exit",2000]]', s);
   // Which build this is.
   s = await page.evaluate(async () => { openHelp("settings", "Settings"); await new Promise(r => setTimeout(r, 100)); const v = document.getElementById("apkVer"); const out = { set: v && v.textContent, foot: (document.getElementById("apkFoot") || {}).textContent }; closeHelp(); return out; });
-  check("Settings and the footer say which Android build this is", /^Android APK build 9( · Data on this phone: .+)?$/.test(s.set || "") && s.foot === " Android APK build 9 ·", s);
+  check("Settings and the footer say which Android build this is", /^Android APK build 9( · Data on this phone: .+)?$/.test(s.set || "") && s.foot === " Android APK build 9", s);
 
   // What's new after an Android update: not on a first install, once after an update.
   s = await page.evaluate(() => { const card = () => document.getElementById("apkNew"); localStorage.removeItem("lpnapkseen");
