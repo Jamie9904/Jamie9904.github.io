@@ -276,7 +276,7 @@ async function tallyPdf(want1,want2){
   pdfFooter(doc,0,true,true);
   return {ok:true,buf:doc.output("arraybuffer"),pages:doc.getNumberOfPages(),rows1:n1,rows2:n2};
 }
-async function buildCmpPdf(res,cnt,manCount,d,logCopy){
+async function buildCmpPdf(res,cnt,manCount,d,logCopy,notes){
   await loadJsPdf();await appVersion();
   const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:"portrait"});
   const L=10,LW=112,RX=L+LW+6,RW=190-LW-6;
@@ -292,7 +292,7 @@ async function buildCmpPdf(res,cnt,manCount,d,logCopy){
   doc.autoTable(Object.assign({},PDF_BASE,PDF_PLAIN,{
     startY:doc.lastAutoTable.finalY+8,margin:{left:RX,right:10,top:12,bottom:16},tableWidth:RW,
     head:[[{content:"Delivery Details",colSpan:2}]],
-    body:[[pdfCell("Date",bold),ukDate(d)]],
+    body:[[pdfCell("Date",bold),ukDate(d)]].concat(notes?[[pdfCell("Notes",bold),String(notes)]]:[]),
     columnStyles:{0:{cellWidth:26}}
   }));
   doc.setPage(1);
