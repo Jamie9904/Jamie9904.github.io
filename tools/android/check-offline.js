@@ -289,6 +289,9 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     document.getElementById("cmpExpBtn").click(); await wait(50); const sh = document.querySelector(".apkask"); out.sub = sh ? sh.querySelector(".rdsub").textContent : ""; if (sh) sh.remove();
     document.getElementById("cmpClear").click(); LPN_APK_MODE("menu"); return out; });
   check("the Manifest check's results show Missing, Extra and Matched as big numbers, and its Export sheet says them too", s.big.big === "2,1,3" && s.big.sub === "2 missing · 1 extra · 3 matched", s.big);
+  s.empty = await page.evaluate(async () => { rows = []; save(); render(); LPN_APK_MODE("log"); await new Promise(r => setTimeout(r, 50));
+    const td = document.querySelector("#body td.empty"), w = td ? td.getBoundingClientRect().width : 0, out = { w, page: document.documentElement.clientWidth, h: td ? td.getBoundingClientRect().height : 0 }; LPN_APK_MODE("menu"); return out; });
+  check("an empty log's \"No pallets yet\" message runs across the page, not squeezed into a narrow column", s.empty.w > s.empty.page * 0.8 && s.empty.h < 140, s.empty);
   check("in Simple view the log keeps its Export menu (Excel and the rest) and its buttons, so exporting still works", s.mode === "" && s.exp && s.menu && s.newDel && s.after === "menu", s);
   // The menu's recent deliveries and shortcuts, the page title bar, and the Manifest date shown the app's way.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};

@@ -452,7 +452,7 @@
     "html.rd.apkm-log #body input[type=checkbox]{width:26px;height:26px;margin:0 4px}",
     "html.rd.apkm-log #body>tr>td:last-child button{background:transparent;border:0;color:var(--mu,#9db0d0);min-width:44px;min-height:44px;padding:0}",
     "html.rd.apkm-log #body>tr.dmgrow{display:block}html.rd.apkm-log #body>tr.dmgrow>td{display:block}",
-    "html.rd.apkm-log #body td.empty{display:block;padding:18px 4px!important}",
+    "html.rd.apkm-log #body>tr>td.empty{display:block;flex:1;width:auto;padding:18px 16px!important;text-align:left;font-family:inherit;font-size:1rem;line-height:1.5;color:var(--ink,#eaf0fa)}",
     // The entry panel: Add is the quieter button (Live scan is the main one)
     "html.rd .card.entry #add{background:var(--sel,#1a3562);color:var(--ink,#eaf0fa);border:0}",
     // Manifest check: which log, as four choices; the bottom buttons stay in reach
