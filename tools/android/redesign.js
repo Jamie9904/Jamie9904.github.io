@@ -405,8 +405,147 @@
   }
 
   window.LPN_APK_EXPORTSHEET = exportSheet; window.LPN_APK_DELSHEET = deliverySheet;
+
+  /* ---- Closer to the mock-up: the frame, the log's rows, the totals, the Manifest check, results, saving, Share log ---- */
+  const css2 = document.createElement("style");
+  css2.textContent = [
+    // The app's name bar only on Home (logo and ⋮; the page's own bar on the other pages, with ⋮ moved into it)
+    "html.rd.apkm-log .top,html.rd.apkm-cmp .top{display:none}",
+    "html.rd.apkm-log #apkBar,html.rd.apkm-cmp #apkBar{padding-top:calc(6px + env(safe-area-inset-top,0px))}",
+    "html.rd.apkm-menu .top .brand>:not(.mark):not(#apkMoreBtn):not(#logoImg){display:none}",
+    "html.rd.apkm-menu .top #logoImg:not([hidden]){display:block;height:52px;width:auto;max-width:180px;padding:6px 12px;border-radius:14px;background:#fff;object-fit:contain;box-shadow:0 8px 24px rgba(0,0,0,.3)}",
+    "html.rd.apkm-menu .top .mark{width:52px;height:52px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.3)}",
+    "html.rd #apkBar #apkMoreBtn{width:48px;height:48px;min-width:48px;margin:0;font-size:1.5rem}",
+    // Home: See all by Recent deliveries, Saved deliveries and Exported files in the bottom bar and the ⋮ menu
+    "#rdRecH{display:flex;align-items:center;justify-content:space-between;margin:20px 2px 8px}#rdRecH h3{margin:0!important}",
+    "#rdSeeAll{border:0;background:transparent;color:var(--act,var(--ac));font-weight:700;min-height:44px;padding:0 6px}",
+    "html.rd #apkRecent>.row{display:none}",
+    // The totals: the big number on the left, the types in two columns on the right
+    "html.rd.apkm-log #logCard #sum{display:grid;grid-template-columns:auto 1fr 1fr;align-items:center;column-gap:16px;row-gap:2px;padding:16px 18px;margin-bottom:0}",
+    "html.rd.apkm-log #logCard #sum:has(+#expInfo[hidden]),html.rd.apkm-log #logCard #sum:has(+#expInfo:empty){margin-bottom:12px}",
+    "html.rd.apkm-log #sum>span:first-child{grid-row:1/span 3;font-size:0;display:flex;flex-direction:row;align-items:baseline;gap:8px;color:var(--mu,#9db0d0)}",
+    "html.rd.apkm-log #sum>span:first-child b{order:0;font-size:2.6rem;line-height:1;color:var(--ink,#eaf0fa);font-family:'IBM Plex Mono',ui-monospace,monospace}",
+    "html.rd.apkm-log #sum>span:first-child::after{order:1;content:'pallets';font-size:1rem;font-weight:400}",
+    "html.rd.apkm-log #sum .sumbtn{margin:0;padding:4px 8px;min-height:36px;font-size:.95rem;justify-content:flex-start;gap:6px;font-weight:400;color:var(--ink,#eaf0fa)}",
+    "html.rd.apkm-log #sum .sumbtn b{font-family:'IBM Plex Mono',ui-monospace,monospace;font-weight:700}",
+    "html.rd.apkm-log #expInfo{background:var(--paper,#13264a);border-radius:0 0 20px 20px;margin:-2px 0 12px;padding:0 18px 14px;border-top:0}",
+    "html.rd.apkm-log #sum:has(+#expInfo:not([hidden])){border-radius:20px 20px 0 0}",
+    // The log: a list, newest first in the mock-up's look (number, LPN with its note, the type as a coloured pill)
+    "html.rd.apkm-log #logCard thead{display:none}",
+    "html.rd.apkm-log #logCard table,html.rd.apkm-log #logCard tbody{display:block;width:100%}",
+    "html.rd.apkm-log #logCard .wrap{overflow:visible;border:0;background:transparent}",
+    "html.rd.apkm-log #body>tr:not(.dmgrow){display:flex;align-items:center;gap:8px;padding:10px 2px;border-bottom:1px solid var(--rule,#223a63);background:transparent!important;box-shadow:none!important}",
+    "html.rd.apkm-log #body>tr>td{display:block;border:0!important;padding:0!important;background:transparent!important}",
+    "html.rd.apkm-log #body>tr>td:first-child{width:28px;flex:none;text-align:right;color:var(--mu,#9db0d0);font-size:.85rem;font-family:'IBM Plex Mono',ui-monospace,monospace}",
+    "html.rd.apkm-log #body>tr>td.l{flex:1;min-width:0}",
+    "html.rd.apkm-log #body .lpnedit{font-size:1.05rem;background:transparent;border:0;padding:4px 0;min-height:40px;text-align:left}",
+    "html.rd.apkm-log #body select{appearance:none;-webkit-appearance:none;border:0;border-radius:12px;min-height:36px;padding:4px 12px;font-weight:700;font-size:.9rem;width:auto;background-image:none}",
+    "html.rd.apkm-log #body tr[data-t=BB] select{background:color-mix(in srgb,var(--bb) 20%,transparent);color:var(--bb)}",
+    "html.rd.apkm-log #body tr[data-t=FMCG] select{background:color-mix(in srgb,var(--fm) 20%,transparent);color:var(--fm)}",
+    "html.rd.apkm-log #body tr[data-t=FPP] select{background:color-mix(in srgb,var(--fp) 20%,transparent);color:var(--fp)}",
+    "html.rd.apkm-log #body tr[data-t=Mixed] select{background:color-mix(in srgb,var(--mx) 20%,transparent);color:var(--mx)}",
+    "html.rd.apkm-log #body input[type=checkbox]{width:26px;height:26px;margin:0 4px}",
+    "html.rd.apkm-log #body>tr>td:last-child button{background:transparent;border:0;color:var(--mu,#9db0d0);min-width:44px;min-height:44px;padding:0}",
+    "html.rd.apkm-log #body>tr.dmgrow{display:block}html.rd.apkm-log #body>tr.dmgrow>td{display:block}",
+    "html.rd.apkm-log #body td.empty{display:block;padding:18px 4px!important}",
+    // The entry panel: Add is the quieter button (Live scan is the main one)
+    "html.rd .card.entry #add{background:var(--sel,#1a3562);color:var(--ink,#eaf0fa);border:0}",
+    // Manifest check: which log, as four choices; the bottom buttons stay in reach
+    "#rdSrc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;background:var(--sel,#1a3562);border-radius:16px;padding:4px;margin:0 0 12px}",
+    "#rdSrc button{min-height:48px;border:0;border-radius:12px;background:transparent;color:var(--ink,#eaf0fa);font-weight:400;padding:0 4px}",
+    "#rdSrc button[aria-pressed=true]{background:var(--ac,#ff8a2a);color:var(--onac,#1b1b1b);font-weight:700}",
+    "html.rd #cmpCard .cmpsteps>.grow:first-child>.row>button:not(#cmpTally){display:none!important}",
+    "html.rd:not(.rd-saved) #cmpCard #cmpHist{display:none!important}html.rd.rd-saved #cmpCard #cmpHist{display:block}",
+    "html.rd #cmpLogName:not(:empty){background:var(--sel,#1a3562);border-radius:16px;padding:14px 16px;color:var(--ink,#eaf0fa)!important;margin:4px 0 8px}",
+    "html.rd.apkm-cmp #cmpBody>.act{position:sticky;bottom:0;z-index:5;background:var(--bg,#0c1830);margin:12px -18px 0;padding:12px 18px calc(14px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 20px rgba(0,0,0,.25)}",
+    "html.rd.apkm-cmp #cmpBody>.act{display:flex!important;flex-direction:row!important;align-items:center;gap:8px;flex-wrap:nowrap!important}html.rd.apkm-cmp #cmpBody>.act>.row{flex:1;display:flex!important;flex-direction:row!important;gap:8px;flex-wrap:nowrap!important;margin:0}",
+    "html.rd.apkm-cmp #cmpBody>.act button{min-height:52px;border-radius:16px;margin:0;width:auto}html.rd.apkm-cmp #cmpBody>.act>.row>button{flex:1}html.rd.apkm-cmp #cmpClear{flex:none;padding:0 14px}",
+    "html.rd.apkm-cmp #cmpExpMenu{display:none!important}",
+    "html.rd #cmpCard textarea{border-radius:16px}",
+    // Results: the lists as cards under coloured headings
+    "html.rd #cmpRes h3{font-size:1rem;margin:16px 4px 6px}html.rd #cmpRes .note{margin:0 4px 8px!important}",
+    "html.rd #cmpRes .ri{background:var(--paper,#13264a);margin:0;padding:6px 8px 6px 16px;border-top:1px solid var(--rule,#223a63);display:flex;align-items:center;gap:6px}",
+    "html.rd #cmpRes .note+.ri{border-top:0;border-radius:18px 18px 0 0}html.rd #cmpRes .ri:not(:has(+.ri)){border-radius:0 0 18px 18px}html.rd #cmpRes .note+.ri:not(:has(+.ri)){border-radius:18px}",
+    "html.rd #cmpRes .ri .l{flex:1;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:1.02rem}",
+    "html.rd #cmpBody:has(#cmpRes .rdbig) #cmpSum{display:none}",
+    // After saving a file: a sheet with a tick, Open, Share and Save to…
+    "html.rd .apksaved{left:0!important;right:0!important;bottom:0!important;border-radius:28px 28px 0 0!important;padding:20px 16px calc(20px + env(safe-area-inset-bottom,0px))!important;background:var(--paper,#13264a)!important;color:var(--ink,#eaf0fa)!important;text-align:center;z-index:1300!important}",
+    "html.rd .apksaved::before{content:'✓';display:flex;align-items:center;justify-content:center;width:64px;height:64px;margin:0 auto 12px;border-radius:32px;background:rgba(60,207,110,.16);color:#3ccf6e;font-size:2rem;font-weight:700}",
+    "html.rd .apksaved p{margin:0 0 16px!important;font-size:1rem}",
+    "html.rd .apksaved .row{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}html.rd .apksaved .row button{min-height:52px;border-radius:16px}",
+    "html.rd .apksaved .row button[aria-label=Close]{position:absolute;top:10px;right:10px;width:44px;min-height:44px;padding:0;border:0;background:transparent;color:var(--mu,#9db0d0)}",
+    // Share log: a big code on white with round arrows either side of the count
+    "html.rd #panelBody .qrimg{width:min(300px,86%);padding:16px;border-radius:24px;box-shadow:0 16px 40px rgba(0,0,0,.4)}",
+    "html.rd #qrBox>.row{justify-content:center;gap:16px}html.rd #qrPrev,html.rd #qrNext{min-width:52px;min-height:52px;border-radius:26px}",
+    "html.rd #qrShow{width:100%;min-height:56px;border-radius:16px}"
+  ].join("");
+  document.head.appendChild(css2);
+
+  /* ⋮ (Guide, Settings, About…) sits in the app's name bar on Home and in the page's own bar on the other pages. */
+  function placeMore() {
+    const b = $("apkMoreBtn"), bar = $("apkBar"), brand = document.querySelector(".top .brand"); if (!b || !bar || !brand) return;
+    const onPage = H.classList.contains("apkm-log") || H.classList.contains("apkm-cmp");
+    if (onPage && b.parentNode !== bar) { const help = $("apkBarHelp"); bar.insertBefore(b, help ? help.nextSibling : null); }
+    else if (!onPage && b.parentNode !== brand) brand.appendChild(b);
+  }
+  /* Home: "See all" by Recent deliveries (android.js redraws that part each time Home opens). */
+  function recentHead() {
+    const rc = $("apkRecent"); if (!rc) return; const h = $("apkRecH"); if (!h || h.parentNode.id === "rdRecH") return;
+    const w = document.createElement("div"); w.id = "rdRecH"; h.before(w); w.appendChild(h);
+    const a = document.createElement("button"); a.type = "button"; a.id = "rdSeeAll"; a.textContent = "See all"; a.setAttribute("aria-label", "See all saved deliveries");
+    a.onclick = () => { const g = $("apkGoHist"); if (g) g.click(); }; w.appendChild(a);
+  }
+  /* Manifest check, step 1: which log — the current one, a saved delivery, a file, or a paper log (photo or Live read). */
+  let srcPick = "";
+  function buildSrc() {
+    const step = document.querySelector("#cmpCard .cmpsteps>.grow:first-child"); if (!step || $("rdSrc")) return;
+    const bar = document.createElement("div"); bar.id = "rdSrc"; bar.setAttribute("role", "group"); bar.setAttribute("aria-label", "Which log");
+    const pick = k => { srcPick = k; [...bar.children].forEach(b => b.setAttribute("aria-pressed", String(b.dataset.k === k))); H.classList.toggle("rd-saved", k === "saved"); };
+    const opt = (k, label, fn, ok) => { if (!ok) return; const b = document.createElement("button"); b.type = "button"; b.dataset.k = k; b.textContent = label; b.setAttribute("aria-pressed", "false"); b.onclick = () => { pick(k); fn(); }; bar.appendChild(b); };
+    const vis = id => { const e = $(id); return !!e && !e.hidden && (!e.style || e.style.display !== "none"); };
+    opt("cur", "Current", () => $("cmpUseLog").click(), vis("cmpUseLog") && has("palletLog"));
+    opt("saved", "Saved", () => { const s = $("cmpHist"); if (s) { s.dispatchEvent(new Event("focus")); s.focus(); try { s.showPicker && s.showPicker(); } catch (e) {} } }, !!$("cmpHist"));
+    opt("file", "File", () => $("cmpLogBtn").click(), vis("cmpLogBtn"));
+    const paper = [["cmpLogPhotoBtn", IC.cam, "Photo of printed log", "Read a printed log from photos"], ["apkLiveLog", IC.read, "Live read log", "Move the camera down a printed log"]].filter(([id]) => vis(id));
+    opt("paper", "Paper", () => sheet("A printed log", (s, close) => { s.insertAdjacentHTML("beforeend", "<h2>A printed log</h2><p class=\"rdsub\">Read its LPNs into the log numbers</p>");
+      paper.forEach(([id, ic, t, sub]) => s.appendChild(rowBtn(ic, t, sub, () => { close(); $(id).click(); }))); }), paper.length > 0);
+    bar.style.gridTemplateColumns = "repeat(" + bar.children.length + ",minmax(0,1fr))";
+    const lab = step.querySelector("label"); if (lab) lab.after(bar); else step.prepend(bar);
+    const hs = $("cmpHist"); if (hs) hs.addEventListener("change", () => { if (hs.value) pick("saved"); });
+  }
+  /* Manifest check's Export: a sheet like the log's (Excel, Email PDF, Print), with Include the log and Share missing list. */
+  function cmpExportSheet() {
+    const box = $("cmpRes"), t = box && !box.hidden ? box.textContent : "", num = re => { const m = re.exec(t); return m ? m[1] : "0"; };
+    sheet("Export the check", (s, close) => {
+      s.insertAdjacentHTML("beforeend", '<h2>Export the check</h2><p class="rdsub"></p><div class="rdtiles"></div>');
+      s.querySelector(".rdsub").textContent = t ? num(/Missing from the log \((\d+)\)/) + " missing · " + num(/On the log only[^(]*\((\d+)\)/) + " extra · " + num(/Matched \((\d+)\)/) + " matched" : "The comparison of the log and the manifest";
+      const tiles = s.querySelector(".rdtiles");
+      [["cmpGo", IC.sheet, "Excel", true], ["cmpMail", IC.file, "Email PDF"], ["cmpPrn", IC.print, "Print"]].forEach(([id, ic, label, p]) => { const o = $(id); if (!o || o.hidden) return;
+        const b = document.createElement("button"); b.type = "button"; if (p) b.className = "p"; b.innerHTML = svg(ic, 26) + "<span></span>"; b.querySelector("span").textContent = label; b.onclick = () => { close(); o.click(); }; tiles.appendChild(b); });
+      if (typeof mergeLog !== "undefined") {
+        const l = document.createElement("label"); l.className = "rdrow"; l.style.cursor = "pointer";
+        l.innerHTML = '<span class="rdtx"><b>Include the full log</b><span>A tab in the spreadsheet, pages at the end of the PDF</span></span><input type="checkbox" class="rdsw">';
+        const c = l.querySelector("input"); c.checked = !!mergeLog; c.setAttribute("aria-label", "Include the full log");
+        c.onchange = () => { mergeLog = c.checked; try { localStorage.setItem("lpnmergelog", mergeLog ? "1" : "0"); } catch (e) {} const st = $("setMerge"); if (st) st.checked = c.checked; };
+        s.appendChild(l);
+      }
+      const sh = $("cmpShare"); if (sh && has("shareMissing")) { s.insertAdjacentHTML("beforeend", '<div class="rdline"></div>'); s.appendChild(rowBtn(IC.qr, "Send the missing list as text", "For a message or email", () => { close(); sh.click(); })); }
+    });
+  }
+  const swCss = document.createElement("style");
+  swCss.textContent = ".rdsw{appearance:none;-webkit-appearance:none;flex:none;width:52px;height:32px;border-radius:16px;background:var(--rule,#223a63);border:2px solid var(--mu,#9db0d0);position:relative;margin:0}"
+    + ".rdsw::after{content:'';position:absolute;top:5px;left:5px;width:18px;height:18px;border-radius:50%;background:var(--mu,#9db0d0);transition:transform .15s}"
+    + ".rdsw:checked{background:var(--ac,#ff8a2a);border-color:var(--ac,#ff8a2a)}.rdsw:checked::after{transform:translateX(20px);background:var(--onac,#1b1b1b)}"
+    + ".rdsw:focus-visible{outline:2px solid var(--ink,#eaf0fa);outline-offset:2px}@media (prefers-reduced-motion:reduce){.rdsw::after{transition:none}}";
+  document.head.appendChild(swCss);
+  window.LPN_APK_CMPEXPORT = cmpExportSheet;
+
   function start() {
-    buildHome(); buildBar(); buildEntry(); buildCmp(); syncBar(); updHome();
+    buildHome(); buildBar(); buildEntry(); buildCmp(); buildSrc(); syncBar(); updHome(); placeMore(); recentHead();
+    new MutationObserver(placeMore).observe(H, { attributes: true, attributeFilter: ["class"] });
+    const rc = $("apkRecent"); if (rc) new MutationObserver(recentHead).observe(rc, { childList: true });
+    // The Manifest check's Export opens the sheet (its own menu stays for Simple view, where the page is one long page).
+    const ce = $("cmpExpBtn"); if (ce) ce.addEventListener("click", e => { if (!H.classList.contains("apkm-cmp")) return; e.stopImmediatePropagation(); e.preventDefault(); cmpExportSheet(); }, true);
     // Keep up with the app: pallets added or removed, settings changed, panels opened.
     if (typeof render === "function" && !render.rd) { const r = render; render = function () { const x = r.apply(this, arguments); try { updHome(); syncBar(); } catch (e) {} return x; }; render.rd = true; }
     if (typeof applySite === "function" && !applySite.rd) { const a = applySite; applySite = function () { const x = a.apply(this, arguments); try { syncBar(); syncEntry(); } catch (e) {} return x; }; applySite.rd = true; }

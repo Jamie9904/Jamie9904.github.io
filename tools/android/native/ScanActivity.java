@@ -104,9 +104,16 @@ public class ScanActivity extends AppCompatActivity {
         strip.addView(recent);
         LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setBackgroundColor(Color.parseColor("#E60c1830"));
+        // The bottom panel as a rounded sheet, and the types in one dark track (as the app's redesigned screens).
+        android.graphics.drawable.GradientDrawable sheetBg = new android.graphics.drawable.GradientDrawable();
+        sheetBg.setColor(Color.parseColor("#F20c1830"));
+        float sheetR = dp(28); sheetBg.setCornerRadii(new float[] { sheetR, sheetR, sheetR, sheetR, 0, 0, 0, 0 });
+        panel.setBackground(sheetBg);
         LinearLayout types = new LinearLayout(this);
         types.setOrientation(LinearLayout.HORIZONTAL);
+        android.graphics.drawable.GradientDrawable track = new android.graphics.drawable.GradientDrawable();
+        track.setColor(Color.parseColor("#15233f")); track.setCornerRadius(dp(16));
+        types.setBackground(track); types.setPadding(dp(4), dp(4), dp(4), dp(4));
         for (int i = 0; i < TYPES.length; i++) {
             final String t = TYPES[i];
             Button b = button(t);
@@ -114,14 +121,14 @@ public class ScanActivity extends AppCompatActivity {
             b.setOnClickListener(v -> { sType = t; applyState(); LpnNativePlugin.scanEvent("scanType", new com.getcapacitor.JSObject().put("type", t)); });
             typeBtns[i] = b;
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(52), 1f);
-            if (i > 0) lp.setMarginStart(dp(6));
+            if (i > 0) lp.setMarginStart(dp(4));
             types.addView(b, lp);
         }
         panel.addView(types);
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(0, dp(8), 0, 0);
+        row.setPadding(0, dp(12), 0, 0);
         fsduBox = new CheckBox(this);
         fsduBox.setText("FSDU");
         fsduBox.setTextColor(Color.WHITE);
@@ -280,7 +287,7 @@ public class ScanActivity extends AppCompatActivity {
     /* Remove last, Torch and Done: the app's dark buttons with a light outline, not Android's grey ones. */
     private void plain(Button b) {
         android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
-        g.setCornerRadius(dp(10)); g.setStroke(dp(2), Color.parseColor("#9db0d0")); g.setColor(Color.parseColor("#13264a"));
+        g.setCornerRadius(dp(16)); g.setStroke(dp(1), Color.parseColor("#3Dffffff")); g.setColor(Color.TRANSPARENT);
         b.setBackground(new android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(Color.parseColor("#33ffffff")), g, null));
         b.setTextColor(new ColorStateList(new int[][] { { -android.R.attr.state_enabled }, {} }, new int[] { Color.parseColor("#6b7d99"), Color.parseColor("#eaf0fa") }));
         b.setTypeface(android.graphics.Typeface.DEFAULT);
@@ -289,15 +296,14 @@ public class ScanActivity extends AppCompatActivity {
         if (undoBtn != null) plain(undoBtn);
         if (torchBtn != null) plain(torchBtn);
         applying = true;
-        // Like the main screen: each type outlined in its colour, the chosen one filled with it and dark text.
+        // Like the main screen: the types in a dark track, the chosen one filled with its colour and dark text.
         for (int i = 0; i < TYPES.length; i++) {
             boolean on = TYPES[i].equals(sType);
             int c;
             try { c = Color.parseColor(sColours[i]); } catch (Exception e) { c = Color.GRAY; }
             android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
-            g.setCornerRadius(dp(10));
-            g.setStroke(dp(2), c);
-            g.setColor(on ? c : Color.parseColor("#13264a"));
+            g.setCornerRadius(dp(12));
+            g.setColor(on ? c : Color.TRANSPARENT);
             typeBtns[i].setBackground(new android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(Color.parseColor("#33ffffff")), g, null));
             typeBtns[i].setTextColor(on ? Color.parseColor("#111111") : Color.parseColor("#eaf0fa"));
             typeBtns[i].setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
@@ -308,11 +314,18 @@ public class ScanActivity extends AppCompatActivity {
         if (doneBtn != null) {
             if (sAllIn) {
                 android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
-                g.setCornerRadius(dp(10)); g.setColor(Color.parseColor("#3ccf6e"));
+                g.setCornerRadius(dp(16)); g.setColor(Color.parseColor("#3ccf6e"));
                 doneBtn.setBackground(new android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(Color.parseColor("#33ffffff")), g, null));
                 doneBtn.setTextColor(Color.parseColor("#111111"));
                 doneBtn.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-            } else plain(doneBtn);
+            } else {
+                // Otherwise Done is the main button, in the app's orange.
+                android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
+                g.setCornerRadius(dp(16)); g.setColor(Color.parseColor("#ff8a2a"));
+                doneBtn.setBackground(new android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(Color.parseColor("#33ffffff")), g, null));
+                doneBtn.setTextColor(Color.parseColor("#1a0e02"));
+                doneBtn.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+            }
         }
         recent.setText(sRecent == null ? "" : sRecent);
         recent.setVisibility(sRecent == null || sRecent.isEmpty() ? android.view.View.GONE : android.view.View.VISIBLE);
