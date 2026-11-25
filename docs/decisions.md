@@ -1269,14 +1269,19 @@ A new look for the Android app only, from a design mock-up (a claude.ai canvas, 
 
 ## Android APK build 5 (built 25 Nov 2026)
 
-Commits `cbd7fc2` to `b13297d`, Android-only (`tools/android/`), made on `updates` (not on `main` yet); `b13297d` raised `tools/android/build.json` to 5 and replaced `whats-new.json`. Android APK build 5 was built and signed on 25 Nov 2026 from GitHub run 45658141921 (file `LPN-Pallet-Log-Android-APK-build-5.apk`, 41 MB; the same signing certificate as build 4, SHA-256 `b028a58a…1a36`; 112 offline checks, photo test on the virtual phone 54/54).
+Commits `cbd7fc2` to `b13297d`, Android-only (`tools/android/`), made on `updates` and on `main` since `b4d5508`; `b13297d` raised `tools/android/build.json` to 5 and replaced `whats-new.json`. Android APK build 5 was built and signed on 25 Nov 2026 from GitHub run 45658141921 (file `LPN-Pallet-Log-Android-APK-build-5.apk`, 41 MB; the same signing certificate as build 4, SHA-256 `b028a58a…1a36`; 112 offline checks, photo test on the virtual phone 54/54).
 
 - **Seamless pages, in `redesign.js`.** The frame round `<main>`, the line along the top of the entry panel and the line down the side of the panels are taken off with CSS in `redesign.js`, like the rest of the redesign, so the website keeps its own look.
 - **No Guide or Changelog in the app.** The Guide and Changelog are hidden (the ⋮ entries, the ? buttons and the footer link) rather than removed from the page, so the website's files and the checks that use them don't change; the footer's last "·", which only separated the Changelog link, is trimmed so the line doesn't end in a dot. The commit doesn't record why they were taken out; What's new tells people they have gone and that ⋮ has Settings, Exported files and About.
 - **The logo in its own shape.** The code comment: "The logo as it is, a little bigger: the box takes the logo's own shape (no white frame round a square logo)". With no padding or background the logo shows as it is, at 64px.
 - **The empty log message across the page.** The list-style log gives each cell a column's look; the one empty-log cell is made a plain block so the message reads as a sentence. A check in `check-offline.js` guards it, and the page-place check now makes a 25-pallet log first (`b6e1d9e`), because the empty log is shorter now and its page could no longer scroll.
 
-## Notes for this check (commit `9f144a4`, on `updates`, not live yet; still build 66)
+
+## Android APK build 6 (built 25 Nov 2026)
+
+Commit `b4d5508` raised `tools/android/build.json` to 6 and replaced `whats-new.json` with one line about Notes for this check; it changes no app or Android code. The build carries the website's Notes for this check (`9f144a4`) into the app (build 5 was built before it). `630e1fe` set `CACHE` in `sw.js` back to `lpn-log-v66` (it had been bumped to `v67` with the notes), so the website release stays build 66 like the other additions since build 66. Built and signed from GitHub run 45699493415 (file `LPN-Pallet-Log-Android-APK-build-6.apk`, 41 MB, the same signing certificate as builds 4 and 5, SHA-256 `b028a58a…1a36`; 112 offline checks, photo test on the virtual phone 54/54, Live read rule 51 of 54).
+
+## Notes for this check (commit `9f144a4`, live since `main` `b4d5508`, still build 66; Android from APK build 6)
 
 - **Why:** some comparisons need a remark that the numbers can't show, for example that one DC didn't send a manifest (the check's own example: "so they show as log only").
 - **Kept until Clear.** The code comment: "kept on this phone until Clear". They are saved as typed (`lpncmpnotes`), so a reload or a closed app doesn't lose them. Start new delivery empties the manifest numbers but not the notes (it only clears `#cmpNums`), so notes from the last check stay until **Clear**.
