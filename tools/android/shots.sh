@@ -4,7 +4,7 @@
 # inside the emulator step; the pictures are kept as the run's "android-screenshots" artifact.
 # Two sizes: the emulator's own (Pixel 6, 411 dp wide) and a small phone (360 dp), each normal and with Bigger buttons.
 set -u
-APK=tools/android/android/app/build/outputs/apk/debug/app-debug.apk
+APK=tools/android/android/app/build/outputs/apk/qa/app-qa.apk # the shrunk build, as in the signed APK
 PKG=io.github.jamie9904.lpnlog
 OUT=shots
 mkdir -p "$OUT"
@@ -34,6 +34,9 @@ set_of() {
   act -a "$PKG.SHOW" --es what big-off; sleep 1
   act -a "$PKG.MANIFEST"; shot "$s-8-manifest" 3   # the Manifest check on its own page
   back; shot "$s-9-menu" 2                        # Back from a page goes to the start menu
+  act -a "$PKG.SHOW" --es what export; shot "$s-10-export" 2     # the Export sheet
+  back; act -a "$PKG.SHOW" --es what delivery; shot "$s-11-delivery" 2  # ⋮ This delivery
+  back; back
 }
 # The app's photo reading (whichever reader the app would use; its own by default) on the user's manifest photos (only the test copy has them): what it got right, missing
 # and extra, from the app's log lines. Run once, before the screenshots.
@@ -41,9 +44,15 @@ ocr_test() {
   adb shell am force-stop "$PKG"; act; sleep 8
   f="/sdcard/Documents/LPN Pallet Log/ocrtest.txt"; adb shell rm -f "'$f'"
   act -a "$PKG.SHOW" --es what ocrtest
-  i=0; while [ $i -lt 300 ]; do sleep 3; i=$((i+1)); adb shell cat "'$f'" 2>/dev/null | grep -q '"done"' && break; done
+  # The probe line comes within about 30 s. If nothing has come after 90 s the page didn't answer (seen twice on a first start
+  # after installing): what the phone showed is kept as ocr-stalled.png, and the app is restarted and asked again.
+  i=0; while [ $i -lt 300 ]; do sleep 3; i=$((i+1))
+    t=$(adb shell cat "'$f'" 2>/dev/null); echo "$t" | grep -q '"liveDone"' && break
+    if [ $i -eq 30 ] && [ -z "$t" ]; then echo "No photo test result after 90 s: restarting the app and asking again"
+      adb exec-out screencap -p > "$OUT/ocr-stalled.png"; adb shell am force-stop "$PKG"; act; sleep 8; act -a "$PKG.SHOW" --es what ocrtest; fi
+  done
   adb shell cat "'$f'" > "$OUT/ocr-phone-reader.txt" 2>/dev/null
-  adb logcat -d | grep -iE "chromium|console|capacitor|tesseract|worker" | grep -viE "Handling local request|callback:" | tail -300 > "$OUT/ocr-log.txt" 2>/dev/null
+  { echo "== crashes"; adb logcat -d -b crash; echo "== memory and the page's process"; adb logcat -d | grep -iE "lowmemorykiller|lmkd|renderer|sandboxed_process|died|lpnlog" | grep -v "empty #" | tail -120; echo "== the page's messages"; adb logcat -d -s "Capacitor/Console:*" "chromium:*" | tail -80; } > "$OUT/ocr-log.txt" 2>/dev/null
   echo "Phone text reader on the manifest photos:"; cat "$OUT/ocr-phone-reader.txt"
 }
 ocr_test

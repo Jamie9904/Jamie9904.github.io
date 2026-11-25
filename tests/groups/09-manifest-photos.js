@@ -235,4 +235,26 @@ module.exports = async ({ browser, URL0 }) => {
     check("no script errors", q.errors.length === 0, q.errors);
     await q.ctx.close();
   }
+  {
+    // Take manifest photo: on a phone it opens the camera straight away (capture), and the photo is read like an
+    // uploaded one; computers (no touch) only have Upload manifest photos.
+    console.log("Take manifest photo");
+    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+    const out = {};
+    for (const phone of [true, false]) {
+      const ctx = await browser.newContext({ viewport: { width: phone ? 390 : 1280, height: 860 }, hasTouch: phone, isMobile: phone, serviceWorkers: "block" });
+      const q = await ctx.newPage(); const errs = []; q.on("pageerror", e => errs.push(e.message));
+      await q.goto(URL0); await q.waitForTimeout(300);
+      await q.evaluate(() => { const i = document.getElementById("instBox"); if (i) i.hidden = true; document.getElementById("cmpToggle").click(); window.readPhoto = async () => ["VLT004037790"]; });
+      const r = await q.evaluate(() => { const b = document.getElementById("cmpCamBtn"), f = document.getElementById("cmpCamFile");
+        return { vis: !b.hidden && b.getClientRects().length > 0, capture: f.getAttribute("capture"), multiple: f.multiple, upload: document.getElementById("cmpPhotoBtn").textContent }; });
+      if (phone) { await q.setInputFiles("#cmpCamFile", [{ name: "cam.jpg", mimeType: "image/jpeg", buffer: png }]);
+        await q.waitForFunction(() => !/Reading photo/.test(document.getElementById("cmpMsg").textContent) && /VLT004037790/.test(document.getElementById("cmpNums").value), null, { timeout: 5000 }).catch(() => {});
+        r.nums = await q.evaluate(() => document.getElementById("cmpNums").value.trim()); }
+      out[phone ? "phone" : "computer"] = r; out[phone ? "phoneErr" : "computerErr"] = errs; await ctx.close();
+    }
+    check("on a phone, Take manifest photo opens the camera (capture) and the photo is read into the manifest numbers", out.phone.vis && out.phone.capture === "environment" && !out.phone.multiple && out.phone.nums === "VLT004037790" && out.phone.upload === "Upload manifest photos", out.phone);
+    check("on a computer only Upload manifest photos is shown", !out.computer.vis && out.computer.upload === "Upload manifest photos", out.computer);
+    check("no script errors", !out.phoneErr.length && !out.computerErr.length, [out.phoneErr, out.computerErr]);
+  }
 };

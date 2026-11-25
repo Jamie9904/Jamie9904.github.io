@@ -91,6 +91,7 @@
   <div class="sum" id="sum"></div>
   <div class="expinfo" id="expInfo" hidden></div>
   <div class="manlive" id="manLive" hidden><div class="mlrow"><span id="manTxt"></span><button type="button" id="manUseExp" hidden></button><button type="button" id="manShow" aria-expanded="false" aria-controls="manList">Show missing</button></div><div class="manlist" id="manList" hidden></div></div>
+  <div class="undo" id="delShareBar" hidden role="status"><span id="delShareTxt"></span><span class="row" style="gap:6px;flex-wrap:nowrap"><button class="p" id="delShareUse">Use theirs</button><button id="delShareKeep">Keep mine</button></span></div>
   <div class="undo" id="undoBar" hidden role="status"><span><span id="undoTxt"></span><span id="undoN" class="undon"></span></span><button id="undoBtn">Undo</button></div>
   <div class="flt"><span class="fltwrap"><input id="flt" type="search" placeholder="Search LPNs" autocomplete="off" aria-label="Search LPNs"><button type="button" id="fltClear" class="fltclear" aria-label="Clear search" hidden>✕</button></span><select id="fltType" aria-label="Filter by type"><option value="">All types</option><option>BB</option><option>FMCG</option><option>FPP</option><option>Mixed</option></select><select id="fltFsdu" aria-label="Filter by FSDU"><option value="">FSDU: any</option><option value="y">With FSDU</option><option value="n">No FSDU</option></select></div>
   <div id="fltInfo" role="status" hidden></div>
@@ -116,7 +117,7 @@
   <div style="margin-bottom:12px"><label for="cmpDate">Manifest date</label><input type="date" id="cmpDate"></div>
   <div class="row cmpsteps">
     <div class="grow"><label>1. LPN log</label><div class="row"><button class="p" id="cmpUseLog">Use current log</button><button id="cmpLogBtn">Upload log file</button><button id="cmpLogPhotoBtn">Photo of printed log</button><button id="cmpTally" hidden>Blank tally sheet</button></div><select id="cmpHist" style="width:100%;margin-top:8px" aria-label="Use a saved delivery"></select></div>
-    <div class="grow"><label>2. Manifest photos or PDFs</label><div class="row"><button id="cmpPhotoBtn">Add manifest photo</button><button id="cmpPdfBtn">Add manifest PDFs</button></div></div>
+    <div class="grow"><label>2. Manifest photos or PDFs</label><div class="row"><button id="cmpCamBtn">Take manifest photo</button><button id="cmpPhotoBtn">Upload manifest photos</button><button id="cmpPdfBtn">Add manifest PDFs</button></div></div>
   </div>
   <details class="opts" id="pfxBox">
     <summary>Prefix presets <span class="note" id="pfxSum"></span></summary>
@@ -139,6 +140,7 @@
   <input type="file" id="cmpLogFile" accept=".xlsx,.xls,.csv,.pdf,application/pdf" hidden>
   <input type="file" id="cmpLogPhotoFile" accept="image/*" multiple hidden>
   <input type="file" id="cmpPhotoFile" accept="image/*" multiple hidden>
+  <input type="file" id="cmpCamFile" accept="image/*" capture="environment" hidden>
   <input type="file" id="cmpPdfFile" accept="application/pdf,.pdf" multiple hidden>
   <div class="msg" id="cmpMsg" role="status" aria-live="polite"></div>
   <div class="row" id="cmpPfxAdd" style="margin-top:6px" hidden></div>

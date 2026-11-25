@@ -492,6 +492,9 @@ $("cmpPdfFile").onchange=async e=>{
   showPfxAdd();
 };
 $("cmpPhotoBtn").onclick=()=>{$("cmpPhotoFile").value="";$("cmpPhotoFile").click()};
+// Take manifest photo: opens the camera straight away (on phones); the photo is read like an uploaded one.
+$("cmpCamBtn").onclick=()=>{$("cmpCamFile").value="";$("cmpCamFile").click()};
+$("cmpCamFile").onchange=e=>$("cmpPhotoFile").onchange(e);
 /* The last batch of manifest photos, kept in memory (not stored) so "Report a problem with these photos" can attach
    the one that read worst. */
 let cmpLastPhotos=[];

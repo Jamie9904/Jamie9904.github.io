@@ -21,6 +21,10 @@ on:
         description: "Screenshots on a virtual Android phone (about 10 minutes more)"
         type: boolean
         default: true
+      qa:
+        description: "Bug hunt on the virtual phone after the screenshots (about 15 minutes more; needs Screenshots ticked)"
+        type: boolean
+        default: false
 permissions:
   contents: write # only to keep the signing key as a draft release (tools/android/sign.sh)
 concurrency:
@@ -29,7 +33,7 @@ concurrency:
 jobs:
   apk:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -61,7 +65,9 @@ jobs:
       - name: Build the APK
         if: github.event_name == 'workflow_dispatch' # only when the owner approves an Android update
         working-directory: tools/android/android
-        run: ./gradlew --no-daemon --stacktrace assembleRelease
+        run: |
+          ./gradlew --no-daemon --stacktrace assembleRelease
+          for f in app/build/outputs/apk/release/*.apk; do echo "::notice title=APK size::$(basename "$f"): $(du -m "$f" | cut -f1) MB"; done
       - name: Build a test copy for the screenshots
         if: github.event_name == 'workflow_dispatch' && inputs.shots
         working-directory: tools/android/android
@@ -69,7 +75,7 @@ jobs:
         run: |
           mkdir -p app/src/main/assets/public/ocrtest
           cp ../../ocr-check/photos/* ../../ocr-check/expected.json app/src/main/assets/public/ocrtest/
-          ./gradlew --no-daemon assembleDebug
+          ./gradlew --no-daemon assembleQa
           rm -rf app/src/main/assets/public/ocrtest
       - name: Let the virtual phone use the processor
         if: github.event_name == 'workflow_dispatch' && inputs.shots
@@ -83,19 +89,21 @@ jobs:
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
-          target: google_apis
+          target: default # plain Android: Google Play services on the test image crashes soon after start-up and takes the app with it (ML Kit is built into the app)
           arch: x86_64
           profile: pixel_6
           disable-animations: true
+          ram-size: 3072M # about what a typical phone has free (the default is less, and the page was stopped part-way through the photos)
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back virtualscene
-          script: sh tools/android/shots.sh
+          script: sh tools/android/shots.sh; if [ "${{ inputs.qa }}" = true ]; then sh tools/android/qa.sh; fi
       # The app's photo reading on the user's manifest photos, on the virtual phone (shots.sh): every LPN right and
-      # nothing extra, or no APK. (The emulator itself may fail to start; then there's no result and only a warning.)
+      # nothing extra, or no APK. (A test that doesn't finish fails the run too.)
       - name: Photo reading on the virtual phone
         if: github.event_name == 'workflow_dispatch' && inputs.shots
         run: |
           f=shots/ocr-phone-reader.txt
-          if [ ! -s "$f" ] || ! grep -q '"done"' "$f"; then echo "::warning title=Photo reading on the phone::No result from the virtual phone"; exit 0; fi
+          if [ ! -s "$f" ] || ! grep -q '"done"' "$f"; then echo "::error title=Photo reading on the phone::The photo test on the virtual phone did not finish (see ocr-log.txt with the screenshots)"; exit 1; fi
+          l=$(grep '"liveDone"' "$f"); [ -n "$l" ] && echo "::notice title=Live read rule on the manifest photos::$l"
           d=$(grep '"done"' "$f"); echo "$d"
           if echo "$d" | grep -q '"right":\([0-9]*\),"want":\1,"missing":\[\],"extra":\[\]'; then echo "::notice title=Photo reading on the phone::$d"; else echo "::error title=Photo reading on the phone::$d"; exit 1; fi
       - name: Keep the screenshots on the draft release "Android screenshots" (replaced each run)
@@ -114,6 +122,20 @@ jobs:
             for a in $(gh api "repos/$GITHUB_REPOSITORY/releases/$id/assets" -q '.[].id'); do gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$a"; done
             gh api -X POST -H "Content-Type: application/zip" --input android-screenshots.zip "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$id/assets?name=android-screenshots.zip" -q .name
           fi
+      # The bug hunt (tools/android/qa.sh): its findings as notices, and its pictures and logs on the same draft release.
+      - name: Bug hunt results
+        if: always() && github.event_name == 'workflow_dispatch' && inputs.shots && inputs.qa
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -s qa/report.txt ] || { echo "::warning title=Bug hunt::No report from the virtual phone"; exit 0; }
+          grep -E "app crashes|freezes|page errors|open after|memory:" qa/report.txt | while read -r l; do echo "::notice title=Bug hunt::$l"; done
+          (cd qa && zip -q ../android-qa.zip *.png *.txt)
+          id=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --paginate -q '.[] | select(.draft and .name == "Android screenshots") | .id' | sort -n | head -n 1)
+          [ -n "$id" ] || exit 0
+          for a in $(gh api "repos/$GITHUB_REPOSITORY/releases/$id/assets" -q '.[] | select(.name == "android-qa.zip") | .id'); do gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$a"; done
+          gh api -X POST -H "Content-Type: application/zip" --input android-qa.zip "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$id/assets?name=android-qa.zip" -q .name
       - uses: actions/upload-artifact@v5
         if: always() && github.event_name == 'workflow_dispatch' && inputs.shots
         with:

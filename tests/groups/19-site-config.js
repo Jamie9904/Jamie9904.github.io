@@ -62,8 +62,8 @@ module.exports = async ({ browser, URL0 }) => {
 
   // Only photos off: PDFs and typing stay.
   p = await withConfig(375, "window.LPN_CONFIG=" + JSON.stringify({ features: Object.assign(all(true), { manifestPhotos: false, liveScan: false }), testing: {} }) + ";");
-  s = await p.evaluate(() => { const vis = id => !document.getElementById(id).hidden; return { photo: vis("cmpPhotoBtn"), logPhoto: vis("cmpLogPhotoBtn"), pdf: vis("cmpPdfBtn"), presets: vis("pfxBox"), label: document.getElementById("cmpPdfBtn").closest(".grow").querySelector("label").textContent, live: vis("scan"), byPhoto: vis("photo"), upload: vis("upload"), tip: vis("scanTip"), scanBtn: vis("scanBtn") }; });
-  check("with manifest photos off, PDFs stay and the step says Manifest PDFs; with Live scan off, Scan by photo and Upload photo stay and the Live scan tip goes", !s.photo && !s.logPhoto && s.pdf && !s.presets && s.label === "2. Manifest PDFs" && !s.live && s.byPhoto && s.upload && !s.tip && s.scanBtn, s);
+  s = await p.evaluate(() => { const vis = id => !document.getElementById(id).hidden; return { cam: vis("cmpCamBtn"), photo: vis("cmpPhotoBtn"), logPhoto: vis("cmpLogPhotoBtn"), pdf: vis("cmpPdfBtn"), presets: vis("pfxBox"), label: document.getElementById("cmpPdfBtn").closest(".grow").querySelector("label").textContent, live: vis("scan"), byPhoto: vis("photo"), upload: vis("upload"), tip: vis("scanTip"), scanBtn: vis("scanBtn") }; });
+  check("with manifest photos off, PDFs stay and the step says Manifest PDFs; with Live scan off, Scan by photo and Upload photo stay and the Live scan tip goes", !s.cam && !s.photo && !s.logPhoto && s.pdf && !s.presets && s.label === "2. Manifest PDFs" && !s.live && s.byPhoto && s.upload && !s.tip && s.scanBtn, s);
   await p.ctx.close();
 
   // Every feature marked as in testing.

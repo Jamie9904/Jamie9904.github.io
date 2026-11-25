@@ -484,3 +484,4 @@ tr.refused td.l{box-shadow:inset 3px 0 0 var(--wn)}
 @media (max-width:359px){.entry .btnrow{gap:6px}.entry .btnrow button{padding:4px 3px;font-size:.84rem}}
 @media (max-width:300px){.entry .btnrow{flex-wrap:wrap}.entry .btnrow button{min-width:6em}}
 #panelBody h3{scroll-margin-top:12px}
+#delShareBar button{min-height:44px}

@@ -151,7 +151,7 @@
   document.addEventListener("pointerdown", e => {
     const b = e.target && e.target.closest && e.target.closest("button"); if (!b || b.disabled) return;
     // A light tap on the main buttons, like Android's keyboard (with Vibrate on in Settings).
-    if (N() && typeof cfg !== "undefined" && cfg.vibrate && b.matches("#add,#tyb button,#scanBtn,#scan,#photo,#upload,#undoLast,#noLpn,.apkgo,#apkCarryBtn,#apkBack")) N().tap().catch(() => {});
+    if (N() && typeof cfg !== "undefined" && cfg.vibrate && b.matches("#add,#tyb button,#scanBtn,#scan,#photo,#upload,#undoLast,#noLpn,.apkgo,#apkCarryBtn,#apkBack,#rdLive,#rdWays")) N().tap().catch(() => {});
     const r = b.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2, s = document.createElement("span");
     if (getComputedStyle(b).position === "static") b.style.position = "relative"; // the ripple sits inside the button; its tap area isn't clipped
     const w = document.createElement("span"); w.className = "apkripwrap"; w.setAttribute("aria-hidden", "true");
@@ -286,6 +286,9 @@
       if (r.what === "settings") { if (typeof closeHelp === "function") closeHelp(); openHelp("settings", "Settings"); }
       else if (r.what === "carry") carryOn();
       else if (r.what === "ocrtest") ocrTest();
+      else if (r.what === "export") { if (has("palletLog")) toLog(); if (window.LPN_APK_EXPORTSHEET) window.LPN_APK_EXPORTSHEET(); else { const b = $("expBtn"); if (b) b.click(); } } // the screenshots and the bug hunt
+      else if (r.what === "delivery") { if (has("palletLog")) toLog(); if (window.LPN_APK_DELSHEET) window.LPN_APK_DELSHEET(); }
+      else if (r.what === "liveread") { const b = $("apkLiveRead"); if (b) b.click(); }
       else if (r.what === "big-on" || r.what === "big-off") { try { localStorage.setItem("lpnapkbig", r.what === "big-on" ? "on" : "off"); } catch (e) {} applyBig(); }
       return;
     }
@@ -567,6 +570,7 @@
     let tw = null, params = {};
     const own = async () => { if (!tw) { tw = await Tesseract.createWorker("eng", 1, window.LPN_TESS); await tw.setParameters(params); } return tw; };
     return Promise.resolve({
+      phone: true,
       setParameters: async p => { params = Object.assign({}, params, p); if (tw) await tw.setParameters(p); },
       terminate: async () => { if (tw) { const t = tw; tw = null; await t.terminate(); } },
       recognize: async img => {
@@ -606,6 +610,22 @@
       }
     } catch (e) { tot.error = String((e && e.message) || e); }
     await log(tot);
+    // Live read manifest's rule on the same photos, as if each were one camera picture: the phone's text reader,
+    // then only numbers after "LPN:" (the same rule as TextScanActivity.afterLabels), tidied as on the page.
+    const lt = { liveDone: true, right: 0, want: 0, missing: [], extra: [] };
+    try {
+      const exp = await (await fetch("ocrtest/expected.json")).json();
+      for (const name of Object.keys(exp).filter(k => !k.startsWith("_"))) {
+        const want = exp[name], blob = await (await fetch("ocrtest/" + name)).blob(), bmp = await createImageBitmap(blob);
+        const c = document.createElement("canvas"); c.width = bmp.width; c.height = bmp.height; c.getContext("2d").drawImage(bmp, 0, 0);
+        const r = await N().readText({ data: c.toDataURL("image/jpeg", 0.9).split(",")[1] }); c.width = c.height = 0;
+        // In reading order, each against the ones taken before it from the same page (as in a live session).
+        const got = []; afterLabels((r.words || []).map(w => w.text)).forEach(v => { const t = liveTidy(v, got, true); if (t.lpn && !got.includes(t.lpn)) got.push(t.lpn); });
+        const g = new Set(got), w = new Set(want);
+        lt.right += want.filter(x => g.has(x)).length; lt.want += want.length; lt.missing.push(...want.filter(x => !g.has(x))); lt.extra.push(...got.filter(x => !w.has(x)));
+      }
+    } catch (e) { lt.error = String((e && e.message) || e); }
+    await log(lt);
   }
 
   /* Start menu: the app opens on a menu to choose Log pallets or Manifest check, and each is its own page instead of
@@ -704,7 +724,7 @@
     const bt = $("apkBarT"); if (bt) bt.textContent = m === "cmp" ? "Manifest check" : "Log pallets";
     if ($("apkBarHelp")) $("apkBarHelp").hidden = m !== "cmp" || !document.querySelector("#cmpCard .helpq");
     if (m !== "menu") requestAnimationFrame(() => { const b = $("apkBar"); if (b) H.style.setProperty("--apkbarh", b.offsetHeight + "px"); });
-    if (m === "cmp") cmpDateShow();
+    if (m === "cmp") { cmpDateShow(); setTimeout(warmOcr, 600); }
     if (m !== was) {
       // Each page keeps its place: back on a page, it's where it was left (the menu always starts at the top).
       window.scrollTo(0, m === "menu" ? 0 : scrollAt[m] || 0);
@@ -719,6 +739,30 @@
     }
   }
   window.LPN_APK_MODE = m => { if (m) setMode(m); return mode; };
+  /* The app's photo reader is got ready as the Manifest check opens, and again as a photo button is pressed (while
+     the camera or picker is open), so the first photo doesn't wait for it to start. It closes by itself when idle. */
+  const TESSJS = /*TESSJS*/"";
+  let warming = false;
+  async function warmOcr() {
+    if (warming || !TESSJS || typeof ocrWorker !== "function" || typeof loadScript !== "function" || !has("manifestPhotos")) return;
+    if (typeof ocrW !== "undefined" && ocrW) return; // already running (or reading a photo): leave it alone
+    if (window.LPN_OCR && window.LPN_OCR()) return; // the phone's own text reader is in use instead
+    warming = true;
+    try { await loadScript(TESSJS, () => window.Tesseract); if (typeof ocrW !== "undefined" && ocrW) return; const w = await ocrWorker(); ocrDone(w, true); } catch (e) {}
+    finally { warming = false; }
+  }
+  window.LPN_APK_WARMOCR = warmOcr;
+  document.addEventListener("pointerdown", e => { const b = e.target.closest && e.target.closest("#cmpCamBtn,#cmpPhotoBtn,#cmpLogPhotoBtn,#photo,#upload"); if (b) warmOcr(); }, true);
+  // Switched to the phone's own text reader in Settings while the app's reader was already running (started early, or
+  // still idle after a photo): the app's reader is closed, so the next photo uses the one now chosen.
+  document.addEventListener("DOMContentLoaded", () => {
+    if (typeof ocrWorker !== "function") return;
+    const real = ocrWorker;
+    ocrWorker = async function () {
+      if (typeof ocrW !== "undefined" && ocrW && window.LPN_OCR && window.LPN_OCR()) { try { const w = await ocrW; if (!w.phone) ocrDone(w, false); } catch (e) {} }
+      return real.apply(this, arguments);
+    };
+  });
   // (android.js loads before the app's own scripts, so this waits for them)
   document.addEventListener("DOMContentLoaded", () => {
     // Simple view switched on or off in Settings: the menu goes or comes back.
@@ -838,12 +882,21 @@
       progPhotos = false; ocrStop = false;
     }
   }
+  /* The photo reader is restarted after every four photos (once nothing is being read): its memory grows with each
+     photo, and on phones with little memory the page was stopped by Android part-way through a long batch. */
+  let readsSince = 0;
+  function recycle(p) {
+    const after = () => { if (++readsSince < 4 || typeof ocrQ === "undefined") return; readsSince = 0;
+      ocrQ = ocrQ.then(async () => { try { if (typeof ocrW !== "undefined" && ocrW) { const w = await ocrW; if (!w.phone) ocrDone(w, false); } } catch (e) {} }); };
+    p.then(after, after); return p;
+  }
+  window.LPN_APK_RECYCLE = () => readsSince;
   function askNotifyOnce() { let asked = null; try { asked = localStorage.getItem("lpnapknotify"); } catch (e) {} if (asked || !N() || typeof N().askNotify !== "function") return;
     try { localStorage.setItem("lpnapknotify", "asked"); } catch (e) {} N().askNotify().catch(() => {}); }
   document.addEventListener("DOMContentLoaded", () => {
     const m = $("cmpMsg"); if (m) new MutationObserver(progress).observe(m, { childList: true, characterData: true, subtree: true });
     // Cancel: the photos not started yet are skipped (the one being read finishes).
-    if (typeof ocrLpns === "function") { const real = ocrLpns; ocrLpns = function (f) { if (ocrStop) return Promise.reject(new Error("stopped: you tapped Cancel")); return real.apply(this, arguments); }; }
+    if (typeof ocrLpns === "function") { const real = ocrLpns; ocrLpns = function (f) { if (ocrStop) return Promise.reject(new Error("stopped: you tapped Cancel")); return recycle(real.apply(this, arguments)); }; }
     addMoreBtn();
     let seen = null; try { seen = localStorage.getItem("lpnapkintro"); } catch (e) {}
     const fresh = (typeof rows === "undefined" || !rows.length) && (typeof hist === "undefined" || !hist.length);
@@ -900,6 +953,98 @@
   document.addEventListener("DOMContentLoaded", () => {
     if (typeof sfx === "function") { const real = sfx; sfx = function () { if (!hushed() || typeof cfg === "undefined") return real.apply(this, arguments);
       const was = cfg.sound; cfg.sound = false; try { return real.apply(this, arguments); } finally { cfg.sound = was; } }; }
+  });
+
+  /* Live read manifest: the camera reads the printed manifest as it's moved down the page (TextScanActivity, the
+     phone's own text reader). Each number printed after "LPN:", once read the same way twice, comes here; it is
+     tidied with the app's own photo rules and prefix list and added to the manifest numbers, and the camera screen
+     shows what happened. Remove last takes the last one added back out. */
+  const liveRead = { added: [], recent: [], target: "manifest" };
+  const liveBox = () => liveRead.target === "log" ? "cmpLogNums" : "cmpNums", liveName = () => liveRead.target === "log" ? "log numbers" : "manifest list";
+  function liveStatus(text, flash, forget) {
+    if (!N() || typeof N().textScanStatus !== "function") return;
+    N().textScanStatus({ text, flash: flash || "", recent: liveRead.recent.slice(-3).reverse().join("\n"), canUndo: liveRead.added.length > 0, forget: forget || null }).catch(() => {});
+  }
+  function liveCount() { const b = $(liveBox()); return b ? b.value.split(/\r?\n/).map(x => x.trim()).filter(Boolean).length : 0; }
+  /* One number read live, tidied with the app's photo rules against the numbers already in the list, so a misread
+     that doesn't match the page (such as a digit too many) is caught rather than added. Returns { lpn } to add (or
+     already listed), { skipped } for a prefix not in the list, { odd } to check by hand, or {} to leave out. */
+  function liveTidy(raw, have, lab) {
+    const v = String(raw || "").toUpperCase().replace(/[^A-Z0-9]/g, ""), first = extractLpns(v, true)[0];
+    if (!first) return {}; // not shaped like an LPN after all
+    const known = new Set(have), split = x => /^([A-Z]+)([0-9]+)$/.exec(x || "");
+    const out = photoLpns(have.filter(x => split(x)).map(x => ({ raw: x, first: x, again: null, lab: true })).concat([{ raw: v, first, again: null, lab }]));
+    const fresh = out.filter(x => !known.has(x)), sk = (out.skipped || []).find(x => !known.has(x));
+    const cand = fresh[0] || (out.includes(first) || known.has(first) ? first : null);
+    if (!cand) return sk ? { skipped: sk } : (typeof lpnDigitsOk === "function" && lpnDigitsOk(first)) ? { odd: first } : {};
+    if (known.has(cand)) return { lpn: cand };
+    if (typeof lpnDigitsOk === "function" && !lpnDigitsOk(cand)) return {}; // an order or phone number, not an LPN
+    // Two or more numbers with this prefix already, all the same length, and this one isn't: a digit misread.
+    const s = split(cand), same = have.map(split).filter(m => m && s && m[1] === s[1]);
+    if (s && same.length >= 2 && same.every(m => m[2].length === same[0][2].length) && s[2].length !== same[0][2].length) return { odd: cand };
+    return { lpn: cand };
+  }
+  window.LPN_APK_LIVETIDY = liveTidy;
+  function liveGot(raw) {
+    if (typeof extractLpns !== "function" || typeof photoLpns !== "function" || typeof addNums !== "function") return;
+    const have = $(liveBox()).value.split(/\r?\n/).map(x => x.trim().toUpperCase()).filter(Boolean);
+    // (labelled in both modes: a live read is already shaped like an LPN and read the same way twice, so a log with a
+    // second supplier's prefix isn't held back as "not like the others")
+    const t = liveTidy(raw, have, true);
+    if (t.skipped) { liveRead.recent.push(t.skipped + " · skipped (prefix)"); if (typeof sfx === "function") sfx("warn");
+      liveStatus(t.skipped + " skipped: its prefix isn't in your prefix list. " + liveCount() + " in the " + liveName() + ".", "warn"); return; }
+    if (t.odd) { liveRead.recent.push(t.odd + " · check"); if (typeof sfx === "function") sfx("warn");
+      liveStatus(t.odd + " doesn't look like the others on this page, so it wasn't added. Check the paper and type it in if it's right.", "warn"); return; }
+    if (!t.lpn) return; // not an LPN: left out quietly
+    const lpn = t.lpn;
+    const r = addNums([lpn], liveBox()); $(liveBox()).dispatchEvent(new Event("input", { bubbles: true }));
+    if (r.added) { liveRead.added.push(lpn); liveRead.recent.push(lpn); if (typeof sfx === "function") sfx("ok");
+      liveStatus("Added " + lpn + ". " + liveCount() + " in the " + liveName() + ".", "ok"); }
+    else { liveRead.recent.push(lpn + " · already listed"); liveStatus(lpn + " is already in the list. " + liveCount() + " in the " + liveName() + ".", ""); }
+    try { if (typeof diag === "function") diag("manifest", "Live read (" + liveRead.target + "): " + raw + " → " + lpn + (r.added ? " added" : " already listed")); } catch (e) {}
+  }
+  function liveUndo() {
+    const lpn = liveRead.added.pop(); if (!lpn) return;
+    const b = $(liveBox()); b.value = b.value.split(/\r?\n/).filter(x => x.trim().toUpperCase() !== lpn).join("\n"); b.dispatchEvent(new Event("input", { bubbles: true }));
+    liveRead.recent.push(lpn + " · removed"); liveStatus("Removed " + lpn + ". " + liveCount() + " in the " + liveName() + ".", "", lpn);
+  }
+  window.LPN_APK_LIVEREAD = { got: liveGot, undo: liveUndo, state: liveRead };
+  /* The same rule as TextScanActivity.afterLabels (keep the two alike), for the photo test on the virtual phone. */
+  function afterLabels(words) {
+    const out = [], clean = s => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    for (let i = 0; i < words.length; i++) {
+      const m = /^LPN[:;.,]?(.*)$/.exec(String(words[i]).toUpperCase().trim()); if (!m) continue;
+      let n = clean(m[1]), next = i + 1;
+      if (!n && next < words.length) { n = clean(words[next]); next++; }
+      if (n.length >= 4 && n.length < 11 && next < words.length && /^[0-9]{1,8}$/.test(clean(words[next]))) n += clean(words[next]);
+      if (n.length >= 9 && n.length <= 16 && /[0-9]{6,}/.test(n)) out.push(n);
+    }
+    return out;
+  }
+  window.LPN_APK_AFTERLABELS = afterLabels;
+  /* The same rule as TextScanActivity.lpnWords (keep the two alike): a printed log's LPNs, standing on their own. */
+  window.LPN_APK_LPNWORDS = words => { const out = [], clean = s => String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    for (let i = 0; i < words.length; i++) { let n = clean(words[i]);
+      if (n.length >= 4 && n.length < 11 && /^[A-Z]{1,4}[0-9]+$/.test(n) && i + 1 < words.length && /^[0-9]{1,8}$/.test(clean(words[i + 1]))) { n += clean(words[i + 1]); i++; }
+      if (/^[A-Z]{1,4}[0-9OIDLSBZ]{8,12}$/.test(n) && n.replace(/[^0-9]/g, "").length >= 6) out.push(n); }
+    return out; };
+  function liveStart(target) {
+    liveRead.added = []; liveRead.recent = []; liveRead.target = target;
+    if (mode && mode !== "cmp") setMode("cmp");
+    cameraOk().then(() => N().startTextScan({ target })).catch(() => toast("The camera couldn’t start."));
+  }
+  if (N()) {
+    try { N().addListener("textScan", e => liveGot(e && e.value)); N().addListener("textScanUndo", liveUndo);
+      N().addListener("textScanClosed", () => { const n = liveRead.added.length; if (typeof cmpMsg === "function") cmpMsg(n ? "Live read added " + n + " LPN" + (n === 1 ? "" : "s") + " to the " + (liveRead.target === "log" ? "log numbers" : "manifest numbers") + ". Check them against the paper copy." : "Live read didn’t add any LPNs."); }); } catch (e) {}
+  }
+  document.addEventListener("DOMContentLoaded", () => {
+    // Take manifest photo: the phone always has a camera (Android's web view doesn't always say it's a touch screen).
+    const cam = $("cmpCamBtn"); if (cam && N() && has("manifestPhotos") && has("manifestCheck")) cam.hidden = false;
+    const b = $("cmpPhotoBtn"); if (!b || !N() || typeof N().startTextScan !== "function" || !has("manifestPhotos") || !has("manifestCheck")) return;
+    const l = document.createElement("button"); l.type = "button"; l.id = "apkLiveRead"; l.textContent = "Live read manifest"; l.onclick = () => liveStart("manifest");
+    b.before(l);
+    // The same for a printed log (step 1), where the LPNs stand on their own without an "LPN:" label.
+    const lp = $("cmpLogPhotoBtn"); if (lp) { const k = document.createElement("button"); k.type = "button"; k.id = "apkLiveLog"; k.textContent = "Live read log"; k.onclick = () => liveStart("log"); lp.after(k); }
   });
 
   /* Carry on: opening the app with a delivery in progress offers to go straight back to scanning. */

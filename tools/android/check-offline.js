@@ -60,6 +60,8 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
         scanners: async () => ({ names: [] }),
         notify: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["notify", o.title, o.text]); return { shown: true }; },
         askNotify: async () => { window.Capacitor.Plugins.LpnNative.calls.push(["askNotify"]); return { asked: true }; },
+        startTextScan: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["textScan", (o || {}).target]); },
+        textScanStatus: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["textStatus", o.text, o.flash, o.recent, o.canUndo, o.forget]); },
         ringer: async () => ({ silent: !!window.__silent }),
         setHandheld: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["hand", o.on]); },
         readText: async o => { window.Capacitor.Plugins.LpnNative.calls.push(["readText", o.data.length > 100]); if (!window.__ocrStub) throw new Error("no reader here"); return window.__ocrStub(o); },
@@ -97,7 +99,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     rows = []; save(); render(); return out; });
   check("the app opens on a menu (Log pallets or Manifest check) with nothing else on the page", s.start === "menu:apkMenu", s);
   check("the menu shows a delivery in progress, with Carry on scanning", s.menuText === "Delivery in progress: 1 pallet." && s.carry, s);
-  check("Log pallets opens the log on its own page (no Manifest check), with ‹ Menu at the top", s.log === "log:apkBar,delCard,entryCard,logCard" && s.entryUsable && s.logAfterCmp, s);
+  check("Log pallets opens the log on its own page (no Manifest check, the delivery details behind ⋮), with a back arrow at the top", s.log === "log:apkBar,entryCard,logCard" && s.entryUsable && s.logAfterCmp, s);
   check("Manifest check opens on its own page, open, and its heading doesn't fold it away; Back goes to the menu", s.cmp === "cmp:apkBar,cmpCard:true" && s.stays && s.back === "menu", s);
   // A professional app's frame: the ⋮ menu, About with the licences, the first-install introduction.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), N = window.Capacitor.Plugins.LpnNative, out = {};
@@ -133,9 +135,9 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     LPN_APK_MODE("log"); document.querySelectorAll(".apkask").forEach(a => a.remove()); save(); out.tick = !!document.querySelector("#apkSavedTick.on");
     LPN_APK_OOPS("check"); await wait(30); const a = document.querySelector(".apkask"); out.oops = a ? a.querySelector(".apkasktitle").textContent + "|" + [...a.querySelectorAll("button")].map(b => b.textContent).join(",") : ""; if (a) a.remove();
     LPN_APK_MODE("menu"); document.getElementById("msg").textContent = "Copied VLT004040265."; await wait(50); out.toast = (document.getElementById("apkToast") || {}).textContent;
-    LPN_APK_MODE("log"); document.getElementById("msg").textContent = ""; const r = document.getElementById("recv"); r.focus(); r.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    LPN_APK_MODE("log"); LPN_APK_DELDETAILS(true); document.getElementById("msg").textContent = ""; const r = document.getElementById("recv"); r.focus(); r.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
     out.next = document.activeElement.id + ":" + r.getAttribute("enterkeyhint") + ":" + document.getElementById("notes").getAttribute("enterkeyhint") + ":" + r.getAttribute("autocapitalize");
-    document.activeElement.blur(); LPN_APK_MODE("menu"); return out; });
+    document.activeElement.blur(); LPN_APK_DELDETAILS(false); LPN_APK_MODE("menu"); return out; });
   check("a ✓ Saved tick shows in the page's bar after each change", s.tick, s);
   check("if something goes wrong, a plain message says the log is safe, with Try again and Save problem report", s.oops === "Something went wrong. Your log is safe on this phone.|Try again,Save problem report,Cancel", s);
   check("a status message that can't be seen where it normally shows (here on the menu) also shows at the bottom", s.toast === "Copied VLT004040265.", s);
@@ -150,6 +152,51 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     localStorage.removeItem("lpnapkquiet"); localStorage.removeItem("lpnapkspeak"); N.listeners.ringer({ silent: false });
     window.AudioContext = AC; actx = null; cfg.sound = was.sound; cfg.vibrate = was.vib; return out; });
   check("with the phone on silent, vibrate or Do Not Disturb a scan only buzzes (sound back when it isn't; Settings can turn this off)", s.silent === "0:1" && s.loud === 1 && s.optOut === 1, s);
+  // Live read manifest: numbers after "LPN:" read by the camera go into the manifest numbers, tidied and checked.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, L = LPN_APK_LIVEREAD, box = document.getElementById("cmpNums"), pf = document.getElementById("cmpPfx"), out = {};
+    const st = () => { const c = N.calls.filter(x => x[0] === "textStatus").pop(); return c ? c[1] + "|" + c[2] + "|" + c[4] + (c[5] ? "|forget " + c[5] : "") : ""; };
+    localStorage.setItem("lpnapkcam", "1"); LPN_APK_MODE("menu"); box.value = "QUB001899182"; pf.value = ""; const b = document.getElementById("apkLiveRead"); N.calls = [];
+    out.btn = !!b && (b.getAttribute("aria-label") || b.textContent); b.click(); await new Promise(r => setTimeout(r, 30)); out.started = N.calls.some(c => c[0] === "textScan" && c[1] === "manifest") && LPN_APK_MODE() === "cmp";
+    out.vis = b.getClientRects().length > 0;
+    N.listeners.textScan({ value: "VLT004040265" }); out.add = st();
+    N.listeners.textScan({ value: "VLTOO4040273" }); out.fix = box.value.split("\n").pop();
+    N.listeners.textScan({ value: "QUB001899182" }); out.dup = st();
+    pf.value = "QUB, VLT"; N.listeners.textScan({ value: "RUN001832813" }); out.skip = st(); pf.value = "";
+    N.listeners.textScan({ value: "PO12345678" }); out.notLpn = box.value.split("\n").length;
+    N.listeners.textScanUndo(); out.undo = st() + "|" + box.value.replace(/\n/g, ",");
+    N.listeners.textScanClosed(); out.closed = document.getElementById("cmpMsg").textContent;
+    out.rule = JSON.stringify(LPN_APK_AFTERLABELS(["Item", "LPN:", "VLT004040265", "Qty", "LPN", "QUB00191", "1625", "LPN:", "PO", "1", "Ref", "VLT004040999", "LPN:RUN001832813"]));
+    box.value = ""; LPN_APK_MODE("log"); return out; });
+  check("Live read manifest (in the Manifest check) opens the camera's text reader on the Manifest check's page", /^Live read: the manifest, move down the page$/.test(s.btn) && s.started && s.vis, s);
+  check("a number read after “LPN:” is added to the manifest numbers with a green flash, tidied like photos (O read for 0)", s.add === "Added VLT004040265. 2 in the manifest list.|ok|true" && s.fix === "VLT004040273", s);
+  check("one already listed isn't added twice; one with a prefix not in the list is skipped (orange); a non-LPN is left out", /^QUB001899182 is already in the list\./.test(s.dup) && /^RUN001832813 skipped: its prefix isn't in your prefix list\..*\|warn\|true$/.test(s.skip) && s.notLpn === 3, s);
+  check("Remove last takes the last one added back out (and lets it be read again); closing says how many were added", s.undo === "Removed VLT004040273. 2 in the manifest list.||true|forget VLT004040273|QUB001899182,VLT004040265" && /Live read added 1 LPN/.test(s.closed), s);
+  check("only numbers straight after an “LPN” label are taken, with a number read with a gap joined", s.rule === '["VLT004040265","QUB001911625","RUN001832813"]', s.rule);
+  s = await page.evaluate(() => { LPN_APK_MODE("cmp"); const b = document.getElementById("cmpCamBtn"), out = !b.hidden && b.getClientRects().length > 0; LPN_APK_MODE("log"); return out; });
+  check("Take manifest photo is always there in the Android app (the phone has a camera)", s === true, s);
+  // A live read that doesn't match the page's pattern (a digit too many, seen on the user's photos) isn't added.
+  s = await page.evaluate(() => { const T = LPN_APK_LIVETIDY, h = ["VLT004040265", "VLT004040273"]; document.getElementById("cmpPfx").value = "";
+    return JSON.stringify({ extra: T("VLT0040440278", h, true), ok: T("VLT004040278", h, true), first: T("VLT004040265", [], true), po: T("PO12345678", h, true) }); });
+  check("a live read with a digit more than the other numbers with its prefix is held back to check, not added", s === '{"extra":{"odd":"VLT0040440278"},"ok":{"lpn":"VLT004040278"},"first":{"lpn":"VLT004040265"},"po":{}}', s);
+  // Live read log: a printed log's LPNs (no "LPN:" label) go into the log numbers.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, box = document.getElementById("cmpLogNums"), out = {};
+    const st = () => { const c = N.calls.filter(x => x[0] === "textStatus").pop(); return c ? c[1] + "|" + c[2] : ""; };
+    LPN_APK_MODE("menu"); box.value = ""; document.getElementById("cmpNums").value = ""; document.getElementById("cmpPfx").value = ""; N.calls = [];
+    const k = document.getElementById("apkLiveLog"); out.btn = !!k && k.textContent + ":" + (k.previousElementSibling || {}).id; k.click(); await new Promise(r => setTimeout(r, 30));
+    out.started = N.calls.some(c => c[0] === "textScan" && c[1] === "log") && LPN_APK_MODE() === "cmp";
+    N.listeners.textScan({ value: "VLT004040265" }); out.add = st(); N.listeners.textScan({ value: "PO12345678" }); N.listeners.textScan({ value: "QUB001899182" });
+    out.box = box.value.replace(/\n/g, ","); out.manifest = document.getElementById("cmpNums").value;
+    N.listeners.textScanClosed(); out.closed = document.getElementById("cmpMsg").textContent;
+    out.rule = JSON.stringify(LPN_APK_LPNWORDS(["1", "VLT004040265", "BB", "QUB00191", "1625", "PO", "12345678", "Tel", "01234567890", "No", "LPN", "1", "12/11/2026"]));
+    box.value = ""; LPN_APK_MODE("log"); return out; });
+  check("Live read log (in step 1, after Photo of printed log) reads a printed log's LPNs into the log numbers, not the manifest", s.btn === "Live read log:cmpLogPhotoBtn" && s.started && s.add === "Added VLT004040265. 1 in the log numbers.|ok" && s.box === "VLT004040265,QUB001899182" && s.manifest === "" && /2 LPNs to the log numbers/.test(s.closed), s);
+  check("on a printed log any LPN-shaped number is taken (a number read with a gap joined), but not order, phone or date numbers", s.rule === '["VLT004040265","QUB001911625"]', s.rule);
+  // Live read shows the camera note first, like the other camera buttons, until Android has been asked once.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)); localStorage.removeItem("lpnapkcam"); window.__camAllowed = false; N.calls = [];
+    document.getElementById("apkLiveRead").click(); await wait(100); const q = { sheet: !!document.querySelector(".apkask"), before: N.calls.filter(c => c[0] === "textScan").length };
+    const btn = document.querySelector(".apkask button"); if (btn) btn.click(); await wait(100); q.after = N.calls.filter(c => c[0] === "textScan").length;
+    window.__camAllowed = true; localStorage.setItem("lpnapkcam", "1"); LPN_APK_MODE("log"); return q; });
+  check("Live read says what the camera is for before Android first asks, then opens the text reader", s.sheet && s.before === 0 && s.after === 1, s);
   // Moving between the menu and the pages: a slide, each page keeps its place, TalkBack hears the page's name, and
   // focus goes back to the button you came from; the menu buttons give the light tap.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), N = window.Capacitor.Plugins.LpnNative, main = document.querySelector("main");
@@ -163,6 +210,86 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("pages slide in and back out, TalkBack hears the page's name, focus goes back to the menu button, and each page keeps its place",
     s.focus === "apkBarT" && s.slideIn && s.menuFocus === "apkGoLog" && s.slideOut && s.menuTop && s.kept, s);
   check("the menu is the first thing on the page, and its buttons give the light tap", s.first === "apkMenu" && s.tap === 1, s);
+  // The redesigned screens (redesign.js).
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), vis = e => !!e && e.getClientRects().length > 0, out = {};
+    rows = ["BB", "BB", "FMCG", "FPP", "Mixed"].map((t, i) => ({ lpn: "VLT00404" + (1210 + i), type: t, fsdu: false })); document.getElementById("expect").value = "8"; save(); render();
+    LPN_APK_MODE("log"); LPN_APK_MODE("menu"); await wait(50);
+    out.num = document.getElementById("rdNum").textContent; out.numL = document.getElementById("rdNumL").textContent; out.bar = document.querySelectorAll("#rdBar i").length;
+    out.leg = document.getElementById("rdLeg").textContent; out.date = /\w+day \d+ \w+/.test(document.getElementById("rdDate").textContent);
+    out.nav = [...document.querySelectorAll("#rdNav button")].map(b => b.textContent).join(","); out.navOnMenu = vis(document.getElementById("rdNav"));
+    document.querySelectorAll("#rdNav button")[1].click(); await wait(50); out.navLog = LPN_APK_MODE(); out.navOnLog = vis(document.getElementById("rdNav"));
+    document.getElementById("expect").value = ""; save(); return out; });
+  check("Home shows the delivery in progress as a big count with the type split, and a bar at the bottom (only on Home) for Home, Log, Check and Saved",
+    s.num === "5" && s.numL === "pallets of 8 expected" && s.bar === 4 && /BB 2.*FMCG 1.*FPP 1.*Mixed 1/.test(s.leg) && s.date && s.nav === "Home,Log,Check,Saved" && s.navOnMenu && s.navLog === "log" && !s.navOnLog, s);
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), vis = e => !!e && e.getClientRects().length > 0, N = window.Capacitor.Plugins.LpnNative, out = {};
+    LPN_APK_MODE("log"); await wait(30);
+    out.bar = ["rdSearch", "rdExport", "rdMenuBtn"].map(i => vis(document.getElementById(i))); out.flt = vis(document.querySelector("#logCard .flt"));
+    document.getElementById("rdSearch").click(); await wait(30); out.fltOn = vis(document.querySelector("#logCard .flt")) && document.activeElement.id === "flt";
+    document.getElementById("rdSearch").click(); await wait(30);
+    out.oldRows = vis(document.getElementById("newDel")) || vis(document.getElementById("expBtn"));
+    document.getElementById("rdMenuBtn").click(); await wait(30); const sh = document.querySelector(".apkask");
+    out.rows = sh ? [...sh.querySelectorAll(".rdrow b")].map(b => b.textContent).join(",") : "";
+    [...sh.querySelectorAll(".rdrow")].find(b => /Delivery details/.test(b.textContent)).click(); await wait(30);
+    out.det = vis(document.getElementById("delCard")) && vis(document.getElementById("trailer")) && document.getElementById("delCard").getAttribute("role") === "dialog";
+    N.listeners.back(); await wait(30); out.detBack = !vis(document.getElementById("delCard")) && LPN_APK_MODE() === "log";
+    let fired = ""; ["phonesBtn", "newDel", "histBtn", "clear"].forEach(id => document.getElementById(id).addEventListener("click", function f() { fired += id + ","; this.removeEventListener("click", f); }, { capture: true }));
+    document.getElementById("rdMenuBtn").click(); await wait(30); [...document.querySelectorAll(".apkask .rdrow")].find(b => /Share log/.test(b.textContent)).click(); await wait(30);
+    out.share = fired; closeHelp(); await wait(30);
+    LPN_APK_MODE("cmp"); out.cmpBar = ["rdSearch", "rdExport", "rdMenuBtn"].some(i => vis(document.getElementById(i))); LPN_APK_MODE("log");
+    return out; });
+  check("Log pallets has Search, Export and ⋮ in its bar (not on the Manifest check); Search shows the search box", s.bar.every(Boolean) && !s.flt && s.fltOn && !s.oldRows && !s.cmpBar, s);
+  check("⋮ opens This delivery: details, Share log, new delivery, saved deliveries, clear; Delivery details fills the screen and Back closes it", s.rows.replace("Undo,", "") === "Delivery details,Share log,Start new delivery,Saved deliveries,Clear all" && s.det && s.detBack && s.share === "phonesBtn,", s);
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {}; let fired = "";
+    const spies = {}, spy = id => { spies[id] = e => { fired += id + ","; e.stopImmediatePropagation(); }; document.getElementById(id).addEventListener("click", spies[id], true); };
+    ["dl", "dlMail", "prn", "tallyBtn", "noLpn"].forEach(spy);
+    document.getElementById("rdExport").click(); await wait(30); const sh = document.querySelector(".apkask");
+    out.title = sh.querySelector("h2").textContent; out.tiles = [...sh.querySelectorAll(".rdtiles button")].map(b => b.textContent).join(","); out.tally = !![...sh.querySelectorAll(".rdrow")].find(b => /Blank tally sheet/.test(b.textContent));
+    [...sh.querySelectorAll(".rdtiles button")].find(b => b.textContent === "Print").click(); await wait(30); out.closed = !document.querySelector(".apkask");
+    document.getElementById("rdExport").click(); await wait(30); [...document.querySelectorAll(".apkask .rdtiles button")].find(b => b.textContent === "Excel").click(); await wait(30);
+    out.live = !!document.getElementById("rdLive") && document.getElementById("rdLive").getClientRects().length > 0 && getComputedStyle(document.getElementById("btnrow")).display === "none";
+    document.getElementById("rdWays").click(); await wait(30); out.ways = [...document.querySelectorAll(".apkask .rdrow b")].map(b => b.textContent).join(",");
+    [...document.querySelectorAll(".apkask .rdrow")].find(b => /No LPN/.test(b.textContent)).click(); await wait(30);
+    out.fired = fired; const q = document.querySelector(".apkask"); if (q) q.remove(); Object.keys(spies).forEach(id => document.getElementById(id).removeEventListener("click", spies[id], true)); return out; });
+  s.focus = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), b = document.getElementById("rdExport"); b.focus(); b.click(); await wait(30);
+    const out = { behind: document.querySelector("main>#logCard").inert && document.querySelector(".top").inert, inSheet: !!document.activeElement.closest(".apkask") };
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); await wait(30);
+    out.closed = !document.querySelector(".apkask"); out.back = document.activeElement === b; out.free = !document.querySelector("main>#logCard").inert;
+    LPN_APK_DELDETAILS(true); await wait(20); out.delBehind = document.querySelector("main>#logCard").inert && !document.getElementById("delCard").inert;
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })); await wait(20); out.delClosed = !LPN_APK_DELDETAILS() && !document.querySelector("main>#logCard").inert; return out; });
+  check("while a sheet or the delivery details are open nothing behind them can be reached; Escape closes them and focus goes back", s.focus.behind && s.focus.inSheet && s.focus.closed && s.focus.back && s.focus.free && s.focus.delBehind && s.focus.delClosed, s.focus);
+  check("Export opens one sheet: Excel, Email PDF and Print, and the blank tally sheet; each does what the old menu did", s.title === "Export 5 pallets" && s.tiles === "Excel,Email PDF,Print" && s.tally && s.closed && s.fired.startsWith("prn,dl,"), s);
+  check("the entry panel has one big Live scan, and a camera button for Scan by photo, Upload photo and No LPN", s.live && s.ways === "Scan by photo,Upload photo,No LPN" && /noLpn,$/.test(s.fired), s);
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {}, st = () => ["rdS1", "rdS2", "rdS3"].map(i => document.getElementById(i).className).join(",");
+    LPN_APK_MODE("cmp"); const l = document.getElementById("cmpLogNums"), m = document.getElementById("cmpNums"); l.value = ""; m.value = ""; l.dispatchEvent(new Event("input")); m.dispatchEvent(new Event("input")); await wait(20);
+    out.s0 = st(); l.value = "VLT004041210"; l.dispatchEvent(new Event("input")); await wait(20); out.s1 = st(); m.value = "VLT004041210"; m.dispatchEvent(new Event("input")); await wait(20); out.s2 = st();
+    out.tiles = ["cmpCamBtn", "apkLiveRead", "cmpPhotoBtn", "cmpPdfBtn"].map(i => { const b = document.getElementById(i); return b ? b.getAttribute("aria-label") + ":" + b.querySelector("b").textContent : "-"; });
+    l.value = ""; m.value = ""; l.dispatchEvent(new Event("input")); m.dispatchEvent(new Event("input"));
+    openHelp("settings", "Settings"); await wait(80); out.groups = document.querySelectorAll("#panelBody .rdgrp").length;
+    const c = document.querySelector("#panelBody label.chk"); out.right = getComputedStyle(c).flexDirection; closeHelp(); await wait(30);
+    LPN_APK_MODE("log"); document.getElementById("phonesBtn").click(); await wait(80);
+    const t = [...document.querySelectorAll("#rdTabs [role=tab]")]; out.tabs = t.map(b => b.textContent + ":" + b.getAttribute("aria-selected")).join(",");
+    t[1].click(); await wait(20); out.pane = document.getElementById("rdPane0").hidden && !document.getElementById("rdPane1").hidden && document.getElementById("qrShow").getClientRects().length === 0;
+    closeHelp(); rows = []; save(); render(); LPN_APK_MODE("menu"); return out; });
+  check("the Manifest check shows its steps (log, manifest, results) as they're done, and the ways to add a manifest as tiles",
+    s.s0 === "now,," && s.s1 === "done,now," && s.s2 === "done,done,now" && s.tiles.join("|") === "Take photo: the manifest, one page at a time:Take photo|Live read: the manifest, move down the page:Live read|Photos: manifest photos, already taken:Photos|PDF: manifest PDFs, from email:PDF", s);
+  check("Settings is in grouped cards with the switches on the right; Share log has Send my pallets and Add theirs as tabs",
+    s.groups > 4 && s.right === "row-reverse" && s.tabs === "Send my pallets:true,Add theirs:false" && s.pane, s);
+  // Simple view (no Home, no page bar): the log keeps its own Export menu and buttons, so exporting still works.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), vis = e => !!e && e.getClientRects().length > 0, out = {};
+    rows = [{ lpn: "VLT004040780", type: "BB", fsdu: false }]; save(); render(); cfg.simple = true; applySimple(); await wait(50);
+    out.mode = LPN_APK_MODE(); out.exp = vis(document.getElementById("expBtn")); document.getElementById("expBtn").click(); await wait(30);
+    out.menu = vis(document.getElementById("dl")); out.newDel = vis(document.getElementById("newDel"));
+    document.getElementById("expBtn").click(); cfg.simple = false; applySimple(); await wait(50); out.after = LPN_APK_MODE(); rows = []; save(); render(); return out; });
+  // The Manifest check's big numbers and its Export sheet read the results' own wording: a change there must show here.
+  s.big = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
+    LPN_APK_MODE("cmp"); const l = document.getElementById("cmpLogNums"), m = document.getElementById("cmpNums");
+    l.value = ["VLT004041210", "VLT004041211", "VLT004041212", "VLT004041299"].join("\n"); m.value = ["VLT004041210", "VLT004041211", "VLT004041212", "VLT004041298", "VLT004041297"].join("\n");
+    l.dispatchEvent(new Event("input")); m.dispatchEvent(new Event("input")); document.getElementById("cmpCheck").click(); await wait(150);
+    out.big = [...document.querySelectorAll("#cmpRes .rdbig b")].map(b => b.textContent).join(",");
+    document.getElementById("cmpExpBtn").click(); await wait(50); const sh = document.querySelector(".apkask"); out.sub = sh ? sh.querySelector(".rdsub").textContent : ""; if (sh) sh.remove();
+    document.getElementById("cmpClear").click(); LPN_APK_MODE("menu"); return out; });
+  check("the Manifest check's results show Missing, Extra and Matched as big numbers, and its Export sheet says them too", s.big.big === "2,1,3" && s.big.sub === "2 missing · 1 extra · 3 matched", s.big);
+  check("in Simple view the log keeps its Export menu (Excel and the rest) and its buttons, so exporting still works", s.mode === "" && s.exp && s.menu && s.newDel && s.after === "menu", s);
   // The menu's recent deliveries and shortcuts, the page title bar, and the Manifest date shown the app's way.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
     const keep = hist; hist = [{ id: "a", date: "2026-11-20", recv: "Sam", rows: [{ lpn: "VLT004040265", type: "BB", fsdu: false }, { lpn: "VLT004040273", type: "BB", fsdu: false }] }, { id: "b", date: "2026-11-19", recv: "", rows: [] }];
@@ -215,7 +342,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     window.__fs = []; window.__share = []; const N = window.Capacitor.Plugins.LpnNative; N.calls = [];
     document.getElementById("dl").click();
     for (let i = 0; i < 100 && !document.getElementById("apkSaved"); i++) await new Promise(r => setTimeout(r, 100));
-    const bar = document.getElementById("apkSaved"), en = document.querySelector(".card.entry"), clear = bar && en ? bar.getBoundingClientRect().bottom <= en.getBoundingClientRect().top + 1 : false, out = { clear, dock: LPN_APK_DOCKH(), fs: window.__fs, msg: document.getElementById("msg").textContent, bar: bar && bar.querySelector("p").textContent, btns: bar ? [...bar.querySelectorAll("button")].map(b => b.textContent).join() : "", sharedBefore: window.__share.length };
+    const bar = document.getElementById("apkSaved"), en = document.querySelector(".card.entry"), clear = bar && en ? (() => { const r = bar.getBoundingClientRect(), t = document.elementFromPoint(r.left + r.width / 2, r.top + 12); return r.bottom <= innerHeight + 1 && !!t && bar.contains(t); })() : false, out = { clear, dock: LPN_APK_DOCKH(), fs: window.__fs, msg: document.getElementById("msg").textContent, bar: bar && bar.querySelector("p").textContent, btns: bar ? [...bar.querySelectorAll("button")].map(b => b.textContent).join() : "", sharedBefore: window.__share.length };
     bar.querySelector("button:nth-child(2)").click(); for (let i = 0; i < 30 && !window.__share.length; i++) await new Promise(r => setTimeout(r, 100));
     out.share = window.__share.map(x => x.files); out.gone = !document.getElementById("apkSaved");
     document.getElementById("dl").click(); for (let i = 0; i < 100 && !document.getElementById("apkSaved"); i++) await new Promise(r => setTimeout(r, 100));
@@ -481,7 +608,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     out.ripple = !!b.querySelector(".apkripple"); out.text = b.textContent;
     const q = document.querySelector(".helpq"), before = getComputedStyle(q).position; q.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true })); out.helpq = [before, getComputedStyle(q).position];
     return out; });
-  check("Android-style switches in Settings (still checkboxes) and a ripple where a button is pressed, without changing buttons' text or position", s.appearance === "none" && s.w === "44px" && s.role === "checkbox" && s.ripple && s.text === "Saved deliveries" && s.helpq[0] === s.helpq[1], s);
+  check("Android-style switches in Settings (still checkboxes) and a ripple where a button is pressed, without changing buttons' text or position", s.appearance === "none" && s.w === "52px" && s.role === "checkbox" && s.ripple && s.text === "Saved deliveries" && s.helpq[0] === s.helpq[1], s);
 
   // Warehouse handheld scanners: each scan goes where it belongs.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), N = window.Capacitor.Plugins.LpnNative, out = {};
@@ -494,7 +621,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     const eb = document.querySelector("#body .lpnedit"); if (!eb) return Object.assign(out, { noRow: document.getElementById("body").innerHTML.slice(0, 200) });
     eb.click(); await wait(100); const d = document.querySelector(".descline input"); if (d) d.focus();
     N.listeners.hwScan({ code: "VLT004040711" }); await wait(150); out.fromEdit = !document.querySelector(".dmgrow") && rows.map(r => r.lpn).join();
-    const f = document.getElementById("flt"); f.focus(); N.listeners.hwScan({ code: "VLT004040703" }); await wait(100); out.search = f.value + ":" + rows.length; f.value = ""; f.dispatchEvent(new Event("input", { bubbles: true })); f.blur();
+    document.getElementById("rdSearch").click(); const f = document.getElementById("flt"); f.focus(); N.listeners.hwScan({ code: "VLT004040703" }); await wait(100); out.search = f.value + ":" + rows.length; f.value = ""; f.dispatchEvent(new Event("input", { bubbles: true })); f.blur(); document.getElementById("rdSearch").click();
     LPN_APK_MODE("cmp"); document.getElementById("cmpNums").value = ""; N.listeners.hwScan({ code: "QUB001899182" }); await wait(100); out.cmp = document.getElementById("cmpNums").value.trim() + ":" + rows.length;
     document.getElementById("cmpNums").value = ""; LPN_APK_MODE("log"); rows = []; save(); render(); return out; });
   check("a handheld scanner is set up on opening, and a scan from the menu is logged as the next pallet on the log's page", s.on && s.log === "log:VLT004040703", s);
@@ -528,6 +655,12 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     const sb = document.getElementById("apkSaved"); if (sb) sb.remove(); localStorage.removeItem("lpnapkdir"); return { before, after, bar, folder }; });
   check("Settings › Android app can choose a folder (such as a synced Drive folder), and every export is then saved there too", /Choose a folder/.test(s.before) && / and in Drive\.$/.test(s.after) && /in Documents › LPN Pallet Log and in Drive\./.test(s.bar)
     && JSON.stringify(s.folder) === '[["folder","content://tree/drive","LPN log 22-11-2026.pdf","application/pdf"]]', s);
+
+  // The photo reader is got ready as the Manifest check's page opens.
+  s = await page.evaluate(async () => { LPN_APK_MODE("log"); const before = !!ocrW; LPN_APK_MODE("cmp");
+    for (let i = 0; i < 60 && !ocrW; i++) await new Promise(r => setTimeout(r, 250));
+    let ready = false; try { ready = !!(ocrW && await ocrW); } catch (e) {} LPN_APK_MODE("log"); return { before, ready }; });
+  check("the photo reader starts as the Manifest check's page opens, so the first photo doesn't wait for it", s.ready, s);
 
   // Photo reading with only the files inside the app.
   const photos = load(OCR).filter(p => p.want && p.want.length);

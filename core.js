@@ -50,6 +50,10 @@ const TYPES=["BB","FMCG","FPP","Mixed"];
 let rows=[];
 let delCollapsed=false;
 const DEL_F=["date","recv","notes","expect","trailer","sealIn","sealOut"];
+/* Delivery details that Share log sends with the pallets (the trailer goes as t, as in every version), with their
+   length limits and the names used in messages. */
+const SHARE_DEL=["expect","sealIn","sealOut","notes"],SHARE_LIM={trailer:40,expect:4,sealIn:40,sealOut:40,notes:500};
+const SHARE_NAME={trailer:"trailer",expect:"expected pallets",sealIn:"seal in",sealOut:"seal out",notes:"delivery notes"};
 let exported=null;
 function logSig(){let h=0;const s=rows.map(r=>r.lpn+"|"+r.type+"|"+(r.fsdu?1:0)+(r.dmg?"|"+r.dmg:"")+(r.desc?"|d:"+r.desc:"")+(r.ref?"|r":"")).join(",");for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return rows.length+":"+h}
 /* "-TR4471" for file names: from the trailer box, or from the trailer given (the Manifest check passes the trailer of
@@ -59,7 +63,10 @@ function fileTag(tr){
   return t?"-"+t:"";
 }
 function getDel(){const o={};DEL_F.forEach(k=>{o[k]=$(k).value});o.exp=exported;return o}
-function setDel(o){o=o||{};DEL_F.forEach(k=>{$(k).value=k==="date"?(o.date||localToday()):(o[k]||"")});exported=o.exp||null;sealHint();syncClear()}
+function setDel(o){o=o||{};shareDelOff();DEL_F.forEach(k=>{$(k).value=k==="date"?(o.date||localToday()):(o[k]||"")});exported=o.exp||null;sealHint();syncClear()}
+/* A Share log question about different delivery details belongs to the delivery it was asked on: another
+   delivery (or Clear trailer) closes it, so Use theirs can't land on the wrong one. */
+function shareDelOff(){const b=document.getElementById("delShareBar");if(b)b.hidden=true;if(typeof shareDelWant!=="undefined")shareDelWant=null}
 /* The Clear trailer, seals and notes button is only active when one of them has something in it. */
 function syncClear(){const b=$("delClear");if(b)b.disabled=!["trailer","sealIn","sealOut","notes"].some(k=>($(k).value||"").trim())}
 const $=id=>document.getElementById(id);
@@ -636,7 +643,7 @@ function localToday(){const n=new Date();return n.getFullYear()+"-"+String(n.get
   syncClear();
   // Clear trailer, seals and notes: for the next trailer on the same day, keeping the date, name and expected count.
   $("delClear").onclick=()=>{
-    const ids=["trailer","sealIn","sealOut","notes"],was={};ids.forEach(k=>was[k]=$(k).value);
+    shareDelOff();const ids=["trailer","sealIn","sealOut","notes"],was={};ids.forEach(k=>was[k]=$(k).value);
     if(!ids.some(k=>was[k].trim()))return;
     ids.forEach(k=>$(k).value="");save();updateDel();sealHint();syncClear();
     showUndo("Cleared the trailer, seals and notes",()=>{ids.forEach(k=>$(k).value=was[k]);save();updateDel();sealHint();syncClear()},true);
