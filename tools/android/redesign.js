@@ -145,6 +145,10 @@
     // ---- settings and the other panels
     "html.rd #panel{border-radius:0;background:var(--bg,#0c1830)}",
     "html.rd #panelBody .rdgrp{background:var(--paper,#13264a);border-radius:20px;padding:14px 16px 10px;margin:0 0 16px}",
+    "html.rd #panelBody #apkSet{background:var(--paper,#13264a);border-radius:20px;padding:14px 16px 10px;margin:0 0 16px}",
+    "html.rd #panelBody #apkSet>h3:first-child{margin:0 0 4px;font-size:.85rem;letter-spacing:.05em;text-transform:uppercase;color:var(--act,var(--ac,#ff8a2a))}",
+    "html.rd #panelBody #apkSet .apksub{margin:18px 0 6px;padding-top:14px;border-top:1px solid var(--rule,#223a63);font-size:.8rem;letter-spacing:.05em;text-transform:uppercase;color:var(--mu,#9db0d0)}",
+    "html.rd #panelBody #apkSet .apksub+label.chk{border-top:0}",
     "html.rd #panelBody .rdgrp h3:not(:first-child){margin:18px 0 8px;padding-top:14px;border-top:1px solid var(--rule,#223a63);font-size:.85rem;letter-spacing:.05em;text-transform:uppercase;color:var(--act,var(--ac,#ff8a2a))}",
     "html.rd #panelBody .rdgrp>h3:first-child{margin:0 0 8px;font-size:.85rem;letter-spacing:.05em;text-transform:uppercase;color:var(--act,var(--ac,#ff8a2a))}",
     "html.rd #panelBody label.chk{display:flex;flex-direction:row-reverse;justify-content:space-between;gap:14px;min-height:56px;padding:8px 0;border-top:1px solid var(--rule,#223a63);margin:0}",
