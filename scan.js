@@ -70,15 +70,20 @@ function shareDel(t,d){
   if(theirs.expect&&!/^\d{1,4}$/.test(theirs.expect))delete theirs.expect;
   const put=(k,v)=>{const e=$(k);e.value=v;e.dispatchEvent(new Event("input",{bubbles:true}));e.dispatchEvent(new Event("change",{bubbles:true}))};
   const filled=[],diff={};
+  // (the trailer, when both are filled in and differ, is already pointed out above, as in every version; notes sent
+  // cut short at SHARE_LIM count as the same when one is the start of the other)
+  const same=(a,b)=>{a=a.toUpperCase();b=b.toUpperCase();return a===b||a.startsWith(b)||b.startsWith(a)};
   Object.keys(theirs).forEach(k=>{const mine=String($(k).value||"").trim();
-    if(!mine){put(k,theirs[k]);filled.push(k)}else if(mine.toUpperCase()!==theirs[k].toUpperCase())diff[k]=theirs[k]});
-  if(filled.length)$("msg").textContent+=" Added from the other phone: "+filled.map(k=>SHARE_NAME[k]).join(", ")+".";
+    if(!mine){put(k,theirs[k]);filled.push(k)}else if(k!=="trailer"&&!same(mine,theirs[k]))diff[k]=theirs[k]});
+  if(filled.length){$("msg").textContent+=" Added from the other phone: "+filled.map(k=>SHARE_NAME[k]).join(", ")+".";
+    showUndo("Delivery details from the other phone",()=>filled.forEach(k=>put(k,"")))}
   const keys=Object.keys(diff),bar=$("delShareBar");
   if(!keys.length||!bar){shareDelWant=null;if(bar)bar.hidden=true;return}
   shareDelWant=diff;
   $("delShareTxt").textContent="The other phone has different delivery details: "+keys.map(k=>SHARE_NAME[k]+(k==="notes"?"":" "+diff[k])).join(", ")+".";
   bar.hidden=false;
-  $("delShareUse").onclick=()=>{const w=shareDelWant||{};Object.keys(w).forEach(k=>put(k,w[k]));shareDelWant=null;bar.hidden=true;$("msg").textContent="Delivery details changed to the other phone’s.";if(typeof diag==="function")diag("merge","Share log: used the other phone’s "+Object.keys(w).join(", "))};
+  $("delShareUse").onclick=()=>{const w=shareDelWant||{},was={};Object.keys(w).forEach(k=>{was[k]=$(k).value;put(k,w[k])});
+    if(Object.keys(w).length)showUndo("Used the other phone’s delivery details",()=>Object.keys(was).forEach(k=>put(k,was[k])));shareDelWant=null;bar.hidden=true;$("msg").textContent="Delivery details changed to the other phone’s.";if(typeof diag==="function")diag("merge","Share log: used the other phone’s "+Object.keys(w).join(", "))};
   $("delShareKeep").onclick=()=>{shareDelWant=null;bar.hidden=true;$("msg").textContent="Kept this phone’s delivery details."};
 }
 function loadZX(){

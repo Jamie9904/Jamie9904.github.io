@@ -102,7 +102,7 @@
     "html.rd.apkm-log #logCard>.ct{display:none}",
     "html.rd.apkm-log #logCard{background:transparent;padding-top:0}",
     "html.rd.apkm-log #logCard #sum{background:var(--paper,#13264a);border-radius:20px;padding:14px 16px;margin-bottom:12px}",
-    "html.rd #expMenu{display:none!important}",
+    "html.rd.apkm-log #expMenu{display:none!important}",
     // the entry panel at the bottom
     "html.rd .card.entry{border-radius:28px 28px 0 0!important;box-shadow:0 -12px 32px rgba(0,0,0,.35)}",
     "html.rd .card.entry #scanBtn,html.rd .card.entry #btnrow,html.rd .card.entry #scanTip{display:none!important}",
@@ -254,7 +254,7 @@
   const rowBtn = (ic, title, sub, fn, cls) => { const b = document.createElement("button"); b.type = "button"; b.className = "rdrow" + (cls ? " " + cls : "");
     b.innerHTML = '<span class="rdic">' + svg(ic) + '</span><span class="rdtx"><b></b><span></span></span>' + svg(IC.chev, 18);
     b.querySelector("b").textContent = title; b.querySelector(".rdtx span").textContent = sub || ""; b.onclick = fn; return b; };
-  const real = id => { const e = $(id); return e && !e.hidden; };
+  const real = id => { const e = $(id); return !!e && !e.hidden && getComputedStyle(e).display !== "none"; };
 
   function deliverySheet() {
     const n = typeof rows !== "undefined" ? rows.length : 0, tr = ($("trailer").value || "").trim(), d = ($("date").value || "");
@@ -267,7 +267,7 @@
       if (real("undoMore")) s.appendChild(rowBtn(IC.undo, "Undo", "Goes back through the last 10 changes", go(() => $("undoMore").click())));
       s.appendChild(rowBtn(IC.plus, "Start new delivery", "Keeps this one in Saved deliveries", go(() => $("newDel").click())));
       s.appendChild(rowBtn(IC.folder, "Saved deliveries", has("findLpn") ? "Earlier deliveries and Find an LPN" : "Earlier deliveries", go(() => $("histBtn").click())));
-      if (n) { s.insertAdjacentHTML("beforeend", '<div class="rdline"></div>'); s.appendChild(rowBtn(IC.bin, "Clear all", "Empties this log (asks first)", go(() => $("clear").click()), "d")); }
+      if (n) { s.insertAdjacentHTML("beforeend", '<div class="rdline"></div>'); s.appendChild(rowBtn(IC.bin, "Clear all", "Empties this log (can be undone)", go(() => $("clear").click()), "d")); }
     });
   }
   /* Delivery details: the Delivery card, full screen, with Done (Back closes it too). */
@@ -304,7 +304,8 @@
       const tile = (ic, label, id, p) => { if (!real(id)) return; const b = document.createElement("button"); b.type = "button"; if (p) b.className = "p"; b.innerHTML = svg(ic, 26) + "<span></span>"; b.querySelector("span").textContent = label; b.onclick = () => { close(); $(id).click(); }; t.appendChild(b); };
       tile(IC.sheet, "Excel", "dl", true); tile(IC.file, "Email PDF", "dlMail"); tile(IC.print, "Print", "prn");
       if (!t.children.length) t.remove();
-      if (real("tallyBtn") && has("tallySheet")) { s.insertAdjacentHTML("beforeend", '<div class="rdline"></div>'); s.appendChild(rowBtn(IC.tally, "Blank tally sheet", "A paper sheet to fill in by hand", () => { close(); $("tallyBtn").click(); })); }
+      if (has("tallySheet") && $("tallyBtn") && !$("tallyBtn").hidden) { s.insertAdjacentHTML("beforeend", '<div class="rdline"></div>'); s.appendChild(rowBtn(IC.tally, "Blank tally sheet", "A paper sheet to fill in by hand", () => { close(); $("tallyBtn").click(); }));
+        if (typeof testNote === "function") testNote("tallySheet", s, "beforeend"); }
     });
   }
 
@@ -350,6 +351,7 @@
     ["cmpLogNums", "cmpNums"].forEach(id => { const e = $(id); if (e) e.addEventListener("input", syncSteps); });
     const res = $("cmpRes"); if (res) new MutationObserver(() => { bigResults(); syncSteps(); }).observe(res, { childList: true, attributes: true, attributeFilter: ["hidden"] });
     syncSteps();
+    setInterval(() => { if (H.classList.contains("apkm-cmp") && !document.hidden) syncSteps(); }, 700);
   }
   const lines = id => (($(id) || {}).value || "").split(/\r?\n/).map(x => x.trim()).filter(Boolean).length;
   function syncSteps() {

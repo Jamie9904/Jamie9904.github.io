@@ -87,6 +87,26 @@ module.exports = async ({ browser, URL0 }) => {
   check("the receiving phone fills in its empty delivery boxes (and saves them) and says which", s.trailer === "TR 4471" && s.expect === "32" && s.notes === "Driver Sam, 2 crushed" && s.stored === "TR 4471" && s.n === 1 && /Added from the other phone: trailer, expected pallets, delivery notes\.$/.test(s.msg), s);
   check("a box that differs is asked about, and Use theirs changes it (and saves it)", s.sealIn === "222222" && s.barOpen && s.barTxt === "The other phone has different delivery details: seal in 111111." && s.used === "111111" && s.barAfter && s.storedSeal === "111111", s);
   check("codes from an older copy (no delivery details) still add the pallets and change nothing else; Keep mine keeps this phone's", s.oldN === 1 && s.oldSeal === "333333" && s.oldBar && s.kept === "444444" && s.keptBar, s);
+  s = await p.evaluate(() => {
+    const v = id => document.getElementById(id).value, set = (id, x) => { document.getElementById(id).value = x; }, bar = document.getElementById("delShareBar"), out = {};
+    const long = "Driver Sam. " + "x".repeat(600);
+    set("trailer", "TR 4471"); set("expect", "32"); set("sealIn", "111111"); set("notes", long);
+    const codes = qrCodesFor([{ lpn: "VLT004040779", type: "BB", fsdu: false }]);
+    // The same long notes (sent cut short) and a different trailer: no question (the trailer has its own line).
+    set("trailer", "TR 9999"); rows = []; save(); render(); qrRecv = null; qrDone.clear(); qrWant = true; codes.forEach(c => onCode(c));
+    out.noAsk = bar.hidden && v("notes") === long && /Check the trailer/.test(document.getElementById("msg").textContent);
+    // Filled-in boxes can be undone.
+    set("trailer", ""); set("expect", ""); set("sealIn", ""); set("notes", ""); rows = []; save(); render(); qrRecv = null; qrDone.clear(); qrWant = true; codes.forEach(c => onCode(c));
+    const top = undoStack[undoStack.length - 1]; out.undoText = top && top.text; top.fn(); out.undone = [v("trailer"), v("expect"), v("sealIn")].join("|");
+    // Use theirs can be undone; another delivery closes the question.
+    set("sealIn", "222222"); rows = []; save(); render(); qrRecv = null; qrDone.clear(); qrWant = true; codes.forEach(c => onCode(c));
+    document.getElementById("delShareUse").click(); const t2 = undoStack[undoStack.length - 1]; out.useUndo = t2.text; t2.fn(); out.back = v("sealIn");
+    set("sealIn", "333333"); rows = []; save(); render(); qrRecv = null; qrDone.clear(); qrWant = true; codes.forEach(c => onCode(c));
+    const asked = !bar.hidden; setDel({}); out.closedByNew = asked && bar.hidden && shareDelWant === null;
+    ["trailer", "expect", "sealIn", "notes"].forEach(k => set(k, "")); rows = []; save(); render(); return out;
+  });
+  check("long notes sent cut short aren't asked about, the trailer isn't asked twice; filled-in details and Use theirs can be undone; another delivery closes the question",
+    s.noAsk && s.undoText === "Delivery details from the other phone" && s.undone === "||" && s.useUndo === "Used the other phone’s delivery details" && s.back === "222222" && s.closedByNew, s);
   // Safety: codes count only after Scan the other phone's codes; a set is added once; a waiting check comes first;
   // another version's codes say so; only a new code beeps; accented text still fits.
   s = await p.evaluate(() => {

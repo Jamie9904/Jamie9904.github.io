@@ -274,6 +274,13 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     s.s0 === "now,," && s.s1 === "done,now," && s.s2 === "done,done,now" && s.tiles.join("|") === "Take photo: the manifest, one page at a time:Take photo|Live read: the manifest, move down the page:Live read|Photos: manifest photos, already taken:Photos|PDF: manifest PDFs, from email:PDF", s);
   check("Settings is in grouped cards with the switches on the right; Share log has Send my pallets and Add theirs as tabs",
     s.groups > 4 && s.right === "row-reverse" && s.tabs === "Send my pallets:true,Add theirs:false" && s.pane, s);
+  // Simple view (no Home, no page bar): the log keeps its own Export menu and buttons, so exporting still works.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), vis = e => !!e && e.getClientRects().length > 0, out = {};
+    rows = [{ lpn: "VLT004040780", type: "BB", fsdu: false }]; save(); render(); cfg.simple = true; applySimple(); await wait(50);
+    out.mode = LPN_APK_MODE(); out.exp = vis(document.getElementById("expBtn")); document.getElementById("expBtn").click(); await wait(30);
+    out.menu = vis(document.getElementById("dl")); out.newDel = vis(document.getElementById("newDel"));
+    document.getElementById("expBtn").click(); cfg.simple = false; applySimple(); await wait(50); out.after = LPN_APK_MODE(); rows = []; save(); render(); return out; });
+  check("in Simple view the log keeps its Export menu (Excel and the rest) and its buttons, so exporting still works", s.mode === "" && s.exp && s.menu && s.newDel && s.after === "menu", s);
   // The menu's recent deliveries and shortcuts, the page title bar, and the Manifest date shown the app's way.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
     const keep = hist; hist = [{ id: "a", date: "2026-11-20", recv: "Sam", rows: [{ lpn: "VLT004040265", type: "BB", fsdu: false }, { lpn: "VLT004040273", type: "BB", fsdu: false }] }, { id: "b", date: "2026-11-19", recv: "", rows: [] }];
