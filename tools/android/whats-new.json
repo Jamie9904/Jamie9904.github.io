@@ -3,6 +3,7 @@
   "items": [
     "Take manifest photo in the Manifest check opens the camera straight away to photograph a manifest page, next to Upload manifest photos for photos you’ve already taken.",
     "Live read manifest, in the Manifest check: hold the phone over a printed manifest and move it slowly down the page. Each number printed after “LPN:” is added to the manifest numbers as soon as it has been read clearly twice, with a green flash. Remove last takes one back out. Live read log does the same for a printed log in step 1, where the LPNs aren’t labelled.",
+    "Share log sends the delivery details too: the trailer number, expected pallets, seals and delivery notes. The other phone fills in its empty boxes and asks before changing different ones. Phones on an older build still get the pallets.",
     "A smaller download (about 42 MB instead of 78 MB), the photo reader gets ready as soon as you open the Manifest check, and reading a long batch of manifest photos uses less of the phone’s memory."
   ]
 }

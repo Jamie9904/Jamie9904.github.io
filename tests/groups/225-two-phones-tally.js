@@ -60,6 +60,33 @@ module.exports = async ({ browser, URL0 }) => {
   }, codes);
   check("a different trailer number on the other phone is pointed out", /Check the trailer: the other phone has TR 4471, this one has TR 9999\.$/.test(s.msg), s.msg);
   check("with Two phones switched off, its codes are ignored, and a damaged set says to show the codes again (never logged as a pallet)", s.off === 0 && /couldn’t be read\. On the other phone, tap Show my pallets as QR codes again\./.test(s.bad) && s.logged === 0, s);
+  // Delivery details go with the pallets: empty boxes are filled in, different ones are asked about. The codes keep
+  // the LPNM1 label and the t and r parts, so older copies of the app still add the pallets (they ignore d).
+  s = await p.evaluate(() => {
+    const v = id => document.getElementById(id).value, set = (id, x) => { document.getElementById(id).value = x; };
+    set("trailer", "TR 4471"); set("expect", "32"); set("sealIn", "111111"); set("sealOut", ""); set("notes", "Driver Sam, 2 crushed");
+    const codes = qrCodesFor([{ lpn: "VLT004040777", type: "BB", fsdu: false }]);
+    const joined = JSON.parse(codes.map(c => /^LPNM1 [a-z0-9]{4} \d+\/\d+ ([\s\S]*)$/.exec(c)[1]).join(""));
+    set("trailer", ""); set("expect", ""); set("sealIn", "222222"); set("sealOut", ""); set("notes", ""); rows = []; save(); render();
+    qrRecv = null; qrDone.clear(); qrWant = true; codes.forEach(c => onCode(c));
+    const bar = document.getElementById("delShareBar"), out = { keys: Object.keys(joined).join(","), oldOk: Array.isArray(joined.r) && joined.t === "TR 4471" && codes.every(c => /^LPNM1 /.test(c)),
+      d: JSON.stringify(joined.d), trailer: v("trailer"), expect: v("expect"), notes: v("notes"), sealIn: v("sealIn"), msg: document.getElementById("msg").textContent,
+      barOpen: !bar.hidden, barTxt: document.getElementById("delShareTxt").textContent, stored: JSON.parse(localStorage.getItem("lpnlog")).trailer, n: rows.length };
+    document.getElementById("delShareUse").click(); out.used = v("sealIn"); out.barAfter = bar.hidden; out.storedSeal = JSON.parse(localStorage.getItem("lpnlog")).sealIn;
+    // From an older copy of the app (no d): the pallets are added and nothing else changes.
+    set("sealIn", "333333"); rows = []; save(); render();
+    const old = "LPNM1 abcd 1/1 " + JSON.stringify({ t: "", r: [{ lpn: "VLT004040778", type: "BB" }] });
+    qrRecv = null; qrWant = true; onCode(old); out.oldN = rows.length; out.oldSeal = v("sealIn"); out.oldBar = bar.hidden;
+    // Keep mine leaves this phone's details alone.
+    set("sealIn", "444444"); rows = []; save(); render(); qrRecv = null; qrDone.clear(); qrWant = true; codes.forEach(c => onCode(c));
+    document.getElementById("delShareKeep").click(); out.kept = v("sealIn"); out.keptBar = bar.hidden;
+    ["trailer", "expect", "sealIn", "notes"].forEach(k => set(k, "")); rows = []; save(); render();
+    return out;
+  });
+  check("Share log sends the delivery details as an extra part, keeping the label and parts older copies of the app read", s.keys === "t,r,d" && s.oldOk && s.d === '{"expect":"32","sealIn":"111111","notes":"Driver Sam, 2 crushed"}', s);
+  check("the receiving phone fills in its empty delivery boxes (and saves them) and says which", s.trailer === "TR 4471" && s.expect === "32" && s.notes === "Driver Sam, 2 crushed" && s.stored === "TR 4471" && s.n === 1 && /Added from the other phone: trailer, expected pallets, delivery notes\.$/.test(s.msg), s);
+  check("a box that differs is asked about, and Use theirs changes it (and saves it)", s.sealIn === "222222" && s.barOpen && s.barTxt === "The other phone has different delivery details: seal in 111111." && s.used === "111111" && s.barAfter && s.storedSeal === "111111", s);
+  check("codes from an older copy (no delivery details) still add the pallets and change nothing else; Keep mine keeps this phone's", s.oldN === 1 && s.oldSeal === "333333" && s.oldBar && s.kept === "444444" && s.keptBar, s);
   // Safety: codes count only after Scan the other phone's codes; a set is added once; a waiting check comes first;
   // another version's codes say so; only a new code beeps; accented text still fits.
   s = await p.evaluate(() => {

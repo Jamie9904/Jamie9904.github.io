@@ -50,6 +50,10 @@ const TYPES=["BB","FMCG","FPP","Mixed"];
 let rows=[];
 let delCollapsed=false;
 const DEL_F=["date","recv","notes","expect","trailer","sealIn","sealOut"];
+/* Delivery details that Share log sends with the pallets (the trailer goes as t, as in every version), with their
+   length limits and the names used in messages. */
+const SHARE_DEL=["expect","sealIn","sealOut","notes"],SHARE_LIM={trailer:40,expect:4,sealIn:40,sealOut:40,notes:500};
+const SHARE_NAME={trailer:"trailer",expect:"expected pallets",sealIn:"seal in",sealOut:"seal out",notes:"delivery notes"};
 let exported=null;
 function logSig(){let h=0;const s=rows.map(r=>r.lpn+"|"+r.type+"|"+(r.fsdu?1:0)+(r.dmg?"|"+r.dmg:"")+(r.desc?"|d:"+r.desc:"")+(r.ref?"|r":"")).join(",");for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return rows.length+":"+h}
 /* "-TR4471" for file names: from the trailer box, or from the trailer given (the Manifest check passes the trailer of
