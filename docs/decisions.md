@@ -1113,7 +1113,7 @@ These changes were made on the `updates` branch and kept build number 66; they w
 - **What's new written by hand for each APK.** Android updates collect several changes, so the list in `whats-new.json` is replaced before each approved build; it isn't shown on a first install, where there is nothing to compare with.
 - **Compile-only runs.** Native code can't be checked by `check-offline.js`, so a hand-started run with the APK unticked compiles it without making an APK that phones would be asked to install.
 
-## Take manifest photo (commit `20083f2` on `updates`, not live yet, still build 66; Android from APK build 4)
+## Take manifest photo (commit `20083f2`, live since `main` `b650471`, still build 66; Android from APK build 4)
 
 - **A camera button as well as the upload button.** **Upload manifest photos** opens the phone's picker, which takes an extra step when the paper is in front of you. A second hidden input with `capture="environment"` opens the back camera straight away. The upload button stays for photos already taken and for reading several at once.
 - **Renamed to say what each does.** With two photo buttons side by side, "Add manifest photo" no longer said which one picks existing photos, so it became **Upload manifest photos** (the same `#cmpPhotoBtn` and `#cmpPhotoFile`, so the Android app's handling of photos opened or shared into it, which passes them to `#cmpPhotoFile`, didn't change).
@@ -1209,9 +1209,11 @@ Commits `1c7fb46` to `6929d5e` (21 and 22 Nov 2026), Android-only (`tools/androi
 - **Scan sounds follow the phone's silent mode, on by default, with a switch.** Someone who has put the phone on silent, vibrate or Do Not Disturb doesn't expect it to beep or talk; the buzz still confirms each scan. The app asks Android when it opens and when it comes back into view, and Android tells it when the mode changes, so it never has to guess. The page's `sfx()` is wrapped rather than changed: while hushed it runs with `cfg.sound` set to false for that one call, so the vibration and everything else in it stay the same and the user's own sound setting isn't touched. The switch is there for people who want the beeps whatever the phone's mode.
 - **Small things that save a look or a tap:** the ✓ Saved tick says the log is stored; status messages from a page you can't see show at the bottom; Next moves through the Delivery boxes; the Manifest date uses the app's date format like the delivery date; the error sheet says the log is safe and offers a problem report, at most once every 30 seconds and never for a cancelled action.
 
-## Android APK build 4 (not built yet)
+## Android APK build 4 (built 25 Nov 2026)
 
-Commits `3ff3456` to `130b75b` (with `20083f2`, Take manifest photo, above), Android-only (`tools/android/` and `.github/workflows/android.yml`), made on the `updates` branch and not on `main` yet. They go into Android APK build 4 when the owner approves it; `whats-new.json` already lists them (`03839df`), but `tools/android/build.json` hasn't been raised to 4 yet.
+Commits `3ff3456` to `130b75b` (with `20083f2`, Take manifest photo, above), Android-only (`tools/android/` and `.github/workflows/android.yml`), made on `updates` and on `main` since `b650471` (25 Nov 2026), the commit that raised `tools/android/build.json` to 4. Android APK build 4 was built and signed from GitHub run 45618664200 (file `LPN-Pallet-Log-Android-APK-build-4.apk`, 41 MB; 111 offline checks, photo test 54/54, Live read rule 52 of 54); `whats-new.json` lists its changes (`03839df`, with more lines since `10a5be6` and `e6f6832`).
+
+- **A rerun, not a change, for Maven Central's 429.** The first two attempts at the build 4 run failed only because Maven Central answered 429 Too Many Requests while Gradle downloaded the build's dependencies; nothing in the code was wrong, and a rerun ten minutes later worked. The workflow has no retry of its own for this, so the fix is to wait and rerun the failed run.
 
 - **Live read with the phone's text reader, not the app's.** Reading the page as the phone moves needs several readings a second of the camera's live picture; ML Kit, inside the app, works on that picture directly in the camera screen (as `ScanActivity` does for barcodes). ML Kit is less accurate than the app's reader on whole photos (53 of 54 against 54 of 54), so the live read leans on rules around it rather than on single readings.
 - **Only numbers after an "LPN" label on a manifest.** Manifests carry order numbers, phone numbers and other codes; the label is the surest sign of an LPN. A printed log has no labels (the LPNs stand on their own), so **Live read log** takes any word shaped like an LPN instead, with at least 6 real digits so dates and short codes are left out.
@@ -1230,7 +1232,7 @@ Commits `3ff3456` to `130b75b` (with `20083f2`, Take manifest photo, above), And
 - **Reader restarted every four photos.** The app's reader uses more memory with each photo, and on phones with little memory Android stopped the page part-way through a long batch. Closing it after every four photos (between photos, on the page's own queue) costs a restart but keeps memory down.
 - **The camera note for Live read too** (commit `d5657c0`). Live read first opened its camera screen straight away, so Android's camera prompt could come without the app's explanation; it now goes through `cameraOk()` like the other camera buttons. The same commit fixed its problem-log line, which named an undefined variable and so was never written.
 
-## Share log sends the delivery details (commit `e6f6832` on `updates`, not live yet, still build 66; Android from APK build 4)
+## Share log sends the delivery details (commit `e6f6832`, live since `main` `b650471`, still build 66; Android from APK build 4)
 
 When two people unload one trailer, the phone that exports should also have the trailer, seals, expected pallets and notes, and before this only the trailer number went with the pallets (to be compared, never copied). Fixes and more checks followed in `477182a`.
 
@@ -1242,7 +1244,7 @@ When two people unload one trailer, the phone that exports should also have the 
 - **The question closes with its delivery.** `setDel()` (new delivery, loading a saved one) and Clear trailer, seals and notes close it (`shareDelOff()`), so Use theirs can't put one trailer's seals on another delivery.
 - **Trade-off:** the details sent are a snapshot from when **Show my pallets as QR codes** was tapped, like the pallets; a closed question can only come back by showing a new set of codes, since the same set can't be added twice. The receiving phone's date and Received by name are never changed.
 
-## The redesigned Android screens (commits `10a5be6` to `943df6e` on `updates`; Android APK build 4, not built yet)
+## The redesigned Android screens (commits `10a5be6` to `97cdabb`, on `main` since `b650471`; Android APK build 4)
 
 A new look for the Android app only, from a design mock-up (a claude.ai canvas, "LPN Pallet Log Android redesign"). It is one file, `tools/android/redesign.js`, loaded after the app's scripts.
 
@@ -1260,6 +1262,7 @@ A new look for the Android app only, from a design mock-up (a claude.ai canvas, 
   - **The Saved tick under the bar** (`943df6e`): in the bar it took room from the page title, which was then cut off; it now floats just below the bar.
   - **Which log as choices.** Four buttons and a drop-down for the log were the busiest part of the Manifest check; one row of choices (Current, Saved, File, Paper) shows one source at a time, and the two paper ways go behind Paper. The original buttons stay (hidden) and are clicked, so `compare.js` is unchanged.
   - **The Manifest check's buttons in reach, Export as a sheet.** Clear, Check results and Export were at the end of a long page; they stay at the bottom of the screen. Export opens a sheet like the log's, and the sheet's **Include the full log** switch writes the same `lpnmergelog` setting as Settings, so there are not two settings to keep in step. Simple view keeps the old Export menu, since its page has no fixed bottom.
-  - **Results numbers read from the text again.** The Export sheet's counts are read from the results' wording, like the big numbers, so a wording change in `compare.js` would show 0 there; no check in `check-offline.js` covers these counts or the big numbers.
+  - **Results numbers read from the text again.** The Export sheet's counts are read from the results' wording, like the big numbers, so a wording change in `compare.js` would show 0 there. Since commit `dfd6fe6` a check in `check-offline.js` covers both (four log numbers against five manifest numbers must show 2, 1 and 3 as the big numbers and "2 missing · 1 extra · 3 matched" in the Export sheet), so such a change fails the Android checks instead of reaching the phone.
   - **The Saved sheet covers the entry panel.** As a bottom sheet it now sits over the docked entry panel instead of above it; it goes by itself after 12 seconds unless it is being used, and `check-offline.js` checks that nothing covers it.
   - **The camera scanner matches the pages.** Done in the app's orange (the main button, as on the pages) and green when all are in; the other buttons with thin outlines so the types and Done stand out.
+  - **Settings › Android app as a card too** (`97cdabb`): the other Settings groups became cards, but the Android app's own section is added by `android.js` and isn't one of the groups `groupPanel()` wraps, so it had no card; it now gets the same card, heading and switch rules.
