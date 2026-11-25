@@ -415,6 +415,7 @@
     "html.rd.apkm-menu .top .brand>:not(.mark):not(#apkMoreBtn):not(#logoImg){display:none}",
     "html.rd.apkm-menu .top #logoImg:not([hidden]){display:block;height:52px;width:auto;max-width:180px;padding:6px 12px;border-radius:14px;background:#fff;object-fit:contain;box-shadow:0 8px 24px rgba(0,0,0,.3)}",
     "html.rd.apkm-menu .top .mark{width:52px;height:52px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.3)}",
+    "html.rd #apkBar{position:sticky}html.rd #apkSavedTick{position:absolute;top:100%;right:16px;margin:0;padding:2px 10px;border-radius:10px;background:var(--bg,#0c1830);pointer-events:none}",
     "html.rd #apkBar #apkMoreBtn{width:48px;height:48px;min-width:48px;margin:0;font-size:1.5rem}",
     // Home: See all by Recent deliveries, Saved deliveries and Exported files in the bottom bar and the ⋮ menu
     "#rdRecH{display:flex;align-items:center;justify-content:space-between;margin:20px 2px 8px}#rdRecH h3{margin:0!important}",
