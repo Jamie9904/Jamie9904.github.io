@@ -143,7 +143,7 @@
     "html.rd #cmpRes .rdbig div{display:flex;flex-direction:column;gap:2px}html.rd #cmpRes .rdbig b{font-size:2.4rem;line-height:1}html.rd #cmpRes .rdbig span{font-size:.9rem;color:var(--mu,#9db0d0)}",
     "html.rd #cmpRes .rdbig .mi b{color:var(--dg,#ff7b6e)}html.rd #cmpRes .rdbig .ex b{color:var(--fm,#6fa8ff)}",
     // ---- settings and the other panels
-    "html.rd #panel{border-radius:0;background:var(--bg,#0c1830)}",
+    "html.rd #panel{border-radius:0;background:var(--bg,#0c1830);border:0!important;box-shadow:none!important}",
     "html.rd #panelBody .rdgrp{background:var(--paper,#13264a);border-radius:20px;padding:14px 16px 10px;margin:0 0 16px}",
     "html.rd #panelBody #apkSet{background:var(--paper,#13264a);border-radius:20px;padding:14px 16px 10px;margin:0 0 16px}",
     "html.rd #panelBody #apkSet>h3:first-child{margin:0 0 4px;font-size:.85rem;letter-spacing:.05em;text-transform:uppercase;color:var(--act,var(--ac,#ff8a2a))}",
