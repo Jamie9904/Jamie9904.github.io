@@ -151,7 +151,7 @@
   document.addEventListener("pointerdown", e => {
     const b = e.target && e.target.closest && e.target.closest("button"); if (!b || b.disabled) return;
     // A light tap on the main buttons, like Android's keyboard (with Vibrate on in Settings).
-    if (N() && typeof cfg !== "undefined" && cfg.vibrate && b.matches("#add,#tyb button,#scanBtn,#scan,#photo,#upload,#undoLast,#noLpn,.apkgo,#apkCarryBtn,#apkBack")) N().tap().catch(() => {});
+    if (N() && typeof cfg !== "undefined" && cfg.vibrate && b.matches("#add,#tyb button,#scanBtn,#scan,#photo,#upload,#undoLast,#noLpn,.apkgo,#apkCarryBtn,#apkBack,#rdLive,#rdWays")) N().tap().catch(() => {});
     const r = b.getBoundingClientRect(), d = Math.max(r.width, r.height) * 2, s = document.createElement("span");
     if (getComputedStyle(b).position === "static") b.style.position = "relative"; // the ripple sits inside the button; its tap area isn't clipped
     const w = document.createElement("span"); w.className = "apkripwrap"; w.setAttribute("aria-hidden", "true");
@@ -286,7 +286,8 @@
       if (r.what === "settings") { if (typeof closeHelp === "function") closeHelp(); openHelp("settings", "Settings"); }
       else if (r.what === "carry") carryOn();
       else if (r.what === "ocrtest") ocrTest();
-      else if (r.what === "export") { if (has("palletLog")) toLog(); const b = $("expBtn"); if (b) b.click(); } // the bug hunt (tools/android/qa.sh)
+      else if (r.what === "export") { if (has("palletLog")) toLog(); if (window.LPN_APK_EXPORTSHEET) window.LPN_APK_EXPORTSHEET(); else { const b = $("expBtn"); if (b) b.click(); } } // the screenshots and the bug hunt
+      else if (r.what === "delivery") { if (has("palletLog")) toLog(); if (window.LPN_APK_DELSHEET) window.LPN_APK_DELSHEET(); }
       else if (r.what === "liveread") { const b = $("apkLiveRead"); if (b) b.click(); }
       else if (r.what === "big-on" || r.what === "big-off") { try { localStorage.setItem("lpnapkbig", r.what === "big-on" ? "on" : "off"); } catch (e) {} applyBig(); }
       return;

@@ -34,6 +34,9 @@ set_of() {
   act -a "$PKG.SHOW" --es what big-off; sleep 1
   act -a "$PKG.MANIFEST"; shot "$s-8-manifest" 3   # the Manifest check on its own page
   back; shot "$s-9-menu" 2                        # Back from a page goes to the start menu
+  act -a "$PKG.SHOW" --es what export; shot "$s-10-export" 2     # the Export sheet
+  back; act -a "$PKG.SHOW" --es what delivery; shot "$s-11-delivery" 2  # ⋮ This delivery
+  back; back
 }
 # The app's photo reading (whichever reader the app would use; its own by default) on the user's manifest photos (only the test copy has them): what it got right, missing
 # and extra, from the app's log lines. Run once, before the screenshots.

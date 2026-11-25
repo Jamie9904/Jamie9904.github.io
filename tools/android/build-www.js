@@ -40,6 +40,8 @@ const edit = (f, from, to, n = 1) => {
 edit("index.html", /<meta http-equiv="Content-Security-Policy" content="[^"]*">/,
   `<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; child-src 'self' blob:; connect-src 'self' blob: data:; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-src blob:; object-src blob:; base-uri 'none'; form-action 'none'">`);
 edit("index.html", '<script src="config.js"></script>', '<script src="android.js"></script>\n<script src="config.js"></script>');
+// The redesigned screens (redesign.js): after the app's own scripts, so everything they change is already there.
+edit("index.html", "</body>", '<script src="redesign.js"></script>\n</body>');
 // Library addresses -> the copies inside the app.
 for (const f of ["core.js", "scan.js", "export.js", "compare.js"]) edit(f, /https:\/\/(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com)\//, "./lib/$1/", "any"); // "./": pdf.js is loaded with import(), which needs it
 // The Android app has its own settings (tools/android/config.js), separate from the website's config.js.
@@ -62,8 +64,14 @@ const APK_BUILD = (() => { let b; try { b = JSON.parse(fs.readFileSync(path.join
   if (!Number.isInteger(b) || b < 1) fail("tools/android/build.json: build must be a whole number from 1"); return b; })();
 edit("export.js", "  if(appVer)return appVer;\n", '  appVer="LPN Pallet Log (Android APK build ' + APK_BUILD + ')";return appVer;\n');
 // The start menu (android.js): the Guide says how to get between Log pallets and the Manifest check.
-edit("panels.js", '<span data-f="palletLog">Tap the <b>Manifest check</b> heading to open it.</span>', '<span data-f="palletLog">Choose <b>Manifest check</b> on the start menu (from the log, tap <b>‹ Menu</b> at the top or press Back). In Simple view the app opens straight on the log, with no menu or Manifest check.</span>');
-edit("panels.js", '<h3>1. Quick start</h3>\n<ol>\n', '<h3>1. Quick start</h3>\n<ol>\n<li data-f="manifestCheck"><b>Start menu:</b> the app opens on a menu: choose <b>Log pallets</b> or <b>Manifest check</b>. Each has its own page; <b>‹ Menu</b> at the top, or Back, takes you back to the menu.</li>\n');
+edit("panels.js", '<span data-f="palletLog">Tap the <b>Manifest check</b> heading to open it.</span>', '<span data-f="palletLog">Choose <b>Manifest check</b> on Home or <b>Check</b> in the bar at the bottom of Home (from the log, tap the back arrow at the top or press Back). In Simple view the app opens straight on the log, with no Home or Manifest check.</span>');
+edit("panels.js", '<h3>1. Quick start</h3>\n<ol>\n', '<h3>1. Quick start</h3>\n<ol>\n<li data-f="manifestCheck"><b>Home:</b> the app opens on Home: the delivery in progress with <b>Carry on scanning</b>, the <b>Manifest check</b>, recent deliveries, and a bar at the bottom for Home, Log, Check and Saved. Each has its own page; the back arrow at the top, or Back, takes you back to Home.</li>\n<li data-f="palletLog"><b>On Log pallets:</b> <b>Export</b> is at the top, and <b>⋮</b> next to it has the delivery details (date, trailer, seals, expected pallets, notes), <span data-f="twoPhones"><b>Share log</b>, </span><b>Undo</b>, <b>Start new delivery</b>, <b>Saved deliveries</b> and <b>Clear all</b>. The magnifying glass shows the search.</li>\n');
+// The redesigned screens (redesign.js): where the buttons that moved are now.
+edit("panels.js", 'On a phone, tap <b>Scan</b> next to Add.', '<b>Live scan</b> is the big button at the bottom; the camera button next to it has the other ways in.');
+edit("panels.js", 'tap <b>No LPN</b> (under <b>Scan</b> on a phone)', 'tap <b>No LPN</b> (under the camera button next to <b>Live scan</b>)');
+edit("panels.js", 'tap <b>Share log</b> (under Start new delivery)', 'tap <b>⋮</b> at the top of Log pallets, then <b>Share log</b>');
+edit("panels.js", '<p>The <b>Export</b> menu has <b>Download (Excel)</b>, <b>Email PDF</b> and <b>Print</b>.', '<p><b>Export</b> at the top of Log pallets has <b>Excel</b>, <b>Email PDF</b> and <b>Print</b>.');
+edit("panels.js", 'use <b>Undo</b> next to Export (or Ctrl+Z on a computer)', 'use <b>Undo</b> in <b>⋮</b> at the top of Log pallets');
 // Nothing about installing: the Android app is already installed (Guide section, Settings, and the first-visit pop-up).
 edit("panels.js", /<h3>\d+\. Install it on your phone<\/h3>[\s\S]*?(?=<h3>\d+\. Settings and good to know<\/h3>)/, "");
 edit("panels.js", '<h3>Install</h3>\n<p>Add this page to your home screen so it opens like an app.</p>\n<div class="row"><button id="showInstall">Show the install pop-up</button></div>\n', "");
@@ -96,6 +104,8 @@ if (!Array.isArray(notes.items) || notes.items.some(t => typeof t !== "string"))
 const tessJs = (fs.readFileSync(path.join(WWW, "compare.js"), "utf8").match(/loadScript\("(\.\/lib\/[^"]*tesseract\.min\.js)"/) || [])[1];
 if (!tessJs || !fs.existsSync(path.join(WWW, tessJs))) fail("couldn't find the photo reader's script in compare.js");
 fs.writeFileSync(path.join(WWW, "android.js"), fs.readFileSync(path.join(__dirname, "android-shim.js"), "utf8").replace("/*TESS*/null", JSON.stringify(tess)).replace('/*TESSJS*/""', JSON.stringify(tessJs)).replace("/*NOTES*/[]", JSON.stringify(notes.items)));
+
+fs.copyFileSync(path.join(__dirname, "redesign.js"), path.join(WWW, "redesign.js"));
 
 // Nothing may still point at the internet (the website's own address in text is fine).
 const left = [];
