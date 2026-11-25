@@ -1242,7 +1242,7 @@ When two people unload one trailer, the phone that exports should also have the 
 - **The question closes with its delivery.** `setDel()` (new delivery, loading a saved one) and Clear trailer, seals and notes close it (`shareDelOff()`), so Use theirs can't put one trailer's seals on another delivery.
 - **Trade-off:** the details sent are a snapshot from when **Show my pallets as QR codes** was tapped, like the pallets; a closed question can only come back by showing a new set of codes, since the same set can't be added twice. The receiving phone's date and Received by name are never changed.
 
-## The redesigned Android screens (commits `10a5be6` to `477182a` on `updates`; Android APK build 4, not built yet)
+## The redesigned Android screens (commits `10a5be6` to `943df6e` on `updates`; Android APK build 4, not built yet)
 
 A new look for the Android app only, from a design mock-up (a claude.ai canvas, "LPN Pallet Log Android redesign"). It is one file, `tools/android/redesign.js`, loaded after the app's scripts.
 
@@ -1255,3 +1255,11 @@ A new look for the Android app only, from a design mock-up (a claude.ai canvas, 
 - **Hidden buttons get no row** (`477182a`): a switched-off or hidden feature (Share log, Undo, the photo buttons, the tally sheet) is left out of the sheets instead of showing a row that does nothing.
 - **Accessibility kept** (`709953b`): sheets and the delivery details make what's behind them inert, Escape and Back close them, and focus goes back to the button that opened them, as the app's panels already did. Colours on the accent use `--onac` and accent text `--act`, the app's own readable colours, rather than new fixed ones. Steps show "✓ done" in words, not only colour, and tile names start with what they show ("Take photo: the manifest, …").
 - **The bottom bar only on Home.** On Log pallets the bottom of the screen is the entry panel.
+- **Closer to the mock-up** (commits `9504a45` to `943df6e`): after the first version, the pages were brought nearer the drawing:
+  - **One bar per page.** On Log pallets and the Manifest check the app name bar and the page bar stacked two bars at the top; the name bar now shows only on Home, and ⋮ moves into the page bar (`placeMore()` moves the same button, so the menu itself has one version).
+  - **The Saved tick under the bar** (`943df6e`): in the bar it took room from the page title, which was then cut off; it now floats just below the bar.
+  - **Which log as choices.** Four buttons and a drop-down for the log were the busiest part of the Manifest check; one row of choices (Current, Saved, File, Paper) shows one source at a time, and the two paper ways go behind Paper. The original buttons stay (hidden) and are clicked, so `compare.js` is unchanged.
+  - **The Manifest check's buttons in reach, Export as a sheet.** Clear, Check results and Export were at the end of a long page; they stay at the bottom of the screen. Export opens a sheet like the log's, and the sheet's **Include the full log** switch writes the same `lpnmergelog` setting as Settings, so there are not two settings to keep in step. Simple view keeps the old Export menu, since its page has no fixed bottom.
+  - **Results numbers read from the text again.** The Export sheet's counts are read from the results' wording, like the big numbers, so a wording change in `compare.js` would show 0 there; no check in `check-offline.js` covers these counts or the big numbers.
+  - **The Saved sheet covers the entry panel.** As a bottom sheet it now sits over the docked entry panel instead of above it; it goes by itself after 12 seconds unless it is being used, and `check-offline.js` checks that nothing covers it.
+  - **The camera scanner matches the pages.** Done in the app's orange (the main button, as on the pages) and green when all are in; the other buttons with thin outlines so the types and Done stand out.
