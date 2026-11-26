@@ -172,6 +172,7 @@
     + "#apkDcExp{border:0;margin:12px 0 0;padding:0;min-width:0}#apkDcExp legend{padding:0;font-weight:700;margin-bottom:6px}#apkDcExp .apkopt{font-weight:400;opacity:.8}"
     + ".apkdcgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px}.apkdcgrid label{display:flex;flex-direction:column;gap:4px;font-size:.9rem;min-width:0}.apkdcgrid input{width:100%;min-height:44px;box-sizing:border-box}#apkDcExp .note{margin:6px 0 0}"
     + "#flash.apktap{pointer-events:auto;cursor:pointer}"
+    + ".apkdctag{display:inline-block;margin-left:8px;padding:1px 7px;border:1px solid var(--line,#35507f);border-radius:999px;font:600 .72rem/1.4 system-ui,sans-serif;color:var(--mu,#9db0d0);vertical-align:middle;white-space:nowrap}"
     + ".apkmaill{display:block;font-weight:700;margin:4px 0}#apkMailTo{width:100%;min-height:46px;box-sizing:border-box}.apkmailr{flex-wrap:wrap;gap:6px;margin:8px 0 0}.apkmailr:empty{display:none}.apkmailc{min-height:40px;max-width:100%;overflow:hidden;text-overflow:ellipsis}.apkmailb{margin-top:10px;flex-wrap:wrap}#apkMailMsg:empty{display:none}"
     + ".apkoldbar{border:1px solid var(--rule,#223a63);border-radius:12px;padding:10px 12px;margin:8px 0}.apkoldbar p{margin:0 0 8px}"
     + ".apkfiles{list-style:none;padding:0;margin:8px 0}.apkfiles li{padding:10px 0;border-bottom:1px solid var(--rule,#223a63)}.apkfname{margin:0;font-weight:700;overflow-wrap:anywhere}.apkfiles .note{margin:2px 0 8px}";
@@ -433,6 +434,7 @@
         + (has("palletLog") ? '<label class="chk"><input type="checkbox" id="apkSpeak"><span>Say the count out loud after each pallet (and “already logged” or “check” for a warning)</span></label>' : "")
         + (has("palletLog") ? '<label class="chk"><input type="checkbox" id="apkDcWarn"><span>Warn when a pallet’s LPN doesn’t start with a known DC prefix (Vault, Runcorn, Qube or Rugby), so a misread or wrong label is caught at the dock</span></label>' : "")
         + (has("palletLog") ? '<label class="chk"><input type="checkbox" id="apkFpp"><span>Set the pallet type to FPP for LPNs with an FPP prefix (V, R, Q and IM), whatever type is chosen</span></label>' : "")
+        + (has("liveScan") && has("torch") ? '<label class="chk"><input type="checkbox" id="apkAutoTorch"><span>Torch on by itself in the camera scanner when it’s too dark to read a label</span></label>' : "")
         + '<label class="chk"><input type="checkbox" id="apkQuiet"><span>No scan sounds or spoken count while the phone is on silent, vibrate or Do Not Disturb (it still buzzes)</span></label>'
         + '<label class="chk"><input type="checkbox" id="apkHand"><span>Warehouse handheld scanner (Zebra or Honeywell): scans come straight into the app, so they can’t land in the wrong box. Untick if your scanner should type like a keyboard.</span></label>'
         + (has("manifestPhotos") ? '<h4 class="apksub">Photos</h4><label class="chk"><input type="checkbox" id="apkOcr"><span>Read manifest photos with the phone’s own text reader instead of the app’s own. It can be faster, but the app’s own reader is more accurate on the test photos, so check what it finds.</span></label>' : "")
@@ -446,7 +448,7 @@
       if ($("apkVol")) { $("apkVol").checked = volOn(); $("apkVol").onchange = () => { try { localStorage.setItem("lpnapkvol", $("apkVol").checked ? "on" : "off"); } catch (e) {} syncVol(); }; }
       $("apkFilesSet").onclick = () => showFiles();
       const sw = (id, key, def) => { const c = $(id); if (!c) return; c.checked = pref(key, def); c.onchange = () => { try { localStorage.setItem(key, c.checked ? "on" : "off"); } catch (e) {} }; };
-      sw("apkQuiet", "lpnapkquiet", true); sw("apkDcWarn", "lpnapkdcwarn", true); sw("apkFpp", "lpnapkfpp", true);
+      sw("apkQuiet", "lpnapkquiet", true); sw("apkDcWarn", "lpnapkdcwarn", true); sw("apkFpp", "lpnapkfpp", true); sw("apkAutoTorch", "lpnapkautotorch", true);
       sw("apkCam", "lpnapkcamscan", true); sw("apkSpeak", "lpnapkspeak", false); sw("apkBig", "lpnapkbig", false); sw("apkHand", "lpnapkhand", true); sw("apkOcr", "lpnapkocr", OCR_DEFAULT);
       if ($("apkHand")) $("apkHand").addEventListener("change", syncHand);
       const dirShow = () => { const d = dirGet(), n = $("apkDirNote"); if (!n) return;
@@ -516,6 +518,36 @@
     return d.toUpperCase() + " · " + (dcExp[d] > 0 ? n + " of " + dcExp[d] : n);
   }
   window.LPN_APK_DCBIG = dcBig;
+  /* DC tags and a DC filter on the log, when it has pallets from more than one DC: a small "Rugby" tag on each row, and
+     "All DCs / Vault / Rugby…" beside the type and FSDU filters (core.js's render reads #fltDc). */
+  function dcGroups() { if (typeof dcGroup !== "function") return []; const c = {}; rows.forEach(r => { const g = dcGroup(r.lpn); if (g) c[g] = (c[g] || 0) + 1; }); return Object.keys(c).sort((a, b) => (a === "Other") - (b === "Other") || c[b] - c[a] || a.localeCompare(b)); }
+  function syncDcFilter() {
+    const ff = $("fltFsdu"); if (!ff || !has("palletLog")) return false;
+    let sel = $("fltDc");
+    if (!sel) { sel = document.createElement("select"); sel.id = "fltDc"; sel.setAttribute("aria-label", "Filter by DC"); sel.hidden = true; ff.after(sel); sel.addEventListener("change", () => { if (typeof render === "function") render(); }); }
+    const gs = dcGroups(), many = gs.length > 1, was = sel.value;
+    const want = [""].concat(gs).join("|");
+    if (sel.dataset.opts !== want) { sel.innerHTML = ""; [["", "All DCs"]].concat(gs.map(g => [g, g])).forEach(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; sel.appendChild(o); }); sel.dataset.opts = want; sel.value = gs.indexOf(was) >= 0 ? was : ""; }
+    const changed = sel.hidden === many || (was && sel.value !== was);
+    sel.hidden = !many; if (!many) sel.value = "";
+    return changed;
+  }
+  function dcTags() {
+    if (typeof dcGroup !== "function") return;
+    const many = dcGroups().length > 1;
+    document.querySelectorAll("#body .lpnedit").forEach(b => {
+      const td = b.closest("td"), old = td && td.querySelector(".apkdctag"); if (old) old.remove();
+      if (!many || !td) return; const r = rows[+b.dataset.i]; const g = r && dcGroup(r.lpn); if (!g) return;
+      const t = document.createElement("span"); t.className = "apkdctag"; t.textContent = g; t.setAttribute("aria-hidden", "true"); b.after(t);
+    });
+  }
+  document.addEventListener("DOMContentLoaded", () => {
+    if (typeof render !== "function" || render.dcf) return;
+    const r0 = render;
+    render = function () { const x = r0.apply(this, arguments); try { if (syncDcFilter()) r0.apply(this, arguments); dcTags(); } catch (e) {} return x; };
+    render.dcf = true;
+    try { render(); } catch (e) {}
+  });
   let shortOk = "";
   function shortAsk(when, go) {
     const a = shortDcs(); if (!a.length) { if (go) go(); return; }
@@ -627,7 +659,7 @@
   const FPP_PFX = ["V", "R", "Q", "IM"];
   let fppSet = "";
   window.LPN_APK_FPPAUTO = v => { try { return pref("lpnapkfpp", true) && typeof lpnPfx === "function" && FPP_PFX.indexOf(lpnPfx(v)) >= 0; } catch (e) { return false; } };
-  const scanState = () => ({ allIn: allIn(), type: ($("type") || {}).value || "BB", fsdu: !!($("fsdu") || {}).checked, canUndo: rows.length > 0, big: pref("lpnapkbig", false), colours: typeColours(), dcs: window.LPN_APK_DCS(rows, dcExp),
+  const scanState = () => ({ allIn: allIn(), type: ($("type") || {}).value || "BB", fsdu: !!($("fsdu") || {}).checked, canUndo: rows.length > 0, big: pref("lpnapkbig", false), colours: typeColours(), dcs: window.LPN_APK_DCS(rows, dcExp), autoTorch: has("torch") && pref("lpnapkautotorch", true),
     recent: rows.slice(-3).reverse().map(r => r.lpn + " · " + r.type + (r.fsdu ? " + FSDU" : "")).join("\n") });
   function pushScan(text) { if (N()) N().scanStatus(text ? { text, state: scanState() } : { state: scanState() }).catch(() => {}); }
   window.LPN_APK_SCANSTATE = scanState;

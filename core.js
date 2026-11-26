@@ -130,7 +130,7 @@ function render(){
   const b=$("body");b.innerHTML="";
   if(!rows.length){b.innerHTML='<tr><td colspan="5" class="empty"><b>No pallets yet.</b> Pick the type, then scan or type the first LPN in the LPN number box. <button type="button" class="linkbtn" id="toLpn">Go to LPN number</button></td></tr>';
     const g=$("toLpn");if(g)g.onclick=()=>$("lpn").focus()}
-  const q=($("flt").value||"").trim().toUpperCase().replace(/\s+/g,""),ft=$("fltType").value,ff=$("fltFsdu").value;
+  const q=($("flt").value||"").trim().toUpperCase().replace(/\s+/g,""),ft=$("fltType").value,ff=$("fltFsdu").value,fd=$("fltDc")&&!$("fltDc").hidden&&typeof dcGroup==="function"?$("fltDc").value:""; // fltDc: the Android app's DC filter
   if($("fltClear"))$("fltClear").hidden=!$("flt").value;
   let shown=0;
   // Numbers only (3 or more): the end of the LPN first, as people read the last digits off a label; anywhere in it
@@ -139,6 +139,7 @@ function render(){
   rows.forEach((r,i)=>{
     if(q&&(tail?!lp(r).endsWith(q):lp(r).indexOf(q)<0))return;
     if(ft&&r.type!==ft)return;
+    if(fd&&dcGroup(r.lpn)!==fd)return;
     if(ff==="y"&&!r.fsdu)return;
     if(ff==="n"&&r.fsdu)return;
     shown++;
@@ -254,7 +255,7 @@ function render(){
     tr.append(n,l,t,f,x);b.appendChild(tr);
   });
   if(rows.length&&!shown){b.innerHTML='<tr><td colspan="5" class="empty">No pallets match the search</td></tr>'}
-  const fi=$("fltInfo");const fa=!!(q||ft||ff);fi.hidden=!fa;if(fa)fi.textContent="Showing "+shown+" of "+rows.length+" pallets (counts above are for the whole log).";
+  const fi=$("fltInfo");const fa=!!(q||ft||ff||fd);fi.hidden=!fa;if(fa)fi.textContent="Showing "+shown+" of "+rows.length+" pallets (counts above are for the whole log).";
   summary();
 }
 /* The damage choices shown under a pallet while it is edited. pick(reason or "", fromKeyboard). */

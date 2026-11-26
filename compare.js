@@ -564,6 +564,8 @@ function dcLogText(list,exp,o){
   if(keys.length<(o.min||1)&&!hasExp)return "";
   return keys.map(k=>k+" "+c[k]+(exp[k]>0?" of "+exp[k]+(c[k]===exp[k]?(o.plain?" (all in)":" ✓"):c[k]>exp[k]?" ("+(c[k]-exp[k])+" over)":""):"")).join(" · ");
 }
+// The DC a pallet is counted under: Vault, Runcorn, Qube, Rugby, "Other" for any other prefix, "" for no letters.
+const dcGroup=n=>{const d=dcOf(n);return !d?"":DCS[d]?d:"Other"};
 /* Manifest check results per DC, when the pallets came from more than one DC: problems first, "Other" last. */
 function cmpByDc(C){
   const g={};

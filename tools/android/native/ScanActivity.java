@@ -60,7 +60,11 @@ public class ScanActivity extends AppCompatActivity {
     private volatile BarcodeScanner scanner;
     private volatile String last = "";
     private volatile long lastAt = 0;
-    private boolean torch = false;
+    private boolean torch = false, userTorch = false;
+    // The torch comes on by itself when the picture stays too dark to read a label (Settings › Android app can turn
+    // this off); once the torch button has been used, it's left to the user.
+    static volatile boolean sAutoTorch = true;
+    private long darkSince = 0, lightAt = 0;
     private String closeReason = "done";
     private static final String[] TYPES = { "BB", "FMCG", "FPP", "Mixed" };
     private final Button[] typeBtns = new Button[TYPES.length];
@@ -157,7 +161,7 @@ public class ScanActivity extends AppCompatActivity {
         undoBtn.setOnClickListener(v -> LpnNativePlugin.scanEvent("scanUndo", new com.getcapacitor.JSObject()));
         row.addView(undoBtn, gap(new LinearLayout.LayoutParams(0, dp(52), 1.2f)));
         torchBtn = button("Torch");
-        torchBtn.setOnClickListener(v -> { if (camera != null) { torch = !torch; camera.getCameraControl().enableTorch(torch); torchBtn.setText(torch ? "Torch off" : "Torch"); } });
+        torchBtn.setOnClickListener(v -> { if (camera != null) { userTorch = true; torch = !torch; camera.getCameraControl().enableTorch(torch); torchBtn.setText(torch ? "Torch off" : "Torch"); } });
         torchBtn.setVisibility(android.view.View.GONE);
         row.addView(torchBtn, gap(new LinearLayout.LayoutParams(0, dp(52), 1f)));
         Button done = button("Done");
@@ -286,6 +290,7 @@ public class ScanActivity extends AppCompatActivity {
     private void analyze(ImageProxy img) {
         BarcodeScanner s = scanner;
         if (img.getImage() == null || s == null) { img.close(); return; }
+        checkLight(img);
         InputImage in = InputImage.fromMediaImage(img.getImage(), img.getImageInfo().getRotationDegrees());
         s.process(in).addOnSuccessListener(list -> {
             List<String> values = new ArrayList<>();
@@ -297,6 +302,28 @@ public class ScanActivity extends AppCompatActivity {
             last = key; lastAt = now;
             LpnNativePlugin.scanned(values);
         }).addOnCompleteListener(t -> img.close());
+    }
+
+    /* How bright the picture is (every 16th pixel of the brightness plane, twice a second); 1.5 seconds below 45 of 255
+       turns the torch on. It isn't turned off by brightness, as the torch itself makes the picture bright. */
+    private void checkLight(ImageProxy img) {
+        if (!sAutoTorch || torch || userTorch || camera == null || !camera.getCameraInfo().hasFlashUnit()) return;
+        long now = System.currentTimeMillis(); if (now - lightAt < 500) return; lightAt = now;
+        try {
+            ImageProxy.PlaneProxy y = img.getPlanes()[0]; java.nio.ByteBuffer b = y.getBuffer();
+            int rs = y.getRowStride(), ps = y.getPixelStride(), w = img.getWidth(), h = img.getHeight(), lim = b.limit(); long sum = 0; int n = 0;
+            for (int r = 0; r < h; r += 16) for (int c = 0; c < w; c += 16) { int i = r * rs + c * ps; if (i < lim) { sum += b.get(i) & 0xff; n++; } }
+            int avg = n == 0 ? 255 : (int) (sum / n);
+            if (avg >= 45) { darkSince = 0; return; }
+            if (darkSince == 0) { darkSince = now; return; }
+            if (now - darkSince < 1500) return;
+            darkSince = 0;
+            runOnUiThread(() -> {
+                if (torch || userTorch || camera == null) return;
+                torch = true; camera.getCameraControl().enableTorch(true); torchBtn.setText("Torch off");
+                status.setText("It’s dark, so the torch is on. Tap Torch off to turn it off.");
+            });
+        } catch (Exception e) {}
     }
 
     /* Shows the page's state: the chosen type, FSDU, the last pallets, whether there's one to remove, button size. */

@@ -623,6 +623,21 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("opening the app with a delivery from an earlier day asks to carry on or save it and start new, on the start menu too (offering Export first when not exported)",
     s.old === "Still working on TR 4471 from yesterday? 2 of 20." && s.oldB === "Carry on scanning,Save it and start new,Cancel" && s.exp === "This delivery hasn’t been exported yet." && s.expB === "Export it first,Save without exporting,Cancel"
     && s.after === "0|true" && /^Delivery in progress/.test(s.today || "") && s.menuOld && !s.menuToday, s);
+  // DC tags and the DC filter on the log; the automatic torch setting reaches the scanner.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), keep = rows.slice(), out = {};
+    rows = ["VLT004041601", "VLT004041602"].map(l => ({ lpn: l, type: "BB", fsdu: false })); save(); render(); LPN_APK_MODE("log"); await wait(30);
+    const sel = document.getElementById("fltDc"); out.oneHidden = !!sel && sel.hidden; out.oneTags = document.querySelectorAll("#body .apkdctag").length;
+    rows = ["VLT004041601", "RBY006292801", "IM0012345701", "RUN0001831601", "XQZ0012345"].map(l => ({ lpn: l, type: "BB", fsdu: false })); save(); render(); await wait(30);
+    out.opts = [...sel.options].map(o => o.textContent).join(); out.tags = [...document.querySelectorAll("#body .apkdctag")].map(t => t.textContent).join();
+    sel.value = "Rugby"; sel.dispatchEvent(new Event("change")); await wait(30);
+    out.shown = [...document.querySelectorAll("#body .lpnedit")].map(b => b.textContent).join(); out.info = document.getElementById("fltInfo").textContent;
+    rows = rows.filter(r => !/^(RBY|IM)/.test(r.lpn)); save(); render(); await wait(30); out.gone = sel.value + "|" + document.querySelectorAll("#body .lpnedit").length;
+    out.torch = LPN_APK_SCANSTATE().autoTorch; localStorage.setItem("lpnapkautotorch", "off"); out.torchOff = LPN_APK_SCANSTATE().autoTorch; localStorage.removeItem("lpnapkautotorch");
+    openHelp("settings", "Settings"); await wait(100); out.setting = !!document.getElementById("apkAutoTorch") && document.getElementById("apkAutoTorch").checked; closeHelp();
+    sel.value = ""; rows = keep; save(); render(); return out; });
+  check("with pallets from more than one DC, each row has a DC tag and the filters get a DC filter (none for one DC)", s.oneHidden && s.oneTags === 0 && s.opts === "All DCs,Rugby,Runcorn,Vault,Other" && s.tags === "Vault,Rugby,Rugby,Runcorn,Other", s);
+  check("the DC filter shows only that DC's pallets, and goes back to All DCs when that DC's pallets are gone", s.shown === "RBY006292801,IM0012345701" && /^Showing 2 of 5 pallets/.test(s.info) && s.gone === "|3", s);
+  check("the camera scanner's automatic torch is on unless switched off in Settings › Android app", s.torch === true && s.torchOff === false && s.setting, s);
   // Results per DC in Manifest check.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)); LPN_APK_MODE("cmp"); await wait(50);
     document.getElementById("cmpLogNums").value = "VLT004040801\nVLT004040802\nRBY006292401\nRUN0001830801"; document.getElementById("cmpNums").value = "VLT004040801\nVLT004040899\nRUN0001830801";

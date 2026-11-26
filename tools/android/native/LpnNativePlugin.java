@@ -180,6 +180,7 @@ public class LpnNativePlugin extends Plugin {
     public void scanStatus(PluginCall call) {
         JSObject st = call.getObject("state");
         if (st != null) {
+            ScanActivity.sAutoTorch = !Boolean.FALSE.equals(st.getBool("autoTorch"));
             String[] cols = null;
             String cs = st.getString("colours"); // "#dba56c,#6fa8ff,#a9c95a,#c79bf0" for BB, FMCG, FPP, Mixed
             if (cs != null && cs.split(",").length == 4) cols = cs.split(",");
