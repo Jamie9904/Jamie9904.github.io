@@ -393,22 +393,14 @@
      "Rugby: 2 missing · 5 matched", "Qube: no manifest (3 on the log)", "Vault: all 20 matched". */
   function byDc(res, after) {
     try {
-      if (typeof cmpData !== "function" || typeof dcOf !== "function" || typeof DCS === "undefined") return;
+      if (typeof cmpData !== "function" || typeof cmpByDc !== "function") return;
       const C = cmpData(); if (!C) return;
-      const g = {};
-      C.res.forEach(x => { const d0 = dcOf(x.n); if (!d0) return; const k = DCS[d0] ? d0 : "Other"; const o = g[k] || (g[k] = { ok: 0, missing: 0, book: 0, noman: 0 }); o[C.kind(x)]++; });
-      const ks = Object.keys(g); if (ks.length < 2) return;
-      const bad = k => g[k].missing + g[k].book + g[k].noman;
-      ks.sort((a, b) => (a === "Other") - (b === "Other") || bad(b) - bad(a) || a.localeCompare(b));
+      const list = cmpByDc(C); if (!list.length) return;
       const box = document.createElement("div"); box.className = "rddcres"; box.setAttribute("role", "group"); box.setAttribute("aria-label", "Results per DC");
       box.innerHTML = "<h3>By DC</h3><ul></ul>"; const ul = box.querySelector("ul");
-      ks.forEach(k => { const o = g[k], li = document.createElement("li"), parts = [];
-        if (o.noman) parts.push("no manifest (" + o.noman + " on the log)");
-        if (o.missing) parts.push(o.missing + " missing");
-        if (o.book) parts.push(o.book + " extra");
-        if (o.ok) parts.push(bad(k) ? o.ok + " matched" : (o.ok === 1 ? "1 matched" : "all " + o.ok + " matched"));
+      list.forEach(o => { const li = document.createElement("li");
         li.className = o.noman ? "nm" : o.missing ? "mi" : o.book ? "ex" : "ok";
-        li.innerHTML = "<b></b><span></span>"; li.querySelector("b").textContent = k; li.querySelector("span").textContent = parts.join(" · "); ul.appendChild(li); });
+        li.innerHTML = "<b></b><span></span>"; li.querySelector("b").textContent = o.dc; li.querySelector("span").textContent = dcResText(o); ul.appendChild(li); });
       after.after(box);
     } catch (e) {}
   }

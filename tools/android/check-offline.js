@@ -543,6 +543,21 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("Delivery details has Expected per DC boxes for the four DCs, and filling them in sets Expected pallets to the total", s.boxes === "Vault,Runcorn,Qube,Rugby" && s.total === "6", s);
   check("the home card and the scanner show each DC's pallets against what's expected (a tick when all are in)", s.split === "Vault 2 of 2 ✓ · Rugby 1 of 4" && s.home === s.split && s.scan === s.split, s);
   check("the per-DC numbers are kept with the delivery (saved, cleared for a new delivery, back with Undo), a typed total isn't changed, and odd values are dropped", JSON.stringify(s.stored) === '{"Vault":2,"Rugby":4}' && s.typedKept === "10" && s.cleared === "{}|" && s.back === '{"Vault":2,"Qube":1,"Rugby":4}|4' && s.clean === '{"Vault":5}', s);
+  // A DC short of its expected number: asked after Done in the scanner and before Start new delivery.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)), keep = rows.slice(), keepDel = getDel(), keepHist = hist.slice(), out = {};
+    document.querySelectorAll(".apkask").forEach(a => a.remove());
+    rows = ["VLT004041001", "VLT004041002", "RBY006292601"].map(l => ({ lpn: l, type: "BB", fsdu: false })); save(); render();
+    const f = (k, v) => { const i = document.getElementById("apkDcExp-" + k); i.value = v; i.dispatchEvent(new Event("input", { bubbles: true })); };
+    f("Vault", "2"); f("Rugby", "4"); out.short = LPN_APK_SHORT().join("|");
+    N.listeners.nativeScanClosed({ reason: "done" }); await wait(50); let a = document.querySelector(".apkask");
+    out.scanQ = a && a.querySelector(".apkasktitle").textContent; out.scanB = a ? [...a.querySelectorAll("button")].map(b => b.textContent).join() : ""; if (a) a.remove();
+    document.getElementById("newDel").click(); await wait(50); a = document.querySelector(".apkask"); out.newQ = a && a.querySelector(".apkasktitle").textContent; out.kept = rows.length;
+    a.querySelector("button").click(); await wait(50); out.msg = document.getElementById("dlmsg").textContent;
+    document.getElementById("newDel").click(); await wait(50); out.again = !!document.querySelector(".apkask"); out.after = rows.length;
+    f("Rugby", ""); out.none = LPN_APK_SHORT().length;
+    hist = keepHist; saveHist(); rows = keep; setDel(keepDel); save(); render(); document.getElementById("dlmsg").textContent = ""; return out; });
+  check("a DC short of its expected number is named after Done in the camera scanner, with Carry on scanning", s.short === "Rugby: 1 of 4" && s.scanQ === "Still short from one DC: Rugby: 1 of 4." && s.scanB === "Carry on scanning,Finish for now", s);
+  check("Start new delivery asks first when a DC is short, then goes on as usual (asked once)", s.newQ === "Still short from one DC: Rugby: 1 of 4. Start a new delivery anyway?" && s.kept === 3 && /hasn’t been exported|Saved to history/.test(s.msg) && !s.again && s.after === 0 && s.none === 0, s);
   // Results per DC in Manifest check.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)); LPN_APK_MODE("cmp"); await wait(50);
     document.getElementById("cmpLogNums").value = "VLT004040801\nVLT004040802\nRBY006292401\nRUN0001830801"; document.getElementById("cmpNums").value = "VLT004040801\nVLT004040899\nRUN0001830801";

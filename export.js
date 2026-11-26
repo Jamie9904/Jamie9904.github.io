@@ -276,7 +276,7 @@ async function tallyPdf(want1,want2){
   pdfFooter(doc,0,true,true);
   return {ok:true,buf:doc.output("arraybuffer"),pages:doc.getNumberOfPages(),rows1:n1,rows2:n2};
 }
-async function buildCmpPdf(res,cnt,manCount,d,logCopy,notes,nmDcs){
+async function buildCmpPdf(res,cnt,manCount,d,logCopy,notes,nmDcs,byDc){
   await loadJsPdf();await appVersion();
   const doc=new window.jspdf.jsPDF({unit:"mm",format:"a4",orientation:"portrait"});
   const L=10,LW=112,RX=L+LW+6,RW=190-LW-6;
@@ -293,6 +293,13 @@ async function buildCmpPdf(res,cnt,manCount,d,logCopy,notes,nmDcs){
     startY:doc.lastAutoTable.finalY+8,margin:{left:RX,right:10,top:12,bottom:16},tableWidth:RW,
     head:[[{content:"Delivery Details",colSpan:2}]],
     body:[[pdfCell("Date",bold),ukDate(d)]].concat(nmDcs&&nmDcs.length?[[pdfCell("No manifest from",bold),nmDcs.map(g=>g.dc).join(", ")]]:[]).concat(notes?[[pdfCell("Notes",bold),String(notes)]]:[]),
+    columnStyles:{0:{cellWidth:26}}
+  }));
+  // Results per DC, when the pallets came from more than one DC (cmpByDc in compare.js).
+  if(byDc&&byDc.length)doc.autoTable(Object.assign({},PDF_BASE,PDF_PLAIN,{
+    startY:doc.lastAutoTable.finalY+8,margin:{left:RX,right:10,top:12,bottom:16},tableWidth:RW,
+    head:[[{content:"By DC",colSpan:2}]],
+    body:byDc.map(o=>[pdfCell(o.dc,bold),dcResText(o)]),
     columnStyles:{0:{cellWidth:26}}
   }));
   doc.setPage(1);

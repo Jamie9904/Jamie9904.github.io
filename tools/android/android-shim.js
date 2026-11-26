@@ -452,15 +452,7 @@
   /* Pallets per DC from the LPN prefixes (compare.js's DCS list: Vault, Runcorn, Qube, Rugby), most first, for example
      "Rugby 12 · Vault 8 · Other 1". Refused pallets and pallets with no LPN are left out. Empty when none of the
      pallets is from a known DC, so test numbers or another site's labels show nothing. */
-  window.LPN_APK_DCS = (list, exp) => {
-    if (typeof dcOf !== "function" || typeof DCS === "undefined") return "";
-    const c = {}; let known = 0; exp = exp || {};
-    (list || []).forEach(r => { if (!r || r.ref || (typeof isNoLpn === "function" && isNoLpn(r.lpn))) return; const d = dcOf(r.lpn); if (!d) return;
-      const k = DCS[d] ? d : "Other"; if (k !== "Other") known++; c[k] = (c[k] || 0) + 1; });
-    Object.keys(exp).forEach(k => { if (DCS[k] && exp[k] > 0 && !c[k]) c[k] = 0; });
-    if (!known && !Object.keys(exp).length) return "";
-    return Object.keys(c).sort((a, b) => (a === "Other") - (b === "Other") || c[b] - c[a] || a.localeCompare(b)).map(k => k + " " + c[k] + (exp[k] > 0 ? " of " + exp[k] + (c[k] >= exp[k] ? " ✓" : "") : "")).join(" · ");
-  };
+  window.LPN_APK_DCS = (list, exp) => typeof dcLogText === "function" ? dcLogText(list, exp) : ""; // compare.js
   /* Expected pallets per DC (Delivery details, optional): kept with the delivery (dcExp beside the app's own details,
      in the log, saved deliveries and backups; the website ignores it), shown as "Rugby 8 of 10" on the home card and in
      the camera scanner. Entering them fills Expected pallets with the total, unless a different total was typed. */
@@ -469,6 +461,29 @@
   const cleanDcExp = o => { const out = {}; if (o && typeof o === "object") dcNames().forEach(k => { const n = parseInt(o[k], 10); if (n > 0 && n < 10000) out[k] = n; }); return out; };
   const dcSum = e => Object.keys(e).reduce((a, k) => a + e[k], 0);
   window.LPN_APK_DCEXP = () => dcExp;
+  /* A DC under its expected number (Expected per DC) gets a reminder when Done is tapped in the camera scanner and
+     before Start new delivery, for example "Rugby: 2 of 4". Nothing is asked when no numbers per DC were set. */
+  function shortDcs() {
+    const ks = Object.keys(dcExp); if (!ks.length || typeof dcOf !== "function") return [];
+    const c = {}; rows.forEach(r => { if (!r || r.ref || (typeof isNoLpn === "function" && isNoLpn(r.lpn))) return; const d = dcOf(r.lpn); c[d] = (c[d] || 0) + 1; });
+    return ks.filter(k => (c[k] || 0) < dcExp[k]).map(k => k + ": " + (c[k] || 0) + " of " + dcExp[k]);
+  }
+  window.LPN_APK_SHORT = shortDcs;
+  let shortOk = "";
+  function shortAsk(when, go) {
+    const a = shortDcs(); if (!a.length) { if (go) go(); return; }
+    const t = (a.length === 1 ? "Still short from one DC: " : "Still short from " + a.length + " DCs: ") + a.join(", ") + ".";
+    if (when === "scan") ask(t, [["Carry on scanning", () => { const b = $("scan"); if (b) b.click(); }], ["Finish for now", null]], true);
+    else ask(t + " Start a new delivery anyway?", [["Start new delivery", () => { shortOk = JSON.stringify(rows.length) + a.join(); go(); }]]);
+  }
+  window.LPN_APK_SHORTASK = shortAsk;
+  // Start new delivery (the Delivery button and the prompt after exporting): asked first when a DC is short.
+  document.addEventListener("click", e => {
+    const b = e.target && e.target.closest && e.target.closest("#newDel,#nextNew"); if (!b || b.dataset.shortGo) return;
+    const a = shortDcs(); if (!a.length || shortOk === JSON.stringify(rows.length) + a.join()) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    shortAsk("new", () => { b.dataset.shortGo = "1"; try { b.click(); } finally { delete b.dataset.shortGo; } });
+  }, true);
   function fillDcExp() { dcNames().forEach(k => { const i = $("apkDcExp-" + k); if (i) i.value = dcExp[k] || ""; }); }
   function buildDcExp() {
     const at = document.querySelector(".dc-exp"); if (!at || $("apkDcExp") || !dcNames().length || !has("palletLog")) return;
@@ -558,6 +573,7 @@
         window.LPN_APK_NATIVESCAN = false;
         if (e && e.reason === "denied") { $("scanbox").hidden = false; $("smsg").textContent = "Camera access was blocked. Allow the camera for LPN Pallet Log in your phone’s Settings › Apps."; }
         else if (e && e.reason === "check") { const c = $("chkBar"); if (c) c.scrollIntoView({ block: "center" }); }
+        else if (e && e.reason === "done") shortAsk("scan");
       });
     } catch (e) {}
   }

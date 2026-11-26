@@ -74,7 +74,7 @@ module.exports = async ({ browser, URL0 }) => {
       let copied = null; navigator.share = undefined; navigator.clipboard.writeText = async t => { copied = t; };
       document.getElementById("cmpShare").click(); await new Promise(r => setTimeout(r, 50));
       return { shared, copied, msg: document.getElementById("cmpMsg").textContent }; });
-    const want = "Manifest check 01/11/2026, trailer TR4471\nMissing from the log (2): RBY006292169, RBY006292211\nOn the log only, to book in (1): RUN0001830999\nMatched: 2 of 4 on the manifest";
+    const want = "Manifest check 01/11/2026, trailer TR4471\nMissing from the log (2): RBY006292169, RBY006292211\nOn the log only, to book in (1): RUN0001830999\nMatched: 2 of 4 on the manifest\nBy DC:\nRugby: 2 missing\nRuncorn: 1 extra · 1 matched\nVault: 1 matched";
     check("Share missing list sends the missing and extra LPNs as plain text through the share menu", s.shared && s.shared.text === want, s.shared);
     check("without a share menu, the list is copied and the message says so", s.copied === want && /copied/.test(s.msg), s);
     // Share this app (Settings) and Your data and privacy (Guide).

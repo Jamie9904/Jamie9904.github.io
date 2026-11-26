@@ -549,6 +549,29 @@ $("cmpClear").onclick=()=>{cmpForgetPhotos();cmpNoManKeep.clear();$("cmpNotes").
 const DCS={Vault:["VLT","V"],Runcorn:["RUN","R"],Qube:["QUB","Q"],Rugby:["RBY","IM"]};
 const lpnPfx=n=>(String(n).toUpperCase().replace(/[\s-]+/g,"").match(/^[A-Z]+/)||[""])[0];
 const dcOf=n=>{const p=lpnPfx(n);if(!p)return "";for(const d in DCS)if(DCS[d].indexOf(p)>=0)return d;return p};
+/* Pallets per DC on a log, most first, with other prefixes together as "Other" at the end: "Vault 26 · Rugby 2".
+   Refused pallets and pallets with no LPN aren't counted. exp (expected per DC, set in the Android app) adds
+   "of n" and a tick (or "(all in)" in exports, whose PDF font has no tick). Empty when no pallet is from a known DC
+   (and nothing is expected), or when there are fewer than min groups. */
+function dcLogText(list,exp,o){
+  exp=exp||{};o=o||{};const c={};let known=0;
+  (list||[]).forEach(r=>{if(!r||r.ref||isNoLpn(r.lpn))return;const d=dcOf(r.lpn);if(!d)return;const k=DCS[d]?d:"Other";if(k!=="Other")known++;c[k]=(c[k]||0)+1});
+  const hasExp=Object.keys(exp).some(k=>DCS[k]&&exp[k]>0);
+  Object.keys(exp).forEach(k=>{if(DCS[k]&&exp[k]>0&&!c[k])c[k]=0});
+  const keys=Object.keys(c).sort((a,b)=>(a==="Other")-(b==="Other")||c[b]-c[a]||a.localeCompare(b));
+  if(!known&&!hasExp)return "";
+  if(keys.length<(o.min||1)&&!hasExp)return "";
+  return keys.map(k=>k+" "+c[k]+(exp[k]>0?" of "+exp[k]+(c[k]>=exp[k]?(o.plain?" (all in)":" ✓"):""):"")).join(" · ");
+}
+/* Manifest check results per DC, when the pallets came from more than one DC: problems first, "Other" last. */
+function cmpByDc(C){
+  const g={};
+  C.res.forEach(x=>{const d0=dcOf(x.n);if(!d0)return;const k=DCS[d0]?d0:"Other";const o=g[k]||(g[k]={dc:k,ok:0,missing:0,book:0,noman:0});o[C.kind(x)]++});
+  const a=Object.keys(g).map(k=>g[k]);if(a.length<2)return [];
+  const bad=o=>o.missing+o.book+o.noman;
+  return a.sort((p,q)=>(p.dc==="Other")-(q.dc==="Other")||bad(q)-bad(p)||p.dc.localeCompare(q.dc));
+}
+const dcResText=o=>{const p=[],bad=o.missing+o.book+o.noman;if(o.noman)p.push("no manifest ("+o.noman+" on the log)");if(o.missing)p.push(o.missing+" missing");if(o.book)p.push(o.book+" extra");if(o.ok)p.push(bad?o.ok+" matched":o.ok===1?"1 matched":"all "+o.ok+" matched");return p.join(" · ")};
 // DCs whose pallets were said to be on the manifest after all (Count as log only), until Clear.
 const cmpNoManKeep=new Set();
 function cmpData(){
@@ -591,7 +614,8 @@ function cmpShareText(C){
     "Missing from the log ("+miss.length+"): "+(miss.join(", ")||"none"),
     "On the log only, to book in ("+book.length+"): "+(book.join(", ")||"none"),
     ...(C.nmDcs&&C.nmDcs.length?["No manifest received: "+nmText(C.nmDcs)]:[]),
-    "Matched: "+cnt.ok+" of "+man.length+" on the manifest"].concat(C.noLpn?["Pallets with no LPN (check by hand): "+C.noLpn]:[]).concat(cmpNotes()?["Notes: "+cmpNotes()]:[]).join("\n");
+    "Matched: "+cnt.ok+" of "+man.length+" on the manifest",
+    ...cmpByDc(C).map((o,i)=>(i?"":"By DC:\n")+o.dc+": "+dcResText(o))].concat(C.noLpn?["Pallets with no LPN (check by hand): "+C.noLpn]:[]).concat(cmpNotes()?["Notes: "+cmpNotes()]:[]).join("\n");
 }
 async function shareCmp(C){
   const text=cmpShareText(C);
@@ -706,6 +730,7 @@ $("cmpGo").onclick=async()=>{
     const border={top:med,left:med,bottom:med,right:med};
     let off=0;
     try{off=await xlLogo(wb,ws,Math.round((7+lpnW+18+12+19)*7.1))}catch(e){off=0}
+    const bd=cmpByDc(C);
     const side=[
       {v:["Summary","Count"],h:1},
       {v:["On manifest",man.length]},
@@ -718,13 +743,14 @@ $("cmpGo").onclick=async()=>{
       {v:["Delivery Details",""],h:1,merge:1},
       {v:["Date",ukDate(d)],l:1},
       ...(C.nmDcs.length?[{v:["No manifest from",C.nmDcs.map(g=>g.dc).join(", ")],l:1}]:[]),
+      ...(bd.length?[{v:["By DC",""],h:1,merge:1}].concat(bd.map(o=>({v:[o.dc,dcResText(o)],l:1}))):[]),
       ...(notes?[{v:["Notes",""],h:1,merge:1},{v:[notes,""],merge:1,note:1}]:[])
     ];
     const ST={ok:{t:"✓ Matched",f:null},missing:{t:"✗ MISSING",f:"FFA6A6A6"},book:{t:"⚠ LOG ONLY",f:"FFD0D0D0"},noman:{t:"⊘ NO MANIFEST",f:"FFE4E4E4"}};
     const HD="FFE6E9ED";
     const n=Math.max(res.length,side.length-1);
     const H=xlTitle(ws,off,8,"Manifest check","Date: "+ukDate(d)+"     On manifest: "+man.length+"     Matched: "+cnt.ok+"     Missing: "+cnt.missing+"     Log only: "+cnt.book+(cnt.noman?"     No manifest: "+cnt.noman:"")+(cnt.noLpn?"     No LPN: "+cnt.noLpn:""));
-    const nl=(cnt.noLpn?1:0)+(cnt.noman?1:0),lastL=H+res.length,s1=H+4+nl,s2a=H+6+nl,s2b=H+7+nl+(C.nmDcs.length?1:0)+(notes?2:0);
+    const nl=(cnt.noLpn?1:0)+(cnt.noman?1:0),lastL=H+res.length,s1=H+4+nl,s2a=H+6+nl,s2b=H+7+nl+(C.nmDcs.length?1:0)+(bd.length?1+bd.length:0)+(notes?2:0);
     for(let i=-1;i<n;i++){
       const r=ws.getRow(H+i+1);
       const head=i<0,x=head?null:res[i],k0=x?kind(x):null,st=k0?ST[k0]:null;
@@ -744,7 +770,7 @@ $("cmpGo").onclick=async()=>{
         put(8,right.v[1],{bold:hd,fill:hd?HD:null,center:typeof right.v[1]==="number",box:bx(8)});
         if(right.merge)ws.mergeCells(r.number,7,r.number,8);
       }
-      r.height=(head||(right&&right.h))?32:Math.max(24,x?xlLpnLines(x.n,lpnW)*18+6:0,right&&typeof right.v[0]==="string"?xlLines(right.v[0],right.note?43:25)*18+6:0);
+      r.height=(head||(right&&right.h))?32:Math.max(24,x?xlLpnLines(x.n,lpnW)*18+6:0,right&&typeof right.v[0]==="string"?xlLines(right.v[0],right.note?43:25)*18+6:0,right&&!right.merge&&typeof right.v[1]==="string"&&right.v[1]?xlLines(right.v[1],18)*18+6:0);
     }
     xlMadeWith(ws,H+n+2,8);
     xlPrint(ws,H);
@@ -766,7 +792,7 @@ $("cmpGo").onclick=async()=>{
       });
     }
     const outName=mergeSrc?mergeSrc.name.replace(/\.xlsx$/i,"")+" (with manifest check).xlsx":"Manifest-check-"+d+fileTag(cmpTrailer)+".xlsx";
-    pdfJob=()=>buildCmpPdf(res,cnt,man.length,d,merge?{list:logList,pdf:logPdfSrc,sheets:logSheets}:null,notes,C.nmDcs);
+    pdfJob=()=>buildCmpPdf(res,cnt,man.length,d,merge?{list:logList,pdf:logPdfSrc,sheets:logSheets}:null,notes,C.nmDcs,cmpByDc(C));
     await sendFile(await wb.xlsx.writeBuffer(),outName,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     cmpMsg("");
   }catch(err){
@@ -898,7 +924,7 @@ $("cmpPrn").onclick=async()=>{
   const d=$("cmpDate").value||"no-date",merge=mergeLog;
   try{
     cmpMsg("Preparing the print copy…");
-    const buf=await buildCmpPdf(C.res,C.cnt,C.man.length,d,merge?{list:C.logList,pdf:logPdfSrc,sheets:logSheets}:null,cmpNotes(),C.nmDcs);
+    const buf=await buildCmpPdf(C.res,C.cnt,C.man.length,d,merge?{list:C.logList,pdf:logPdfSrc,sheets:logSheets}:null,cmpNotes(),C.nmDcs,cmpByDc(C));
     await printBuf(buf,"Manifest-check-"+d+fileTag(cmpTrailer)+".pdf",{set textContent(t){cmpMsg(t)}});
   }catch(e){cmpMsg("Couldn’t prepare the print copy: "+((e&&e.message)||"error"))}
 };
