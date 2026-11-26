@@ -523,7 +523,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     localStorage.setItem("lpnapkdcwarn", "off"); document.getElementById("lpn").value = "ABE001234569"; add(); await wait(50); out.offFlash = document.getElementById("flash").textContent; localStorage.removeItem("lpnapkdcwarn");
     openHelp("settings", "Settings"); await wait(100); out.setting = !!document.getElementById("apkDcWarn") && document.getElementById("apkDcWarn").checked; closeHelp();
     rows = keep; save(); render(); return out; });
-  check("pallets per DC: known DCs most first, other prefixes last, refused and No LPN pallets left out; nothing when no pallet is from a known DC", s.split === "Rugby 2 · Vault 2 · Runcorn 1 · Other 1" && s.none === "", s);
+  check("pallets per DC: known DCs most first, other prefixes last, refused pallets counted (they count towards the expected pallets), No LPN pallets left out; nothing when no pallet is from a known DC", s.split === "Rugby 3 · Vault 2 · Runcorn 1 · Other 1" && s.none === "", s);
   check("the home card and the camera scanner show the pallets per DC", s.home === s.split && s.state === s.split, s);
   check("a pallet with an unknown DC prefix is still added, with a warning and an orange flash in the scanner; a known one isn't warned about", s.oddIn && !!s.odd && /· ⚠ Not a known DC: check the label$/.test(s.odd[1]) && s.odd[3] === "warn" && !!s.ok && !/Not a known DC/.test(s.ok[1]) && s.ok[3] === "ok", s);
   check("typed in, an unknown prefix shows the warning on the Added note; Settings › Android app can turn it off (on by default)", /^Added #\d+: ABD001234568 · .*⚠ Not a known DC: check the label$/.test(s.flash) && s.warnCls && !/Not a known DC/.test(s.offFlash) && s.setting, s);

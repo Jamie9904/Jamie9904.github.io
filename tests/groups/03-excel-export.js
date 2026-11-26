@@ -104,18 +104,18 @@ module.exports = async ({ browser, URL0 }) => {
     const expKeep = document.getElementById("expect").value; document.getElementById("expect").value = "";
     out.line = ex(); window.__wb = null; window.saveOnly = async () => {}; await document.getElementById("dl").onclick(); await new Promise(r => setTimeout(r, 200));
     const ws = window.__wb.sheets[0], v = (k, c) => ws.rows[k]._c[c] && ws.rows[k]._c[c].value; out.xl = v(Object.keys(ws.rows).find(k => v(k, 6) === "By DC"), 7);
-    rows = ["VLT004040901", "VLT004040902"].map(l => ({ lpn: l, type: "BB", fsdu: false })); out.one = ex() === undefined;
+    rows = ["VLT004040901", "VLT004040902"].map(l => ({ lpn: l, type: "BB", fsdu: false })); out.one = ex() === undefined; out.exp = dcLogText(rows, { Vault: 2, Rugby: 1 }, { plain: true }) + "|" + dcLogText(rows, { Vault: 1 }, { plain: true });
     window.__wb = null; document.getElementById("cmpLogNums").value = "VLT004040801\nVLT004040802\nRBY006292401\nRUN0001830801"; document.getElementById("cmpNums").value = "VLT004040801\nVLT004040899\nRUN0001830801";
     await document.getElementById("cmpGo").onclick();
     const wc = window.__wb.sheets.find(w => /Manifest/.test(w.name)), vc = (k, c) => wc.rows[k]._c[c] && wc.rows[k]._c[c].value, kc = Object.keys(wc.rows).map(Number).sort((a, b) => a - b);
     const kh = kc.find(k => vc(k, 7) === "By DC"); out.cmpXl = kh ? [1, 2, 3].map(i => vc(kh + i, 7) + ": " + vc(kh + i, 8)).join("|") : "";
-    out.cmpShare = cmpShareText(cmpData()).split("\n").slice(-4).join("|");
+    out.cmpShare = cmpShareText(cmpData()).split("\n").pop();
     document.getElementById("cmpClear").click(); rows = keep; document.getElementById("expect").value = expKeep; return out;
   });
-  check("the pallet log's exports get a By DC line in Delivery Details when the pallets came from more than one DC (refused and No LPN left out), and none for one DC",
-    s.line === "Vault 3 · Rugby 2 · Runcorn 1 · Other 1" && s.xl === s.line && s.one, s);
+  check("the pallet log's exports get a By DC line in Delivery Details when the pallets came from more than one DC (refused pallets counted, No LPN left out), and none for one DC",
+    s.line === "Rugby 3 · Vault 3 · Runcorn 1 · Other 1" && s.xl === s.line && s.one && s.exp === "Vault 2 of 2 (all in) · Rugby 0 of 1|Vault 2 of 1 (1 over)", s);
   check("the Manifest check's Excel and shared list give the results for each DC, problems first",
-    s.cmpXl === "Vault: 1 missing · 1 extra · 1 matched|Rugby: no manifest (1 on the log)|Runcorn: 1 matched" && s.cmpShare === "By DC:|Vault: 1 missing · 1 extra · 1 matched|Rugby: no manifest (1 on the log)|Runcorn: 1 matched", s);
+    s.cmpXl === "Vault: 1 missing · 1 extra · 1 matched|Rugby: no manifest (1 on the log)|Runcorn: 1 matched" && s.cmpShare === "By DC: Vault: 1 missing, 1 extra, 1 matched; Rugby: no manifest (1 on the log); Runcorn: 1 matched", s);
   check("no script errors", p.errors.length === 0, p.errors);
   await p.ctx.close();
 };

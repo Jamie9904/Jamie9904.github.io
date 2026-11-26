@@ -465,7 +465,7 @@
      before Start new delivery, for example "Rugby: 2 of 4". Nothing is asked when no numbers per DC were set. */
   function shortDcs() {
     const ks = Object.keys(dcExp); if (!ks.length || typeof dcOf !== "function") return [];
-    const c = {}; rows.forEach(r => { if (!r || r.ref || (typeof isNoLpn === "function" && isNoLpn(r.lpn))) return; const d = dcOf(r.lpn); c[d] = (c[d] || 0) + 1; });
+    const c = {}; rows.forEach(r => { if (!r || (typeof isNoLpn === "function" && isNoLpn(r.lpn))) return; const d = dcOf(r.lpn); c[d] = (c[d] || 0) + 1; });
     return ks.filter(k => (c[k] || 0) < dcExp[k]).map(k => k + ": " + (c[k] || 0) + " of " + dcExp[k]);
   }
   window.LPN_APK_SHORT = shortDcs;

@@ -550,18 +550,19 @@ const DCS={Vault:["VLT","V"],Runcorn:["RUN","R"],Qube:["QUB","Q"],Rugby:["RBY","
 const lpnPfx=n=>(String(n).toUpperCase().replace(/[\s-]+/g,"").match(/^[A-Z]+/)||[""])[0];
 const dcOf=n=>{const p=lpnPfx(n);if(!p)return "";for(const d in DCS)if(DCS[d].indexOf(p)>=0)return d;return p};
 /* Pallets per DC on a log, most first, with other prefixes together as "Other" at the end: "Vault 26 · Rugby 2".
-   Refused pallets and pallets with no LPN aren't counted. exp (expected per DC, set in the Android app) adds
-   "of n" and a tick (or "(all in)" in exports, whose PDF font has no tick). Empty when no pallet is from a known DC
+   Pallets with no LPN aren't counted; refused pallets are, as they count towards the expected pallets. exp
+   (expected per DC, set in the Android app) adds "of n" and a tick when they're all in (or "(all in)" in exports,
+   whose PDF font has no tick), or "(n over)" when there are more than expected. Empty when no pallet is from a known DC
    (and nothing is expected), or when there are fewer than min groups. */
 function dcLogText(list,exp,o){
   exp=exp||{};o=o||{};const c={};let known=0;
-  (list||[]).forEach(r=>{if(!r||r.ref||isNoLpn(r.lpn))return;const d=dcOf(r.lpn);if(!d)return;const k=DCS[d]?d:"Other";if(k!=="Other")known++;c[k]=(c[k]||0)+1});
+  (list||[]).forEach(r=>{if(!r||isNoLpn(r.lpn))return;const d=dcOf(r.lpn);if(!d)return;const k=DCS[d]?d:"Other";if(k!=="Other")known++;c[k]=(c[k]||0)+1});
   const hasExp=Object.keys(exp).some(k=>DCS[k]&&exp[k]>0);
   Object.keys(exp).forEach(k=>{if(DCS[k]&&exp[k]>0&&!c[k])c[k]=0});
   const keys=Object.keys(c).sort((a,b)=>(a==="Other")-(b==="Other")||c[b]-c[a]||a.localeCompare(b));
   if(!known&&!hasExp)return "";
   if(keys.length<(o.min||1)&&!hasExp)return "";
-  return keys.map(k=>k+" "+c[k]+(exp[k]>0?" of "+exp[k]+(c[k]>=exp[k]?(o.plain?" (all in)":" ✓"):""):"")).join(" · ");
+  return keys.map(k=>k+" "+c[k]+(exp[k]>0?" of "+exp[k]+(c[k]===exp[k]?(o.plain?" (all in)":" ✓"):c[k]>exp[k]?" ("+(c[k]-exp[k])+" over)":""):"")).join(" · ");
 }
 /* Manifest check results per DC, when the pallets came from more than one DC: problems first, "Other" last. */
 function cmpByDc(C){
@@ -571,7 +572,7 @@ function cmpByDc(C){
   const bad=o=>o.missing+o.book+o.noman;
   return a.sort((p,q)=>(p.dc==="Other")-(q.dc==="Other")||bad(q)-bad(p)||p.dc.localeCompare(q.dc));
 }
-const dcResText=o=>{const p=[],bad=o.missing+o.book+o.noman;if(o.noman)p.push("no manifest ("+o.noman+" on the log)");if(o.missing)p.push(o.missing+" missing");if(o.book)p.push(o.book+" extra");if(o.ok)p.push(bad?o.ok+" matched":o.ok===1?"1 matched":"all "+o.ok+" matched");return p.join(" · ")};
+const dcResText=(o,sep)=>{const p=[],bad=o.missing+o.book+o.noman;if(o.noman)p.push("no manifest ("+o.noman+" on the log)");if(o.missing)p.push(o.missing+" missing");if(o.book)p.push(o.book+" extra");if(o.ok)p.push(bad?o.ok+" matched":o.ok===1?"1 matched":"all "+o.ok+" matched");return p.join(sep||" · ")};
 // DCs whose pallets were said to be on the manifest after all (Count as log only), until Clear.
 const cmpNoManKeep=new Set();
 function cmpData(){
@@ -615,7 +616,7 @@ function cmpShareText(C){
     "On the log only, to book in ("+book.length+"): "+(book.join(", ")||"none"),
     ...(C.nmDcs&&C.nmDcs.length?["No manifest received: "+nmText(C.nmDcs)]:[]),
     "Matched: "+cnt.ok+" of "+man.length+" on the manifest",
-    ...cmpByDc(C).map((o,i)=>(i?"":"By DC:\n")+o.dc+": "+dcResText(o))].concat(C.noLpn?["Pallets with no LPN (check by hand): "+C.noLpn]:[]).concat(cmpNotes()?["Notes: "+cmpNotes()]:[]).join("\n");
+    ...(cmpByDc(C).length?["By DC: "+cmpByDc(C).map(o=>o.dc+": "+dcResText(o,", ")).join("; ")]:[])].concat(C.noLpn?["Pallets with no LPN (check by hand): "+C.noLpn]:[]).concat(cmpNotes()?["Notes: "+cmpNotes()]:[]).join("\n");
 }
 async function shareCmp(C){
   const text=cmpShareText(C);
