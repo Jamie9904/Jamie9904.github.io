@@ -213,8 +213,10 @@ function render(){
           const u=v.toUpperCase().replace(/\s+/g,"");
           const dup=rows.some((z,k)=>k!==i&&z.lpn.toUpperCase().replace(/\s+/g,"")===u);
           const old=r.lpn;r.lpn=v;
-          $("msg").textContent=dup?"Note: "+v+" is already in the log.":"";
-          if(dup)sfx("warn");
+          // The same checks as adding a pallet (format, prefix list, digits), as a note: the change stays, with Undo.
+          const odd=!dup&&cfg.check&&!isNoLpn(v)?lpnIssues(v).filter(x=>!/^already/.test(x)):[];
+          $("msg").textContent=dup?"Note: "+v+" is already in the log.":odd.length?"Note: "+v+" "+odd[0]+". Check it, or use Undo.":"";
+          if(dup||odd.length)sfx("warn");
           said.push("Changed "+old+" to "+v);backs.push(()=>{r.lpn=old});
         }
         if(said.length){save();showUndo(said.join(". "),()=>{backs.forEach(f=>f());save();render()})}

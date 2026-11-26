@@ -332,6 +332,11 @@
       else if (r.what === "delivery") { if (has("palletLog")) toLog(); if (window.LPN_APK_DELSHEET) window.LPN_APK_DELSHEET(); }
       else if (r.what === "liveread") { const b = $("apkLiveRead"); if (b) b.click(); }
       else if (r.what === "big-on" || r.what === "big-off") { try { localStorage.setItem("lpnapkbig", r.what === "big-on" ? "on" : "off"); } catch (e) {} applyBig(); }
+      // Settings › Colours › Follow phone, switched on or off (for the bug hunt's light and dark check).
+      else if ((r.what === "follow-on" || r.what === "follow-off") && typeof applyTheme === "function") {
+        try { theme = r.what === "follow-on" ? Object.assign({}, theme, { follow: true }) : { bg: THEME_DEFAULT.bg, ac: THEME_DEFAULT.ac }; saveTheme(); applyTheme(); } catch (e) {}
+        console.warn("LPNQA theme follow=" + (r.what === "follow-on") + " phone dark=" + !!(window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches) + " bg=" + getComputedStyle(document.documentElement).getPropertyValue("--bg").trim());
+      }
       return;
     }
     if (r.action === "continue") { if (typeof closeHelp === "function") closeHelp(); const l = $("lpn"); if (l && has("palletLog")) { toLog(); quietFocus(l); } return; }

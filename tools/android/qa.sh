@@ -53,9 +53,14 @@ back; shot 12-font-130-menu 2
 adb shell settings put system font_scale 0.85; sleep 2; act >/dev/null; shot 13-font-085 3
 adb shell settings put system font_scale 1.0; sleep 1
 
-step "7. Light and dark"
+step "7. Light and dark (the app's own colours, then Settings › Follow phone on)"
 adb shell cmd uimode night yes >/dev/null; sleep 3; act >/dev/null; shot 14-dark 3
 adb shell cmd uimode night no >/dev/null; sleep 3; act >/dev/null; shot 15-light 3
+act -a "$PKG.SHOW" --es what follow-on >/dev/null; sleep 2; shot 15b-follow-light 1
+adb shell cmd uimode night yes >/dev/null; sleep 3; act >/dev/null; act -a "$PKG.SHOW" --es what follow-on >/dev/null; sleep 2; shot 15c-follow-dark 1
+adb shell cmd uimode night no >/dev/null; sleep 3; act >/dev/null; act -a "$PKG.SHOW" --es what follow-on >/dev/null; sleep 2; shot 15d-follow-light-again 1
+note "$(adb logcat -d | grep -o 'LPNQA theme[^"]*' | tail -3 | tr '\n' ';')"
+act -a "$PKG.SHOW" --es what follow-off >/dev/null; sleep 1
 
 step "8. Turned sideways (phones stay upright)"
 adb shell settings put system accelerometer_rotation 0; adb shell settings put system user_rotation 1; sleep 3; shot 16-sideways 2
