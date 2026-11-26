@@ -19,6 +19,10 @@
   H.classList.add("rd");
   const svg = (d, w) => '<svg width="' + (w || 22) + '" height="' + (w || 22) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + d + "</svg>";
   const IC = {
+    tick: '<path d="M20 6 9 17l-5-5"/>',
+    cross: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    warn: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+    nope: '<circle cx="12" cy="12" r="9"/><path d="m5.7 5.7 12.6 12.6"/>',
     back: '<path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/>',
     home: '<path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
     list: '<path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/>',
@@ -136,7 +140,6 @@
     "html.rd #cmpCard .cmpsteps>.grow:last-child>.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}",
     "html.rd #cmpCard .cmpsteps>.grow:last-child>.row button{min-height:104px;border-radius:20px;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;text-align:left;padding:14px 16px;margin:0;background:var(--sel,#1a3562);border:0}",
     "html.rd #cmpCard .cmpsteps>.grow:last-child>.row button .rdtic{color:var(--act,var(--ac,#ff8a2a))}",
-    "html.rd #cmpCard .cmpsteps>.grow:last-child>.row button:first-child{background:var(--ac,#ff8a2a);color:var(--onac,#1b1b1b)}html.rd #cmpCard .cmpsteps>.grow:last-child>.row button:first-child .rdtic{color:inherit}",
     "html.rd #cmpCard .cmpsteps>.grow:last-child>.row button[hidden]{display:none}",
     "html.rd #cmpCard .cmpsteps>.grow:first-child>.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}html.rd #cmpCard .cmpsteps>.grow:first-child>.row>*{margin:0;min-height:52px;border-radius:14px}",
     "html.rd #cmpCard .cmpsteps>.grow:first-child>.row>select{grid-column:1/-1}",
@@ -359,7 +362,7 @@
   function buildCmp() {
     const body = $("cmpBody"); if (!body || $("rdSteps")) return;
     const st = document.createElement("ol"); st.id = "rdSteps"; st.setAttribute("aria-label", "Manifest check steps");
-    st.innerHTML = ["Log", "Manifest", "Results"].map((t, i) => '<li id="rdS' + (i + 1) + '"><i></i><span>' + (i + 1) + " · " + t + '<span class="ok"> ✓<span class="sr"> (done)</span></span></span></li>').join("");
+    st.innerHTML = ["Log", "Manifest", "Results"].map((t, i) => '<li id="rdS' + (i + 1) + '"><i></i><span>' + (i + 1) + " · " + t + '<span class="ok"> ' + svg(IC.tick, 14) + '<span class="sr"> (done)</span></span></span></li>').join("");
     body.prepend(st);
     const tic = { apkLiveRead: IC.read, cmpCamBtn: IC.cam, cmpPhotoBtn: IC.img, cmpPdfBtn: IC.file };
     const short = { apkLiveRead: "Live read", cmpCamBtn: "Take photo", cmpPhotoBtn: "Photos", cmpPdfBtn: "PDF" };
@@ -377,7 +380,7 @@
     let q = 0; const later = () => { if (!q) q = requestAnimationFrame(() => { q = 0; syncSteps(); }); };
     ["cmpLogNums", "cmpNums"].forEach(id => { const e = $(id); if (!e) return; e.addEventListener("input", later);
       if (vd && vd.set) Object.defineProperty(e, "value", { configurable: true, get() { return vd.get.call(this); }, set(v) { vd.set.call(this, v); later(); } }); });
-    const res = $("cmpRes"); if (res) new MutationObserver(() => { bigResults(); syncSteps(); }).observe(res, { childList: true, attributes: true, attributeFilter: ["hidden"] });
+    const res = $("cmpRes"); if (res) new MutationObserver(() => { bigResults(); syncSteps(); glyphIcons(res); }).observe(res, { childList: true, attributes: true, attributeFilter: ["hidden"] });
     syncSteps();
   }
   const lines = id => (($(id) || {}).value || "").split(/\r?\n/).map(x => x.trim()).filter(Boolean).length;
@@ -535,6 +538,39 @@
     "html.rd #qrShow{width:100%;min-height:56px;border-radius:16px}"
   ].join("");
   document.head.appendChild(css2);
+
+  /* Polish (26 Nov 2026): orange for the one main action on each screen (Carry on scanning, Live scan, Check results,
+     Excel in its sheet); other buttons are dark with an orange icon. Settings labels in sentence case. Bold kept for
+     titles and the big numbers (the app's font comes in regular and bold only); secondary text regular. */
+  const css3 = document.createElement("style");
+  css3.textContent = [
+    "#rdExport{border-color:var(--line,#35507f)!important;color:var(--ink,#eaf0fa)!important;font-weight:400}#rdExport svg{color:var(--act,var(--ac,#ff8a2a))}",
+    "html.rd.apkm-cmp #cmpExpBtn{background:transparent!important;border:1px solid var(--line,#35507f)!important;color:var(--ink,#eaf0fa)!important}",
+    "#rdTabs button[aria-selected=true],#rdSrc button[aria-pressed=true]{background:var(--sel,#1a3562)!important;color:var(--ink,#eaf0fa)!important;box-shadow:inset 0 -3px 0 var(--act,var(--ac,#ff8a2a))}",
+    "html.rd #panelBody #apkSet>h3:first-child,html.rd #panelBody .rdgrp>h3:first-child,html.rd #panelBody .rdgrp h3:not(:first-child){text-transform:none;letter-spacing:0;font-size:1.05rem;color:var(--ink,#eaf0fa)}",
+    "html.rd #panelBody #apkSet .apksub{text-transform:none;letter-spacing:0;font-size:.92rem;font-weight:400;color:var(--mu,#9db0d0)}",
+    "html.rd #apkMenu #rdDcs{font-weight:400}html.rd #cmpRes .nmri .l{font-weight:400}",
+    ".rdgi{display:inline-flex;vertical-align:-3px;margin-right:6px}.rdgi svg{width:1.05em;height:1.05em}",
+    "#flash .rdgi{vertical-align:-2px;margin:0 4px 0 0}"
+  ].join("");
+  document.head.appendChild(css3);
+  /* The status characters (✓ ✗ ⚠ ⊘) at the start of a heading or note become the app's line icons on screen
+     (the text stays for screen readers and the exports keep the characters). */
+  const GLYPH = { "✓": "tick", "✗": "cross", "⚠": "warn", "⊘": "nope" };
+  function glyphIcons(root) {
+    if (!root) return;
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), hits = [];
+    while (w.nextNode()) { const n = w.currentNode; if (/[✓✗⚠⊘]\s/.test(n.nodeValue) && !(n.parentNode && n.parentNode.closest && n.parentNode.closest(".rdgi,textarea,input,option,select"))) hits.push(n); }
+    hits.forEach(n => {
+      const parts = n.nodeValue.split(/([✓✗⚠⊘])\s/), f = document.createDocumentFragment();
+      for (let i = 0; i < parts.length; i++) {
+        if (i % 2 === 1) { const sp = document.createElement("span"); sp.className = "rdgi"; sp.innerHTML = svg(IC[GLYPH[parts[i]]], 18); f.appendChild(sp); }
+        else if (parts[i]) f.appendChild(document.createTextNode(parts[i]));
+      }
+      n.parentNode.replaceChild(f, n);
+    });
+  }
+  window.LPN_APK_GLYPHS = glyphIcons;
 
   /* ⋮ (Guide, Settings, About…) sits in the app's name bar on Home and in the page's own bar on the other pages. */
   function placeMore() {

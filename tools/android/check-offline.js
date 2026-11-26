@@ -120,7 +120,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), N = window.Capacitor.Plugins.LpnNative, out = {}; N.calls = []; LPN_APK_MODE("cmp");
     try { localStorage.removeItem("lpnapknotify"); } catch (e) {}
     const msg = document.getElementById("cmpMsg"); msg.textContent = "Reading photo 2 of 4…"; await wait(50);
-    const p = document.getElementById("apkProg"); out.shown = p ? p.querySelector("span").textContent + ":" + p.querySelector(".bar i").style.width : "";
+    const p = document.getElementById("apkProg"); out.shown = p ? p.querySelector("span").textContent + ":" + p.querySelector(".bar i").style.transform : "";
     out.asked = N.calls.filter(c => c[0] === "askNotify").length;
     document.getElementById("apkProgStop").click(); out.stopped = await readPhoto(new File([new Uint8Array(4)], "x.jpg", { type: "image/jpeg" })).then(() => "read", e => String(e.message));
     Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
@@ -128,7 +128,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     out.gone = !document.getElementById("apkProg"); out.note = N.calls.filter(c => c[0] === "notify").map(c => c[1]).join();
     out.after = await Promise.race([readPhoto(new File([new Uint8Array(4)], "x.jpg", { type: "image/jpeg" })).then(() => "read", e => String(e.message)), wait(400).then(() => "running")]);
     msg.textContent = ""; LPN_APK_MODE("log"); return out; });
-  check("reading photos shows a progress bar (photo 2 of 4) with Cancel, which skips the photos not started yet", s.shown === "Reading photo 2 of 4:38%" && /Cancel/.test(s.stopped) && s.gone && !/Cancel/.test(s.after), s);
+  check("reading photos shows a progress bar (photo 2 of 4) with Cancel, which skips the photos not started yet", s.shown === "Reading photo 2 of 4:scaleX(0.375)" && /Cancel/.test(s.stopped) && s.gone && !/Cancel/.test(s.after), s);
   check("a notification says when photo reading finishes in the background (Android asks once, when photos are first read)", s.note === "Photo reading stopped" && s.asked === 1, s);
   // Finishing touches: the Saved tick, the friendly error screen, messages at the bottom, Next in Delivery.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
@@ -519,14 +519,14 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     lastAt = 0; N.listeners.nativeScan({ values: ["ABC001234567"] }); await wait(80); out.odd = N.calls.filter(c => c[0] === "status").pop(); out.oddIn = rows.some(r => r.lpn === "ABC001234567");
     lastAt = 0; N.listeners.nativeScan({ values: ["VLT004040603"] }); await wait(80); out.ok = N.calls.filter(c => c[0] === "status").pop();
     N.listeners.nativeScanClosed({ reason: "done" }); N.scanStatus = orig; LPN_APK_MODE("log");
-    document.getElementById("lpn").value = "ABD001234568"; add(); await wait(50); out.flash = document.getElementById("flash").textContent; out.warnCls = document.getElementById("flash").classList.contains("warn");
+    document.getElementById("lpn").value = "ABD001234568"; add(); await wait(50); out.flash = document.getElementById("flash").textContent; out.flashIcon = !!document.querySelector("#flash .rdgi svg"); out.warnCls = document.getElementById("flash").classList.contains("warn");
     localStorage.setItem("lpnapkdcwarn", "off"); document.getElementById("lpn").value = "ABE001234569"; add(); await wait(50); out.offFlash = document.getElementById("flash").textContent; localStorage.removeItem("lpnapkdcwarn");
     openHelp("settings", "Settings"); await wait(100); out.setting = !!document.getElementById("apkDcWarn") && document.getElementById("apkDcWarn").checked; closeHelp();
     rows = keep; save(); render(); return out; });
   check("pallets per DC: known DCs most first, other prefixes last, refused pallets counted (they count towards the expected pallets), No LPN pallets left out; nothing when no pallet is from a known DC", s.split === "Rugby 3 · Vault 2 · Runcorn 1 · Other 1" && s.none === "", s);
   check("the home card and the camera scanner show the pallets per DC", s.home === s.split && s.state === s.split, s);
   check("a pallet with an unknown DC prefix is still added, with a warning and an orange flash in the scanner; a known one isn't warned about", s.oddIn && !!s.odd && /· ⚠ Not a known DC: check the label$/.test(s.odd[1]) && s.odd[3] === "warn" && !!s.ok && !/Not a known DC/.test(s.ok[1]) && s.ok[3] === "ok", s);
-  check("typed in, an unknown prefix shows the warning on the Added note; Settings › Android app can turn it off (on by default)", /^Added #\d+: ABD001234568 · .*⚠ Not a known DC: check the label$/.test(s.flash) && s.warnCls && !/Not a known DC/.test(s.offFlash) && s.setting, s);
+  check("typed in, an unknown prefix shows the warning on the Added note; Settings › Android app can turn it off (on by default)", /^Added #\d+: ABD001234568 · .*Not a known DC: check the label$/.test(s.flash) && s.flashIcon && s.warnCls && !/Not a known DC/.test(s.offFlash) && s.setting, s);
   // Expected pallets per DC (Delivery details): the total, the home card and scanner, kept with the delivery.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), keep = rows.slice(), keepDel = getDel(), out = {};
     rows = ["VLT004040701", "VLT004040702", "RBY006292301"].map(l => ({ lpn: l, type: "BB", fsdu: false })); document.getElementById("expect").value = ""; save(); render();
@@ -641,6 +641,14 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("with pallets from more than one DC, each row has a DC tag and the filters get a DC filter (none for one DC)", s.oneHidden && s.oneTags === 0 && s.opts === "All DCs,Rugby,Runcorn,Vault,Other" && s.tags === "Vault,Rugby,Rugby,Runcorn,Other", s);
   check("the DC filter shows only that DC's pallets, and goes back to All DCs when that DC's pallets are gone, a total is tapped or Simple view is turned on", s.shown === "RBY006292801,IM0012345701" && /^Showing 2 of 5 pallets/.test(s.info) && s.gone === "|3" && s.sumClear && s.simpleClear, s);
   check("the camera scanner's automatic torch is on unless switched off in Settings › Android app", s.torch === true && s.torchOff === false && s.setting, s);
+  // Polish: one filled orange main action per screen, sentence-case Settings labels, line icons for status characters.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), bg = id => getComputedStyle(document.getElementById(id)).backgroundColor, ac = (() => { const d = document.createElement("i"); d.style.color = getComputedStyle(document.documentElement).getPropertyValue("--ac"); document.body.appendChild(d); const c = getComputedStyle(d).color; d.remove(); return c; })(), out = {};
+    LPN_APK_MODE("cmp"); await wait(30); out.check = bg("cmpCheck") === ac; out.export = bg("cmpExpBtn") !== ac; out.photo = bg("cmpCamBtn") !== ac;
+    LPN_APK_MODE("log"); await wait(30); const e = getComputedStyle(document.getElementById("rdExport")); out.dl = e.borderTopColor !== ac;
+    openHelp("settings", "Settings"); await wait(100); out.labels = [...document.querySelectorAll("#panelBody h3, #panelBody .apksub")].filter(h => h.offsetParent).map(h => getComputedStyle(h).textTransform).every(t => t === "none");
+    closeHelp(); const d = document.createElement("div"); d.textContent = "⚠ Not on the manifest"; document.body.appendChild(d); LPN_APK_GLYPHS(d); out.glyph = d.textContent + "|" + !!d.querySelector(".rdgi svg"); d.remove(); LPN_APK_MODE("menu"); return out; });
+  check("only the main action is filled orange (Check results), not Export, Take photo or the log's download button; Settings labels aren't in capitals; status characters show as line icons",
+    s.check && s.export && s.photo && s.dl && s.labels && s.glyph === "Not on the manifest|true", s);
   // Results per DC in Manifest check.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)); LPN_APK_MODE("cmp"); await wait(50);
     document.getElementById("cmpLogNums").value = "VLT004040801\nVLT004040802\nRBY006292401\nRUN0001830801"; document.getElementById("cmpNums").value = "VLT004040801\nVLT004040899\nRUN0001830801";

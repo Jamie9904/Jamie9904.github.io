@@ -625,6 +625,7 @@
           if (!was && typeof sfx === "function") sfx("warn");
         }
       } catch (e) {}
+      try { if (window.LPN_APK_GLYPHS) window.LPN_APK_GLYPHS($("flash")); } catch (e) {}
       return x;
     };
     flashAdded.dc = true;
@@ -1026,7 +1027,7 @@
     + "#apkIntro .row{display:flex;justify-content:space-between;padding:0 20px}#apkIntro .row button{min-height:48px;min-width:110px}"
     + "#apkProg{position:sticky;top:var(--apkbarh,60px);z-index:11;background:var(--paper,#13264a);margin:-12px -18px 12px;padding:10px 18px;border-bottom:1px solid var(--line,#35507f)}"
     + "#apkProg .t{display:flex;align-items:center;gap:10px;justify-content:space-between}#apkProg .t span{font-weight:700}#apkProg .t button{min-height:40px}"
-    + "#apkProg .bar{height:6px;border-radius:3px;background:var(--line,#35507f);margin-top:8px;overflow:hidden}#apkProg .bar i{display:block;height:100%;width:0;background:var(--ac,#ff8a2a);transition:width .3s}"
+    + "#apkProg .bar{height:6px;border-radius:3px;background:var(--line,#35507f);margin-top:8px;overflow:hidden}#apkProg .bar i{display:block;height:100%;width:100%;transform:scaleX(0);transform-origin:left center;background:var(--ac,#ff8a2a);transition:transform .3s}"
     + "@media (prefers-reduced-motion:reduce){#apkProg .bar i{transition:none}}";
   document.head.appendChild(proCss);
 
@@ -1107,7 +1108,7 @@
         $("apkProgStop").onclick = () => { ocrStop = true; $("apkProgStop").disabled = true; p.querySelector("span").textContent = "Stopping after this photo…"; }; }
       const n = +k[2], of = +k[3], photo = /photo/i.test(k[0]) || /Photo/.test(k[0]);
       if (!ocrStop) p.querySelector("span").textContent = (photo ? "Reading photo " : /PDF/i.test(k[0]) ? "Reading PDF " : "Reading page ") + n + " of " + of;
-      p.querySelector(".bar i").style.width = Math.round(((n - 1) / of) * 100 + 100 / of / 2) + "%";
+      p.querySelector(".bar i").style.transform = "scaleX(" + Math.min(1, ((n - 1) / of) + 1 / of / 2).toFixed(3) + ")"; // scale, not width: smoother on slower phones
       $("apkProgStop").hidden = !photo; if (photo && !progPhotos) { progPhotos = true; askNotifyOnce(); }
       progOn = true;
     } else if (progOn) {
