@@ -450,7 +450,7 @@
   const expected = () => parseInt(($("expect") || {}).value, 10);
   const allIn = () => { const ex = expected(); return ex > 0 && rows.length >= ex; };
   /* Pallets per DC from the LPN prefixes (compare.js's DCS list: Vault, Runcorn, Qube, Rugby), most first, for example
-     "Rugby 12 · Vault 8 · Other 1". Refused pallets and pallets with no LPN are left out. Empty when none of the
+     "Rugby 12 · Vault 8 · Other 1". Pallets with no LPN are left out; refused pallets count (as they do towards the expected pallets). Empty when none of the
      pallets is from a known DC, so test numbers or another site's labels show nothing. */
   window.LPN_APK_DCS = (list, exp) => typeof dcLogText === "function" ? dcLogText(list, exp) : ""; // compare.js
   /* Expected pallets per DC (Delivery details, optional): kept with the delivery (dcExp beside the app's own details,
@@ -488,7 +488,7 @@
   function buildDcExp() {
     const at = document.querySelector(".dc-exp"); if (!at || $("apkDcExp") || !dcNames().length || !has("palletLog")) return;
     const f = document.createElement("fieldset"); f.id = "apkDcExp"; f.className = "dc-dcexp";
-    f.innerHTML = '<legend>Expected per DC <span class="apkopt">(optional)</span></legend><div class="apkdcgrid"></div><p class="note">Shown on the home screen and in the camera scanner, for example “Rugby 8 of 10”.</p>';
+    f.innerHTML = '<legend>Expected per DC <span class="apkopt">(optional)</span></legend><div class="apkdcgrid"></div><p class="note">Shown on the home screen, in the camera scanner and on the exports, for example “Rugby 8 of 10”.</p>';
     const g = f.querySelector(".apkdcgrid");
     dcNames().forEach(k => { const l = document.createElement("label"); l.innerHTML = '<span></span><input type="number" min="0" max="9999" inputmode="numeric" autocomplete="off">';
       l.querySelector("span").textContent = k; const i = l.querySelector("input"); i.id = "apkDcExp-" + k; g.appendChild(l);
