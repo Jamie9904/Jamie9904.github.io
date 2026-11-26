@@ -557,7 +557,7 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     f("Rugby", ""); out.none = LPN_APK_SHORT().length;
     hist = keepHist; saveHist(); rows = keep; setDel(keepDel); save(); render(); document.getElementById("dlmsg").textContent = ""; return out; });
   check("a DC short of its expected number is named after Done in the camera scanner, with Carry on scanning", s.short === "Rugby: 1 of 4" && s.scanQ === "Still short from one DC: Rugby: 1 of 4." && s.scanB === "Carry on scanning,Finish for now", s);
-  check("Start new delivery asks first when a DC is short, then goes on as usual (asked once)", s.newQ === "Still short from one DC: Rugby: 1 of 4. Start a new delivery anyway?" && s.kept === 3 && /hasn’t been exported|Saved to history/.test(s.msg) && !s.again && s.after === 0 && s.none === 0, s);
+  check("Start new delivery asks first when a DC is short, then goes on as usual (asked once)", s.newQ === "Still short from one DC: Rugby: 1 of 4. Start a new delivery anyway?" && s.kept === 3 && /Export it first|Saved to history/.test(s.msg) && !s.again && s.after === 0 && s.none === 0, s);
   // Results per DC in Manifest check.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)); LPN_APK_MODE("cmp"); await wait(50);
     document.getElementById("cmpLogNums").value = "VLT004040801\nVLT004040802\nRBY006292401\nRUN0001830801"; document.getElementById("cmpNums").value = "VLT004040801\nVLT004040899\nRUN0001830801";
