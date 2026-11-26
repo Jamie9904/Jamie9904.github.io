@@ -53,7 +53,7 @@ import java.util.concurrent.Executors;
 public class ScanActivity extends AppCompatActivity {
     static volatile ScanActivity current = null;
     private PreviewView preview;
-    private TextView status;
+    private TextView status, dcBig;
     private Button torchBtn;
     private Camera camera;
     private ExecutorService exec;
@@ -91,6 +91,14 @@ public class ScanActivity extends AppCompatActivity {
         LinearLayout strip = new LinearLayout(this);
         strip.setOrientation(LinearLayout.VERTICAL);
         strip.setBackgroundColor(Color.parseColor("#D90c1830"));
+        // The last pallet's DC in large letters ("RUGBY · 3 of 4"), readable at arm's length; orange for an unknown one.
+        dcBig = new TextView(this);
+        dcBig.setTextColor(Color.WHITE);
+        dcBig.setTextSize(TypedValue.COMPLEX_UNIT_SP, 30);
+        dcBig.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        dcBig.setLetterSpacing(0.04f);
+        dcBig.setVisibility(android.view.View.GONE);
+        strip.addView(dcBig);
         status = new TextView(this);
         status.setTextColor(Color.WHITE);
         status.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
@@ -360,6 +368,18 @@ public class ScanActivity extends AppCompatActivity {
     }
 
     /* What the page says about the last scan ("Added …", a warning). close: back to the app (to answer a warning). */
+    static void showDc(String text, boolean warn) {
+        ScanActivity a = current;
+        if (a == null || a.dcBig == null) return;
+        a.runOnUiThread(() -> {
+            boolean on = text != null && !text.isEmpty();
+            a.dcBig.setText(on ? text : "");
+            a.dcBig.setTextColor(Color.parseColor(warn ? "#ff8a2a" : "#ffffff"));
+            a.dcBig.setContentDescription(on ? text.toLowerCase(java.util.Locale.UK) : null);
+            a.dcBig.setVisibility(on ? android.view.View.VISIBLE : android.view.View.GONE);
+        });
+    }
+
     static void show(String text, boolean close, String flash) {
         ScanActivity a = current;
         if (a == null) return;

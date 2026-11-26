@@ -117,10 +117,46 @@
       d = d || {};
       const files = [];
       for (const f of d.files || []) files.push(await toCache(f, f.name));
+      // Email PDF: ask who it's for (the last addresses are offered), then open the email app with To filled in.
+      if (typeof emailMode !== "undefined" && emailMode && files.length === 1 && N() && typeof N().emailFile === "function") {
+        const to = await mailTo((d.files[0] || {}).name || d.title || "the file");
+        if (to === null) { const x = new Error("Share cancelled"); x.name = "AbortError"; throw x; }
+        if (to !== "share") { await N().emailFile({ uri: files[0], to, subject: d.title || "", text: d.text || "", mime: (d.files[0] || {}).type || "application/pdf" }); return; }
+      }
       try { await P().Share.share({ title: d.title, text: d.text, url: d.url, files: files.length ? files : undefined, dialogTitle: d.title || "Share" }); }
       catch (e) { if (cancelled(e)) { const x = new Error("Share cancelled"); x.name = "AbortError"; throw x; } throw e; }
     };
   }
+  /* Email PDF's "Send to": the last three addresses are kept on this phone (lpnapkmailto) and offered as buttons.
+     Resolves the address ("" to leave To empty), "share" for the share menu instead, or null when closed. */
+  const mailList = () => { try { const a = JSON.parse(localStorage.getItem("lpnapkmailto") || "[]"); return Array.isArray(a) ? a.filter(x => typeof x === "string" && okMail(x)).slice(0, 3) : []; } catch (e) { return []; } };
+  const okMail = v => /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$/.test(v) && v.length <= 120;
+  function mailTo(name) {
+    return new Promise(res => {
+      document.querySelectorAll(".apkask").forEach(a => a.remove());
+      const list = mailList(), d = document.createElement("div"); d.className = "apkask"; d.setAttribute("role", "dialog"); d.setAttribute("aria-modal", "true"); d.setAttribute("aria-label", "Email " + name);
+      d.innerHTML = '<div class="apksheet card"><p class="apkasktitle"></p><label for="apkMailTo" class="apkmaill">Send to</label><input type="email" id="apkMailTo" autocomplete="email" inputmode="email" placeholder="name@example.com"><div class="row apkmailr" id="apkMailR"></div><p class="note" id="apkMailMsg" role="status"></p><div class="row apkmailb"><button type="button" class="p" id="apkMailGo">Open email</button><button type="button" id="apkMailShare">Other apps</button><button type="button" id="apkMailNo">Cancel</button></div></div>';
+      d.querySelector(".apkasktitle").textContent = "Email " + name;
+      const inp = d.querySelector("#apkMailTo"); inp.value = list[0] || "";
+      list.forEach(a => { const b = document.createElement("button"); b.type = "button"; b.className = "apkmailc"; b.textContent = a; b.onclick = () => { inp.value = a; inp.focus(); }; d.querySelector("#apkMailR").appendChild(b); });
+      let settled = false; const done = v => { if (settled) return; settled = true; d.remove(); res(v); };
+      // Closed some other way (Back, another question): counts as Cancel, so Email PDF doesn't wait for ever.
+      const mo = new MutationObserver(() => { if (!d.isConnected) { mo.disconnect(); if (!settled) { settled = true; res(null); } } }); mo.observe(document.body, { childList: true });
+      d.addEventListener("click", e => { if (e.target === d) done(null); });
+      d.querySelector("#apkMailNo").onclick = () => done(null);
+      d.querySelector("#apkMailShare").onclick = () => done("share");
+      d.querySelector("#apkMailGo").onclick = () => {
+        const v = inp.value.trim();
+        if (v && !okMail(v)) { d.querySelector("#apkMailMsg").textContent = "That doesn’t look like an email address. Check it, or leave it empty."; inp.focus(); return; }
+        if (v) { try { localStorage.setItem("lpnapkmailto", JSON.stringify([v].concat(list.filter(x => x.toLowerCase() !== v.toLowerCase())).slice(0, 3))); } catch (e) {} }
+        done(v);
+      };
+      inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); d.querySelector("#apkMailGo").click(); } });
+      document.body.appendChild(d); (list[0] ? d.querySelector("#apkMailGo") : inp).focus();
+    });
+  }
+  window.LPN_APK_MAILTO = mailTo;
+
   /* ---- Android-only native helpers (tools/android/native) ---- */
   const N = () => (P() && P().LpnNative) || null;
   const A = () => (P() && P().App) || null;
@@ -136,6 +172,7 @@
     + "#apkDcExp{border:0;margin:12px 0 0;padding:0;min-width:0}#apkDcExp legend{padding:0;font-weight:700;margin-bottom:6px}#apkDcExp .apkopt{font-weight:400;opacity:.8}"
     + ".apkdcgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px}.apkdcgrid label{display:flex;flex-direction:column;gap:4px;font-size:.9rem;min-width:0}.apkdcgrid input{width:100%;min-height:44px;box-sizing:border-box}#apkDcExp .note{margin:6px 0 0}"
     + "#flash.apktap{pointer-events:auto;cursor:pointer}"
+    + ".apkmaill{display:block;font-weight:700;margin:4px 0}#apkMailTo{width:100%;min-height:46px;box-sizing:border-box}.apkmailr{flex-wrap:wrap;gap:6px;margin:8px 0 0}.apkmailr:empty{display:none}.apkmailc{min-height:40px;max-width:100%;overflow:hidden;text-overflow:ellipsis}.apkmailb{margin-top:10px;flex-wrap:wrap}#apkMailMsg:empty{display:none}"
     + ".apkoldbar{border:1px solid var(--rule,#223a63);border-radius:12px;padding:10px 12px;margin:8px 0}.apkoldbar p{margin:0 0 8px}"
     + ".apkfiles{list-style:none;padding:0;margin:8px 0}.apkfiles li{padding:10px 0;border-bottom:1px solid var(--rule,#223a63)}.apkfname{margin:0;font-weight:700;overflow-wrap:anywhere}.apkfiles .note{margin:2px 0 8px}";
   document.head.appendChild(css);
@@ -471,6 +508,14 @@
     return ks.filter(k => (c[k] || 0) < dcExp[k]).map(k => k + ": " + (c[k] || 0) + " of " + dcExp[k]);
   }
   window.LPN_APK_SHORT = shortDcs;
+  /* The large line in the camera scanner after each pallet: its DC and how many from that DC so far ("RUGBY · 3 of 4"). */
+  function dcBig(l) {
+    if (typeof dcOf !== "function" || typeof DCS === "undefined") return "";
+    const d = dcOf(l); if (!d) return ""; if (!DCS[d]) return "UNKNOWN DC";
+    let n = 0; rows.forEach(r => { if (r && !(typeof isNoLpn === "function" && isNoLpn(r.lpn)) && dcOf(r.lpn) === d) n++; });
+    return d.toUpperCase() + " · " + (dcExp[d] > 0 ? n + " of " + dcExp[d] : n);
+  }
+  window.LPN_APK_DCBIG = dcBig;
   let shortOk = "";
   function shortAsk(when, go) {
     const a = shortDcs(); if (!a.length) { if (go) go(); return; }
@@ -605,7 +650,8 @@
           const ex = expected(), n = rows.length, done = /^Added/.test(said) && ex > 0 && n >= ex;
           const tail = done ? (n === ex ? countText() + ", all in" : countText() + ", more than expected") : countText();
           const odd = /^Added/.test(said) && rows.length && window.LPN_APK_DCWARN(rows[rows.length - 1].lpn);
-          N().scanStatus({ text: /^LPNM/.test(v) ? said : said + " · " + tail + (odd ? " · ⚠ Not a known DC: check the label" : ""), state: scanState(), flash: odd ? "warn" : /^Added/.test(said) ? "ok" : undefined });
+          const added = /^Added/.test(said) && rows.length ? rows[rows.length - 1].lpn : "";
+          N().scanStatus({ text: /^LPNM/.test(v) ? said : said + " · " + tail + (odd ? " · ⚠ Not a known DC: check the label" : ""), state: scanState(), flash: odd ? "warn" : /^Added/.test(said) ? "ok" : undefined, dc: added ? dcBig(added) : undefined });
         }
       });
       // The scanner's own buttons change the page's controls, and the scanner shows the result.
@@ -1198,8 +1244,28 @@
 
   /* Carry on: opening the app with a delivery in progress offers to go straight back to scanning. */
   function carryOn() {
-    if (!N() || !has("palletLog") || !has("liveScan") || !rows.length || window.LPN_APK_NATIVESCAN || (typeof scanning !== "undefined" && scanning) || document.querySelector(".apkask") || ($("panel") && !$("panel").hidden)) return;
+    if (!N() || !has("palletLog") || !rows.length || window.LPN_APK_NATIVESCAN || (typeof scanning !== "undefined" && scanning) || document.querySelector(".apkask") || ($("panel") && !$("panel").hidden)) return;
+    // A delivery dated before today was probably left open: carry on with it, or save it and start a new one.
+    const d = ($("date") || {}).value || "", today = typeof localToday === "function" ? localToday() : "";
+    if (d && today && d < today) {
+      const y = new Date(today + "T12:00:00"); y.setDate(y.getDate() - 1);
+      const yd = y.getFullYear() + "-" + String(y.getMonth() + 1).padStart(2, "0") + "-" + String(y.getDate()).padStart(2, "0");
+      const tr = (($("trailer") || {}).value || "").trim(), when = d === yd ? "yesterday" : (typeof ukDate === "function" ? ukDate(d) : d);
+      const go = [];
+      if (has("liveScan")) go.push(["Carry on scanning", () => opened({ action: "scan" })]); else go.push(["Carry on", null]);
+      go.push(["Save it and start new", oldNew]);
+      ask("Still working on " + (tr ? tr + " " : "the delivery ") + "from " + when + "? " + countText() + ".", go);
+      return;
+    }
+    if (!has("liveScan")) return;
     ask("Delivery in progress: " + countText() + ".", [["Carry on scanning", () => opened({ action: "scan" })]]);
+  }
+  // Save it and start new: if it hasn't been exported, offer Export first (Start new delivery would otherwise only say so).
+  function oldNew() {
+    const done = typeof exported !== "undefined" && exported && typeof logSig === "function" && exported.sig === logSig();
+    const start = () => { if (typeof newAck !== "undefined" && typeof logSig === "function") newAck = logSig(); const b = $("newDel"); if (b) b.click(); };
+    if (done) { start(); return; }
+    ask("This delivery hasn’t been exported yet.", [["Export it first", () => { if (typeof LPN_APK_EXPORTSHEET === "function") { LPN_APK_MODE && LPN_APK_MODE("log"); LPN_APK_EXPORTSHEET(); } }], ["Save without exporting", start]]);
   }
   window.LPN_APK_CARRYON = carryOn;
   if (N()) window.addEventListener("load", () => setTimeout(() => { try { if (!mode) carryOn(); } catch (e) {} }, 1200));

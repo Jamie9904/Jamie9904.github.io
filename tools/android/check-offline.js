@@ -585,6 +585,43 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     document.querySelector("#undoBar button").click(); await wait(50); out.undone = rows.length;
     rows = keep; document.getElementById("cmpNums").value = man; save(); render(); document.getElementById("msg").textContent = ""; return out; });
   check("a pasted list sets FPP-prefix pallets to FPP, says so, and Undo takes the whole paste away", s.types === "VLT004041301:BB,IM0012345690:FPP,R0012345691:FPP" && /2 pallets were set to FPP from the prefix\.$/.test(s.msg) && s.undone === 0, s);
+  // The camera scanner's large DC line; Email PDF's Send to; and a delivery left open from an earlier day.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)), keep = rows.slice(), keepDel = getDel(), keepHist = hist.slice(), man = document.getElementById("cmpNums").value, out = {};
+    document.getElementById("cmpNums").value = ""; document.querySelectorAll(".apkask").forEach(a => a.remove()); rows = []; setDel({ date: localToday() }); save(); render();
+    const dcs = [], orig = N.scanStatus; N.scanStatus = async o => { if ("dc" in o) dcs.push(o.dc); return orig(o); };
+    const f = (k, v) => { const i = document.getElementById("apkDcExp-" + k); i.value = v; i.dispatchEvent(new Event("input", { bubbles: true })); }; f("Rugby", "4");
+    document.getElementById("scan").click(); await wait(200);
+    for (const v of ["RBY006292701", "VLT004041401", "ABC004041402"]) { lastAt = 0; N.listeners.nativeScan({ values: [v] }); await wait(80); if (pendingAdd) hideCheck(); }
+    N.listeners.nativeScanClosed({ reason: "back" }); N.scanStatus = orig; out.dc = dcs.filter(x => x !== undefined).join("|");
+    // Email PDF: Send to, with the last addresses kept.
+    const mails = []; N.emailFile = async o => { mails.push(o.to + "|" + o.subject + "|" + o.mime + "|" + /^file:/.test(o.uri)); };
+    const shares = [], sh = window.Capacitor.Plugins.Share.share; window.Capacitor.Plugins.Share.share = async o => { shares.push(o.title); };
+    localStorage.removeItem("lpnapkmailto"); const file = () => new File(["%PDF-1.4"], "LPN log 2026-11-26.pdf", { type: "application/pdf" });
+    emailMode = true; let p = navigator.share({ files: [file()], title: "LPN log 2026-11-26", text: "Please find the attached file" }); await wait(100);
+    let d = document.querySelector(".apkask"); out.title = d && d.querySelector(".apkasktitle").textContent; out.empty = document.getElementById("apkMailTo").value;
+    document.getElementById("apkMailTo").value = "not an address"; document.getElementById("apkMailGo").click(); out.bad = document.getElementById("apkMailMsg").textContent;
+    document.getElementById("apkMailTo").value = "goodsin@example.co.uk"; document.getElementById("apkMailGo").click(); await p;
+    p = navigator.share({ files: [file()], title: "LPN log 2026-11-26", text: "x" }); await wait(100); out.filled = document.getElementById("apkMailTo").value; out.chips = [...document.querySelectorAll(".apkmailc")].map(b => b.textContent).join();
+    document.getElementById("apkMailShare").click(); await p;
+    p = navigator.share({ files: [file()], title: "LPN log 2026-11-26", text: "x" }); await wait(100); document.querySelector(".apkask").remove();
+    out.back = await p.then(() => "sent", e => e.name); emailMode = false; window.Capacitor.Plugins.Share.share = sh;
+    out.mails = mails.join(); out.shares = shares.join(); out.kept = localStorage.getItem("lpnapkmailto"); localStorage.removeItem("lpnapkmailto");
+    // A delivery dated before today.
+    const y = new Date(); y.setDate(y.getDate() - 1); const yd = y.getFullYear() + "-" + String(y.getMonth() + 1).padStart(2, "0") + "-" + String(y.getDate()).padStart(2, "0");
+    rows = ["VLT004041501", "VLT004041502"].map(l => ({ lpn: l, type: "BB", fsdu: false })); setDel({ date: yd, trailer: "TR 4471", expect: "20" }); exported = null; save(); render();
+    LPN_APK_CARRYON(); await wait(50); d = document.querySelector(".apkask"); out.old = d && d.querySelector(".apkasktitle").textContent; out.oldB = d ? [...d.querySelectorAll("button")].map(b => b.textContent).join() : "";
+    [...d.querySelectorAll("button")].find(b => b.textContent === "Save it and start new").click(); await wait(50); d = document.querySelector(".apkask");
+    out.exp = d && d.querySelector(".apkasktitle").textContent; out.expB = d ? [...d.querySelectorAll("button")].map(b => b.textContent).join() : "";
+    [...d.querySelectorAll("button")].find(b => b.textContent === "Save without exporting").click(); await wait(80); out.after = rows.length + "|" + hist.some(h => h.trailer === "TR 4471");
+    setDel({ date: localToday() }); rows = [{ lpn: "VLT004041503", type: "BB", fsdu: false }]; render(); LPN_APK_CARRYON(); await wait(50); d = document.querySelector(".apkask"); out.today = d && d.querySelector(".apkasktitle").textContent; if (d) d.remove();
+    hist = keepHist; saveHist(); rows = keep; setDel(keepDel); document.getElementById("cmpNums").value = man; save(); render(); return out; });
+  check("after each pallet the camera scanner shows its DC in large letters, with that DC's count (and expected number); orange UNKNOWN DC for others", s.dc === "RUGBY · 1 of 4|VAULT · 1|UNKNOWN DC", s);
+  check("Email PDF asks who it's for, checks the address, opens the email app with it filled in, and offers the last addresses next time (Other apps: the share menu; Back: cancelled)",
+    s.title === "Email LPN log 2026-11-26.pdf" && s.empty === "" && /doesn’t look like an email address/.test(s.bad) && s.filled === "goodsin@example.co.uk" && s.chips === "goodsin@example.co.uk"
+    && s.mails === "goodsin@example.co.uk|LPN log 2026-11-26|application/pdf|true" && s.shares === "LPN log 2026-11-26" && s.back === "AbortError" && s.kept === '["goodsin@example.co.uk"]', s);
+  check("opening the app with a delivery from an earlier day asks to carry on or save it and start new (offering Export first when not exported)",
+    s.old === "Still working on TR 4471 from yesterday? 2 of 20." && s.oldB === "Carry on scanning,Save it and start new,Cancel" && s.exp === "This delivery hasn’t been exported yet." && s.expB === "Export it first,Save without exporting,Cancel"
+    && s.after === "0|true" && /^Delivery in progress/.test(s.today || ""), s);
   // Results per DC in Manifest check.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)); LPN_APK_MODE("cmp"); await wait(50);
     document.getElementById("cmpLogNums").value = "VLT004040801\nVLT004040802\nRBY006292401\nRUN0001830801"; document.getElementById("cmpNums").value = "VLT004040801\nVLT004040899\nRUN0001830801";

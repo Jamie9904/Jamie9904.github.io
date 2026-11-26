@@ -185,6 +185,7 @@ public class LpnNativePlugin extends Plugin {
             if (cs != null && cs.split(",").length == 4) cols = cs.split(",");
             ScanActivity.setState(st.getString("type"), Boolean.TRUE.equals(st.getBool("fsdu")), st.getString("recent"), Boolean.TRUE.equals(st.getBool("canUndo")), Boolean.TRUE.equals(st.getBool("big")), cols, Boolean.TRUE.equals(st.getBool("allIn")), st.getString("dcs"));
         }
+        if (call.getString("dc") != null) ScanActivity.showDc(call.getString("dc"), "warn".equals(call.getString("flash")));
         if (call.getString("text") != null || call.getString("flash") != null || Boolean.TRUE.equals(call.getBoolean("close", false))) ScanActivity.show(call.getString("text"), Boolean.TRUE.equals(call.getBoolean("close", false)), call.getString("flash"));
         call.resolve();
     }
@@ -637,6 +638,26 @@ public class LpnNativePlugin extends Plugin {
             getActivity().startActivity(Intent.createChooser(i, name));
             call.resolve();
         } catch (Exception e) { call.reject(e.getMessage() == null ? "No app on this phone can open that file." : e.getMessage()); }
+    }
+
+    /* Email PDF: the file (saved in the app's cache by the page) goes to an email app with the To address filled in. */
+    @PluginMethod
+    public void emailFile(PluginCall call) {
+        String uri = call.getString("uri"), to = call.getString("to", ""), subject = call.getString("subject", ""), text = call.getString("text", ""), mime = call.getString("mime", "application/pdf");
+        try {
+            File f = new File(Uri.parse(uri).getPath());
+            String cache = getContext().getCacheDir().getCanonicalPath() + File.separator;
+            if (!f.getCanonicalPath().startsWith(cache) || !f.exists()) { call.reject("That file is no longer there."); return; }
+            Uri u = FileProvider.getUriForFile(getContext(), getContext().getPackageName() + ".fileprovider", f);
+            Intent i = new Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, u).putExtra(Intent.EXTRA_SUBJECT, subject).putExtra(Intent.EXTRA_TEXT, text).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            if (to != null && !to.isEmpty()) i.putExtra(Intent.EXTRA_EMAIL, new String[] { to });
+            i.setClipData(android.content.ClipData.newRawUri("", u));
+            // Only email apps (the mailto: selector); if the phone has none set up that way, any app that can send it.
+            Intent only = new Intent(i).setSelector(new Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:")));
+            try { getActivity().startActivity(only); }
+            catch (android.content.ActivityNotFoundException e) { getActivity().startActivity(Intent.createChooser(i, "Email " + f.getName())); }
+            call.resolve();
+        } catch (Exception e) { call.reject(e.getMessage() == null ? "No email app on this phone could open it." : e.getMessage()); }
     }
 
     @PluginMethod
