@@ -546,6 +546,9 @@
     const r0 = render;
     render = function () { const x = r0.apply(this, arguments); try { if (syncDcFilter()) r0.apply(this, arguments); dcTags(); } catch (e) {} return x; };
     render.dcf = true;
+    // Tapping a total above the table, and Simple view (which hides the filters), clear the DC filter as they do the others.
+    document.addEventListener("click", e => { if (e.target && e.target.closest && e.target.closest("#sum .sumbtn")) { const f = $("fltDc"); if (f) f.value = ""; } }, true);
+    if (typeof applySimple === "function" && !applySimple.dcf) { const a0 = applySimple; applySimple = function () { const x = a0.apply(this, arguments); const g = $("fltDc"); if (g && document.documentElement.classList.contains("simple") && g.value) { g.value = ""; render(); } return x; }; applySimple.dcf = true; }
     try { render(); } catch (e) {}
   });
   let shortOk = "";

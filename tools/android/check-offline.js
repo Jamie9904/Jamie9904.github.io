@@ -631,12 +631,15 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     out.opts = [...sel.options].map(o => o.textContent).join(); out.tags = [...document.querySelectorAll("#body .apkdctag")].map(t => t.textContent).join();
     sel.value = "Rugby"; sel.dispatchEvent(new Event("change")); await wait(30);
     out.shown = [...document.querySelectorAll("#body .lpnedit")].map(b => b.textContent).join(); out.info = document.getElementById("fltInfo").textContent;
+    const tot = document.querySelector("#sum .sumbtn"); if (tot) { tot.click(); await wait(30); out.sumClear = sel.value === ""; tot.click(); await wait(30); }
+    sel.value = "Rugby"; render(); const simple0 = cfg.simple; cfg.simple = true; applySimple(); await wait(30); out.simpleClear = sel.value === "" && document.querySelectorAll("#body .lpnedit").length === 5; cfg.simple = simple0; applySimple(); await wait(30);
+    sel.value = "Rugby"; render();
     rows = rows.filter(r => !/^(RBY|IM)/.test(r.lpn)); save(); render(); await wait(30); out.gone = sel.value + "|" + document.querySelectorAll("#body .lpnedit").length;
     out.torch = LPN_APK_SCANSTATE().autoTorch; localStorage.setItem("lpnapkautotorch", "off"); out.torchOff = LPN_APK_SCANSTATE().autoTorch; localStorage.removeItem("lpnapkautotorch");
     openHelp("settings", "Settings"); await wait(100); out.setting = !!document.getElementById("apkAutoTorch") && document.getElementById("apkAutoTorch").checked; closeHelp();
     sel.value = ""; rows = keep; save(); render(); return out; });
   check("with pallets from more than one DC, each row has a DC tag and the filters get a DC filter (none for one DC)", s.oneHidden && s.oneTags === 0 && s.opts === "All DCs,Rugby,Runcorn,Vault,Other" && s.tags === "Vault,Rugby,Rugby,Runcorn,Other", s);
-  check("the DC filter shows only that DC's pallets, and goes back to All DCs when that DC's pallets are gone", s.shown === "RBY006292801,IM0012345701" && /^Showing 2 of 5 pallets/.test(s.info) && s.gone === "|3", s);
+  check("the DC filter shows only that DC's pallets, and goes back to All DCs when that DC's pallets are gone, a total is tapped or Simple view is turned on", s.shown === "RBY006292801,IM0012345701" && /^Showing 2 of 5 pallets/.test(s.info) && s.gone === "|3" && s.sumClear && s.simpleClear, s);
   check("the camera scanner's automatic torch is on unless switched off in Settings › Android app", s.torch === true && s.torchOff === false && s.setting, s);
   // Results per DC in Manifest check.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)); LPN_APK_MODE("cmp"); await wait(50);
