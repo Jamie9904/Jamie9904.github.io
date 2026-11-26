@@ -609,19 +609,20 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     // A delivery dated before today.
     const y = new Date(); y.setDate(y.getDate() - 1); const yd = y.getFullYear() + "-" + String(y.getMonth() + 1).padStart(2, "0") + "-" + String(y.getDate()).padStart(2, "0");
     rows = ["VLT004041501", "VLT004041502"].map(l => ({ lpn: l, type: "BB", fsdu: false })); setDel({ date: yd, trailer: "TR 4471", expect: "20" }); exported = null; save(); render();
+    const was = LPN_APK_MODE(); LPN_APK_MODE("menu"); LPN_APK_OPENCHECK(); await wait(50); d = document.querySelector(".apkask"); out.menuOld = !!d && /^Still working on/.test(d.querySelector(".apkasktitle").textContent); if (d) d.remove();
     LPN_APK_CARRYON(); await wait(50); d = document.querySelector(".apkask"); out.old = d && d.querySelector(".apkasktitle").textContent; out.oldB = d ? [...d.querySelectorAll("button")].map(b => b.textContent).join() : "";
     [...d.querySelectorAll("button")].find(b => b.textContent === "Save it and start new").click(); await wait(50); d = document.querySelector(".apkask");
     out.exp = d && d.querySelector(".apkasktitle").textContent; out.expB = d ? [...d.querySelectorAll("button")].map(b => b.textContent).join() : "";
     [...d.querySelectorAll("button")].find(b => b.textContent === "Save without exporting").click(); await wait(80); out.after = rows.length + "|" + hist.some(h => h.trailer === "TR 4471");
-    setDel({ date: localToday() }); rows = [{ lpn: "VLT004041503", type: "BB", fsdu: false }]; render(); LPN_APK_CARRYON(); await wait(50); d = document.querySelector(".apkask"); out.today = d && d.querySelector(".apkasktitle").textContent; if (d) d.remove();
+    setDel({ date: localToday() }); rows = [{ lpn: "VLT004041503", type: "BB", fsdu: false }]; render(); LPN_APK_CARRYON(); await wait(50); d = document.querySelector(".apkask"); out.today = d && d.querySelector(".apkasktitle").textContent; if (d) d.remove(); LPN_APK_OPENCHECK(); await wait(50); out.menuToday = !!document.querySelector(".apkask"); document.querySelectorAll(".apkask").forEach(x => x.remove()); if (was) LPN_APK_MODE(was);
     hist = keepHist; saveHist(); rows = keep; setDel(keepDel); document.getElementById("cmpNums").value = man; save(); render(); return out; });
   check("after each pallet the camera scanner shows its DC in large letters, with that DC's count (and expected number); orange UNKNOWN DC for others", s.dc === "RUGBY · 1 of 4|VAULT · 1|UNKNOWN DC", s);
   check("Email PDF asks who it's for, checks the address, opens the email app with it filled in, and offers the last addresses next time (Other apps: the share menu; Back: cancelled)",
     s.title === "Email LPN log 2026-11-26.pdf" && s.empty === "" && /doesn’t look like an email address/.test(s.bad) && s.filled === "goodsin@example.co.uk" && s.chips === "goodsin@example.co.uk"
     && s.mails === "goodsin@example.co.uk|LPN log 2026-11-26|application/pdf|true" && s.shares === "LPN log 2026-11-26" && s.back === "AbortError" && s.kept === '["goodsin@example.co.uk"]', s);
-  check("opening the app with a delivery from an earlier day asks to carry on or save it and start new (offering Export first when not exported)",
+  check("opening the app with a delivery from an earlier day asks to carry on or save it and start new, on the start menu too (offering Export first when not exported)",
     s.old === "Still working on TR 4471 from yesterday? 2 of 20." && s.oldB === "Carry on scanning,Save it and start new,Cancel" && s.exp === "This delivery hasn’t been exported yet." && s.expB === "Export it first,Save without exporting,Cancel"
-    && s.after === "0|true" && /^Delivery in progress/.test(s.today || ""), s);
+    && s.after === "0|true" && /^Delivery in progress/.test(s.today || "") && s.menuOld && !s.menuToday, s);
   // Results per DC in Manifest check.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)); LPN_APK_MODE("cmp"); await wait(50);
     document.getElementById("cmpLogNums").value = "VLT004040801\nVLT004040802\nRBY006292401\nRUN0001830801"; document.getElementById("cmpNums").value = "VLT004040801\nVLT004040899\nRUN0001830801";

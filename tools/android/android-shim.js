@@ -1243,7 +1243,7 @@
   });
 
   /* Carry on: opening the app with a delivery in progress offers to go straight back to scanning. */
-  function carryOn() {
+  function carryOn(oldOnly) {
     if (!N() || !has("palletLog") || !rows.length || window.LPN_APK_NATIVESCAN || (typeof scanning !== "undefined" && scanning) || document.querySelector(".apkask") || ($("panel") && !$("panel").hidden)) return;
     // A delivery dated before today was probably left open: carry on with it, or save it and start a new one.
     const d = ($("date") || {}).value || "", today = typeof localToday === "function" ? localToday() : "";
@@ -1257,7 +1257,7 @@
       ask("Still working on " + (tr ? tr + " " : "the delivery ") + "from " + when + "? " + countText() + ".", go);
       return;
     }
-    if (!has("liveScan")) return;
+    if (oldOnly || !has("liveScan")) return;
     ask("Delivery in progress: " + countText() + ".", [["Carry on scanning", () => opened({ action: "scan" })]]);
   }
   // Save it and start new: if it hasn't been exported, offer Export first (Start new delivery would otherwise only say so).
@@ -1268,7 +1268,11 @@
     ask("This delivery hasn’t been exported yet.", [["Export it first", () => { if (typeof LPN_APK_EXPORTSHEET === "function") { LPN_APK_MODE && LPN_APK_MODE("log"); LPN_APK_EXPORTSHEET(); } }], ["Save without exporting", start]]);
   }
   window.LPN_APK_CARRYON = carryOn;
-  if (N()) window.addEventListener("load", () => setTimeout(() => { try { if (!mode) carryOn(); } catch (e) {} }, 1200));
+  // On opening: with no start menu, Carry on scanning (or the earlier-day question); with the start menu, only the
+  // earlier-day question, as the menu already shows the delivery in progress.
+  function openCheck() { if (!mode) carryOn(); else if (mode === "menu") carryOn(true); }
+  window.LPN_APK_OPENCHECK = openCheck;
+  if (N()) window.addEventListener("load", () => setTimeout(() => { try { openCheck(); } catch (e) {} }, 1200));
 
   /* The count out loud after each pallet, and a word for a warning (Settings › Android app). */
   function sayIt(t) { if (N() && pref("lpnapkspeak", false) && !hushed()) N().speak({ text: t }).catch(() => {}); }
