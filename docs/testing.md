@@ -316,6 +316,13 @@ Since commit `1bd4f34`, Android workflow runs started by hand with **Screenshots
 
 **On `updates` (commit `3e57eba`, not in an APK yet):** `check-offline.js` has one more check, so 113: on the Manifest check page, log numbers `VLT004041210`, `RBY006291167`, `RBY006291168` and manifest number `VLT004041210` give the big numbers "0Missing,0Extra,1Matched,2No manifest" (cell text joined by commas) and the Export sheet's subtitle "0 missing · 0 extra · 1 matched · 2 no manifest". No GitHub run has been read for it here.
 
+**On `updates` (commits `9c05d9b` and `4805cb6`, for Android APK build 7, not in an APK yet):** 4 more checks, so 117. With the log set to `VLT004040601`, `V0013323651`, `RBY006292169`, `IM0012345678`, `XQZ004040602`, `RUN0001830763`, a refused `RBY006292170` and `No LPN 1`:
+  - **pallets per DC:** `LPN_APK_DCS(rows)` is "Rugby 2 · Vault 2 · Runcorn 1 · Other 1" (known DCs most first, ties alphabetical, other prefixes last, the refused and No LPN pallets left out), and `LPN_APK_DCS` of just `TEST1234` is empty;
+  - **shown on Home and in the camera scanner:** `#rdDcs` on Home and the `dcs` in the state sent when Scan opens the camera scanner are the same text;
+  - **the warning in the camera scanner:** a `nativeScan` of `ABC001234567` is still added and its status ends "· ⚠ Not a known DC: check the label" with flash `warn`; `VLT004040603` after it has no warning and flash `ok`;
+  - **the warning when typed in:** adding `ABD001234568` makes `#flash` read "Added #n: ABD001234568 · …⚠ Not a known DC: check the label" with the class `warn` (since `4805cb6` anything may come between the LPN and the warning, such as the pallet type and a manifest note); with `lpnapkdcwarn` `"off"`, `ABE001234569` gets no warning; and Settings has `#apkDcWarn`, ticked.
+  The longer photo reader warm-up and the Manifest check steps without a timer have no checks of their own (the existing step check above still runs). No GitHub run has been read for these here.
+
 ### Bug hunt on the virtual phone (`tools/android/qa.sh`)
 
 Since commits `9a330bc` and `2ff87e7` (Android APK build 4), hand-started Android runs have a third tick box, **Bug hunt on the virtual phone after the screenshots (about 15 minutes more; needs Screenshots ticked)** (input `qa`, off by default). With it ticked, the emulator step runs `sh tools/android/qa.sh` straight after `shots.sh`, on the same virtual phone with the same `qa` test copy installed. Start it without making an APK with:

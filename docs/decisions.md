@@ -1300,3 +1300,19 @@ Commit `b4d5508` raised `tools/android/build.json` to 6 and replaced `whats-new.
 - **On every output.** The summary, Share missing list, Excel and PDF all show it, with "No manifest from" in Delivery Details so a printed check says which DC to chase. On the Excel the rows' grey (`E4E4E4`, PDF `[228,228,228]`) is lighter than Log only (`D0D0D0`) and Missing (`A6A6A6`); the commit doesn't say why that shade was picked.
 - **The Share missing list check changed its data, not its expectation of the old wording.** Its extra pallet was a Qube pallet with no Qube pallet on the manifest, which is now No manifest; `556e385` uses a Runcorn extra so the check still tests a plain log only line.
 - **Android:** the redesign reads the counts from the results' text (see above), so the fourth big number and the Export sheet's "no manifest" part read "No manifest received (n)" the same way; `check-offline.js` has a check for both.
+
+## Pallets per DC and the unknown DC warning (Android only; commits `9c05d9b` and `4805cb6` on `updates`, for Android APK build 7, not in an APK yet)
+
+- **Same DC list as No manifest received.** `LPN_APK_DCS` and `LPN_APK_DCWARN` in `android-shim.js` use `compare.js`'s `DCS`, `dcOf()` and `lpnPfx()` rather than a list of their own, so a DC or prefix added there is picked up by both. Unlike No manifest received, which names an unknown prefix by its letters, the per-DC count puts every unknown prefix under one **Other**.
+- **Nothing shown without a known DC.** The code comment: empty "when none of the pallets is from a known DC, so test numbers or another site's labels show nothing".
+- **Refused and No LPN pallets left out** of the count, as they weren't received or have no prefix to go by.
+- **Warn, don't block.** A pallet with an unknown prefix is still added (the code comment: "a misread, or a label from somewhere else. The pallet is still added (Undo takes it off)"), so a genuine pallet from a new DC isn't held up at the dock. The warning is on by default and can be switched off in Settings › Android app › Scanning (`lpnapkdcwarn`). An LPN with no letters isn't warned about (`lpnPfx()` empty), nor is a No LPN pallet.
+- **Added to the existing Added note, not a new message.** `flashAdded` is wrapped to append the warning, so the pallet number and type stay visible; the note is kept for 4 seconds and the warning sound is played only if the note wasn't already a warning, so one add doesn't play it twice.
+- **Android only.** These are in the Android app's own code (`tools/android/`), not on the website.
+
+## Photo reader warm-up and Manifest check steps (Android only; commit `9c05d9b` on `updates`, for Android APK build 7)
+
+- **Kept open 60 seconds, not 15.** The code comment: "once ready it stays open for a minute (not the usual 15 seconds), long enough to line up the camera". The earlier warm-up handed the worker to `ocrDone()`, whose 15-second idle timer could close it before the first photo was taken.
+- **In the photo queue (`ocrQ`).** The warm-up now takes its turn there, so "a photo started meanwhile simply waits for it" instead of starting a second reader alongside it.
+- **Not on phones under 2 GB.** With `navigator.deviceMemory` below 2 the reader is only started when needed (code comment: "very little memory: start it only when needed"), so an idle reader doesn't hold memory for a minute on those phones.
+- **No 700 ms timer for the steps.** The code comment: "No timer, so nothing runs in the background while the page sits open." A value set by code fires no `input` event, which the timer was there to catch; wrapping each box's `value` setter catches those instead, and `requestAnimationFrame` runs `syncSteps()` at most once per frame.
