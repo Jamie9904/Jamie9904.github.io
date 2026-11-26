@@ -133,8 +133,11 @@ function render(){
   const q=($("flt").value||"").trim().toUpperCase().replace(/\s+/g,""),ft=$("fltType").value,ff=$("fltFsdu").value;
   if($("fltClear"))$("fltClear").hidden=!$("flt").value;
   let shown=0;
+  // Numbers only (3 or more): the end of the LPN first, as people read the last digits off a label; anywhere in it
+  // when no LPN ends with them.
+  const lp=r=>r.lpn.toUpperCase().replace(/\s+/g,""),tail=/^\d{3,}$/.test(q)&&rows.some(r=>lp(r).endsWith(q));
   rows.forEach((r,i)=>{
-    if(q&&r.lpn.toUpperCase().replace(/\s+/g,"").indexOf(q)<0)return;
+    if(q&&(tail?!lp(r).endsWith(q):lp(r).indexOf(q)<0))return;
     if(ft&&r.type!==ft)return;
     if(ff==="y"&&!r.fsdu)return;
     if(ff==="n"&&r.fsdu)return;

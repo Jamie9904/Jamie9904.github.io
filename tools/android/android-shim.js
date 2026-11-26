@@ -135,6 +135,7 @@
     + ".apksaved{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:1000;padding:12px 14px;border-radius:12px;background:#1f2a41;color:#fff;box-shadow:0 6px 24px rgba(0,0,0,.4)}.apksaved p{margin:0 0 8px;overflow-wrap:anywhere}"
     + "#apkDcExp{border:0;margin:12px 0 0;padding:0;min-width:0}#apkDcExp legend{padding:0;font-weight:700;margin-bottom:6px}#apkDcExp .apkopt{font-weight:400;opacity:.8}"
     + ".apkdcgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px}.apkdcgrid label{display:flex;flex-direction:column;gap:4px;font-size:.9rem;min-width:0}.apkdcgrid input{width:100%;min-height:44px;box-sizing:border-box}#apkDcExp .note{margin:6px 0 0}"
+    + "#flash.apktap{pointer-events:auto;cursor:pointer}"
     + ".apkoldbar{border:1px solid var(--rule,#223a63);border-radius:12px;padding:10px 12px;margin:8px 0}.apkoldbar p{margin:0 0 8px}"
     + ".apkfiles{list-style:none;padding:0;margin:8px 0}.apkfiles li{padding:10px 0;border-bottom:1px solid var(--rule,#223a63)}.apkfname{margin:0;font-weight:700;overflow-wrap:anywhere}.apkfiles .note{margin:2px 0 8px}";
   document.head.appendChild(css);
@@ -394,6 +395,7 @@
           + '<label class="chk"><input type="checkbox" id="apkCam"><span>Live scan with the phone’s own camera scanner (faster, with tap-to-focus and automatic zoom). Untick to use the one inside the app.</span></label>' : "")
         + (has("palletLog") ? '<label class="chk"><input type="checkbox" id="apkSpeak"><span>Say the count out loud after each pallet (and “already logged” or “check” for a warning)</span></label>' : "")
         + (has("palletLog") ? '<label class="chk"><input type="checkbox" id="apkDcWarn"><span>Warn when a pallet’s LPN doesn’t start with a known DC prefix (Vault, Runcorn, Qube or Rugby), so a misread or wrong label is caught at the dock</span></label>' : "")
+        + (has("palletLog") ? '<label class="chk"><input type="checkbox" id="apkFpp"><span>Set the pallet type to FPP for LPNs with an FPP prefix (V, R, Q and IM), whatever type is chosen</span></label>' : "")
         + '<label class="chk"><input type="checkbox" id="apkQuiet"><span>No scan sounds or spoken count while the phone is on silent, vibrate or Do Not Disturb (it still buzzes)</span></label>'
         + '<label class="chk"><input type="checkbox" id="apkHand"><span>Warehouse handheld scanner (Zebra or Honeywell): scans come straight into the app, so they can’t land in the wrong box. Untick if your scanner should type like a keyboard.</span></label>'
         + (has("manifestPhotos") ? '<h4 class="apksub">Photos</h4><label class="chk"><input type="checkbox" id="apkOcr"><span>Read manifest photos with the phone’s own text reader instead of the app’s own. It can be faster, but the app’s own reader is more accurate on the test photos, so check what it finds.</span></label>' : "")
@@ -407,7 +409,7 @@
       if ($("apkVol")) { $("apkVol").checked = volOn(); $("apkVol").onchange = () => { try { localStorage.setItem("lpnapkvol", $("apkVol").checked ? "on" : "off"); } catch (e) {} syncVol(); }; }
       $("apkFilesSet").onclick = () => showFiles();
       const sw = (id, key, def) => { const c = $(id); if (!c) return; c.checked = pref(key, def); c.onchange = () => { try { localStorage.setItem(key, c.checked ? "on" : "off"); } catch (e) {} }; };
-      sw("apkQuiet", "lpnapkquiet", true); sw("apkDcWarn", "lpnapkdcwarn", true);
+      sw("apkQuiet", "lpnapkquiet", true); sw("apkDcWarn", "lpnapkdcwarn", true); sw("apkFpp", "lpnapkfpp", true);
       sw("apkCam", "lpnapkcamscan", true); sw("apkSpeak", "lpnapkspeak", false); sw("apkBig", "lpnapkbig", false); sw("apkHand", "lpnapkhand", true); sw("apkOcr", "lpnapkocr", OCR_DEFAULT);
       if ($("apkHand")) $("apkHand").addEventListener("change", syncHand);
       const dirShow = () => { const d = dirGet(), n = $("apkDirNote"); if (!n) return;
@@ -525,6 +527,12 @@
     flashAdded = function (v) {
       const x = f.apply(this, arguments);
       try {
+        // Tap the note to change the pallet's type; it stays a little longer so there's time to.
+        const el = $("flash"); el.classList.add("apktap"); el.dataset.lpn = v;
+        if (fppSet === v) { el.append(" · FPP from the prefix"); fppSet = ""; }
+        if (!el.classList.contains("warn")) { clearTimeout(flashTimer); flashTimer = setTimeout(() => { el.hidden = true; }, 4000); }
+      } catch (e) {}
+      try {
         if (window.LPN_APK_DCWARN(v)) {
           const el = $("flash"), was = el.classList.contains("warn");
           el.append(" · ⚠ Not a known DC: check the label"); el.classList.add("warn");
@@ -535,7 +543,34 @@
       return x;
     };
     flashAdded.dc = true;
+    // FPP from the prefix: V, R, Q and IM are the DCs' FPP prefixes, so those pallets are FPP whatever type is chosen.
+    if (typeof addValue === "function" && !addValue.fpp) {
+      const av = addValue;
+      addValue = function (v, o) {
+        if (!window.LPN_APK_FPPAUTO(v) || (o && o.type === "FPP") || (!o && ($("type") || {}).value === "FPP")) return av.apply(this, arguments);
+        const given = arguments.length > 1 && !!o;
+        fppSet = v;
+        const r = av.call(this, v, Object.assign({ type: ($("type") || {}).value, fsdu: !!($("fsdu") || {}).checked }, o || {}, { type: "FPP" }));
+        if (!given && $("fsdu")) $("fsdu").checked = false; // as for any pallet added without a type given
+        return r;
+      };
+      addValue.fpp = true;
+    }
+    // The Added note: tap it to change the type of the pallet just added (with Undo).
+    const fl = $("flash");
+    if (fl) fl.addEventListener("click", () => {
+      const v = fl.dataset.lpn; let i = -1; rows.forEach((r, k) => { if (r.lpn === v) i = k; }); if (i < 0) return;
+      const r = rows[i], types = typeof TYPES !== "undefined" ? TYPES : ["BB", "FMCG", "FPP", "Mixed"];
+      fl.hidden = true;
+      ask("Change the type of " + v + " (now " + r.type + ")", types.filter(t => t !== r.type).map(t => [t, () => {
+        const old = r.type; r.type = t; save(); render();
+        if (typeof showUndo === "function") showUndo("Changed " + v + " to " + t, () => { r.type = old; save(); render(); });
+      }]));
+    });
   });
+  const FPP_PFX = ["V", "R", "Q", "IM"];
+  let fppSet = "";
+  window.LPN_APK_FPPAUTO = v => { try { return pref("lpnapkfpp", true) && typeof lpnPfx === "function" && FPP_PFX.indexOf(lpnPfx(v)) >= 0; } catch (e) { return false; } };
   const scanState = () => ({ allIn: allIn(), type: ($("type") || {}).value || "BB", fsdu: !!($("fsdu") || {}).checked, canUndo: rows.length > 0, big: pref("lpnapkbig", false), colours: typeColours(), dcs: window.LPN_APK_DCS(rows, dcExp),
     recent: rows.slice(-3).reverse().map(r => r.lpn + " · " + r.type + (r.fsdu ? " + FSDU" : "")).join("\n") });
   function pushScan(text) { if (N()) N().scanStatus(text ? { text, state: scanState() } : { state: scanState() }).catch(() => {}); }

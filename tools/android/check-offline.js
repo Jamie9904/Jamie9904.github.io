@@ -558,6 +558,25 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     hist = keepHist; saveHist(); rows = keep; setDel(keepDel); save(); render(); document.getElementById("dlmsg").textContent = ""; return out; });
   check("a DC short of its expected number is named after Done in the camera scanner, with Carry on scanning", s.short === "Rugby: 1 of 4" && s.scanQ === "Still short from one DC: Rugby: 1 of 4." && s.scanB === "Carry on scanning,Finish for now", s);
   check("Start new delivery asks first when a DC is short, then goes on as usual (asked once)", s.newQ === "Still short from one DC: Rugby: 1 of 4. Start a new delivery anyway?" && s.kept === 3 && /Export it first|Saved to history/.test(s.msg) && !s.again && s.after === 0 && s.none === 0, s);
+  // FPP from the prefix (V, R, Q, IM), tap the Added note to change the type, and a search that finds one pallet.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)), keep = rows.slice(), out = {}, man = document.getElementById("cmpNums").value, t = l => (rows.find(r => r.lpn === l) || {}).type || "none";
+    document.getElementById("cmpNums").value = ""; document.querySelectorAll(".apkask").forEach(a => a.remove()); rows = []; save(); render(); LPN_APK_MODE("log");
+    document.querySelector('#tyb button[data-t="BB"]').click();
+    document.getElementById("lpn").value = "IM0012345681"; add(); await wait(50); out.typed = rows[0].type + "|" + document.getElementById("type").value + "|" + document.getElementById("flash").textContent;
+    document.getElementById("lpn").value = "VLT004041101"; add(); await wait(50); out.plain = t("VLT004041101");
+    N.calls = []; document.getElementById("scan").click(); await wait(200); lastAt = 0; N.listeners.nativeScan({ values: ["R0012345682"] }); await wait(80); out.scanned = t("R0012345682"); if (pendingAdd) { out.scanned += ":" + (document.getElementById("chkTxt") || {}).textContent; hideCheck(); } N.listeners.nativeScanClosed({ reason: "back" });
+    localStorage.setItem("lpnapkfpp", "off"); document.getElementById("lpn").value = "Q0012345683"; add(); await wait(50); out.off = t("Q0012345683"); if (pendingAdd) hideCheck(); localStorage.removeItem("lpnapkfpp");
+    document.getElementById("lpn").value = "V0013329998"; add(); await wait(50); const fl = document.getElementById("flash"); out.tappable = getComputedStyle(fl).pointerEvents;
+    fl.click(); await wait(50); const a = document.querySelector(".apkask"); out.q = a && a.querySelector(".apkasktitle").textContent; out.b = a ? [...a.querySelectorAll("button")].map(b => b.textContent).join() : "";
+    [...a.querySelectorAll("button")].find(b => b.textContent === "Mixed").click(); await wait(50); out.changed = t("V0013329998"); out.undo = document.getElementById("undoBar").textContent;
+    document.querySelector("#undoBar button").click(); await wait(50); out.undone = t("V0013329998");
+    rows = ["VLT004041210", "VLT004121055", "VLT004041211"].map(l => ({ lpn: l, type: "BB", fsdu: false })); save(); render(); window.scrollTo(0, 0);
+    const f = document.getElementById("flt"); f.value = "1211"; f.dispatchEvent(new Event("input", { bubbles: true })); await wait(100);
+    out.hit = [...document.querySelectorAll("#body tr.rdhit .lpnedit")].map(b => b.textContent).join();
+    f.value = ""; f.dispatchEvent(new Event("input", { bubbles: true })); rows = keep; document.getElementById("cmpNums").value = man; save(); render(); return out; });
+  check("an LPN with an FPP prefix (V, R, Q, IM) is added as FPP whatever type is chosen, typed or scanned, and the note says so; Settings can turn it off", s.typed === "FPP|BB|Added #1: IM0012345681 · FPP · FPP from the prefix" && s.plain === "BB" && s.scanned === "FPP" && s.off === "BB", s);
+  check("tapping the Added note offers the other types for that pallet, with Undo", s.tappable === "auto" && s.q === "Change the type of V0013329998 (now FPP)" && s.b === "BB,FMCG,Mixed,Cancel" && s.changed === "Mixed" && /^Changed V0013329998 to Mixed/.test(s.undo) && s.undone === "FPP", s);
+  check("a search that finds just one pallet lights it up", s.hit === "VLT004041211", s);
   // Results per DC in Manifest check.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)); LPN_APK_MODE("cmp"); await wait(50);
     document.getElementById("cmpLogNums").value = "VLT004040801\nVLT004040802\nRBY006292401\nRUN0001830801"; document.getElementById("cmpNums").value = "VLT004040801\nVLT004040899\nRUN0001830801";

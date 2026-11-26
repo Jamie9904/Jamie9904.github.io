@@ -74,6 +74,7 @@
     "html.rd #apkMenu #rdLeg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.9rem;color:var(--ink,#eaf0fa)}html.rd #apkMenu #rdLeg span{display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:.9rem;color:var(--ink,#eaf0fa)}#rdLeg i{width:8px;height:8px;border-radius:4px;flex:none}",
     "html.rd #apkCarry{margin:12px 16px 0!important}html.rd #apkCarryBtn{width:100%;min-height:56px;border-radius:16px;font-size:1.1rem;display:flex;align-items:center;justify-content:center;gap:8px}",
     ".rddcres{margin:4px 0 12px}.rddcres h3{margin:0 0 6px;font-size:1rem}.rddcres ul{list-style:none;margin:0;padding:0}.rddcres li{display:flex;gap:10px;align-items:baseline;padding:8px 10px;border-left:4px solid var(--rule,#223a63);margin-bottom:6px;border-radius:8px;background:var(--sel,rgba(255,255,255,.04))}.rddcres li b{min-width:5.5em}.rddcres li span{min-width:0;overflow-wrap:anywhere}.rddcres li.mi{border-left-color:var(--dg,#ff6b6b)}.rddcres li.ex{border-left-color:var(--wn,#ffb020)}.rddcres li.ok{border-left-color:var(--gd,#5ec27a)}",
+    "#body tr.rdhit td{background:var(--acs,#3a3550);transition:background .2s}",
     "#rdDel.empty #rdNumRow,#rdDel.empty #rdBar,#rdDel.empty #rdLeg,#rdDel.empty #rdDcs{display:none}",
     "html.rd #apkMenu #rdDcs{display:block;margin-top:8px;font-size:.9rem;font-weight:700;color:var(--ink,#eaf0fa)}html.rd #apkMenu #rdDcs:empty{display:none}html.rd #apkMenu #rdDcs span{display:inline;white-space:nowrap;font:inherit;color:inherit}",
     "html.rd #apkMenu #rdDel.empty .apkgo b{font-size:1.25rem;font-weight:700;color:var(--ink,#eaf0fa)}",
@@ -226,7 +227,20 @@
     s.className = "rdib"; s.setAttribute("aria-pressed", "false");
     const e = mk("rdExport", svg(IC.down, 18) + '<span class="rdxl">Export</span>', null, exportSheet); e.setAttribute("aria-haspopup", "dialog");
     const mb = mk("rdMenuBtn", svg(IC.truck, 24), "This delivery: details, Share log, new delivery", deliverySheet); mb.className = "rdib"; mb.setAttribute("aria-haspopup", "dialog");
-    bar.insertBefore(s, help); bar.insertBefore(e, help); bar.insertBefore(mb, help);
+    bar.insertBefore(s, help); bar.insertBefore(e, help); bar.insertBefore(mb, help); searchJump();
+  }
+  /* Search that finds just one pallet scrolls to it and lights it up for a moment (Enter does it again). */
+  function searchJump() {
+    const f = $("flt"); if (!f || f.dataset.rdj) return; f.dataset.rdj = "1";
+    const go = force => setTimeout(() => {
+      if ((f.value || "").trim().length < 3) return;
+      const b = document.querySelectorAll("#body .lpnedit"); if (b.length !== 1) return;
+      const tr = b[0].closest("tr"); if (!tr || (!force && tr.dataset.rdhit === f.value)) return; tr.dataset.rdhit = f.value;
+      tr.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      tr.classList.add("rdhit"); setTimeout(() => tr.classList.remove("rdhit"), 1600);
+    }, 0);
+    f.addEventListener("input", () => go(false));
+    f.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); go(true); } });
   }
   function setSearch(on) { H.classList.toggle("rd-search", !!on); const b = $("rdSearch"); if (b) b.setAttribute("aria-pressed", String(!!on)); }
   // Search only when the app has it (Simple view hides it), Export only with pallets to export.
