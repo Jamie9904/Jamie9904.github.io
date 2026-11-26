@@ -109,13 +109,16 @@ module.exports = async ({ browser, URL0 }) => {
     await document.getElementById("cmpGo").onclick();
     const wc = window.__wb.sheets.find(w => /Manifest/.test(w.name)), vc = (k, c) => wc.rows[k]._c[c] && wc.rows[k]._c[c].value, kc = Object.keys(wc.rows).map(Number).sort((a, b) => a - b);
     const kh = kc.find(k => vc(k, 7) === "By DC"); out.cmpXl = kh ? [1, 2, 3].map(i => vc(kh + i, 7) + ": " + vc(kh + i, 8)).join("|") : "";
-    out.cmpShare = cmpShareText(cmpData()).split("\n").pop();
+    out.cmpShare = cmpShareText(cmpData()).split("\n").pop(); out.resW = wc.columns[4].width;
+    window.__wb = null; document.getElementById("cmpLogNums").value = "VLT004040801\nVLT004040802"; document.getElementById("cmpNums").value = "VLT004040801"; await document.getElementById("cmpGo").onclick();
+    out.resW2 = window.__wb.sheets.find(w => /Manifest/.test(w.name)).columns[4].width;
     document.getElementById("cmpClear").click(); rows = keep; document.getElementById("expect").value = expKeep; return out;
   });
   check("the pallet log's exports get a By DC line in Delivery Details when the pallets came from more than one DC (refused pallets counted, No LPN left out), and none for one DC",
     s.line === "Rugby 3 · Vault 3 · Runcorn 1 · Other 1" && s.xl === s.line && s.one && s.exp === "Vault 2 of 2 (all in) · Rugby 0 of 1|Vault 2 of 1 (1 over)", s);
   check("the Manifest check's Excel and shared list give the results for each DC, problems first",
     s.cmpXl === "Vault: 1 missing · 1 extra · 1 matched|Rugby: no manifest (1 on the log)|Runcorn: 1 matched" && s.cmpShare === "By DC: Vault: 1 missing, 1 extra, 1 matched; Rugby: no manifest (1 on the log); Runcorn: 1 matched", s);
+  check("the Manifest check's Result column is wide enough for its longest result, so ⚠ LOG ONLY and ⊘ NO MANIFEST aren't cut off", s.resW === 29 && s.resW2 === 23, s);
   check("no script errors", p.errors.length === 0, p.errors);
   await p.ctx.close();
 };
