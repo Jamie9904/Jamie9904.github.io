@@ -653,7 +653,8 @@ public class LpnNativePlugin extends Plugin {
             if (to != null && !to.isEmpty()) i.putExtra(Intent.EXTRA_EMAIL, new String[] { to });
             i.setClipData(android.content.ClipData.newRawUri("", u));
             // Only email apps (the mailto: selector); if the phone has none set up that way, any app that can send it.
-            Intent only = new Intent(i).setSelector(new Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:")));
+            Intent only = new Intent(i);
+            only.setSelector(new Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:")));
             try { getActivity().startActivity(only); }
             catch (android.content.ActivityNotFoundException e) { getActivity().startActivity(Intent.createChooser(i, "Email " + f.getName())); }
             call.resolve();
