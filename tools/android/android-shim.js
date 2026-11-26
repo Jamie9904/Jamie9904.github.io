@@ -172,6 +172,7 @@
     + "#apkDcExp{border:0;margin:12px 0 0;padding:0;min-width:0}#apkDcExp legend{padding:0;font-weight:700;margin-bottom:6px}#apkDcExp .apkopt{font-weight:400;opacity:.8}"
     + ".apkdcgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px}.apkdcgrid label{display:flex;flex-direction:column;gap:4px;font-size:.9rem;min-width:0}.apkdcgrid input{width:100%;min-height:44px;box-sizing:border-box}#apkDcExp .note{margin:6px 0 0}"
     + "#flash.apktap{pointer-events:auto;cursor:pointer}"
+    + ".apkdctag{display:inline-block;margin-left:8px;padding:1px 7px;border:1px solid var(--line,#35507f);border-radius:999px;font:600 .72rem/1.4 system-ui,sans-serif;color:var(--mu,#9db0d0);vertical-align:middle;white-space:nowrap}"
     + ".apkmaill{display:block;font-weight:700;margin:4px 0}#apkMailTo{width:100%;min-height:46px;box-sizing:border-box}.apkmailr{flex-wrap:wrap;gap:6px;margin:8px 0 0}.apkmailr:empty{display:none}.apkmailc{min-height:40px;max-width:100%;overflow:hidden;text-overflow:ellipsis}.apkmailb{margin-top:10px;flex-wrap:wrap}#apkMailMsg:empty{display:none}"
     + ".apkoldbar{border:1px solid var(--rule,#223a63);border-radius:12px;padding:10px 12px;margin:8px 0}.apkoldbar p{margin:0 0 8px}"
     + ".apkfiles{list-style:none;padding:0;margin:8px 0}.apkfiles li{padding:10px 0;border-bottom:1px solid var(--rule,#223a63)}.apkfname{margin:0;font-weight:700;overflow-wrap:anywhere}.apkfiles .note{margin:2px 0 8px}";
@@ -331,6 +332,11 @@
       else if (r.what === "delivery") { if (has("palletLog")) toLog(); if (window.LPN_APK_DELSHEET) window.LPN_APK_DELSHEET(); }
       else if (r.what === "liveread") { const b = $("apkLiveRead"); if (b) b.click(); }
       else if (r.what === "big-on" || r.what === "big-off") { try { localStorage.setItem("lpnapkbig", r.what === "big-on" ? "on" : "off"); } catch (e) {} applyBig(); }
+      // Settings › Colours › Follow phone, switched on or off (for the bug hunt's light and dark check).
+      else if ((r.what === "follow-on" || r.what === "follow-off") && typeof applyTheme === "function") {
+        try { theme = r.what === "follow-on" ? Object.assign({}, theme, { follow: true }) : { bg: THEME_DEFAULT.bg, ac: THEME_DEFAULT.ac }; saveTheme(); applyTheme(); } catch (e) {}
+        console.warn("LPNQA theme follow=" + (r.what === "follow-on") + " phone dark=" + !!(window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches) + " bg=" + getComputedStyle(document.documentElement).getPropertyValue("--bg").trim());
+      }
       return;
     }
     if (r.action === "continue") { if (typeof closeHelp === "function") closeHelp(); const l = $("lpn"); if (l && has("palletLog")) { toLog(); quietFocus(l); } return; }
@@ -433,6 +439,7 @@
         + (has("palletLog") ? '<label class="chk"><input type="checkbox" id="apkSpeak"><span>Say the count out loud after each pallet (and “already logged” or “check” for a warning)</span></label>' : "")
         + (has("palletLog") ? '<label class="chk"><input type="checkbox" id="apkDcWarn"><span>Warn when a pallet’s LPN doesn’t start with a known DC prefix (Vault, Runcorn, Qube or Rugby), so a misread or wrong label is caught at the dock</span></label>' : "")
         + (has("palletLog") ? '<label class="chk"><input type="checkbox" id="apkFpp"><span>Set the pallet type to FPP for LPNs with an FPP prefix (V, R, Q and IM), whatever type is chosen</span></label>' : "")
+        + (has("liveScan") && has("torch") ? '<label class="chk"><input type="checkbox" id="apkAutoTorch"><span>Torch on by itself in the camera scanner when it’s too dark to read a label</span></label>' : "")
         + '<label class="chk"><input type="checkbox" id="apkQuiet"><span>No scan sounds or spoken count while the phone is on silent, vibrate or Do Not Disturb (it still buzzes)</span></label>'
         + '<label class="chk"><input type="checkbox" id="apkHand"><span>Warehouse handheld scanner (Zebra or Honeywell): scans come straight into the app, so they can’t land in the wrong box. Untick if your scanner should type like a keyboard.</span></label>'
         + (has("manifestPhotos") ? '<h4 class="apksub">Photos</h4><label class="chk"><input type="checkbox" id="apkOcr"><span>Read manifest photos with the phone’s own text reader instead of the app’s own. It can be faster, but the app’s own reader is more accurate on the test photos, so check what it finds.</span></label>' : "")
@@ -446,7 +453,7 @@
       if ($("apkVol")) { $("apkVol").checked = volOn(); $("apkVol").onchange = () => { try { localStorage.setItem("lpnapkvol", $("apkVol").checked ? "on" : "off"); } catch (e) {} syncVol(); }; }
       $("apkFilesSet").onclick = () => showFiles();
       const sw = (id, key, def) => { const c = $(id); if (!c) return; c.checked = pref(key, def); c.onchange = () => { try { localStorage.setItem(key, c.checked ? "on" : "off"); } catch (e) {} }; };
-      sw("apkQuiet", "lpnapkquiet", true); sw("apkDcWarn", "lpnapkdcwarn", true); sw("apkFpp", "lpnapkfpp", true);
+      sw("apkQuiet", "lpnapkquiet", true); sw("apkDcWarn", "lpnapkdcwarn", true); sw("apkFpp", "lpnapkfpp", true); sw("apkAutoTorch", "lpnapkautotorch", true);
       sw("apkCam", "lpnapkcamscan", true); sw("apkSpeak", "lpnapkspeak", false); sw("apkBig", "lpnapkbig", false); sw("apkHand", "lpnapkhand", true); sw("apkOcr", "lpnapkocr", OCR_DEFAULT);
       if ($("apkHand")) $("apkHand").addEventListener("change", syncHand);
       const dirShow = () => { const d = dirGet(), n = $("apkDirNote"); if (!n) return;
@@ -516,6 +523,39 @@
     return d.toUpperCase() + " · " + (dcExp[d] > 0 ? n + " of " + dcExp[d] : n);
   }
   window.LPN_APK_DCBIG = dcBig;
+  /* DC tags and a DC filter on the log, when it has pallets from more than one DC: a small "Rugby" tag on each row, and
+     "All DCs / Vault / Rugby…" beside the type and FSDU filters (core.js's render reads #fltDc). */
+  function dcGroups() { if (typeof dcGroup !== "function") return []; const c = {}; rows.forEach(r => { const g = dcGroup(r.lpn); if (g) c[g] = (c[g] || 0) + 1; }); return Object.keys(c).sort((a, b) => (a === "Other") - (b === "Other") || c[b] - c[a] || a.localeCompare(b)); }
+  function syncDcFilter() {
+    const ff = $("fltFsdu"); if (!ff || !has("palletLog")) return false;
+    let sel = $("fltDc");
+    if (!sel) { sel = document.createElement("select"); sel.id = "fltDc"; sel.setAttribute("aria-label", "Filter by DC"); sel.hidden = true; ff.after(sel); sel.addEventListener("change", () => { if (typeof render === "function") render(); }); }
+    const gs = dcGroups(), many = gs.length > 1, was = sel.value;
+    const want = [""].concat(gs).join("|");
+    if (sel.dataset.opts !== want) { sel.innerHTML = ""; [["", "All DCs"]].concat(gs.map(g => [g, g])).forEach(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; sel.appendChild(o); }); sel.dataset.opts = want; sel.value = gs.indexOf(was) >= 0 ? was : ""; }
+    const changed = sel.hidden === many || (was && sel.value !== was);
+    sel.hidden = !many; if (!many) sel.value = "";
+    return changed;
+  }
+  function dcTags() {
+    if (typeof dcGroup !== "function") return;
+    const many = dcGroups().length > 1;
+    document.querySelectorAll("#body .lpnedit").forEach(b => {
+      const td = b.closest("td"), old = td && td.querySelector(".apkdctag"); if (old) old.remove();
+      if (!many || !td) return; const r = rows[+b.dataset.i]; const g = r && dcGroup(r.lpn); if (!g) return;
+      const t = document.createElement("span"); t.className = "apkdctag"; t.textContent = g; t.setAttribute("aria-hidden", "true"); b.after(t);
+    });
+  }
+  document.addEventListener("DOMContentLoaded", () => {
+    if (typeof render !== "function" || render.dcf) return;
+    const r0 = render;
+    render = function () { const x = r0.apply(this, arguments); try { if (syncDcFilter()) r0.apply(this, arguments); dcTags(); } catch (e) {} return x; };
+    render.dcf = true;
+    // Tapping a total above the table, and Simple view (which hides the filters), clear the DC filter as they do the others.
+    document.addEventListener("click", e => { if (e.target && e.target.closest && e.target.closest("#sum .sumbtn")) { const f = $("fltDc"); if (f) f.value = ""; } }, true);
+    if (typeof applySimple === "function" && !applySimple.dcf) { const a0 = applySimple; applySimple = function () { const x = a0.apply(this, arguments); const g = $("fltDc"); if (g && document.documentElement.classList.contains("simple") && g.value) { g.value = ""; render(); } return x; }; applySimple.dcf = true; }
+    try { render(); } catch (e) {}
+  });
   let shortOk = "";
   function shortAsk(when, go) {
     const a = shortDcs(); if (!a.length) { if (go) go(); return; }
@@ -585,6 +625,7 @@
           if (!was && typeof sfx === "function") sfx("warn");
         }
       } catch (e) {}
+      try { if (window.LPN_APK_GLYPHS) window.LPN_APK_GLYPHS($("flash")); } catch (e) {}
       return x;
     };
     flashAdded.dc = true;
@@ -627,7 +668,7 @@
   const FPP_PFX = ["V", "R", "Q", "IM"];
   let fppSet = "";
   window.LPN_APK_FPPAUTO = v => { try { return pref("lpnapkfpp", true) && typeof lpnPfx === "function" && FPP_PFX.indexOf(lpnPfx(v)) >= 0; } catch (e) { return false; } };
-  const scanState = () => ({ allIn: allIn(), type: ($("type") || {}).value || "BB", fsdu: !!($("fsdu") || {}).checked, canUndo: rows.length > 0, big: pref("lpnapkbig", false), colours: typeColours(), dcs: window.LPN_APK_DCS(rows, dcExp),
+  const scanState = () => ({ allIn: allIn(), type: ($("type") || {}).value || "BB", fsdu: !!($("fsdu") || {}).checked, canUndo: rows.length > 0, big: pref("lpnapkbig", false), colours: typeColours(), dcs: window.LPN_APK_DCS(rows, dcExp), autoTorch: has("torch") && pref("lpnapkautotorch", true),
     recent: rows.slice(-3).reverse().map(r => r.lpn + " · " + r.type + (r.fsdu ? " + FSDU" : "")).join("\n") });
   function pushScan(text) { if (N()) N().scanStatus(text ? { text, state: scanState() } : { state: scanState() }).catch(() => {}); }
   window.LPN_APK_SCANSTATE = scanState;
@@ -986,7 +1027,7 @@
     + "#apkIntro .row{display:flex;justify-content:space-between;padding:0 20px}#apkIntro .row button{min-height:48px;min-width:110px}"
     + "#apkProg{position:sticky;top:var(--apkbarh,60px);z-index:11;background:var(--paper,#13264a);margin:-12px -18px 12px;padding:10px 18px;border-bottom:1px solid var(--line,#35507f)}"
     + "#apkProg .t{display:flex;align-items:center;gap:10px;justify-content:space-between}#apkProg .t span{font-weight:700}#apkProg .t button{min-height:40px}"
-    + "#apkProg .bar{height:6px;border-radius:3px;background:var(--line,#35507f);margin-top:8px;overflow:hidden}#apkProg .bar i{display:block;height:100%;width:0;background:var(--ac,#ff8a2a);transition:width .3s}"
+    + "#apkProg .bar{height:6px;border-radius:3px;background:var(--line,#35507f);margin-top:8px;overflow:hidden}#apkProg .bar i{display:block;height:100%;width:100%;transform:scaleX(0);transform-origin:left center;background:var(--ac,#ff8a2a);transition:transform .3s}"
     + "@media (prefers-reduced-motion:reduce){#apkProg .bar i{transition:none}}";
   document.head.appendChild(proCss);
 
@@ -1067,7 +1108,7 @@
         $("apkProgStop").onclick = () => { ocrStop = true; $("apkProgStop").disabled = true; p.querySelector("span").textContent = "Stopping after this photo…"; }; }
       const n = +k[2], of = +k[3], photo = /photo/i.test(k[0]) || /Photo/.test(k[0]);
       if (!ocrStop) p.querySelector("span").textContent = (photo ? "Reading photo " : /PDF/i.test(k[0]) ? "Reading PDF " : "Reading page ") + n + " of " + of;
-      p.querySelector(".bar i").style.width = Math.round(((n - 1) / of) * 100 + 100 / of / 2) + "%";
+      p.querySelector(".bar i").style.transform = "scaleX(" + Math.min(1, ((n - 1) / of) + 1 / of / 2).toFixed(3) + ")"; // scale, not width: smoother on slower phones
       $("apkProgStop").hidden = !photo; if (photo && !progPhotos) { progPhotos = true; askNotifyOnce(); }
       progOn = true;
     } else if (progOn) {
@@ -1243,7 +1284,7 @@
   });
 
   /* Carry on: opening the app with a delivery in progress offers to go straight back to scanning. */
-  function carryOn() {
+  function carryOn(oldOnly) {
     if (!N() || !has("palletLog") || !rows.length || window.LPN_APK_NATIVESCAN || (typeof scanning !== "undefined" && scanning) || document.querySelector(".apkask") || ($("panel") && !$("panel").hidden)) return;
     // A delivery dated before today was probably left open: carry on with it, or save it and start a new one.
     const d = ($("date") || {}).value || "", today = typeof localToday === "function" ? localToday() : "";
@@ -1257,7 +1298,7 @@
       ask("Still working on " + (tr ? tr + " " : "the delivery ") + "from " + when + "? " + countText() + ".", go);
       return;
     }
-    if (!has("liveScan")) return;
+    if (oldOnly || !has("liveScan")) return;
     ask("Delivery in progress: " + countText() + ".", [["Carry on scanning", () => opened({ action: "scan" })]]);
   }
   // Save it and start new: if it hasn't been exported, offer Export first (Start new delivery would otherwise only say so).
@@ -1268,7 +1309,11 @@
     ask("This delivery hasn’t been exported yet.", [["Export it first", () => { if (typeof LPN_APK_EXPORTSHEET === "function") { LPN_APK_MODE && LPN_APK_MODE("log"); LPN_APK_EXPORTSHEET(); } }], ["Save without exporting", start]]);
   }
   window.LPN_APK_CARRYON = carryOn;
-  if (N()) window.addEventListener("load", () => setTimeout(() => { try { if (!mode) carryOn(); } catch (e) {} }, 1200));
+  // On opening: with no start menu, Carry on scanning (or the earlier-day question); with the start menu, only the
+  // earlier-day question, as the menu already shows the delivery in progress.
+  function openCheck() { if (!mode) carryOn(); else if (mode === "menu") carryOn(true); }
+  window.LPN_APK_OPENCHECK = openCheck;
+  if (N()) window.addEventListener("load", () => setTimeout(() => { try { openCheck(); } catch (e) {} }, 1200));
 
   /* The count out loud after each pallet, and a word for a warning (Settings › Android app). */
   function sayIt(t) { if (N() && pref("lpnapkspeak", false) && !hushed()) N().speak({ text: t }).catch(() => {}); }

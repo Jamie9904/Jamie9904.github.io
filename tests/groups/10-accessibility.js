@@ -52,6 +52,12 @@ module.exports = async ({ browser, URL0 }) => {
     check("on a phone, the Added note shows above the Undo bar, not under it", u.flashShown && u.apart, u);
     await q.click("#undoBtn"); u = await q.evaluate(() => rows[0].lpn);
     check("Undo from there puts the LPN back", u === "VLT004037790", u);
+    // An edited LPN gets the same checks as a new one, as a note (the change stays, with Undo).
+    await q.focus('#body .lpnedit[data-i="1"]'); await q.keyboard.press("Enter"); await q.waitForTimeout(50);
+    await q.keyboard.press("Control+A"); await q.keyboard.type("C"); await q.keyboard.press("Enter"); await q.waitForTimeout(100);
+    u = await q.evaluate(() => ({ lpn: rows[1].lpn, msg: document.getElementById("msg").textContent }));
+    check("an LPN edited to something that doesn't look like an LPN is kept, with a note saying so", u.lpn === "C" && u.msg === "Note: C doesn’t look like an LPN (1 to 3 letters then digits). Check it, or use Undo.", u);
+    await q.evaluate(() => { rows[1].lpn = "QUB001899186"; save(); render(); document.getElementById("undoBar").hidden = true; document.getElementById("msg").textContent = ""; });
     await q.evaluate(() => { rows = rows.slice(0, 2); save(); render(); });
     u = await q.evaluate(() => { document.getElementById("expBtn").click(); return !document.getElementById("expMenu").hidden; });
     await q.keyboard.press("Escape");

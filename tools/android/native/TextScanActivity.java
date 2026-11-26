@@ -103,7 +103,10 @@ public class TextScanActivity extends AppCompatActivity {
         LinearLayout panel = new LinearLayout(this);
         panel.setOrientation(LinearLayout.HORIZONTAL);
         panel.setGravity(Gravity.CENTER_VERTICAL);
-        panel.setBackgroundColor(Color.parseColor("#E60c1830"));
+        android.graphics.drawable.GradientDrawable sheetBg = new android.graphics.drawable.GradientDrawable();
+        sheetBg.setColor(Color.parseColor("#F20c1830"));
+        float sheetR = dp(28); sheetBg.setCornerRadii(new float[] { sheetR, sheetR, sheetR, sheetR, 0, 0, 0, 0 });
+        panel.setBackground(sheetBg); // a rounded sheet, as in the camera scanner
         undoBtn = button("Remove last");
         undoBtn.setContentDescription("Remove the last number added");
         undoBtn.setOnClickListener(v -> LpnNativePlugin.scanEvent("textScanUndo", new com.getcapacitor.JSObject()));
@@ -113,6 +116,10 @@ public class TextScanActivity extends AppCompatActivity {
         torchBtn.setVisibility(android.view.View.GONE);
         panel.addView(torchBtn, gap(new LinearLayout.LayoutParams(0, dp(52), 1f)));
         Button done = button("Done");
+        android.graphics.drawable.GradientDrawable dg = new android.graphics.drawable.GradientDrawable();
+        dg.setCornerRadius(dp(16)); dg.setColor(Color.parseColor("#ff8a2a"));
+        done.setBackground(new android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(Color.parseColor("#33ffffff")), dg, null));
+        done.setTextColor(Color.parseColor("#1a0e02")); done.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         done.setOnClickListener(v -> finish());
         panel.addView(done, gap(new LinearLayout.LayoutParams(0, dp(52), 1f)));
         frame = new FrameView(this, strip, panel, getResources().getDisplayMetrics().density);
@@ -164,7 +171,8 @@ public class TextScanActivity extends AppCompatActivity {
         b.setMaxLines(2);
         androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(b, 11, 17, 1, TypedValue.COMPLEX_UNIT_SP);
         android.graphics.drawable.GradientDrawable g = new android.graphics.drawable.GradientDrawable();
-        g.setCornerRadius(dp(10)); g.setStroke(dp(2), Color.parseColor("#9db0d0")); g.setColor(Color.parseColor("#13264a"));
+        // As in the camera scanner: rounded, a light outline on the dark panel (Done is the orange main button).
+        g.setCornerRadius(dp(16)); g.setStroke(dp(1), Color.parseColor("#3Dffffff")); g.setColor(Color.TRANSPARENT);
         b.setBackground(new android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(Color.parseColor("#33ffffff")), g, null));
         b.setTextColor(new ColorStateList(new int[][] { { -android.R.attr.state_enabled }, {} }, new int[] { Color.parseColor("#6b7d99"), Color.parseColor("#eaf0fa") }));
         return b;

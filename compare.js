@@ -564,6 +564,8 @@ function dcLogText(list,exp,o){
   if(keys.length<(o.min||1)&&!hasExp)return "";
   return keys.map(k=>k+" "+c[k]+(exp[k]>0?" of "+exp[k]+(c[k]===exp[k]?(o.plain?" (all in)":" ✓"):c[k]>exp[k]?" ("+(c[k]-exp[k])+" over)":""):"")).join(" · ");
 }
+// The DC a pallet is counted under: Vault, Runcorn, Qube, Rugby, "Other" for any other prefix, "" for no letters.
+const dcGroup=n=>{const d=dcOf(n);return !d?"":DCS[d]?d:"Other"};
 /* Manifest check results per DC, when the pallets came from more than one DC: problems first, "Other" last. */
 function cmpByDc(C){
   const g={};
@@ -726,7 +728,11 @@ $("cmpGo").onclick=async()=>{
     while(wb.getWorksheet(tab))tab="Manifest Check "+(tn++);
     const ws=wb.addWorksheet(tab);
     const lpnW=xlLpnWidth(res.map(x=>x.n),21);
-    ws.columns=[{width:7},{width:lpnW},{width:18},{width:12},{width:19},{width:3},{width:25},{width:18}];
+    const ST={ok:{t:"✓ Matched",f:null},missing:{t:"✗ MISSING",f:"FFA6A6A6"},book:{t:"⚠ LOG ONLY",f:"FFD0D0D0"},noman:{t:"⊘ NO MANIFEST",f:"FFE4E4E4"}};
+    // The Result column fits the longest result on this sheet ("⚠ LOG ONLY", "⊘ NO MANIFEST") in bold 14 pt with its
+    // indent, so nothing wraps out of sight (about 13.5 px a capital, 7 px a width unit).
+    const resW=Math.max(19,...[...new Set(res.map(x=>ST[kind(x)].t))].map(t=>Math.ceil((t.length*13.5+24)/7)));
+    ws.columns=[{width:7},{width:lpnW},{width:18},{width:12},{width:resW},{width:3},{width:25},{width:18}];
     const bc={argb:"FF000000"},med={style:"medium",color:bc};
     const border={top:med,left:med,bottom:med,right:med};
     let off=0;
@@ -747,7 +753,6 @@ $("cmpGo").onclick=async()=>{
       ...(bd.length?[{v:["By DC",""],h:1,merge:1}].concat(bd.map(o=>({v:[o.dc,dcResText(o)],l:1}))):[]),
       ...(notes?[{v:["Notes",""],h:1,merge:1},{v:[notes,""],merge:1,note:1}]:[])
     ];
-    const ST={ok:{t:"✓ Matched",f:null},missing:{t:"✗ MISSING",f:"FFA6A6A6"},book:{t:"⚠ LOG ONLY",f:"FFD0D0D0"},noman:{t:"⊘ NO MANIFEST",f:"FFE4E4E4"}};
     const HD="FFE6E9ED";
     const n=Math.max(res.length,side.length-1);
     const H=xlTitle(ws,off,8,"Manifest check","Date: "+ukDate(d)+"     On manifest: "+man.length+"     Matched: "+cnt.ok+"     Missing: "+cnt.missing+"     Log only: "+cnt.book+(cnt.noman?"     No manifest: "+cnt.noman:"")+(cnt.noLpn?"     No LPN: "+cnt.noLpn:""));
