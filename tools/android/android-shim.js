@@ -133,6 +133,9 @@
     + ".apksheet::before{content:'';position:absolute;top:10px;left:50%;width:36px;height:4px;margin-left:-18px;border-radius:2px;background:var(--mu,#9db0d0);opacity:.6}"
     + "@keyframes apkup{from{transform:translateY(40px);opacity:.4}}@media (prefers-reduced-motion:reduce){.apksheet{animation:none}}.apkask .apkasktitle{margin:0 0 10px;font-weight:700}"
     + ".apksaved{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:1000;padding:12px 14px;border-radius:12px;background:#1f2a41;color:#fff;box-shadow:0 6px 24px rgba(0,0,0,.4)}.apksaved p{margin:0 0 8px;overflow-wrap:anywhere}"
+    + "#apkDcExp{border:0;margin:12px 0 0;padding:0;min-width:0}#apkDcExp legend{padding:0;font-weight:700;margin-bottom:6px}#apkDcExp .apkopt{font-weight:400;opacity:.8}"
+    + ".apkdcgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px}.apkdcgrid label{display:flex;flex-direction:column;gap:4px;font-size:.9rem;min-width:0}.apkdcgrid input{width:100%;min-height:44px;box-sizing:border-box}#apkDcExp .note{margin:6px 0 0}"
+    + ".apkoldbar{border:1px solid var(--rule,#223a63);border-radius:12px;padding:10px 12px;margin:8px 0}.apkoldbar p{margin:0 0 8px}"
     + ".apkfiles{list-style:none;padding:0;margin:8px 0}.apkfiles li{padding:10px 0;border-bottom:1px solid var(--rule,#223a63)}.apkfname{margin:0;font-weight:700;overflow-wrap:anywhere}.apkfiles .note{margin:2px 0 8px}";
   document.head.appendChild(css);
   /* Android-style controls (the app's own colours): a ripple where a button is pressed, and switches for the on/off
@@ -449,14 +452,49 @@
   /* Pallets per DC from the LPN prefixes (compare.js's DCS list: Vault, Runcorn, Qube, Rugby), most first, for example
      "Rugby 12 · Vault 8 · Other 1". Refused pallets and pallets with no LPN are left out. Empty when none of the
      pallets is from a known DC, so test numbers or another site's labels show nothing. */
-  window.LPN_APK_DCS = list => {
+  window.LPN_APK_DCS = (list, exp) => {
     if (typeof dcOf !== "function" || typeof DCS === "undefined") return "";
-    const c = {}; let known = 0;
+    const c = {}; let known = 0; exp = exp || {};
     (list || []).forEach(r => { if (!r || r.ref || (typeof isNoLpn === "function" && isNoLpn(r.lpn))) return; const d = dcOf(r.lpn); if (!d) return;
       const k = DCS[d] ? d : "Other"; if (k !== "Other") known++; c[k] = (c[k] || 0) + 1; });
-    if (!known) return "";
-    return Object.keys(c).sort((a, b) => (a === "Other") - (b === "Other") || c[b] - c[a] || a.localeCompare(b)).map(k => k + " " + c[k]).join(" · ");
+    Object.keys(exp).forEach(k => { if (DCS[k] && exp[k] > 0 && !c[k]) c[k] = 0; });
+    if (!known && !Object.keys(exp).length) return "";
+    return Object.keys(c).sort((a, b) => (a === "Other") - (b === "Other") || c[b] - c[a] || a.localeCompare(b)).map(k => k + " " + c[k] + (exp[k] > 0 ? " of " + exp[k] + (c[k] >= exp[k] ? " ✓" : "") : "")).join(" · ");
   };
+  /* Expected pallets per DC (Delivery details, optional): kept with the delivery (dcExp beside the app's own details,
+     in the log, saved deliveries and backups; the website ignores it), shown as "Rugby 8 of 10" on the home card and in
+     the camera scanner. Entering them fills Expected pallets with the total, unless a different total was typed. */
+  let dcExp = {};
+  const dcNames = () => typeof DCS === "undefined" ? [] : Object.keys(DCS);
+  const cleanDcExp = o => { const out = {}; if (o && typeof o === "object") dcNames().forEach(k => { const n = parseInt(o[k], 10); if (n > 0 && n < 10000) out[k] = n; }); return out; };
+  const dcSum = e => Object.keys(e).reduce((a, k) => a + e[k], 0);
+  window.LPN_APK_DCEXP = () => dcExp;
+  function fillDcExp() { dcNames().forEach(k => { const i = $("apkDcExp-" + k); if (i) i.value = dcExp[k] || ""; }); }
+  function buildDcExp() {
+    const at = document.querySelector(".dc-exp"); if (!at || $("apkDcExp") || !dcNames().length || !has("palletLog")) return;
+    const f = document.createElement("fieldset"); f.id = "apkDcExp"; f.className = "dc-dcexp";
+    f.innerHTML = '<legend>Expected per DC <span class="apkopt">(optional)</span></legend><div class="apkdcgrid"></div><p class="note">Shown on the home screen and in the camera scanner, for example “Rugby 8 of 10”.</p>';
+    const g = f.querySelector(".apkdcgrid");
+    dcNames().forEach(k => { const l = document.createElement("label"); l.innerHTML = '<span></span><input type="number" min="0" max="9999" inputmode="numeric" autocomplete="off">';
+      l.querySelector("span").textContent = k; const i = l.querySelector("input"); i.id = "apkDcExp-" + k; g.appendChild(l);
+      i.addEventListener("input", () => {
+        const before = dcSum(dcExp), o = {}; dcNames().forEach(n => { const v = $("apkDcExp-" + n); o[n] = v ? v.value : ""; }); dcExp = cleanDcExp(o);
+        const ex = $("expect"), now = dcSum(dcExp), cur = parseInt(ex.value, 10);
+        if (ex && (!ex.value || cur === before) && now !== cur && (now || ex.value)) { ex.value = now || ""; ex.dispatchEvent(new Event("input", { bubbles: true })); ex.dispatchEvent(new Event("change", { bubbles: true })); }
+        if (typeof save === "function") save(); if (typeof render === "function") render();
+      }); });
+    at.after(f); fillDcExp();
+  }
+  document.addEventListener("DOMContentLoaded", () => {
+    if (typeof getDel !== "function" || getDel.dc) return;
+    const g0 = getDel; getDel = function () { const o = g0.apply(this, arguments); if (Object.keys(dcExp).length) o.dcExp = Object.assign({}, dcExp); return o; }; getDel.dc = true;
+    const s0 = setDel; setDel = function (o) { const x = s0.apply(this, arguments); dcExp = cleanDcExp(o && o.dcExp); fillDcExp(); return x; };
+    const c0 = cleanDel; cleanDel = function (o) { const x = c0.apply(this, arguments); const e = cleanDcExp(o && o.dcExp); if (Object.keys(e).length) x.dcExp = e; return x; };
+    // The log and saved deliveries were read before these wrappers (core.js and panels.js), so dcExp is put back.
+    try { const raw = JSON.parse(localStorage.getItem("lpnlog") || "null"); dcExp = cleanDcExp(raw && raw.dcExp); } catch (e) {}
+    try { const raw = JSON.parse(localStorage.getItem("lpnhist") || "[]"); if (Array.isArray(raw) && typeof hist !== "undefined") hist.forEach(h => { const r = raw.find(x => x && x.id === h.id), e = cleanDcExp(r && r.dcExp); if (Object.keys(e).length) h.dcExp = e; }); } catch (e) {}
+    buildDcExp();
+  });
   /* An LPN whose letters aren't a known DC prefix (DCS in compare.js) gets a warning as it's added: a misread, or a
      label from somewhere else. The pallet is still added (Undo takes it off). Settings › Android app can turn it off. */
   window.LPN_APK_DCWARN = v => {
@@ -483,7 +521,7 @@
     };
     flashAdded.dc = true;
   });
-  const scanState = () => ({ allIn: allIn(), type: ($("type") || {}).value || "BB", fsdu: !!($("fsdu") || {}).checked, canUndo: rows.length > 0, big: pref("lpnapkbig", false), colours: typeColours(), dcs: window.LPN_APK_DCS(rows),
+  const scanState = () => ({ allIn: allIn(), type: ($("type") || {}).value || "BB", fsdu: !!($("fsdu") || {}).checked, canUndo: rows.length > 0, big: pref("lpnapkbig", false), colours: typeColours(), dcs: window.LPN_APK_DCS(rows, dcExp),
     recent: rows.slice(-3).reverse().map(r => r.lpn + " · " + r.type + (r.fsdu ? " + FSDU" : "")).join("\n") });
   function pushScan(text) { if (N()) N().scanStatus(text ? { text, state: scanState() } : { state: scanState() }).catch(() => {}); }
   window.LPN_APK_SCANSTATE = scanState;
@@ -1177,7 +1215,7 @@
   /* Exported files: what the app saved in Documents › LPN Pallet Log, newest first, to open, share or print again. */
   async function showFiles() {
     if (typeof HELP === "undefined") return;
-    HELP.apkfiles = '<p class="note">Files this app saved in <b>Documents › LPN Pallet Log</b>, newest first. They stay on this phone; delete them in the Files app.</p><div id="apkFiles"><p class="note">Looking…</p></div><div class="msg" id="apkFilesMsg" role="status" aria-live="polite"></div>';
+    HELP.apkfiles = '<p class="note">Files this app saved in <b>Documents › LPN Pallet Log</b>, newest first. They stay on this phone until deleted: files more than 60 days old can be cleared out here.</p><div id="apkFiles"><p class="note">Looking…</p></div><div class="msg" id="apkFilesMsg" role="status" aria-live="polite"></div>';
     if (typeof closeHelp === "function") closeHelp();
     openHelp("apkfiles", "Exported files");
     const box = $("apkFiles"), msg = t => { $("apkFilesMsg").textContent = t; };
@@ -1188,6 +1226,18 @@
     if (!files.length) { box.innerHTML = '<p class="note">No exported files yet. Files appear here after Download (Excel), Email PDF or saving a backup.</p>'; return; }
     const when = t => { if (!t) return ""; const d = new Date(Number(t)); return (typeof ukDate === "function" ? ukDate(d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0")) : d.toDateString()) + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
     const kb = n => n > 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB";
+    // Files more than 60 days old can be cleared out together (the newest backup is always kept).
+    const old = oldFiles(files);
+    if (old.length) {
+      const bar = document.createElement("div"); bar.className = "apkoldbar"; bar.id = "apkOldBar";
+      const p = document.createElement("p"); p.textContent = old.length + (old.length === 1 ? " file is" : " files are") + " more than 60 days old (" + kb(old.reduce((a, f) => a + (f.size || 0), 0)) + ")."; bar.appendChild(p);
+      const b = document.createElement("button"); b.type = "button"; b.id = "apkOldDel"; b.textContent = "Delete old files"; bar.appendChild(b);
+      b.onclick = () => ask("Delete " + old.length + " exported " + (old.length === 1 ? "file" : "files") + " more than 60 days old? They can’t be got back. Your newest backup is kept.", [["Delete", async () => {
+        let n = 0; for (const f of old) { try { await P().Filesystem.deleteFile({ path: "LPN Pallet Log/" + f.name, directory: "DOCUMENTS" }); n++; } catch (e) {} }
+        await showFiles(); $("apkFilesMsg").textContent = "Deleted " + n + " old " + (n === 1 ? "file" : "files") + (n < old.length ? "; " + (old.length - n) + " couldn’t be deleted" : "") + ".";
+      }]]);
+      box.appendChild(bar);
+    }
     const ul = document.createElement("ul"); ul.className = "apkfiles";
     files.slice(0, 100).forEach(f => {
       const li = document.createElement("li");
@@ -1204,6 +1254,27 @@
     box.appendChild(ul);
   }
   window.LPN_APK_FILES = showFiles;
+  const OLD_DAYS = 60;
+  function oldFiles(files) {
+    const cut = Date.now() - OLD_DAYS * 864e5;
+    const backups = files.filter(f => /^lpn-backup-.*\.json$/i.test(f.name)).sort((a, b) => (b.mtime || 0) - (a.mtime || 0));
+    const keep = backups[0] && backups[0].name;
+    return files.filter(f => f.mtime && Number(f.mtime) < cut && f.name !== keep);
+  }
+  /* Once a month at most, when 5 or more exported files are over 60 days old, the app offers to show them (nothing is
+     deleted without the Delete button and its question in Exported files). */
+  async function offerOld() {
+    try {
+      if (!P() || !P().Filesystem || document.hidden || document.querySelector(".apkask")) return;
+      const last = +(localStorage.getItem("lpnapkoldask") || 0); if (Date.now() - last < 30 * 864e5) return;
+      const files = ((await P().Filesystem.readdir({ path: "LPN Pallet Log", directory: "DOCUMENTS" })).files || []).filter(f => f.type !== "directory");
+      const old = oldFiles(files); if (old.length < 5 || document.querySelector(".apkask")) return;
+      localStorage.setItem("lpnapkoldask", String(Date.now()));
+      ask(old.length + " exported files are more than 60 days old. Look at them and clear them out to free space?", [["Show them", () => showFiles()]]);
+    } catch (e) {}
+  }
+  window.LPN_APK_OFFEROLD = offerOld;
+  if (P()) window.addEventListener("load", () => setTimeout(offerOld, 15000));
   if (P()) {
     const h = $("histBtn");
     if (h && !$("apkFilesBtn")) { const b = document.createElement("button"); b.type = "button"; b.id = "apkFilesBtn"; b.textContent = "Exported files"; b.onclick = () => showFiles(); h.after(b); }

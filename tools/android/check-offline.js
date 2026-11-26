@@ -527,6 +527,44 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("the home card and the camera scanner show the pallets per DC", s.home === s.split && s.state === s.split, s);
   check("a pallet with an unknown DC prefix is still added, with a warning and an orange flash in the scanner; a known one isn't warned about", s.oddIn && !!s.odd && /· ⚠ Not a known DC: check the label$/.test(s.odd[1]) && s.odd[3] === "warn" && !!s.ok && !/Not a known DC/.test(s.ok[1]) && s.ok[3] === "ok", s);
   check("typed in, an unknown prefix shows the warning on the Added note; Settings › Android app can turn it off (on by default)", /^Added #\d+: ABD001234568 · .*⚠ Not a known DC: check the label$/.test(s.flash) && s.warnCls && !/Not a known DC/.test(s.offFlash) && s.setting, s);
+  // Expected pallets per DC (Delivery details): the total, the home card and scanner, kept with the delivery.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), keep = rows.slice(), keepDel = getDel(), out = {};
+    rows = ["VLT004040701", "VLT004040702", "RBY006292301"].map(l => ({ lpn: l, type: "BB", fsdu: false })); document.getElementById("expect").value = ""; save(); render();
+    const f = (k, v) => { const i = document.getElementById("apkDcExp-" + k); i.value = v; i.dispatchEvent(new Event("input", { bubbles: true })); };
+    out.boxes = [...document.querySelectorAll("#apkDcExp input")].map(i => i.id.replace("apkDcExp-", "")).join();
+    f("Vault", "2"); f("Rugby", "4"); out.total = document.getElementById("expect").value;
+    out.split = LPN_APK_DCS(rows, LPN_APK_DCEXP()); LPN_APK_MODE("menu"); await wait(50); out.home = document.getElementById("rdDcs").textContent; out.scan = LPN_APK_SCANSTATE().dcs;
+    out.stored = (JSON.parse(localStorage.getItem("lpnlog")) || {}).dcExp;
+    document.getElementById("expect").value = "10"; f("Qube", "1"); out.typedKept = document.getElementById("expect").value;
+    const prev = getDel(); setDel({ date: prev.date }); out.cleared = JSON.stringify(LPN_APK_DCEXP()) + "|" + document.getElementById("apkDcExp-Vault").value;
+    setDel(prev); out.back = JSON.stringify(LPN_APK_DCEXP()) + "|" + document.getElementById("apkDcExp-Rugby").value;
+    out.clean = JSON.stringify(cleanDel({ dcExp: { Vault: "5", Nowhere: 3, Rugby: -1, Qube: "x" } }).dcExp);
+    rows = keep; setDel(keepDel); save(); render(); return out; });
+  check("Delivery details has Expected per DC boxes for the four DCs, and filling them in sets Expected pallets to the total", s.boxes === "Vault,Runcorn,Qube,Rugby" && s.total === "6", s);
+  check("the home card and the scanner show each DC's pallets against what's expected (a tick when all are in)", s.split === "Vault 2 of 2 ✓ · Rugby 1 of 4" && s.home === s.split && s.scan === s.split, s);
+  check("the per-DC numbers are kept with the delivery (saved, cleared for a new delivery, back with Undo), a typed total isn't changed, and odd values are dropped", JSON.stringify(s.stored) === '{"Vault":2,"Rugby":4}' && s.typedKept === "10" && s.cleared === "{}|" && s.back === '{"Vault":2,"Qube":1,"Rugby":4}|4' && s.clean === '{"Vault":5}', s);
+  // Results per DC in Manifest check.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)); LPN_APK_MODE("cmp"); await wait(50);
+    document.getElementById("cmpLogNums").value = "VLT004040801\nVLT004040802\nRBY006292401\nRUN0001830801"; document.getElementById("cmpNums").value = "VLT004040801\nVLT004040899\nRUN0001830801";
+    document.getElementById("cmpCheck").click(); await wait(200);
+    const one = [...document.querySelectorAll(".rddcres li")].map(li => li.className + ":" + li.textContent).join("|");
+    document.getElementById("cmpLogNums").value = "VLT004040801"; document.getElementById("cmpNums").value = "VLT004040801"; document.getElementById("cmpCheck").click(); await wait(200);
+    const single = !!document.querySelector(".rddcres"); document.getElementById("cmpClear") && document.getElementById("cmpClear").click(); await wait(50); return { one, single }; });
+  check("Manifest check lists the results per DC, problems first, when the trailer had more than one DC", s.one === "mi:Vault1 missing · 1 extra · 1 matched|nm:Rugbyno manifest (1 on the log)|ok:Runcorn1 matched" && !s.single, s);
+  // Clearing out old exported files.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), FS = window.Capacitor.Plugins.Filesystem, keepDir = window.__dir, del = [], day = 864e5, now = Date.now();
+    const origDel = FS.deleteFile; FS.deleteFile = async o => { del.push(o.path); window.__dir = window.__dir.filter(f => "LPN Pallet Log/" + f.name !== o.path); };
+    window.__dir = [{ name: "new.xlsx", mtime: now - day, size: 2048, type: "file", uri: "x" }, { name: "old.xlsx", mtime: now - 90 * day, size: 2048, type: "file", uri: "x" },
+      { name: "old.pdf", mtime: now - 61 * day, size: 1048576 * 2, type: "file", uri: "x" }, { name: "lpn-backup-2026-01-01.json", mtime: now - 300 * day, size: 4096, type: "file", uri: "x" }];
+    await LPN_APK_FILES(); await wait(100); const out = { bar: (document.getElementById("apkOldBar") || {}).textContent };
+    document.getElementById("apkOldDel").click(); await wait(50); const a = document.querySelector(".apkask"); out.q = a && a.querySelector(".apkasktitle").textContent;
+    a.querySelector("button").click(); await wait(200); out.del = del.sort().join(); out.msg = document.getElementById("apkFilesMsg").textContent; out.barAfter = !!document.getElementById("apkOldBar");
+    window.__dir = Array.from({ length: 6 }, (x, i) => ({ name: "o" + i + ".pdf", mtime: now - 70 * day, size: 10, type: "file", uri: "x" })); localStorage.removeItem("lpnapkoldask"); closeHelp(); await wait(50);
+    document.querySelectorAll(".apkask").forEach(x => x.remove()); await LPN_APK_OFFEROLD(); const o = document.querySelector(".apkask"); out.offer = o && o.querySelector(".apkasktitle").textContent; if (o) o.remove();
+    await LPN_APK_OFFEROLD(); out.again = !!document.querySelector(".apkask");
+    FS.deleteFile = origDel; window.__dir = keepDir; localStorage.removeItem("lpnapkoldask"); return out; });
+  check("Exported files offers to delete files over 60 days old (keeping the newest backup), and deletes them only after its question", s.bar === "2 files are more than 60 days old (2.0 MB).Delete old files" && /^Delete 2 exported files more than 60 days old\? They can’t be got back\. Your newest backup is kept\.$/.test(s.q) && s.del === "LPN Pallet Log/old.pdf,LPN Pallet Log/old.xlsx" && s.msg === "Deleted 2 old files." && !s.barAfter, s);
+  check("with 5 or more old files the app offers (at most once a month) to show them, without deleting anything", s.offer === "6 exported files are more than 60 days old. Look at them and clear them out to free space?" && !s.again, s);
   // Carry on scanning.
   s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative; document.querySelectorAll(".apkask").forEach(a => a.remove()); N.calls = []; LPN_APK_CARRYON(); const a = document.querySelector(".apkask");
     const out = { q: a && a.querySelector(".apkasktitle").textContent, b: a ? [...a.querySelectorAll("button")].map(x => x.textContent).join() : "" }; a.querySelector("button").click(); await new Promise(r => setTimeout(r, 300));

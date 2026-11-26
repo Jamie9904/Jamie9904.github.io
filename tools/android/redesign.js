@@ -73,8 +73,9 @@
     "html.rd #apkMenu #rdBar{display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px;margin:0 0 12px}#rdBar i{display:block;min-width:4px}",
     "html.rd #apkMenu #rdLeg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.9rem;color:var(--ink,#eaf0fa)}html.rd #apkMenu #rdLeg span{display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:.9rem;color:var(--ink,#eaf0fa)}#rdLeg i{width:8px;height:8px;border-radius:4px;flex:none}",
     "html.rd #apkCarry{margin:12px 16px 0!important}html.rd #apkCarryBtn{width:100%;min-height:56px;border-radius:16px;font-size:1.1rem;display:flex;align-items:center;justify-content:center;gap:8px}",
+    ".rddcres{margin:4px 0 12px}.rddcres h3{margin:0 0 6px;font-size:1rem}.rddcres ul{list-style:none;margin:0;padding:0}.rddcres li{display:flex;gap:10px;align-items:baseline;padding:8px 10px;border-left:4px solid var(--rule,#223a63);margin-bottom:6px;border-radius:8px;background:var(--sel,rgba(255,255,255,.04))}.rddcres li b{min-width:5.5em}.rddcres li span{min-width:0;overflow-wrap:anywhere}.rddcres li.mi{border-left-color:var(--dg,#ff6b6b)}.rddcres li.ex{border-left-color:var(--wn,#ffb020)}.rddcres li.ok{border-left-color:var(--gd,#5ec27a)}",
     "#rdDel.empty #rdNumRow,#rdDel.empty #rdBar,#rdDel.empty #rdLeg,#rdDel.empty #rdDcs{display:none}",
-    "html.rd #apkMenu #rdDcs{display:block;margin-top:8px;font-size:.9rem;font-weight:700;color:var(--ink,#eaf0fa)}html.rd #apkMenu #rdDcs:empty{display:none}",
+    "html.rd #apkMenu #rdDcs{display:block;margin-top:8px;font-size:.9rem;font-weight:700;color:var(--ink,#eaf0fa)}html.rd #apkMenu #rdDcs:empty{display:none}html.rd #apkMenu #rdDcs span{display:inline;white-space:nowrap;font:inherit;color:inherit}",
     "html.rd #apkMenu #rdDel.empty .apkgo b{font-size:1.25rem;font-weight:700;color:var(--ink,#eaf0fa)}",
     "html.rd #apkMenu #apkGoCmp{display:flex;align-items:center;gap:14px;border:0;background:var(--paper,#13264a);border-radius:20px;padding:16px 18px;min-height:80px}",
     "html.rd #apkMenu #apkGoCmp .rdic{width:48px;height:48px;border-radius:14px;background:var(--sel,#1a3562);color:var(--fm,#6fa8ff);display:flex;align-items:center;justify-content:center;flex:none}",
@@ -210,7 +211,7 @@
     $("rdBar").innerHTML = TYPES_C.map(([t, v], i) => cnt[i] ? '<i style="flex:' + cnt[i] + ";background:" + cs.getPropertyValue(v).trim() + '"></i>' : "").join("");
     $("rdLeg").innerHTML = TYPES_C.map(([t, v], i) => '<span><i style="background:' + cs.getPropertyValue(v).trim() + '"></i>' + t + " " + cnt[i] + "</span>").join("");
     // Pallets per DC, for example "Rugby 12 · Vault 8" (android.js works it out from the LPN prefixes).
-    const dc = typeof LPN_APK_DCS === "function" ? LPN_APK_DCS(all) : ""; $("rdDcs").textContent = dc;
+    const dc = typeof LPN_APK_DCS === "function" ? LPN_APK_DCS(all, typeof LPN_APK_DCEXP === "function" ? LPN_APK_DCEXP() : null) : ""; const dz = $("rdDcs"); dz.textContent = ""; dc.split(" · ").filter(Boolean).forEach((t, i) => { if (i) dz.append(" · "); const sp = document.createElement("span"); sp.textContent = t; dz.appendChild(sp); });
     go.setAttribute("aria-label", all.length ? "Log pallets: delivery in progress" + (tr ? ", trailer " + tr : "") + ", " + n + " " + (n === 1 ? "pallet" : "pallets") + (ex > 0 ? " of " + ex + " expected" : "") + ": " + TYPES_C.map(([t], i) => cnt[i] + " " + t).join(", ") + (dc ? ". By DC: " + dc.replace(/ · /g, ", ") : "") : "Log pallets");
     del.setAttribute("aria-label", all.length ? "Delivery in progress" : "Log pallets");
   }
@@ -386,6 +387,30 @@
     const nm = num(/No manifest received \((\d+)\)/);
     if (nm) { d.insertAdjacentHTML("beforeend", '<div class="nm"><b class="rdmono"></b><span>No manifest</span></div>'); d.lastChild.querySelector("b").textContent = nm; d.style.gridTemplateColumns = "repeat(4,minmax(0,1fr))"; }
     res.prepend(d);
+    byDc(res, d);
+  }
+  /* Results per DC under the big numbers, when the trailer had more than one DC: problems first, for example
+     "Rugby: 2 missing · 5 matched", "Qube: no manifest (3 on the log)", "Vault: all 20 matched". */
+  function byDc(res, after) {
+    try {
+      if (typeof cmpData !== "function" || typeof dcOf !== "function" || typeof DCS === "undefined") return;
+      const C = cmpData(); if (!C) return;
+      const g = {};
+      C.res.forEach(x => { const d0 = dcOf(x.n); if (!d0) return; const k = DCS[d0] ? d0 : "Other"; const o = g[k] || (g[k] = { ok: 0, missing: 0, book: 0, noman: 0 }); o[C.kind(x)]++; });
+      const ks = Object.keys(g); if (ks.length < 2) return;
+      const bad = k => g[k].missing + g[k].book + g[k].noman;
+      ks.sort((a, b) => (a === "Other") - (b === "Other") || bad(b) - bad(a) || a.localeCompare(b));
+      const box = document.createElement("div"); box.className = "rddcres"; box.setAttribute("role", "group"); box.setAttribute("aria-label", "Results per DC");
+      box.innerHTML = "<h3>By DC</h3><ul></ul>"; const ul = box.querySelector("ul");
+      ks.forEach(k => { const o = g[k], li = document.createElement("li"), parts = [];
+        if (o.noman) parts.push("no manifest (" + o.noman + " on the log)");
+        if (o.missing) parts.push(o.missing + " missing");
+        if (o.book) parts.push(o.book + " extra");
+        if (o.ok) parts.push(bad(k) ? o.ok + " matched" : (o.ok === 1 ? "1 matched" : "all " + o.ok + " matched"));
+        li.className = o.noman ? "nm" : o.missing ? "mi" : o.book ? "ex" : "ok";
+        li.innerHTML = "<b></b><span></span>"; li.querySelector("b").textContent = k; li.querySelector("span").textContent = parts.join(" · "); ul.appendChild(li); });
+      after.after(box);
+    } catch (e) {}
   }
 
   /* ---- Settings in grouped cards; Share log as two tabs ---- */

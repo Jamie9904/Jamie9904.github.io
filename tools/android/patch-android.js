@@ -37,9 +37,10 @@ edit(man, /android:allowBackup="true"/, 'android:allowBackup="false"');
 // Android 13+ predictive back: the app's own Back (android.js) gets the swipe's progress, and leaving shows the system animation.
 edit(man, /<application/, '<application android:enableOnBackInvokedCallback="true"');
 edit(path.join(AND, "build.gradle"), /versionCode \d+/, "versionCode " + code);
-// The signed APK carries only the ARM code that phones use (ML Kit's text reader is in it once per kind of processor,
-// so the Intel copies doubled the size). The test copy for GitHub's virtual phone (debug, Intel) keeps every kind.
-edit(path.join(AND, "build.gradle"), /(buildTypes\s*\{\s*release\s*\{)/, "$1\n            ndk { abiFilters 'armeabi-v7a', 'arm64-v8a' }");
+// The signed APK carries only the 64-bit ARM code that phones use (ML Kit's text reader is in it once per kind of
+// processor, so each extra kind adds megabytes). The owner chose 64-bit only (26 Nov 2026): a phone running 32-bit
+// Android can't install it. The test copy for GitHub's virtual phone (debug, Intel) keeps every kind.
+edit(path.join(AND, "build.gradle"), /(buildTypes\s*\{\s*release\s*\{)/, "$1\n            ndk { abiFilters 'arm64-v8a' }");
 // The signed APK's Android code is shrunk (unused code and images left out; the app's own code, Capacitor and the
 // page's bridges are kept whole). "qa" is the same shrunk build, signed with the test key and for the virtual phone's
 // Intel processor, so GitHub's photo test and screenshots run on exactly what goes into the APK.
