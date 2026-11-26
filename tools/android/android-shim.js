@@ -117,10 +117,46 @@
       d = d || {};
       const files = [];
       for (const f of d.files || []) files.push(await toCache(f, f.name));
+      // Email PDF: ask who it's for (the last addresses are offered), then open the email app with To filled in.
+      if (typeof emailMode !== "undefined" && emailMode && files.length === 1 && N() && typeof N().emailFile === "function") {
+        const to = await mailTo((d.files[0] || {}).name || d.title || "the file");
+        if (to === null) { const x = new Error("Share cancelled"); x.name = "AbortError"; throw x; }
+        if (to !== "share") { await N().emailFile({ uri: files[0], to, subject: d.title || "", text: d.text || "", mime: (d.files[0] || {}).type || "application/pdf" }); return; }
+      }
       try { await P().Share.share({ title: d.title, text: d.text, url: d.url, files: files.length ? files : undefined, dialogTitle: d.title || "Share" }); }
       catch (e) { if (cancelled(e)) { const x = new Error("Share cancelled"); x.name = "AbortError"; throw x; } throw e; }
     };
   }
+  /* Email PDF's "Send to": the last three addresses are kept on this phone (lpnapkmailto) and offered as buttons.
+     Resolves the address ("" to leave To empty), "share" for the share menu instead, or null when closed. */
+  const mailList = () => { try { const a = JSON.parse(localStorage.getItem("lpnapkmailto") || "[]"); return Array.isArray(a) ? a.filter(x => typeof x === "string" && okMail(x)).slice(0, 3) : []; } catch (e) { return []; } };
+  const okMail = v => /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$/.test(v) && v.length <= 120;
+  function mailTo(name) {
+    return new Promise(res => {
+      document.querySelectorAll(".apkask").forEach(a => a.remove());
+      const list = mailList(), d = document.createElement("div"); d.className = "apkask"; d.setAttribute("role", "dialog"); d.setAttribute("aria-modal", "true"); d.setAttribute("aria-label", "Email " + name);
+      d.innerHTML = '<div class="apksheet card"><p class="apkasktitle"></p><label for="apkMailTo" class="apkmaill">Send to</label><input type="email" id="apkMailTo" autocomplete="email" inputmode="email" placeholder="name@example.com"><div class="row apkmailr" id="apkMailR"></div><p class="note" id="apkMailMsg" role="status"></p><div class="row apkmailb"><button type="button" class="p" id="apkMailGo">Open email</button><button type="button" id="apkMailShare">Other apps</button><button type="button" id="apkMailNo">Cancel</button></div></div>';
+      d.querySelector(".apkasktitle").textContent = "Email " + name;
+      const inp = d.querySelector("#apkMailTo"); inp.value = list[0] || "";
+      list.forEach(a => { const b = document.createElement("button"); b.type = "button"; b.className = "apkmailc"; b.textContent = a; b.onclick = () => { inp.value = a; inp.focus(); }; d.querySelector("#apkMailR").appendChild(b); });
+      let settled = false; const done = v => { if (settled) return; settled = true; d.remove(); res(v); };
+      // Closed some other way (Back, another question): counts as Cancel, so Email PDF doesn't wait for ever.
+      const mo = new MutationObserver(() => { if (!d.isConnected) { mo.disconnect(); if (!settled) { settled = true; res(null); } } }); mo.observe(document.body, { childList: true });
+      d.addEventListener("click", e => { if (e.target === d) done(null); });
+      d.querySelector("#apkMailNo").onclick = () => done(null);
+      d.querySelector("#apkMailShare").onclick = () => done("share");
+      d.querySelector("#apkMailGo").onclick = () => {
+        const v = inp.value.trim();
+        if (v && !okMail(v)) { d.querySelector("#apkMailMsg").textContent = "That doesn’t look like an email address. Check it, or leave it empty."; inp.focus(); return; }
+        if (v) { try { localStorage.setItem("lpnapkmailto", JSON.stringify([v].concat(list.filter(x => x.toLowerCase() !== v.toLowerCase())).slice(0, 3))); } catch (e) {} }
+        done(v);
+      };
+      inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); d.querySelector("#apkMailGo").click(); } });
+      document.body.appendChild(d); (list[0] ? d.querySelector("#apkMailGo") : inp).focus();
+    });
+  }
+  window.LPN_APK_MAILTO = mailTo;
+
   /* ---- Android-only native helpers (tools/android/native) ---- */
   const N = () => (P() && P().LpnNative) || null;
   const A = () => (P() && P().App) || null;
@@ -133,6 +169,11 @@
     + ".apksheet::before{content:'';position:absolute;top:10px;left:50%;width:36px;height:4px;margin-left:-18px;border-radius:2px;background:var(--mu,#9db0d0);opacity:.6}"
     + "@keyframes apkup{from{transform:translateY(40px);opacity:.4}}@media (prefers-reduced-motion:reduce){.apksheet{animation:none}}.apkask .apkasktitle{margin:0 0 10px;font-weight:700}"
     + ".apksaved{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:1000;padding:12px 14px;border-radius:12px;background:#1f2a41;color:#fff;box-shadow:0 6px 24px rgba(0,0,0,.4)}.apksaved p{margin:0 0 8px;overflow-wrap:anywhere}"
+    + "#apkDcExp{border:0;margin:12px 0 0;padding:0;min-width:0}#apkDcExp legend{padding:0;font-weight:700;margin-bottom:6px}#apkDcExp .apkopt{font-weight:400;opacity:.8}"
+    + ".apkdcgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px}.apkdcgrid label{display:flex;flex-direction:column;gap:4px;font-size:.9rem;min-width:0}.apkdcgrid input{width:100%;min-height:44px;box-sizing:border-box}#apkDcExp .note{margin:6px 0 0}"
+    + "#flash.apktap{pointer-events:auto;cursor:pointer}"
+    + ".apkmaill{display:block;font-weight:700;margin:4px 0}#apkMailTo{width:100%;min-height:46px;box-sizing:border-box}.apkmailr{flex-wrap:wrap;gap:6px;margin:8px 0 0}.apkmailr:empty{display:none}.apkmailc{min-height:40px;max-width:100%;overflow:hidden;text-overflow:ellipsis}.apkmailb{margin-top:10px;flex-wrap:wrap}#apkMailMsg:empty{display:none}"
+    + ".apkoldbar{border:1px solid var(--rule,#223a63);border-radius:12px;padding:10px 12px;margin:8px 0}.apkoldbar p{margin:0 0 8px}"
     + ".apkfiles{list-style:none;padding:0;margin:8px 0}.apkfiles li{padding:10px 0;border-bottom:1px solid var(--rule,#223a63)}.apkfname{margin:0;font-weight:700;overflow-wrap:anywhere}.apkfiles .note{margin:2px 0 8px}";
   document.head.appendChild(css);
   /* Android-style controls (the app's own colours): a ripple where a button is pressed, and switches for the on/off
@@ -390,6 +431,8 @@
         + (has("liveScan") ? '<label class="chk"><input type="checkbox" id="apkVol"><span>Volume-down button starts and stops Live scan (volume-up still changes the volume)</span></label>'
           + '<label class="chk"><input type="checkbox" id="apkCam"><span>Live scan with the phone’s own camera scanner (faster, with tap-to-focus and automatic zoom). Untick to use the one inside the app.</span></label>' : "")
         + (has("palletLog") ? '<label class="chk"><input type="checkbox" id="apkSpeak"><span>Say the count out loud after each pallet (and “already logged” or “check” for a warning)</span></label>' : "")
+        + (has("palletLog") ? '<label class="chk"><input type="checkbox" id="apkDcWarn"><span>Warn when a pallet’s LPN doesn’t start with a known DC prefix (Vault, Runcorn, Qube or Rugby), so a misread or wrong label is caught at the dock</span></label>' : "")
+        + (has("palletLog") ? '<label class="chk"><input type="checkbox" id="apkFpp"><span>Set the pallet type to FPP for LPNs with an FPP prefix (V, R, Q and IM), whatever type is chosen</span></label>' : "")
         + '<label class="chk"><input type="checkbox" id="apkQuiet"><span>No scan sounds or spoken count while the phone is on silent, vibrate or Do Not Disturb (it still buzzes)</span></label>'
         + '<label class="chk"><input type="checkbox" id="apkHand"><span>Warehouse handheld scanner (Zebra or Honeywell): scans come straight into the app, so they can’t land in the wrong box. Untick if your scanner should type like a keyboard.</span></label>'
         + (has("manifestPhotos") ? '<h4 class="apksub">Photos</h4><label class="chk"><input type="checkbox" id="apkOcr"><span>Read manifest photos with the phone’s own text reader instead of the app’s own. It can be faster, but the app’s own reader is more accurate on the test photos, so check what it finds.</span></label>' : "")
@@ -403,7 +446,7 @@
       if ($("apkVol")) { $("apkVol").checked = volOn(); $("apkVol").onchange = () => { try { localStorage.setItem("lpnapkvol", $("apkVol").checked ? "on" : "off"); } catch (e) {} syncVol(); }; }
       $("apkFilesSet").onclick = () => showFiles();
       const sw = (id, key, def) => { const c = $(id); if (!c) return; c.checked = pref(key, def); c.onchange = () => { try { localStorage.setItem(key, c.checked ? "on" : "off"); } catch (e) {} }; };
-      sw("apkQuiet", "lpnapkquiet", true);
+      sw("apkQuiet", "lpnapkquiet", true); sw("apkDcWarn", "lpnapkdcwarn", true); sw("apkFpp", "lpnapkfpp", true);
       sw("apkCam", "lpnapkcamscan", true); sw("apkSpeak", "lpnapkspeak", false); sw("apkBig", "lpnapkbig", false); sw("apkHand", "lpnapkhand", true); sw("apkOcr", "lpnapkocr", OCR_DEFAULT);
       if ($("apkHand")) $("apkHand").addEventListener("change", syncHand);
       const dirShow = () => { const d = dirGet(), n = $("apkDirNote"); if (!n) return;
@@ -445,7 +488,146 @@
   const typeColours = () => { const cs = getComputedStyle(document.documentElement); return ["--bb", "--fm", "--fp", "--mx"].map(v => cs.getPropertyValue(v).trim()).filter(c => /^#[0-9a-f]{6}$/i.test(c)).join(","); };
   const expected = () => parseInt(($("expect") || {}).value, 10);
   const allIn = () => { const ex = expected(); return ex > 0 && rows.length >= ex; };
-  const scanState = () => ({ allIn: allIn(), type: ($("type") || {}).value || "BB", fsdu: !!($("fsdu") || {}).checked, canUndo: rows.length > 0, big: pref("lpnapkbig", false), colours: typeColours(),
+  /* Pallets per DC from the LPN prefixes (compare.js's DCS list: Vault, Runcorn, Qube, Rugby), most first, for example
+     "Rugby 12 · Vault 8 · Other 1". Pallets with no LPN are left out; refused pallets count (as they do towards the expected pallets). Empty when none of the
+     pallets is from a known DC, so test numbers or another site's labels show nothing. */
+  window.LPN_APK_DCS = (list, exp) => typeof dcLogText === "function" ? dcLogText(list, exp) : ""; // compare.js
+  /* Expected pallets per DC (Delivery details, optional): kept with the delivery (dcExp beside the app's own details,
+     in the log, saved deliveries and backups; the website ignores it), shown as "Rugby 8 of 10" on the home card and in
+     the camera scanner. Entering them fills Expected pallets with the total, unless a different total was typed. */
+  let dcExp = {};
+  const dcNames = () => typeof DCS === "undefined" ? [] : Object.keys(DCS);
+  const cleanDcExp = o => { const out = {}; if (o && typeof o === "object") dcNames().forEach(k => { const n = parseInt(o[k], 10); if (n > 0 && n < 10000) out[k] = n; }); return out; };
+  const dcSum = e => Object.keys(e).reduce((a, k) => a + e[k], 0);
+  window.LPN_APK_DCEXP = () => dcExp;
+  /* A DC under its expected number (Expected per DC) gets a reminder when Done is tapped in the camera scanner and
+     before Start new delivery, for example "Rugby: 2 of 4". Nothing is asked when no numbers per DC were set. */
+  function shortDcs() {
+    const ks = Object.keys(dcExp); if (!ks.length || typeof dcOf !== "function") return [];
+    const c = {}; rows.forEach(r => { if (!r || (typeof isNoLpn === "function" && isNoLpn(r.lpn))) return; const d = dcOf(r.lpn); c[d] = (c[d] || 0) + 1; });
+    return ks.filter(k => (c[k] || 0) < dcExp[k]).map(k => k + ": " + (c[k] || 0) + " of " + dcExp[k]);
+  }
+  window.LPN_APK_SHORT = shortDcs;
+  /* The large line in the camera scanner after each pallet: its DC and how many from that DC so far ("RUGBY · 3 of 4"). */
+  function dcBig(l) {
+    if (typeof dcOf !== "function" || typeof DCS === "undefined") return "";
+    const d = dcOf(l); if (!d) return ""; if (!DCS[d]) return "UNKNOWN DC";
+    let n = 0; rows.forEach(r => { if (r && !(typeof isNoLpn === "function" && isNoLpn(r.lpn)) && dcOf(r.lpn) === d) n++; });
+    return d.toUpperCase() + " · " + (dcExp[d] > 0 ? n + " of " + dcExp[d] : n);
+  }
+  window.LPN_APK_DCBIG = dcBig;
+  let shortOk = "";
+  function shortAsk(when, go) {
+    const a = shortDcs(); if (!a.length) { if (go) go(); return; }
+    const t = (a.length === 1 ? "Still short from one DC: " : "Still short from " + a.length + " DCs: ") + a.join(", ") + ".";
+    if (when === "scan") ask(t, [["Carry on scanning", () => { const b = $("scan"); if (b) b.click(); }], ["Finish for now", null]], true);
+    else ask(t + " Start a new delivery anyway?", [["Start new delivery", () => { shortOk = JSON.stringify(rows.length) + a.join(); go(); }]]);
+  }
+  window.LPN_APK_SHORTASK = shortAsk;
+  // Start new delivery (the Delivery button and the prompt after exporting): asked first when a DC is short.
+  document.addEventListener("click", e => {
+    const b = e.target && e.target.closest && e.target.closest("#newDel,#nextNew"); if (!b || b.dataset.shortGo) return;
+    const a = shortDcs(); if (!a.length || shortOk === JSON.stringify(rows.length) + a.join()) return;
+    e.preventDefault(); e.stopImmediatePropagation();
+    shortAsk("new", () => { b.dataset.shortGo = "1"; try { b.click(); } finally { delete b.dataset.shortGo; } });
+  }, true);
+  function fillDcExp() { dcNames().forEach(k => { const i = $("apkDcExp-" + k); if (i) i.value = dcExp[k] || ""; }); }
+  function buildDcExp() {
+    const at = document.querySelector(".dc-exp"); if (!at || $("apkDcExp") || !dcNames().length || !has("palletLog")) return;
+    const f = document.createElement("fieldset"); f.id = "apkDcExp"; f.className = "dc-dcexp";
+    f.innerHTML = '<legend>Expected per DC <span class="apkopt">(optional)</span></legend><div class="apkdcgrid"></div><p class="note">Shown on the home screen, in the camera scanner and on the exports, for example “Rugby 8 of 10”.</p>';
+    const g = f.querySelector(".apkdcgrid");
+    dcNames().forEach(k => { const l = document.createElement("label"); l.innerHTML = '<span></span><input type="number" min="0" max="9999" inputmode="numeric" autocomplete="off">';
+      l.querySelector("span").textContent = k; const i = l.querySelector("input"); i.id = "apkDcExp-" + k; g.appendChild(l);
+      i.addEventListener("input", () => {
+        const before = dcSum(dcExp), o = {}; dcNames().forEach(n => { const v = $("apkDcExp-" + n); o[n] = v ? v.value : ""; }); dcExp = cleanDcExp(o);
+        const ex = $("expect"), now = dcSum(dcExp), cur = parseInt(ex.value, 10);
+        if (ex && (!ex.value || cur === before) && now !== cur && (now || ex.value)) { ex.value = now || ""; ex.dispatchEvent(new Event("input", { bubbles: true })); ex.dispatchEvent(new Event("change", { bubbles: true })); }
+        if (typeof save === "function") save(); if (typeof render === "function") render();
+      }); });
+    at.after(f); fillDcExp();
+  }
+  document.addEventListener("DOMContentLoaded", () => {
+    if (typeof getDel !== "function" || getDel.dc) return;
+    const g0 = getDel; getDel = function () { const o = g0.apply(this, arguments); if (Object.keys(dcExp).length) o.dcExp = Object.assign({}, dcExp); return o; }; getDel.dc = true;
+    const s0 = setDel; setDel = function (o) { const x = s0.apply(this, arguments); dcExp = cleanDcExp(o && o.dcExp); fillDcExp(); return x; };
+    const c0 = cleanDel; cleanDel = function (o) { const x = c0.apply(this, arguments); const e = cleanDcExp(o && o.dcExp); if (Object.keys(e).length) x.dcExp = e; return x; };
+    // The log and saved deliveries were read before these wrappers (core.js and panels.js), so dcExp is put back.
+    try { const raw = JSON.parse(localStorage.getItem("lpnlog") || "null"); dcExp = cleanDcExp(raw && raw.dcExp); } catch (e) {}
+    try { const raw = JSON.parse(localStorage.getItem("lpnhist") || "[]"); if (Array.isArray(raw) && typeof hist !== "undefined") hist.forEach(h => { const r = raw.find(x => x && x.id === h.id), e = cleanDcExp(r && r.dcExp); if (Object.keys(e).length) h.dcExp = e; }); } catch (e) {}
+    buildDcExp();
+  });
+  /* An LPN whose letters aren't a known DC prefix (DCS in compare.js) gets a warning as it's added: a misread, or a
+     label from somewhere else. The pallet is still added (Undo takes it off). Settings › Android app can turn it off. */
+  window.LPN_APK_DCWARN = v => {
+    try {
+      if (!pref("lpnapkdcwarn", true) || typeof dcOf !== "function" || typeof DCS === "undefined" || typeof lpnPfx !== "function") return false;
+      if (typeof isNoLpn === "function" && isNoLpn(v)) return false;
+      return !!lpnPfx(v) && !DCS[dcOf(v)];
+    } catch (e) { return false; }
+  };
+  document.addEventListener("DOMContentLoaded", () => {
+    if (typeof flashAdded !== "function" || flashAdded.dc) return;
+    const f = flashAdded;
+    flashAdded = function (v) {
+      const x = f.apply(this, arguments);
+      try {
+        // Tap the note to change the pallet's type; it stays a little longer so there's time to.
+        const el = $("flash"); el.classList.add("apktap"); el.dataset.lpn = v;
+        if (fppSet === v) { el.append(" · FPP from the prefix"); fppSet = ""; }
+        if (!el.classList.contains("warn")) { clearTimeout(flashTimer); flashTimer = setTimeout(() => { el.hidden = true; }, 4000); }
+      } catch (e) {}
+      try {
+        if (window.LPN_APK_DCWARN(v)) {
+          const el = $("flash"), was = el.classList.contains("warn");
+          el.append(" · ⚠ Not a known DC: check the label"); el.classList.add("warn");
+          clearTimeout(flashTimer); flashTimer = setTimeout(() => { el.hidden = true; }, 4000);
+          if (!was && typeof sfx === "function") sfx("warn");
+        }
+      } catch (e) {}
+      return x;
+    };
+    flashAdded.dc = true;
+    // FPP from the prefix: V, R, Q and IM are the DCs' FPP prefixes, so those pallets are FPP whatever type is chosen.
+    if (typeof addValue === "function" && !addValue.fpp) {
+      const av = addValue;
+      addValue = function (v, o) {
+        if (!window.LPN_APK_FPPAUTO(v) || (o && o.type === "FPP") || (!o && ($("type") || {}).value === "FPP")) return av.apply(this, arguments);
+        const given = arguments.length > 1 && !!o;
+        fppSet = v;
+        const r = av.call(this, v, Object.assign({ type: ($("type") || {}).value, fsdu: !!($("fsdu") || {}).checked }, o || {}, { type: "FPP" }));
+        if (!given && $("fsdu")) $("fsdu").checked = false; // as for any pallet added without a type given
+        return r;
+      };
+      addValue.fpp = true;
+    }
+    // A pasted list follows the same rule: pallets with an FPP prefix are FPP (Undo still takes the whole paste away).
+    if (typeof addPasted === "function" && !addPasted.fpp) {
+      const ap = addPasted;
+      addPasted = function () {
+        const before = rows.length, x = ap.apply(this, arguments);
+        let n = 0; rows.slice(before).forEach(r => { if (r.type !== "FPP" && window.LPN_APK_FPPAUTO(r.lpn)) { r.type = "FPP"; n++; } });
+        if (n) { save(); render(); const m = $("msg"); if (m) m.textContent = (m.textContent ? m.textContent + " " : "") + n + (n === 1 ? " pallet was" : " pallets were") + " set to FPP from the prefix."; }
+        return x;
+      };
+      addPasted.fpp = true;
+    }
+    // The Added note: tap it to change the type of the pallet just added (with Undo).
+    const fl = $("flash");
+    if (fl) fl.addEventListener("click", () => {
+      const v = fl.dataset.lpn; let i = -1; rows.forEach((r, k) => { if (r.lpn === v) i = k; }); if (i < 0) return;
+      const r = rows[i], types = typeof TYPES !== "undefined" ? TYPES : ["BB", "FMCG", "FPP", "Mixed"];
+      fl.hidden = true;
+      ask("Change the type of " + v + " (now " + r.type + ")", types.filter(t => t !== r.type).map(t => [t, () => {
+        const old = r.type; r.type = t; save(); render();
+        if (typeof showUndo === "function") showUndo("Changed " + v + " to " + t, () => { r.type = old; save(); render(); });
+      }]));
+    });
+  });
+  const FPP_PFX = ["V", "R", "Q", "IM"];
+  let fppSet = "";
+  window.LPN_APK_FPPAUTO = v => { try { return pref("lpnapkfpp", true) && typeof lpnPfx === "function" && FPP_PFX.indexOf(lpnPfx(v)) >= 0; } catch (e) { return false; } };
+  const scanState = () => ({ allIn: allIn(), type: ($("type") || {}).value || "BB", fsdu: !!($("fsdu") || {}).checked, canUndo: rows.length > 0, big: pref("lpnapkbig", false), colours: typeColours(), dcs: window.LPN_APK_DCS(rows, dcExp),
     recent: rows.slice(-3).reverse().map(r => r.lpn + " · " + r.type + (r.fsdu ? " + FSDU" : "")).join("\n") });
   function pushScan(text) { if (N()) N().scanStatus(text ? { text, state: scanState() } : { state: scanState() }).catch(() => {}); }
   window.LPN_APK_SCANSTATE = scanState;
@@ -467,7 +649,9 @@
         else {
           const ex = expected(), n = rows.length, done = /^Added/.test(said) && ex > 0 && n >= ex;
           const tail = done ? (n === ex ? countText() + ", all in" : countText() + ", more than expected") : countText();
-          N().scanStatus({ text: /^LPNM/.test(v) ? said : said + " · " + tail, state: scanState(), flash: /^Added/.test(said) ? "ok" : undefined });
+          const odd = /^Added/.test(said) && rows.length && window.LPN_APK_DCWARN(rows[rows.length - 1].lpn);
+          const added = /^Added/.test(said) && rows.length ? rows[rows.length - 1].lpn : "";
+          N().scanStatus({ text: /^LPNM/.test(v) ? said : said + " · " + tail + (odd ? " · ⚠ Not a known DC: check the label" : ""), state: scanState(), flash: odd ? "warn" : /^Added/.test(said) ? "ok" : undefined, dc: added ? dcBig(added) : undefined });
         }
       });
       // The scanner's own buttons change the page's controls, and the scanner shows the result.
@@ -481,6 +665,7 @@
         window.LPN_APK_NATIVESCAN = false;
         if (e && e.reason === "denied") { $("scanbox").hidden = false; $("smsg").textContent = "Camera access was blocked. Allow the camera for LPN Pallet Log in your phone’s Settings › Apps."; }
         else if (e && e.reason === "check") { const c = $("chkBar"); if (c) c.scrollIntoView({ block: "center" }); }
+        else if (e && e.reason === "done") shortAsk("scan");
       });
     } catch (e) {}
   }
@@ -743,13 +928,23 @@
      the camera or picker is open), so the first photo doesn't wait for it to start. It closes by itself when idle. */
   const TESSJS = /*TESSJS*/"";
   let warming = false;
+  const WARM_MS = 60000;
   async function warmOcr() {
     if (warming || !TESSJS || typeof ocrWorker !== "function" || typeof loadScript !== "function" || !has("manifestPhotos")) return;
     if (typeof ocrW !== "undefined" && ocrW) return; // already running (or reading a photo): leave it alone
     if (window.LPN_OCR && window.LPN_OCR()) return; // the phone's own text reader is in use instead
+    if (navigator.deviceMemory && navigator.deviceMemory < 2) return; // very little memory: start it only when needed
     warming = true;
-    try { await loadScript(TESSJS, () => window.Tesseract); if (typeof ocrW !== "undefined" && ocrW) return; const w = await ocrWorker(); ocrDone(w, true); } catch (e) {}
-    finally { warming = false; }
+    // It takes its turn with photo reads (ocrQ), so a photo started meanwhile simply waits for it, and once ready it
+    // stays open for a minute (not the usual 15 seconds), long enough to line up the camera. A photo read clears
+    // that timer and sets its own.
+    const run = (typeof ocrQ !== "undefined" ? ocrQ : Promise.resolve()).then(async () => {
+      await loadScript(TESSJS, () => window.Tesseract); if (typeof ocrW !== "undefined" && ocrW) return;
+      const w = await ocrWorker(), mine = ocrW; clearTimeout(ocrIdle);
+      ocrIdle = setTimeout(() => { if (ocrW === mine) { ocrW = null; try { Promise.resolve(w.terminate()).catch(() => {}); } catch (e) {} } }, WARM_MS);
+    });
+    if (typeof ocrQ !== "undefined") ocrQ = run.catch(() => {});
+    try { await run; } catch (e) {} finally { warming = false; }
   }
   window.LPN_APK_WARMOCR = warmOcr;
   document.addEventListener("pointerdown", e => { const b = e.target.closest && e.target.closest("#cmpCamBtn,#cmpPhotoBtn,#cmpLogPhotoBtn,#photo,#upload"); if (b) warmOcr(); }, true);
@@ -1049,8 +1244,28 @@
 
   /* Carry on: opening the app with a delivery in progress offers to go straight back to scanning. */
   function carryOn() {
-    if (!N() || !has("palletLog") || !has("liveScan") || !rows.length || window.LPN_APK_NATIVESCAN || (typeof scanning !== "undefined" && scanning) || document.querySelector(".apkask") || ($("panel") && !$("panel").hidden)) return;
+    if (!N() || !has("palletLog") || !rows.length || window.LPN_APK_NATIVESCAN || (typeof scanning !== "undefined" && scanning) || document.querySelector(".apkask") || ($("panel") && !$("panel").hidden)) return;
+    // A delivery dated before today was probably left open: carry on with it, or save it and start a new one.
+    const d = ($("date") || {}).value || "", today = typeof localToday === "function" ? localToday() : "";
+    if (d && today && d < today) {
+      const y = new Date(today + "T12:00:00"); y.setDate(y.getDate() - 1);
+      const yd = y.getFullYear() + "-" + String(y.getMonth() + 1).padStart(2, "0") + "-" + String(y.getDate()).padStart(2, "0");
+      const tr = (($("trailer") || {}).value || "").trim(), when = d === yd ? "yesterday" : (typeof ukDate === "function" ? ukDate(d) : d);
+      const go = [];
+      if (has("liveScan")) go.push(["Carry on scanning", () => opened({ action: "scan" })]); else go.push(["Carry on", null]);
+      go.push(["Save it and start new", oldNew]);
+      ask("Still working on " + (tr ? tr + " " : "the delivery ") + "from " + when + "? " + countText() + ".", go);
+      return;
+    }
+    if (!has("liveScan")) return;
     ask("Delivery in progress: " + countText() + ".", [["Carry on scanning", () => opened({ action: "scan" })]]);
+  }
+  // Save it and start new: if it hasn't been exported, offer Export first (Start new delivery would otherwise only say so).
+  function oldNew() {
+    const done = typeof exported !== "undefined" && exported && typeof logSig === "function" && exported.sig === logSig();
+    const start = () => { if (typeof newAck !== "undefined" && typeof logSig === "function") newAck = logSig(); const b = $("newDel"); if (b) b.click(); };
+    if (done) { start(); return; }
+    ask("This delivery hasn’t been exported yet.", [["Export it first", () => { if (typeof LPN_APK_EXPORTSHEET === "function") { LPN_APK_MODE && LPN_APK_MODE("log"); LPN_APK_EXPORTSHEET(); } }], ["Save without exporting", start]]);
   }
   window.LPN_APK_CARRYON = carryOn;
   if (N()) window.addEventListener("load", () => setTimeout(() => { try { if (!mode) carryOn(); } catch (e) {} }, 1200));
@@ -1128,7 +1343,7 @@
   /* Exported files: what the app saved in Documents › LPN Pallet Log, newest first, to open, share or print again. */
   async function showFiles() {
     if (typeof HELP === "undefined") return;
-    HELP.apkfiles = '<p class="note">Files this app saved in <b>Documents › LPN Pallet Log</b>, newest first. They stay on this phone; delete them in the Files app.</p><div id="apkFiles"><p class="note">Looking…</p></div><div class="msg" id="apkFilesMsg" role="status" aria-live="polite"></div>';
+    HELP.apkfiles = '<p class="note">Files this app saved in <b>Documents › LPN Pallet Log</b>, newest first. They stay on this phone until deleted: files more than 60 days old can be cleared out here.</p><div id="apkFiles"><p class="note">Looking…</p></div><div class="msg" id="apkFilesMsg" role="status" aria-live="polite"></div>';
     if (typeof closeHelp === "function") closeHelp();
     openHelp("apkfiles", "Exported files");
     const box = $("apkFiles"), msg = t => { $("apkFilesMsg").textContent = t; };
@@ -1139,6 +1354,18 @@
     if (!files.length) { box.innerHTML = '<p class="note">No exported files yet. Files appear here after Download (Excel), Email PDF or saving a backup.</p>'; return; }
     const when = t => { if (!t) return ""; const d = new Date(Number(t)); return (typeof ukDate === "function" ? ukDate(d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0")) : d.toDateString()) + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); };
     const kb = n => n > 1048576 ? (n / 1048576).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1024)) + " KB";
+    // Files more than 60 days old can be cleared out together (the newest backup is always kept).
+    const old = oldFiles(files);
+    if (old.length) {
+      const bar = document.createElement("div"); bar.className = "apkoldbar"; bar.id = "apkOldBar";
+      const p = document.createElement("p"); p.textContent = old.length + (old.length === 1 ? " file is" : " files are") + " more than 60 days old (" + kb(old.reduce((a, f) => a + (f.size || 0), 0)) + ")."; bar.appendChild(p);
+      const b = document.createElement("button"); b.type = "button"; b.id = "apkOldDel"; b.textContent = "Delete old files"; bar.appendChild(b);
+      b.onclick = () => ask("Delete " + old.length + " exported " + (old.length === 1 ? "file" : "files") + " more than 60 days old? They can’t be got back. Your newest backup is kept.", [["Delete", async () => {
+        let n = 0; for (const f of old) { try { await P().Filesystem.deleteFile({ path: "LPN Pallet Log/" + f.name, directory: "DOCUMENTS" }); n++; } catch (e) {} }
+        await showFiles(); $("apkFilesMsg").textContent = "Deleted " + n + " old " + (n === 1 ? "file" : "files") + (n < old.length ? "; " + (old.length - n) + " couldn’t be deleted" : "") + ".";
+      }]]);
+      box.appendChild(bar);
+    }
     const ul = document.createElement("ul"); ul.className = "apkfiles";
     files.slice(0, 100).forEach(f => {
       const li = document.createElement("li");
@@ -1155,6 +1382,27 @@
     box.appendChild(ul);
   }
   window.LPN_APK_FILES = showFiles;
+  const OLD_DAYS = 60;
+  function oldFiles(files) {
+    const cut = Date.now() - OLD_DAYS * 864e5;
+    const backups = files.filter(f => /^lpn-backup-.*\.json$/i.test(f.name)).sort((a, b) => (b.mtime || 0) - (a.mtime || 0));
+    const keep = backups[0] && backups[0].name;
+    return files.filter(f => f.mtime && Number(f.mtime) < cut && f.name !== keep);
+  }
+  /* Once a month at most, when 5 or more exported files are over 60 days old, the app offers to show them (nothing is
+     deleted without the Delete button and its question in Exported files). */
+  async function offerOld() {
+    try {
+      if (!P() || !P().Filesystem || document.hidden || document.querySelector(".apkask")) return;
+      const last = +(localStorage.getItem("lpnapkoldask") || 0); if (Date.now() - last < 30 * 864e5) return;
+      const files = ((await P().Filesystem.readdir({ path: "LPN Pallet Log", directory: "DOCUMENTS" })).files || []).filter(f => f.type !== "directory");
+      const old = oldFiles(files); if (old.length < 5 || document.querySelector(".apkask")) return;
+      localStorage.setItem("lpnapkoldask", String(Date.now()));
+      ask(old.length + " exported files are more than 60 days old. Look at them and clear them out to free space?", [["Show them", () => showFiles()]]);
+    } catch (e) {}
+  }
+  window.LPN_APK_OFFEROLD = offerOld;
+  if (P()) window.addEventListener("load", () => setTimeout(offerOld, 15000));
   if (P()) {
     const h = $("histBtn");
     if (h && !$("apkFilesBtn")) { const b = document.createElement("button"); b.type = "button"; b.id = "apkFilesBtn"; b.textContent = "Exported files"; b.onclick = () => showFiles(); h.after(b); }

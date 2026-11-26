@@ -290,6 +290,14 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
     document.getElementById("cmpExpBtn").click(); await wait(50); const sh = document.querySelector(".apkask"); out.sub = sh ? sh.querySelector(".rdsub").textContent : ""; if (sh) sh.remove();
     document.getElementById("cmpClear").click(); LPN_APK_MODE("menu"); return out; });
   check("the Manifest check's results show Missing, Extra and Matched as big numbers, and its Export sheet says them too", s.big.big === "2,1,3" && s.big.sub === "2 missing · 1 extra · 3 matched", s.big);
+  s.nm = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
+    LPN_APK_MODE("cmp"); const l = document.getElementById("cmpLogNums"), m = document.getElementById("cmpNums");
+    l.value = ["VLT004041210", "RBY006291167", "RBY006291168"].join("\n"); m.value = "VLT004041210"; l.dispatchEvent(new Event("input")); m.dispatchEvent(new Event("input"));
+    document.getElementById("cmpCheck").click(); await wait(150);
+    out.big = [...document.querySelectorAll("#cmpRes .rdbig div")].map(d => d.textContent).join(",");
+    document.getElementById("cmpExpBtn").click(); await wait(50); const sh = document.querySelector(".apkask"); out.sub = sh ? sh.querySelector(".rdsub").textContent : ""; if (sh) sh.remove();
+    document.getElementById("cmpClear").click(); LPN_APK_MODE("menu"); return out; });
+  check("a DC that didn't send its manifest adds a fourth big number, No manifest, and the Export sheet says it", s.nm.big === "0Missing,0Extra,1Matched,2No manifest" && s.nm.sub === "0 missing · 0 extra · 1 matched · 2 no manifest", s.nm);
   s.empty = await page.evaluate(async () => { rows = []; save(); render(); LPN_APK_MODE("log"); await new Promise(r => setTimeout(r, 50));
     const td = document.querySelector("#body td.empty"), w = td ? td.getBoundingClientRect().width : 0, out = { w, page: document.documentElement.clientWidth, h: td ? td.getBoundingClientRect().height : 0 }; LPN_APK_MODE("menu"); return out; });
   check("an empty log's \"No pallets yet\" message runs across the page, not squeezed into a narrow column", s.empty.w > s.empty.page * 0.8 && s.empty.h < 140, s.empty);
@@ -499,6 +507,143 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("the type and FSDU buttons in the scanner change the app's own (FSDU clears after the next pallet, as usual)", s.typed.page === "FPP" && s.typed.sent === "FPP" && s.fsdu.page && s.fsdu.sent && s.added === "VLT004040501:FPP:true,VLT004040502:FPP:false", s);
   check("the scanner shows the last pallets, newest first", s.after.recent === "VLT004040502 · FPP\nVLT004040501 · FPP + FSDU" && s.after.canUndo, s.after);
   check("Remove last in the scanner removes the last pallet (with Undo in the app)", s.undo.rows === "VLT004040501" && /^Removed VLT004040502 · 1 of 20\. Undo is in the app\.$/.test(s.undo.status[1]) && s.undo.state.recent === "VLT004040501 · FPP + FSDU", s.undo);
+  // Pallets per DC (from the LPN prefixes) on the home card and in the scanner, and the unknown-prefix warning.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)), keep = rows.slice();
+    const st = () => N.calls.filter(c => c[0] === "state").pop(), orig = N.scanStatus; N.scanStatus = async o => { if (o.state) N.calls.push(["state", o.state]); return orig(o); };
+    const out = {};
+    rows = ["VLT004040601", "V0013323651", "RBY006292169", "IM0012345678", "XQZ004040602", "RUN0001830763"].map(l => ({ lpn: l, type: "BB", fsdu: false }));
+    rows.push({ lpn: "RBY006292170", type: "BB", fsdu: false, ref: true }, { lpn: "No LPN 1", type: "BB", fsdu: false }); save(); render();
+    out.split = LPN_APK_DCS(rows); out.none = LPN_APK_DCS([{ lpn: "TEST1234", type: "BB" }]);
+    LPN_APK_MODE("menu"); await wait(50); out.home = (document.getElementById("rdDcs") || {}).textContent;
+    N.calls = []; document.getElementById("scan").click(); await wait(200); out.state = st() && st()[1].dcs;
+    lastAt = 0; N.listeners.nativeScan({ values: ["ABC001234567"] }); await wait(80); out.odd = N.calls.filter(c => c[0] === "status").pop(); out.oddIn = rows.some(r => r.lpn === "ABC001234567");
+    lastAt = 0; N.listeners.nativeScan({ values: ["VLT004040603"] }); await wait(80); out.ok = N.calls.filter(c => c[0] === "status").pop();
+    N.listeners.nativeScanClosed({ reason: "done" }); N.scanStatus = orig; LPN_APK_MODE("log");
+    document.getElementById("lpn").value = "ABD001234568"; add(); await wait(50); out.flash = document.getElementById("flash").textContent; out.warnCls = document.getElementById("flash").classList.contains("warn");
+    localStorage.setItem("lpnapkdcwarn", "off"); document.getElementById("lpn").value = "ABE001234569"; add(); await wait(50); out.offFlash = document.getElementById("flash").textContent; localStorage.removeItem("lpnapkdcwarn");
+    openHelp("settings", "Settings"); await wait(100); out.setting = !!document.getElementById("apkDcWarn") && document.getElementById("apkDcWarn").checked; closeHelp();
+    rows = keep; save(); render(); return out; });
+  check("pallets per DC: known DCs most first, other prefixes last, refused pallets counted (they count towards the expected pallets), No LPN pallets left out; nothing when no pallet is from a known DC", s.split === "Rugby 3 · Vault 2 · Runcorn 1 · Other 1" && s.none === "", s);
+  check("the home card and the camera scanner show the pallets per DC", s.home === s.split && s.state === s.split, s);
+  check("a pallet with an unknown DC prefix is still added, with a warning and an orange flash in the scanner; a known one isn't warned about", s.oddIn && !!s.odd && /· ⚠ Not a known DC: check the label$/.test(s.odd[1]) && s.odd[3] === "warn" && !!s.ok && !/Not a known DC/.test(s.ok[1]) && s.ok[3] === "ok", s);
+  check("typed in, an unknown prefix shows the warning on the Added note; Settings › Android app can turn it off (on by default)", /^Added #\d+: ABD001234568 · .*⚠ Not a known DC: check the label$/.test(s.flash) && s.warnCls && !/Not a known DC/.test(s.offFlash) && s.setting, s);
+  // Expected pallets per DC (Delivery details): the total, the home card and scanner, kept with the delivery.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), keep = rows.slice(), keepDel = getDel(), out = {};
+    rows = ["VLT004040701", "VLT004040702", "RBY006292301"].map(l => ({ lpn: l, type: "BB", fsdu: false })); document.getElementById("expect").value = ""; save(); render();
+    const f = (k, v) => { const i = document.getElementById("apkDcExp-" + k); i.value = v; i.dispatchEvent(new Event("input", { bubbles: true })); };
+    out.boxes = [...document.querySelectorAll("#apkDcExp input")].map(i => i.id.replace("apkDcExp-", "")).join();
+    f("Vault", "2"); f("Rugby", "4"); out.total = document.getElementById("expect").value;
+    out.split = LPN_APK_DCS(rows, LPN_APK_DCEXP()); LPN_APK_MODE("menu"); await wait(50); out.home = document.getElementById("rdDcs").textContent; out.scan = LPN_APK_SCANSTATE().dcs;
+    out.stored = (JSON.parse(localStorage.getItem("lpnlog")) || {}).dcExp;
+    document.getElementById("expect").value = "10"; f("Qube", "1"); out.typedKept = document.getElementById("expect").value;
+    const prev = getDel(); setDel({ date: prev.date }); out.cleared = JSON.stringify(LPN_APK_DCEXP()) + "|" + document.getElementById("apkDcExp-Vault").value;
+    setDel(prev); out.back = JSON.stringify(LPN_APK_DCEXP()) + "|" + document.getElementById("apkDcExp-Rugby").value;
+    out.clean = JSON.stringify(cleanDel({ dcExp: { Vault: "5", Nowhere: 3, Rugby: -1, Qube: "x" } }).dcExp);
+    rows = keep; setDel(keepDel); save(); render(); return out; });
+  check("Delivery details has Expected per DC boxes for the four DCs, and filling them in sets Expected pallets to the total", s.boxes === "Vault,Runcorn,Qube,Rugby" && s.total === "6", s);
+  check("the home card and the scanner show each DC's pallets against what's expected (a tick when all are in)", s.split === "Vault 2 of 2 ✓ · Rugby 1 of 4" && s.home === s.split && s.scan === s.split, s);
+  check("the per-DC numbers are kept with the delivery (saved, cleared for a new delivery, back with Undo), a typed total isn't changed, and odd values are dropped", JSON.stringify(s.stored) === '{"Vault":2,"Rugby":4}' && s.typedKept === "10" && s.cleared === "{}|" && s.back === '{"Vault":2,"Qube":1,"Rugby":4}|4' && s.clean === '{"Vault":5}', s);
+  // A DC short of its expected number: asked after Done in the scanner and before Start new delivery.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)), keep = rows.slice(), keepDel = getDel(), keepHist = hist.slice(), out = {};
+    document.querySelectorAll(".apkask").forEach(a => a.remove());
+    rows = ["VLT004041001", "VLT004041002", "RBY006292601"].map(l => ({ lpn: l, type: "BB", fsdu: false })); save(); render();
+    const f = (k, v) => { const i = document.getElementById("apkDcExp-" + k); i.value = v; i.dispatchEvent(new Event("input", { bubbles: true })); };
+    f("Vault", "2"); f("Rugby", "4"); out.short = LPN_APK_SHORT().join("|");
+    N.listeners.nativeScanClosed({ reason: "done" }); await wait(50); let a = document.querySelector(".apkask");
+    out.scanQ = a && a.querySelector(".apkasktitle").textContent; out.scanB = a ? [...a.querySelectorAll("button")].map(b => b.textContent).join() : ""; if (a) a.remove();
+    document.getElementById("newDel").click(); await wait(50); a = document.querySelector(".apkask"); out.newQ = a && a.querySelector(".apkasktitle").textContent; out.kept = rows.length;
+    a.querySelector("button").click(); await wait(50); out.msg = document.getElementById("dlmsg").textContent;
+    document.getElementById("newDel").click(); await wait(50); out.again = !!document.querySelector(".apkask"); out.after = rows.length;
+    f("Rugby", ""); out.none = LPN_APK_SHORT().length;
+    hist = keepHist; saveHist(); rows = keep; setDel(keepDel); save(); render(); document.getElementById("dlmsg").textContent = ""; return out; });
+  check("a DC short of its expected number is named after Done in the camera scanner, with Carry on scanning", s.short === "Rugby: 1 of 4" && s.scanQ === "Still short from one DC: Rugby: 1 of 4." && s.scanB === "Carry on scanning,Finish for now", s);
+  check("Start new delivery asks first when a DC is short, then goes on as usual (asked once)", s.newQ === "Still short from one DC: Rugby: 1 of 4. Start a new delivery anyway?" && s.kept === 3 && /Export it first|Saved to history/.test(s.msg) && !s.again && s.after === 0 && s.none === 0, s);
+  // FPP from the prefix (V, R, Q, IM), tap the Added note to change the type, and a search that finds one pallet.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)), keep = rows.slice(), out = {}, man = document.getElementById("cmpNums").value, t = l => (rows.find(r => r.lpn === l) || {}).type || "none";
+    document.getElementById("cmpNums").value = ""; document.querySelectorAll(".apkask").forEach(a => a.remove()); rows = []; save(); render(); LPN_APK_MODE("log");
+    document.querySelector('#tyb button[data-t="BB"]').click();
+    document.getElementById("lpn").value = "IM0012345681"; add(); await wait(50); out.typed = rows[0].type + "|" + document.getElementById("type").value + "|" + document.getElementById("flash").textContent;
+    document.getElementById("lpn").value = "VLT004041101"; add(); await wait(50); out.plain = t("VLT004041101");
+    N.calls = []; document.getElementById("scan").click(); await wait(200); lastAt = 0; N.listeners.nativeScan({ values: ["R0012345682"] }); await wait(80); out.scanned = t("R0012345682"); if (pendingAdd) { out.scanned += ":" + (document.getElementById("chkTxt") || {}).textContent; hideCheck(); } N.listeners.nativeScanClosed({ reason: "back" });
+    localStorage.setItem("lpnapkfpp", "off"); document.getElementById("lpn").value = "Q0012345683"; add(); await wait(50); out.off = t("Q0012345683"); if (pendingAdd) hideCheck(); localStorage.removeItem("lpnapkfpp");
+    document.getElementById("lpn").value = "V0013329998"; add(); await wait(50); const fl = document.getElementById("flash"); out.tappable = getComputedStyle(fl).pointerEvents;
+    fl.click(); await wait(50); const a = document.querySelector(".apkask"); out.q = a && a.querySelector(".apkasktitle").textContent; out.b = a ? [...a.querySelectorAll("button")].map(b => b.textContent).join() : "";
+    [...a.querySelectorAll("button")].find(b => b.textContent === "Mixed").click(); await wait(50); out.changed = t("V0013329998"); out.undo = document.getElementById("undoBar").textContent;
+    document.querySelector("#undoBar button").click(); await wait(50); out.undone = t("V0013329998");
+    rows = ["VLT004041210", "VLT004121055", "VLT004041211"].map(l => ({ lpn: l, type: "BB", fsdu: false })); save(); render(); window.scrollTo(0, 0);
+    const f = document.getElementById("flt"); f.value = "1211"; f.dispatchEvent(new Event("input", { bubbles: true })); await wait(100);
+    out.hit = [...document.querySelectorAll("#body tr.rdhit .lpnedit")].map(b => b.textContent).join();
+    f.value = ""; f.dispatchEvent(new Event("input", { bubbles: true })); rows = keep; document.getElementById("cmpNums").value = man; save(); render(); return out; });
+  check("an LPN with an FPP prefix (V, R, Q, IM) is added as FPP whatever type is chosen, typed or scanned, and the note says so; Settings can turn it off", s.typed === "FPP|BB|Added #1: IM0012345681 · FPP · FPP from the prefix" && s.plain === "BB" && s.scanned === "FPP" && s.off === "BB", s);
+  check("tapping the Added note offers the other types for that pallet, with Undo", s.tappable === "auto" && s.q === "Change the type of V0013329998 (now FPP)" && s.b === "BB,FMCG,Mixed,Cancel" && s.changed === "Mixed" && /^Changed V0013329998 to Mixed/.test(s.undo) && s.undone === "FPP", s);
+  check("a search that finds just one pallet lights it up", s.hit === "VLT004041211", s);
+  // A pasted list (or LPNs shared into the app) follows the FPP prefix rule too.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), keep = rows.slice(), man = document.getElementById("cmpNums").value, out = {};
+    document.getElementById("cmpNums").value = ""; rows = []; save(); render(); document.querySelector('#tyb button[data-t="BB"]').click();
+    addPasted("VLT004041301\nIM0012345690\nR0012345691"); await wait(50);
+    out.types = rows.map(r => r.lpn + ":" + r.type).join(); out.msg = document.getElementById("msg").textContent;
+    document.querySelector("#undoBar button").click(); await wait(50); out.undone = rows.length;
+    rows = keep; document.getElementById("cmpNums").value = man; save(); render(); document.getElementById("msg").textContent = ""; return out; });
+  check("a pasted list sets FPP-prefix pallets to FPP, says so, and Undo takes the whole paste away", s.types === "VLT004041301:BB,IM0012345690:FPP,R0012345691:FPP" && /2 pallets were set to FPP from the prefix\.$/.test(s.msg) && s.undone === 0, s);
+  // The camera scanner's large DC line; Email PDF's Send to; and a delivery left open from an earlier day.
+  s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative, wait = ms => new Promise(r => setTimeout(r, ms)), keep = rows.slice(), keepDel = getDel(), keepHist = hist.slice(), man = document.getElementById("cmpNums").value, out = {};
+    document.getElementById("cmpNums").value = ""; document.querySelectorAll(".apkask").forEach(a => a.remove()); rows = []; setDel({ date: localToday() }); save(); render();
+    const dcs = [], orig = N.scanStatus; N.scanStatus = async o => { if ("dc" in o) dcs.push(o.dc); return orig(o); };
+    const f = (k, v) => { const i = document.getElementById("apkDcExp-" + k); i.value = v; i.dispatchEvent(new Event("input", { bubbles: true })); }; f("Rugby", "4");
+    document.getElementById("scan").click(); await wait(200);
+    for (const v of ["RBY006292701", "VLT004041401", "ABC004041402"]) { lastAt = 0; N.listeners.nativeScan({ values: [v] }); await wait(80); if (pendingAdd) hideCheck(); }
+    N.listeners.nativeScanClosed({ reason: "back" }); N.scanStatus = orig; out.dc = dcs.filter(x => x !== undefined).join("|");
+    // Email PDF: Send to, with the last addresses kept.
+    const mails = []; N.emailFile = async o => { mails.push(o.to + "|" + o.subject + "|" + o.mime + "|" + /^file:/.test(o.uri)); };
+    const shares = [], sh = window.Capacitor.Plugins.Share.share; window.Capacitor.Plugins.Share.share = async o => { shares.push(o.title); };
+    localStorage.removeItem("lpnapkmailto"); const file = () => new File(["%PDF-1.4"], "LPN log 2026-11-26.pdf", { type: "application/pdf" });
+    emailMode = true; let p = navigator.share({ files: [file()], title: "LPN log 2026-11-26", text: "Please find the attached file" }); await wait(100);
+    let d = document.querySelector(".apkask"); out.title = d && d.querySelector(".apkasktitle").textContent; out.empty = document.getElementById("apkMailTo").value;
+    document.getElementById("apkMailTo").value = "not an address"; document.getElementById("apkMailGo").click(); out.bad = document.getElementById("apkMailMsg").textContent;
+    document.getElementById("apkMailTo").value = "goodsin@example.co.uk"; document.getElementById("apkMailGo").click(); await p;
+    p = navigator.share({ files: [file()], title: "LPN log 2026-11-26", text: "x" }); await wait(100); out.filled = document.getElementById("apkMailTo").value; out.chips = [...document.querySelectorAll(".apkmailc")].map(b => b.textContent).join();
+    document.getElementById("apkMailShare").click(); await p;
+    p = navigator.share({ files: [file()], title: "LPN log 2026-11-26", text: "x" }); await wait(100); document.querySelector(".apkask").remove();
+    out.back = await p.then(() => "sent", e => e.name); emailMode = false; window.Capacitor.Plugins.Share.share = sh;
+    out.mails = mails.join(); out.shares = shares.join(); out.kept = localStorage.getItem("lpnapkmailto"); localStorage.removeItem("lpnapkmailto");
+    // A delivery dated before today.
+    const y = new Date(); y.setDate(y.getDate() - 1); const yd = y.getFullYear() + "-" + String(y.getMonth() + 1).padStart(2, "0") + "-" + String(y.getDate()).padStart(2, "0");
+    rows = ["VLT004041501", "VLT004041502"].map(l => ({ lpn: l, type: "BB", fsdu: false })); setDel({ date: yd, trailer: "TR 4471", expect: "20" }); exported = null; save(); render();
+    LPN_APK_CARRYON(); await wait(50); d = document.querySelector(".apkask"); out.old = d && d.querySelector(".apkasktitle").textContent; out.oldB = d ? [...d.querySelectorAll("button")].map(b => b.textContent).join() : "";
+    [...d.querySelectorAll("button")].find(b => b.textContent === "Save it and start new").click(); await wait(50); d = document.querySelector(".apkask");
+    out.exp = d && d.querySelector(".apkasktitle").textContent; out.expB = d ? [...d.querySelectorAll("button")].map(b => b.textContent).join() : "";
+    [...d.querySelectorAll("button")].find(b => b.textContent === "Save without exporting").click(); await wait(80); out.after = rows.length + "|" + hist.some(h => h.trailer === "TR 4471");
+    setDel({ date: localToday() }); rows = [{ lpn: "VLT004041503", type: "BB", fsdu: false }]; render(); LPN_APK_CARRYON(); await wait(50); d = document.querySelector(".apkask"); out.today = d && d.querySelector(".apkasktitle").textContent; if (d) d.remove();
+    hist = keepHist; saveHist(); rows = keep; setDel(keepDel); document.getElementById("cmpNums").value = man; save(); render(); return out; });
+  check("after each pallet the camera scanner shows its DC in large letters, with that DC's count (and expected number); orange UNKNOWN DC for others", s.dc === "RUGBY · 1 of 4|VAULT · 1|UNKNOWN DC", s);
+  check("Email PDF asks who it's for, checks the address, opens the email app with it filled in, and offers the last addresses next time (Other apps: the share menu; Back: cancelled)",
+    s.title === "Email LPN log 2026-11-26.pdf" && s.empty === "" && /doesn’t look like an email address/.test(s.bad) && s.filled === "goodsin@example.co.uk" && s.chips === "goodsin@example.co.uk"
+    && s.mails === "goodsin@example.co.uk|LPN log 2026-11-26|application/pdf|true" && s.shares === "LPN log 2026-11-26" && s.back === "AbortError" && s.kept === '["goodsin@example.co.uk"]', s);
+  check("opening the app with a delivery from an earlier day asks to carry on or save it and start new (offering Export first when not exported)",
+    s.old === "Still working on TR 4471 from yesterday? 2 of 20." && s.oldB === "Carry on scanning,Save it and start new,Cancel" && s.exp === "This delivery hasn’t been exported yet." && s.expB === "Export it first,Save without exporting,Cancel"
+    && s.after === "0|true" && /^Delivery in progress/.test(s.today || ""), s);
+  // Results per DC in Manifest check.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)); LPN_APK_MODE("cmp"); await wait(50);
+    document.getElementById("cmpLogNums").value = "VLT004040801\nVLT004040802\nRBY006292401\nRUN0001830801"; document.getElementById("cmpNums").value = "VLT004040801\nVLT004040899\nRUN0001830801";
+    document.getElementById("cmpCheck").click(); await wait(200);
+    const one = [...document.querySelectorAll(".rddcres li")].map(li => li.className + ":" + li.textContent).join("|");
+    document.getElementById("cmpLogNums").value = "VLT004040801"; document.getElementById("cmpNums").value = "VLT004040801"; document.getElementById("cmpCheck").click(); await wait(200);
+    const single = !!document.querySelector(".rddcres"); document.getElementById("cmpClear") && document.getElementById("cmpClear").click(); await wait(50); return { one, single }; });
+  check("Manifest check lists the results per DC, problems first, when the trailer had more than one DC", s.one === "mi:Vault1 missing · 1 extra · 1 matched|nm:Rugbyno manifest (1 on the log)|ok:Runcorn1 matched" && !s.single, s);
+  // Clearing out old exported files.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), FS = window.Capacitor.Plugins.Filesystem, keepDir = window.__dir, del = [], day = 864e5, now = Date.now();
+    const origDel = FS.deleteFile; FS.deleteFile = async o => { del.push(o.path); window.__dir = window.__dir.filter(f => "LPN Pallet Log/" + f.name !== o.path); };
+    window.__dir = [{ name: "new.xlsx", mtime: now - day, size: 2048, type: "file", uri: "x" }, { name: "old.xlsx", mtime: now - 90 * day, size: 2048, type: "file", uri: "x" },
+      { name: "old.pdf", mtime: now - 61 * day, size: 1048576 * 2, type: "file", uri: "x" }, { name: "lpn-backup-2026-01-01.json", mtime: now - 300 * day, size: 4096, type: "file", uri: "x" }];
+    await LPN_APK_FILES(); await wait(100); const out = { bar: (document.getElementById("apkOldBar") || {}).textContent };
+    document.getElementById("apkOldDel").click(); await wait(50); const a = document.querySelector(".apkask"); out.q = a && a.querySelector(".apkasktitle").textContent;
+    a.querySelector("button").click(); await wait(200); out.del = del.sort().join(); out.msg = document.getElementById("apkFilesMsg").textContent; out.barAfter = !!document.getElementById("apkOldBar");
+    window.__dir = Array.from({ length: 6 }, (x, i) => ({ name: "o" + i + ".pdf", mtime: now - 70 * day, size: 10, type: "file", uri: "x" })); localStorage.removeItem("lpnapkoldask"); closeHelp(); await wait(50);
+    document.querySelectorAll(".apkask").forEach(x => x.remove()); await LPN_APK_OFFEROLD(); const o = document.querySelector(".apkask"); out.offer = o && o.querySelector(".apkasktitle").textContent; if (o) o.remove();
+    await LPN_APK_OFFEROLD(); out.again = !!document.querySelector(".apkask");
+    FS.deleteFile = origDel; window.__dir = keepDir; localStorage.removeItem("lpnapkoldask"); return out; });
+  check("Exported files offers to delete files over 60 days old (keeping the newest backup), and deletes them only after its question", s.bar === "2 files are more than 60 days old (2.0 MB).Delete old files" && /^Delete 2 exported files more than 60 days old\? They can’t be got back\. Your newest backup is kept\.$/.test(s.q) && s.del === "LPN Pallet Log/old.pdf,LPN Pallet Log/old.xlsx" && s.msg === "Deleted 2 old files." && !s.barAfter, s);
+  check("with 5 or more old files the app offers (at most once a month) to show them, without deleting anything", s.offer === "6 exported files are more than 60 days old. Look at them and clear them out to free space?" && !s.again, s);
   // Carry on scanning.
   s = await page.evaluate(async () => { const N = window.Capacitor.Plugins.LpnNative; document.querySelectorAll(".apkask").forEach(a => a.remove()); N.calls = []; LPN_APK_CARRYON(); const a = document.querySelector(".apkask");
     const out = { q: a && a.querySelector(".apkasktitle").textContent, b: a ? [...a.querySelectorAll("button")].map(x => x.textContent).join() : "" }; a.querySelector("button").click(); await new Promise(r => setTimeout(r, 300));

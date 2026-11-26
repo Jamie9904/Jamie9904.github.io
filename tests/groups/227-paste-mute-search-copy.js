@@ -60,6 +60,11 @@ module.exports = async ({ browser, URL0 }) => {
   check("the ✕ in the search box shows only with a search, clears it and shows everything", s.hidden0 && s.shown === 1 && !s.hidden1 && s.size[0] >= 40 && s.size[1] >= 40 && s.value === "" && s.all === 2 && s.focus && s.hidden2, s);
   s = await p.evaluate(() => { const f = document.getElementById("flt"); f.value = "RUN"; render(); addValue("QUB001899210"); return { value: f.value, shown: document.querySelectorAll("#body .lpnedit").length }; });
   check("adding a pallet clears an old search, so the new pallet shows", s.value === "" && s.shown === 3, s);
+  // Searching just numbers finds the LPNs ending with them first (the last digits off a label), anywhere if none do.
+  s = await p.evaluate(() => { const keep = rows.slice(), f = document.getElementById("flt"), shown = q => { f.value = q; render(); return [...document.querySelectorAll("#body .lpnedit")].map(b => b.textContent).join(); };
+    rows = ["VLT004041210", "VLT004121055", "RUN001830763"].map(l => ({ lpn: l, type: "BB", fsdu: false })); render();
+    const out = { tail: shown("1210"), mid: shown("2105"), short: shown("12"), ph: f.placeholder }; f.value = ""; rows = keep; render(); return out; });
+  check("searching 3 or more digits shows the LPNs ending with them, or any containing them when none do", s.tail === "VLT004041210" && s.mid === "VLT004121055" && s.short === "VLT004041210,VLT004121055" && s.ph === "Search LPNs or last digits", s);
 
   // Press and hold an LPN to copy it; the editor doesn't open. Ctrl+C on it does the same.
   await p.evaluate(() => { window.__copied = []; navigator.clipboard.writeText = async t => { window.__copied.push(t); }; });

@@ -1,6 +1,13 @@
 {
   "_about": "Shown once on each phone after it installs a new Android update (not on a first install). Replace the list with what this update changes, in plain words, each time an Android update is approved and built.",
   "items": [
-    "Notes for this check in the Manifest check, for things like a DC that didn’t send a manifest. They stay on the phone until you tap Clear, and go on the Excel and PDF of the check (under Delivery Details) and in the shared missing list."
+    "No manifest received: pallets from a DC with nothing on the manifest (Vault, Runcorn, Qube or Rugby, from the LPN’s letters) are shown together instead of as log only, on screen, on the exports and in the shared list.",
+    "Pallets per DC on the home screen and in the camera scanner, with the DC in large letters after each scan. Add Expected per DC in Delivery details to see “Rugby 2 of 4”, and get a reminder if a DC is short.",
+    "By DC on the exports, and the Manifest check’s results for each DC.",
+    "A warning for an LPN that doesn’t start with a known DC prefix, and LPNs starting V, R, Q or IM go in as FPP (typed, scanned or pasted). Both can be turned off in Settings.",
+    "Tap the Added note to change the pallet’s type. Search by the last digits of an LPN.",
+    "Email PDF remembers who you send it to. Exported files can clear out files more than 60 days old.",
+    "A reminder when a delivery from an earlier day is still open, and the manifest photo reader is ready sooner.",
+    "A smaller download: this version is for 64-bit phones."
   ]
 }

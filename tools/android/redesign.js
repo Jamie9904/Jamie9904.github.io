@@ -73,7 +73,10 @@
     "html.rd #apkMenu #rdBar{display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px;margin:0 0 12px}#rdBar i{display:block;min-width:4px}",
     "html.rd #apkMenu #rdLeg{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.9rem;color:var(--ink,#eaf0fa)}html.rd #apkMenu #rdLeg span{display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:.9rem;color:var(--ink,#eaf0fa)}#rdLeg i{width:8px;height:8px;border-radius:4px;flex:none}",
     "html.rd #apkCarry{margin:12px 16px 0!important}html.rd #apkCarryBtn{width:100%;min-height:56px;border-radius:16px;font-size:1.1rem;display:flex;align-items:center;justify-content:center;gap:8px}",
-    "#rdDel.empty #rdNumRow,#rdDel.empty #rdBar,#rdDel.empty #rdLeg{display:none}",
+    ".rddcres{margin:4px 0 12px}.rddcres h3{margin:0 0 6px;font-size:1rem}.rddcres ul{list-style:none;margin:0;padding:0}.rddcres li{display:flex;gap:10px;align-items:baseline;padding:8px 10px;border-left:4px solid var(--rule,#223a63);margin-bottom:6px;border-radius:8px;background:var(--sel,rgba(255,255,255,.04))}.rddcres li b{min-width:5.5em}.rddcres li span{min-width:0;overflow-wrap:anywhere}.rddcres li.mi{border-left-color:var(--dg,#ff6b6b)}.rddcres li.ex{border-left-color:var(--wn,#ffb020)}.rddcres li.ok{border-left-color:var(--gd,#5ec27a)}",
+    "#body tr.rdhit td{background:var(--acs,#3a3550);transition:background .2s}",
+    "#rdDel.empty #rdNumRow,#rdDel.empty #rdBar,#rdDel.empty #rdLeg,#rdDel.empty #rdDcs{display:none}",
+    "html.rd #apkMenu #rdDcs{display:block;margin-top:8px;font-size:.9rem;font-weight:700;color:var(--ink,#eaf0fa)}html.rd #apkMenu #rdDcs:empty{display:none}html.rd #apkMenu #rdDcs span{display:inline;white-space:nowrap;font:inherit;color:inherit}",
     "html.rd #apkMenu #rdDel.empty .apkgo b{font-size:1.25rem;font-weight:700;color:var(--ink,#eaf0fa)}",
     "html.rd #apkMenu #apkGoCmp{display:flex;align-items:center;gap:14px;border:0;background:var(--paper,#13264a);border-radius:20px;padding:16px 18px;min-height:80px}",
     "html.rd #apkMenu #apkGoCmp .rdic{width:48px;height:48px;border-radius:14px;background:var(--sel,#1a3562);color:var(--fm,#6fa8ff);display:flex;align-items:center;justify-content:center;flex:none}",
@@ -141,7 +144,7 @@
     "html.rd #cmpCheck{min-height:56px;border-radius:16px;font-size:1.05rem}",
     "html.rd #cmpRes .rdbig{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;background:var(--paper,#13264a);border-radius:20px;padding:18px;margin:0 0 12px}",
     "html.rd #cmpRes .rdbig div{display:flex;flex-direction:column;gap:2px}html.rd #cmpRes .rdbig b{font-size:2.4rem;line-height:1}html.rd #cmpRes .rdbig span{font-size:.9rem;color:var(--mu,#9db0d0)}",
-    "html.rd #cmpRes .rdbig .mi b{color:var(--dg,#ff7b6e)}html.rd #cmpRes .rdbig .ex b{color:var(--fm,#6fa8ff)}",
+    "html.rd #cmpRes .rdbig .nm b{color:var(--wn,#ffcf8a)}html.rd #cmpRes .rdbig .mi b{color:var(--dg,#ff7b6e)}html.rd #cmpRes .rdbig .ex b{color:var(--fm,#6fa8ff)}",
     // ---- settings and the other panels
     "html.rd #panel{border-radius:0;background:var(--bg,#0c1830);border:0!important;box-shadow:none!important}",
     "html.rd #panelBody .rdgrp{background:var(--paper,#13264a);border-radius:20px;padding:14px 16px 10px;margin:0 0 16px}",
@@ -174,7 +177,7 @@
     const del = document.createElement("section"); del.id = "rdDel"; del.setAttribute("aria-label", "Delivery in progress");
     m.insertBefore(del, $("apkGoLog")); del.appendChild($("apkGoLog")); del.appendChild($("apkCarry"));
     const go = $("apkGoLog");
-    go.insertAdjacentHTML("beforeend", '<span id="rdNumRow" aria-hidden="true"><span id="rdNum" class="rdmono"></span><span id="rdNumL"></span></span><span id="rdBar" aria-hidden="true"></span><span id="rdLeg" aria-hidden="true"></span>');
+    go.insertAdjacentHTML("beforeend", '<span id="rdNumRow" aria-hidden="true"><span id="rdNum" class="rdmono"></span><span id="rdNumL"></span></span><span id="rdBar" aria-hidden="true"></span><span id="rdLeg" aria-hidden="true"></span><span id="rdDcs" aria-hidden="true"></span>');
     const cb = $("apkCarryBtn"); if (cb && !cb.querySelector("svg")) cb.insertAdjacentHTML("afterbegin", svg(IC.scan));
     const gc = $("apkGoCmp");
     if (gc && !gc.querySelector(".rdic")) {
@@ -208,7 +211,9 @@
     const cs = getComputedStyle(H), cnt = TYPES_C.map(([t]) => all.filter(r => r.type === t && !r.ref).length);
     $("rdBar").innerHTML = TYPES_C.map(([t, v], i) => cnt[i] ? '<i style="flex:' + cnt[i] + ";background:" + cs.getPropertyValue(v).trim() + '"></i>' : "").join("");
     $("rdLeg").innerHTML = TYPES_C.map(([t, v], i) => '<span><i style="background:' + cs.getPropertyValue(v).trim() + '"></i>' + t + " " + cnt[i] + "</span>").join("");
-    go.setAttribute("aria-label", all.length ? "Log pallets: delivery in progress" + (tr ? ", trailer " + tr : "") + ", " + n + " " + (n === 1 ? "pallet" : "pallets") + (ex > 0 ? " of " + ex + " expected" : "") + ": " + TYPES_C.map(([t], i) => cnt[i] + " " + t).join(", ") : "Log pallets");
+    // Pallets per DC, for example "Rugby 12 · Vault 8" (android.js works it out from the LPN prefixes).
+    const dc = typeof LPN_APK_DCS === "function" ? LPN_APK_DCS(all, typeof LPN_APK_DCEXP === "function" ? LPN_APK_DCEXP() : null) : ""; const dz = $("rdDcs"); dz.textContent = ""; dc.split(" · ").filter(Boolean).forEach((t, i) => { if (i) dz.append(" · "); const sp = document.createElement("span"); sp.textContent = t; dz.appendChild(sp); });
+    go.setAttribute("aria-label", all.length ? "Log pallets: delivery in progress" + (tr ? ", trailer " + tr : "") + ", " + n + " " + (n === 1 ? "pallet" : "pallets") + (ex > 0 ? " of " + ex + " expected" : "") + ": " + TYPES_C.map(([t], i) => cnt[i] + " " + t).join(", ") + (dc ? ". By DC: " + dc.replace(/ · /g, ", ") : "") : "Log pallets");
     del.setAttribute("aria-label", all.length ? "Delivery in progress" : "Log pallets");
   }
 
@@ -222,7 +227,20 @@
     s.className = "rdib"; s.setAttribute("aria-pressed", "false");
     const e = mk("rdExport", svg(IC.down, 18) + '<span class="rdxl">Export</span>', null, exportSheet); e.setAttribute("aria-haspopup", "dialog");
     const mb = mk("rdMenuBtn", svg(IC.truck, 24), "This delivery: details, Share log, new delivery", deliverySheet); mb.className = "rdib"; mb.setAttribute("aria-haspopup", "dialog");
-    bar.insertBefore(s, help); bar.insertBefore(e, help); bar.insertBefore(mb, help);
+    bar.insertBefore(s, help); bar.insertBefore(e, help); bar.insertBefore(mb, help); searchJump();
+  }
+  /* Search that finds just one pallet scrolls to it and lights it up for a moment (Enter does it again). */
+  function searchJump() {
+    const f = $("flt"); if (!f || f.dataset.rdj) return; f.dataset.rdj = "1";
+    const go = force => setTimeout(() => {
+      if ((f.value || "").trim().length < 3) return;
+      const b = document.querySelectorAll("#body .lpnedit"); if (b.length !== 1) return;
+      const tr = b[0].closest("tr"); if (!tr || (!force && tr.dataset.rdhit === f.value)) return; tr.dataset.rdhit = f.value;
+      tr.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      tr.classList.add("rdhit"); setTimeout(() => tr.classList.remove("rdhit"), 1600);
+    }, 0);
+    f.addEventListener("input", () => go(false));
+    f.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); go(true); } });
   }
   function setSearch(on) { H.classList.toggle("rd-search", !!on); const b = $("rdSearch"); if (b) b.setAttribute("aria-pressed", String(!!on)); }
   // Search only when the app has it (Simple view hides it), Export only with pallets to export.
@@ -352,12 +370,18 @@
       b.innerHTML = '<span class="rdtic">' + svg(tic[id], 28) + '</span><span><b style="display:block;font-size:1.05rem"></b><span style="font-size:.85rem;font-weight:400;opacity:.85"></span></span>';
       b.querySelector("b").textContent = short[id]; b.querySelector("span>span").textContent = sub[id]; });
     tiles(); setTimeout(tiles, 0);
-    ["cmpLogNums", "cmpNums"].forEach(id => { const e = $(id); if (e) e.addEventListener("input", syncSteps); });
+    // The steps update when the boxes change: typing (input), and the app filling them from photos, PDFs or the log
+    // (a value set in code fires no event, so each box's own value setter is wrapped). No timer, so nothing runs
+    // in the background while the page sits open.
+    const vd = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
+    let q = 0; const later = () => { if (!q) q = requestAnimationFrame(() => { q = 0; syncSteps(); }); };
+    ["cmpLogNums", "cmpNums"].forEach(id => { const e = $(id); if (!e) return; e.addEventListener("input", later);
+      if (vd && vd.set) Object.defineProperty(e, "value", { configurable: true, get() { return vd.get.call(this); }, set(v) { vd.set.call(this, v); later(); } }); });
     const res = $("cmpRes"); if (res) new MutationObserver(() => { bigResults(); syncSteps(); }).observe(res, { childList: true, attributes: true, attributeFilter: ["hidden"] });
     syncSteps();
-    setInterval(() => { if (H.classList.contains("apkm-cmp") && !document.hidden) syncSteps(); }, 700);
   }
   const lines = id => (($(id) || {}).value || "").split(/\r?\n/).map(x => x.trim()).filter(Boolean).length;
+
   function syncSteps() {
     const a = lines("cmpLogNums") > 0, b = lines("cmpNums") > 0, r = $("cmpRes") && !$("cmpRes").hidden;
     const set = (id, done, now) => { const e = $(id); if (!e) return; e.className = done ? "done" : now ? "now" : ""; if (now) e.setAttribute("aria-current", "step"); else e.removeAttribute("aria-current"); };
@@ -373,7 +397,26 @@
     const d = document.createElement("div"); d.className = "rdbig"; d.setAttribute("aria-hidden", "true");
     d.innerHTML = '<div class="mi"><b class="rdmono"></b><span>Missing</span></div><div class="ex"><b class="rdmono"></b><span>Extra</span></div><div><b class="rdmono"></b><span>Matched</span></div>';
     const bs = d.querySelectorAll("b"); bs[0].textContent = mi === null ? "0" : mi; bs[1].textContent = ex === null ? "0" : ex; bs[2].textContent = ma === null ? "–" : ma;
+    // A DC that didn't send its manifest: a fourth number
+    const nm = num(/No manifest received \((\d+)\)/);
+    if (nm) { d.insertAdjacentHTML("beforeend", '<div class="nm"><b class="rdmono"></b><span>No manifest</span></div>'); d.lastChild.querySelector("b").textContent = nm; d.style.gridTemplateColumns = "repeat(4,minmax(0,1fr))"; }
     res.prepend(d);
+    byDc(res, d);
+  }
+  /* Results per DC under the big numbers, when the trailer had more than one DC: problems first, for example
+     "Rugby: 2 missing · 5 matched", "Qube: no manifest (3 on the log)", "Vault: all 20 matched". */
+  function byDc(res, after) {
+    try {
+      if (typeof cmpData !== "function" || typeof cmpByDc !== "function") return;
+      const C = cmpData(); if (!C) return;
+      const list = cmpByDc(C); if (!list.length) return;
+      const box = document.createElement("div"); box.className = "rddcres"; box.setAttribute("role", "group"); box.setAttribute("aria-label", "Results per DC");
+      box.innerHTML = "<h3>By DC</h3><ul></ul>"; const ul = box.querySelector("ul");
+      list.forEach(o => { const li = document.createElement("li");
+        li.className = o.noman ? "nm" : o.missing ? "mi" : o.book ? "ex" : "ok";
+        li.innerHTML = "<b></b><span></span>"; li.querySelector("b").textContent = o.dc; li.querySelector("span").textContent = dcResText(o); ul.appendChild(li); });
+      after.after(box);
+    } catch (e) {}
   }
 
   /* ---- Settings in grouped cards; Share log as two tabs ---- */
@@ -478,6 +521,7 @@
     "html.rd #cmpRes .ri{background:var(--paper,#13264a);margin:0;padding:6px 8px 6px 16px;border-top:1px solid var(--rule,#223a63);display:flex;align-items:center;gap:6px}",
     "html.rd #cmpRes .note+.ri{border-top:0;border-radius:18px 18px 0 0}html.rd #cmpRes .ri:not(:has(+.ri)){border-radius:0 0 18px 18px}html.rd #cmpRes .note+.ri:not(:has(+.ri)){border-radius:18px}",
     "html.rd #cmpRes .ri .l{flex:1;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:1.02rem}",
+    "html.rd #cmpRes .nmri .l{font-family:inherit;font-weight:700}",
     "html.rd #cmpBody:has(#cmpRes .rdbig) #cmpSum{display:none}",
     // After saving a file: a sheet with a tick, Open, Share and Save to…
     "html.rd .apksaved{left:0!important;right:0!important;bottom:0!important;border-radius:28px 28px 0 0!important;padding:20px 16px calc(20px + env(safe-area-inset-bottom,0px))!important;background:var(--paper,#13264a)!important;color:var(--ink,#eaf0fa)!important;text-align:center;z-index:1300!important}",
@@ -529,7 +573,8 @@
     const box = $("cmpRes"), t = box && !box.hidden ? box.textContent : "", num = re => { const m = re.exec(t); return m ? m[1] : "0"; };
     sheet("Export the check", (s, close) => {
       s.insertAdjacentHTML("beforeend", '<h2>Export the check</h2><p class="rdsub"></p><div class="rdtiles"></div>');
-      s.querySelector(".rdsub").textContent = t ? num(/Missing from the log \((\d+)\)/) + " missing · " + num(/On the log only[^(]*\((\d+)\)/) + " extra · " + num(/Matched \((\d+)\)/) + " matched" : "The comparison of the log and the manifest";
+      const nm = num(/No manifest received \((\d+)\)/);
+      s.querySelector(".rdsub").textContent = t ? num(/Missing from the log \((\d+)\)/) + " missing · " + num(/On the log only[^(]*\((\d+)\)/) + " extra · " + num(/Matched \((\d+)\)/) + " matched" + (nm !== "0" ? " · " + nm + " no manifest" : "") : "The comparison of the log and the manifest";
       const tiles = s.querySelector(".rdtiles");
       [["cmpGo", IC.sheet, "Excel", true], ["cmpMail", IC.file, "Email PDF"], ["cmpPrn", IC.print, "Print"]].forEach(([id, ic, label, p]) => { const o = $(id); if (!o || o.hidden) return;
         const b = document.createElement("button"); b.type = "button"; if (p) b.className = "p"; b.innerHTML = svg(ic, 26) + "<span></span>"; b.querySelector("span").textContent = label; b.onclick = () => { close(); o.click(); }; tiles.appendChild(b); });

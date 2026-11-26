@@ -133,8 +133,11 @@ function render(){
   const q=($("flt").value||"").trim().toUpperCase().replace(/\s+/g,""),ft=$("fltType").value,ff=$("fltFsdu").value;
   if($("fltClear"))$("fltClear").hidden=!$("flt").value;
   let shown=0;
+  // Numbers only (3 or more): the end of the LPN first, as people read the last digits off a label; anywhere in it
+  // when no LPN ends with them.
+  const lp=r=>r.lpn.toUpperCase().replace(/\s+/g,""),tail=/^\d{3,}$/.test(q)&&rows.some(r=>lp(r).endsWith(q));
   rows.forEach((r,i)=>{
-    if(q&&r.lpn.toUpperCase().replace(/\s+/g,"").indexOf(q)<0)return;
+    if(q&&(tail?!lp(r).endsWith(q):lp(r).indexOf(q)<0))return;
     if(ft&&r.type!==ft)return;
     if(ff==="y"&&!r.fsdu)return;
     if(ff==="n"&&r.fsdu)return;
@@ -319,7 +322,10 @@ function dmgRow(r,pick,opt){
   const tn=testNote("damage",td);if(tn)tn.style.margin="0 0 6px";
   addRef();return tr;
 }
-function extras(){const o=[];const e=parseInt($("expect").value,10);if(e>=0)o.push(["Expected pallets",String(e)]);[["trailer","Trailer number"],["sealIn","Seal in"],["sealOut","Seal out"]].forEach(f=>{const v=($(f[0]).value||"").trim();if(v)o.push([f[1],v])});const n=($("notes").value||"").trim();if(n)o.push(["Notes",n]);rows.forEach(r=>{if(r.ref)o.push(["Refused pallet",r.lpn+": sent back with the driver"])});rows.forEach(r=>{if(r.dmg)o.push(["Damaged pallet",r.lpn+": "+r.dmg])});rows.forEach(r=>{if(r.desc)o.push(["Pallet description",r.lpn+": "+r.desc])});return o}
+function extras(){const o=[];const e=parseInt($("expect").value,10);if(e>=0)o.push(["Expected pallets",String(e)]);
+  // Pallets per DC when the trailer had more than one (or expected numbers per DC were set in the Android app).
+  const bd=typeof dcLogText==="function"?dcLogText(rows,typeof LPN_APK_DCEXP==="function"?LPN_APK_DCEXP():null,{min:2,plain:true}):"";if(bd)o.push(["By DC",bd]);
+[["trailer","Trailer number"],["sealIn","Seal in"],["sealOut","Seal out"]].forEach(f=>{const v=($(f[0]).value||"").trim();if(v)o.push([f[1],v])});const n=($("notes").value||"").trim();if(n)o.push(["Notes",n]);rows.forEach(r=>{if(r.ref)o.push(["Refused pallet",r.lpn+": sent back with the driver"])});rows.forEach(r=>{if(r.dmg)o.push(["Damaged pallet",r.lpn+": "+r.dmg])});rows.forEach(r=>{if(r.desc)o.push(["Pallet description",r.lpn+": "+r.desc])});return o}
 $("sum").addEventListener("click",e=>{
   const b=e.target.closest(".sumbtn");if(!b)return;
   const k=b.dataset.f,on=b.getAttribute("aria-pressed")==="true";
