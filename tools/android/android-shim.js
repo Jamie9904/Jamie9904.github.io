@@ -556,6 +556,17 @@
       };
       addValue.fpp = true;
     }
+    // A pasted list follows the same rule: pallets with an FPP prefix are FPP (Undo still takes the whole paste away).
+    if (typeof addPasted === "function" && !addPasted.fpp) {
+      const ap = addPasted;
+      addPasted = function () {
+        const before = rows.length, x = ap.apply(this, arguments);
+        let n = 0; rows.slice(before).forEach(r => { if (r.type !== "FPP" && window.LPN_APK_FPPAUTO(r.lpn)) { r.type = "FPP"; n++; } });
+        if (n) { save(); render(); const m = $("msg"); if (m) m.textContent = (m.textContent ? m.textContent + " " : "") + n + (n === 1 ? " pallet was" : " pallets were") + " set to FPP from the prefix."; }
+        return x;
+      };
+      addPasted.fpp = true;
+    }
     // The Added note: tap it to change the type of the pallet just added (with Undo).
     const fl = $("flash");
     if (fl) fl.addEventListener("click", () => {

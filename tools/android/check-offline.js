@@ -577,6 +577,14 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
   check("an LPN with an FPP prefix (V, R, Q, IM) is added as FPP whatever type is chosen, typed or scanned, and the note says so; Settings can turn it off", s.typed === "FPP|BB|Added #1: IM0012345681 · FPP · FPP from the prefix" && s.plain === "BB" && s.scanned === "FPP" && s.off === "BB", s);
   check("tapping the Added note offers the other types for that pallet, with Undo", s.tappable === "auto" && s.q === "Change the type of V0013329998 (now FPP)" && s.b === "BB,FMCG,Mixed,Cancel" && s.changed === "Mixed" && /^Changed V0013329998 to Mixed/.test(s.undo) && s.undone === "FPP", s);
   check("a search that finds just one pallet lights it up", s.hit === "VLT004041211", s);
+  // A pasted list (or LPNs shared into the app) follows the FPP prefix rule too.
+  s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)), keep = rows.slice(), man = document.getElementById("cmpNums").value, out = {};
+    document.getElementById("cmpNums").value = ""; rows = []; save(); render(); document.querySelector('#tyb button[data-t="BB"]').click();
+    addPasted("VLT004041301\nIM0012345690\nR0012345691"); await wait(50);
+    out.types = rows.map(r => r.lpn + ":" + r.type).join(); out.msg = document.getElementById("msg").textContent;
+    document.querySelector("#undoBar button").click(); await wait(50); out.undone = rows.length;
+    rows = keep; document.getElementById("cmpNums").value = man; save(); render(); document.getElementById("msg").textContent = ""; return out; });
+  check("a pasted list sets FPP-prefix pallets to FPP, says so, and Undo takes the whole paste away", s.types === "VLT004041301:BB,IM0012345690:FPP,R0012345691:FPP" && /2 pallets were set to FPP from the prefix\.$/.test(s.msg) && s.undone === 0, s);
   // Results per DC in Manifest check.
   s = await page.evaluate(async () => { const wait = ms => new Promise(r => setTimeout(r, ms)); LPN_APK_MODE("cmp"); await wait(50);
     document.getElementById("cmpLogNums").value = "VLT004040801\nVLT004040802\nRBY006292401\nRUN0001830801"; document.getElementById("cmpNums").value = "VLT004040801\nVLT004040899\nRUN0001830801";
