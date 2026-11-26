@@ -343,6 +343,10 @@ Since commit `1bd4f34`, Android workflow runs started by hand with **Screenshots
   - **a single search match:** with `VLT004041210`, `VLT004121055` and `VLT004041211`, typing "1211" into `#flt` (an `input` event) leaves `VLT004041211`'s row with the class `rdhit`.
   The 4-second note time, Enter in the search and the scroll itself have no check of their own.
 
+**On `updates` (commit `3b03e47`, for Android APK build 7, not in an APK yet):** 1 more check, so 129, passed on GitHub as reported by the session that made the change. With the log and the manifest numbers emptied and BB picked:
+  - **a pasted list:** `addPasted("VLT004041301\nIM0012345690\nR0012345691")` adds `VLT004041301` as BB and `IM0012345690` and `R0012345691` as FPP; `#msg` ends "2 pallets were set to FPP from the prefix."; clicking the Undo bar's button leaves 0 pallets. The log and manifest numbers are put back afterwards.
+  Sharing text in as **Pallets in the log** has no check of its own (it calls the same `addPasted`), nor does Share log keeping the other phone's types.
+
 ### Bug hunt on the virtual phone (`tools/android/qa.sh`)
 
 Since commits `9a330bc` and `2ff87e7` (Android APK build 4), hand-started Android runs have a third tick box, **Bug hunt on the virtual phone after the screenshots (about 15 minutes more; needs Screenshots ticked)** (input `qa`, off by default). With it ticked, the emulator step runs `sh tools/android/qa.sh` straight after `shots.sh`, on the same virtual phone with the same `qa` test copy installed. Start it without making an APK with:
